@@ -179,6 +179,71 @@ Tras analizar su propuesta pública, estos son puntos donde NexUS puede ganar ve
 * **Pagos como elemento transversal:** el módulo de pagos se presenta como independiente del plan, activable/desactivable.
 * **Personalización y desarrollo a medida (plan superior):** indican posibilidad de personalizar funcionalidades, especialmente en escenarios complejos.
 
+### TuComunidad (TucomunidApp)
+
+#### 1. Features (Funcionalidades Clave)
+
+**A. Comunicación y Organización Comunitaria**
+* Comunicación en tiempo real con notificaciones. 
+* Voto digital en juntas con envío desde el móvil. 
+* Chat entre vecinos y comunidad social básica. 
+
+**B. Gestión Operativa y Administrativa**
+* Reporte y seguimiento de incidencias. 
+* Reserva de espacios comunes desde la app. 
+* Acceso a documentos y cuentas de la comunidad. 
+* Consulta de recibos y pagos; cambio de domiciliación.
+* Apertura digital de accesos comunitarios. 
+
+**C. Integración de Servicios y Proveedores**
+* Directorio de profesionales para servicios del hogar.
+* Sincronización con software de administración de fincas.
+
+---
+
+#### 3. Mercado que atacan
+
+* Propietarios y vecinos de comunidades. 
+* Administradores de fincas como canal de adopción clave.
+* Empresas de servicios integradas en el directorio.
+
+---
+
+#### 4. Análisis de UX/UI
+
+* Interfaz móvil y web moderna con funcionalidades básicas de uso diario. 
+* Enfoque en tareas directas (incidencias, reservas, comunicación).
+* Accesibilidad general sin modo específico para perfiles con brecha digital.
+
+---
+
+#### 5. Tabla Comparativa y Oportunidades
+
+| Característica | TuComunidad (Competencia) | NexUS |
+| :--- | :--- | :--- |
+| IA integrada | ❌ | **✔ IA Generativa** |
+| Incidencias | ✔ | **✔ Proactivo + seguro** |
+| Reservas | ✔ | ✔ + social |
+| Comunidad Social | ✔ | **✔ Gamificada + Afinidades** |
+| Accesibilidad | ✔ básica | **✔ Modo Vecino Mayor** |
+| Paquetería | ❓ | **✔ P2P con reglas** |
+
+---
+
+#### 6. Puntos débiles explotables
+
+1. **Sin IA para actas y decisiones automáticas:** La inteligencia artificial puede ser crucial a la hora de automatizar la creación de actas de las juntas..  
+2. **Incidencias sin automatización preventiva.**  
+3. **Comunidad social funcional pero poco retentiva.** : ofrecen comunicaciones vecinales, pero sin promover dicha comunicación, lo que puede generar que dicha funcionalidad sea intrascendente. 
+4. **Accesibilidad no especializada para mayores.** : interfaz poco intuitiva y poco adaptada, provocando exclusión de personas mayores dentro de las comunidades.
+5. **Flujos de servicios sin diseño de uso continuo.**
+
+---
+
+#### 7. Modelo de Negocio (Estimado)
+
+* **SaaS por suscripción:** Cobro mensual o anual por comunidad de vecinos.
+* **Lead Generation:** Posible monetización por módulos y servicios complementarios (servicios externos de fontanería, electricista...).
 
 ## Comparativa de Funcionalidades
 
