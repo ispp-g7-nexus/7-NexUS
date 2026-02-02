@@ -77,21 +77,19 @@ Se analizan los principales competidores de NexUS, identificando sus puntos fuer
 
 | Característica | VecinosEnRed (Competencia) | NexUS (Nuestra Propuesta) |
 | :--- | :--- | :--- |
-| **Modelo de Negocio** | **Freemium Limitado:** Gratis solo hasta 5 vecinos (inviable). Pago por tramos de propiedades. | **100% Gratuito:** Sin límite de usuarios, eliminando la barrera económica de entrada. |
 | **Inteligencia Artificial** | **Nula:** Procesos manuales y gestión de datos estática. | **IA Generativa:** Resumen automático de actas, extracción de tareas y votaciones asistidas. |
 | **Enfoque de Gestión** | **Reactiva/Administrativa:** Contabilidad y registro de tickets. | **Proactiva/Preventiva:** Mantenimiento conectado a seguros y avisos automáticos. |
-| **Experiencia de Usuario** | **Legacy/Web Wrapper:** Interfaz antigua, lenta y poco atractiva. | **Nativa & Inclusiva:** UX moderna y **Modo Vecino Mayor** adaptado a la brecha digital. |
+| **Experiencia de Usuario** | **Legacy/Web Wrapper:** Interfaz antigua, lenta y poco atractiva. | **Inclusiva:** UX moderna y **Modo Vecino Mayor** adaptado a la brecha digital. |
 | **Paquetería** | No contemplado. | **Sistema P2P:** Red de vecinos receptores para solucionar el problema del e-commerce. |
 
 #### 6. Puntos débiles explotables
 
 Tras analizar su modelo y el feedback de sus usuarios, se identifican las siguientes áreas críticas donde NexUS tiene ventaja competitiva:
 
-1.  **La "Trampa" del Precio:** VecinosEnRed utiliza un modelo *Freemium* engañoso con un límite de 5 propietarios, haciendo inviable su uso gratuito en comunidades reales. NexUS, al ser 100% gratuito, elimina la barrera de entrada económica.
-2.  **Tecnología Obsoleta (Deuda Técnica):** La competencia sufre de una arquitectura antigua y una app lenta. NexUS, con un stack moderno, ofrece una fluidez y estética superior.
-3.  **Gestión de la Soledad vs. Comunidad:** VecinosEnRed trata a los vecinos como apuntes contables. NexUS ataca la necesidad emocional mediante *Afinidades* y *Red de Ayudas*.
-4.  **Burocracia vs. Automatización (Factor IA):** Mientras ellos ofrecen un repositorio de PDFs (Actas), NexUS ofrece un asistente que lee y resume el contenido automáticamente, ahorrando tiempo real.
-5.  **Exclusión Demográfica:** Su interfaz compleja ignora a la tercera edad. El *Modo Vecino Mayor* de NexUS asegura la inclusión digital de todo el edificio.
+1.  **Tecnología Obsoleta (Deuda Técnica):** La competencia sufre de una arquitectura antigua y una app lenta. NexUS, con un stack moderno, ofrece una fluidez y estética superior.
+2.  **Gestión de la Soledad vs. Comunidad:** VecinosEnRed trata a los vecinos como apuntes contables. NexUS ataca la necesidad emocional mediante *Afinidades* y *Red de Ayudas*.
+3.  **Burocracia vs. Automatización (Factor IA):** Mientras ellos ofrecen un repositorio de PDFs (Actas), NexUS ofrece un asistente que lee y resume el contenido automáticamente, ahorrando tiempo real.
+4.  **Exclusión Demográfica:** Su interfaz compleja ignora a la tercera edad. El *Modo Vecino Mayor* de NexUS asegura la inclusión digital de todo el edificio.
 
 #### 7. Modelo de Negocio (Observado)
 
