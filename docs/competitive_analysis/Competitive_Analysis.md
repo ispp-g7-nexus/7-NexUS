@@ -39,11 +39,9 @@ Se analizan los principales competidores de NexUS, identificando sus puntos fuer
 Tabla comparativa de funcionalidades clave entre NexUS y las soluciones competidoras, destacando aquellas características diferenciales.
 
 
-
 ## Análisis
 
 Evaluación crítica de los resultados obtenidos en la comparativa, considerando factores técnicos, funcionales y estratégicos.
-
 
 
 ## Conclusiones y estrategias
