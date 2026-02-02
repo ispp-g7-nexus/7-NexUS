@@ -5,7 +5,7 @@
 </p>
 
 
-**Grupo:** 11  
+**Grupo:** B-Tarde 
 **Proyecto:** NexUS  
 **Fecha:** 02/02/2026  
 **Asignatura:** ISPP  
@@ -13,7 +13,7 @@
 
 
 <p align="center">
-  <img src="../images/logo-etsii.jpe" alt="Portada" width="300">
+  <img src="../images/logo-etsii.jpe" alt="Portada" width="400">
 </p>
 
 
@@ -179,6 +179,8 @@ Tras analizar su propuesta pública, estos son puntos donde NexUS puede ganar ve
 * **Pagos como elemento transversal:** el módulo de pagos se presenta como independiente del plan, activable/desactivable.
 * **Personalización y desarrollo a medida (plan superior):** indican posibilidad de personalizar funcionalidades, especialmente en escenarios complejos.
 
+---
+
 ### TuComunidad (TucomunidApp)
 
 #### 1. Features (Funcionalidades Clave)
@@ -199,7 +201,6 @@ Tras analizar su propuesta pública, estos son puntos donde NexUS puede ganar ve
 * Directorio de profesionales para servicios del hogar.
 * Sincronización con software de administración de fincas.
 
----
 
 #### 3. Mercado que atacan
 
@@ -207,7 +208,6 @@ Tras analizar su propuesta pública, estos son puntos donde NexUS puede ganar ve
 * Administradores de fincas como canal de adopción clave.
 * Empresas de servicios integradas en el directorio.
 
----
 
 #### 4. Análisis de UX/UI
 
@@ -215,20 +215,22 @@ Tras analizar su propuesta pública, estos son puntos donde NexUS puede ganar ve
 * Enfoque en tareas directas (incidencias, reservas, comunicación).
 * Accesibilidad general sin modo específico para perfiles con brecha digital.
 
----
 
 #### 5. Tabla Comparativa y Oportunidades
 
-| Característica | TuComunidad (Competencia) | NexUS |
+| Característica | TuComunidad (Competencia) | NexUS (Nuestra Propuesta) |
 | :--- | :--- | :--- |
-| IA integrada | ❌ | **✔ IA Generativa** |
-| Incidencias | ✔ | **✔ Proactivo + seguro** |
-| Reservas | ✔ | ✔ + social |
-| Comunidad Social | ✔ | **✔ Gamificada + Afinidades** |
-| Accesibilidad | ✔ básica | **✔ Modo Vecino Mayor** |
-| Paquetería | ❓ | **✔ P2P con reglas** |
+| **Inteligencia Artificial** | No incorpora IA para el tratamiento de documentos ni apoyo a la toma de decisiones. | IA generativa para resumen de actas, extracción de acuerdos, tareas y apoyo a decisiones comunitarias. |
+| **Gestión de incidencias** | Gestión reactiva: reporte, seguimiento y comunicación con el administrador. | Gestión proactiva: mantenimiento preventivo, automatización de avisos y conexión directa con seguros. |
+| **Automatización de procesos** | Digitalización de procesos existentes sin automatización avanzada. | Automatización de flujos clave (actas, incidencias, avisos, mantenimiento). |
+| **Reservas de zonas comunes** | Reservas funcionales con disponibilidad en tiempo real. | Reservas con UX optimizada y capa social para fomentar participación y convivencia. |
+| **Comunicación vecinal** | Comunicación y chat entre vecinos, orientados a mensajes y avisos. | Comunicación estructurada con red de ayudas, afinidades e interacción recurrente. |
+| **Cohesión social** | Comunidad basada en comunicación básica y utilitaria. | Construcción activa de comunidad mediante gamificación, afinidades y colaboración vecinal. |
+| **Accesibilidad digital** | Interfaz sencilla de uso general, sin adaptación específica a mayores. | Modo Vecino Mayor con interfaz adaptada a usuarios con brecha digital. |
+| **Paquetería y logística** | No se define un flujo específico de gestión de paquetería comunitaria. | Sistema de paquetería P2P con reglas, trazabilidad y responsabilidades claras. |
+| **Rol del vecino** | Usuario principalmente informativo y operativo. | Usuario activo, colaborador y generador de valor comunitario. |
+| **Diferenciación competitiva** | Centralización de servicios y comunicaciones. | Enfoque social, preventivo e inteligente orientado a la convivencia y al uso diario. |
 
----
 
 #### 6. Puntos débiles explotables
 
@@ -237,8 +239,6 @@ Tras analizar su propuesta pública, estos son puntos donde NexUS puede ganar ve
 3. **Comunidad social funcional pero poco retentiva.** : ofrecen comunicaciones vecinales, pero sin promover dicha comunicación, lo que puede generar que dicha funcionalidad sea intrascendente. 
 4. **Accesibilidad no especializada para mayores.** : interfaz poco intuitiva y poco adaptada, provocando exclusión de personas mayores dentro de las comunidades.
 5. **Flujos de servicios sin diseño de uso continuo.**
-
----
 
 #### 7. Modelo de Negocio (Estimado)
 
