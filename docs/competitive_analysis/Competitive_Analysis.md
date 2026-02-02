@@ -1,6 +1,9 @@
 # Análisis de Competidores – NexUS
 
-![Portada / Imagen del documento-Logo-APP](../images/logo-app.jpeg)
+<p align="center">
+  <img src="../images/logo-app.jpeg" alt="Portada" width="700">
+</p>
+
 
 **Grupo:** 11  
 **Proyecto:** NexUS  
@@ -8,11 +11,11 @@
 **Asignatura:** ISPP  
 **Institución:** ETSII, Universidad de Sevilla
 
----
 
-![Portada / Imagen del documento-Logo-ETSII](../images/logo-etsii.jpe)
+<p align="center">
+  <img src="../images/logo-etsii.jpe" alt="Portada" width="300">
+</p>
 
----
 
 ## Índice
 
