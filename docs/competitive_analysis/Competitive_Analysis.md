@@ -98,6 +98,86 @@ Tras analizar su modelo y el feedback de sus usuarios, se identifican las siguie
 * **SaaS por Niveles (Tiered Pricing):** Tarifas escalonadas (Medium 90€/año, Enterprise 190€/año).
 * **Upselling:** Cobro de suplementos por paquetes de propietarios adicionales.
 * **Soporte:** Servicios de soporte telefónico o premium cobrados aparte.
+---
+### TusVecinos
+
+**TusVecinos** es una plataforma para comunidades de propietarios que centraliza en una sola app la comunicación (avisos y tablón), la operativa diaria (incidencias y reservas), la toma de decisiones (votaciones/encuestas), la documentación y los pagos. Ofrece acceso móvil y web, con planes por vivienda y opciones de personalización según las necesidades de cada comunidad.
+
+#### 1. Features (Funcionalidades Clave)
+
+**A. Gestión de Incidencias y Operaciones**
+
+* **Incidencias:** reporta problemas desde la app e incluye el seguimiento de su evolución mediante actualizaciones y notificaciones.
+* **Reservas de zonas comunes:** disponibilidad en tiempo real y confirmación inmediata para evitar solapaminetos.
+* **Reglas de reserva configurables:** límites por vivienda, horarios, condiciones de uso y restricciones definidas por la comunidad.
+* **Control de morosidad vinculado a reservas (declarado):** se menciona el uso de pagos y restricciones para reducir impagos en el uso de instalaciones.
+* **Gestión documental:** repositorio digital para actas y documentación de la comunidad, accesible desde cualquier lugar.
+* **Acceso multiplataforma:** incluyen acceso desde móvil y opciones web para vecinos y para administradores (según su oferta comercial).
+
+**B. Comunicación y Gobernanza**
+
+* **Avisos y noticias:** canal de comunicación oficial con notificaciones al móvil para informar a toda la comunidad.
+* **Tablón de anuncios:** espacio moderado para propuestas, dudas y comunicaciones entre vecinos, como alternativa a canales no oficiales.
+* **Votaciones y encuestas:** votación telemática con recuento automatizado y resultados centralizados.
+* **Trazabilidad del proceso de voto (declarada):** comunican verificabilidad y "validez legal", sin detallar el mecanismo técnico-jurídico.
+* **Permisos y solicitudes:** contemplan flujos de solicitud de permisos al administrador/presidencia (p. ej., usos extraordinarios en el edificio).
+
+**C. Integraciones, Accesos y Servicios Complementarios**
+
+* **Pagos en la app:** módulo de pagos para cuotas, derramas y otros conceptos; lo presentan como funcionalidad transversal.
+* **Pagos como módulo independiente (tarifas):** declaran que puede activarse o desactivarse sin alterar el plan contratado.
+* **Domótica:** integración con sistemas domóticos mediante API.
+* **Diferenciación de perfiles:** contemplan diferencias entre propietario e inquilino (especialmente para el acceso a documentación).
+* **Onboarding guiado:** alta de vecinos mediante identificación por vivienda (p. ej., mecanismo QR indicado en su proceso de instalación).
+
+#### 2. Mercado que atacan
+
+1. **Presidentes y juntas de gobierno:** buscan reducir carga operativa (comunicaciones, incidencias, reservas) y disminuir conflictos por falta de información.
+2. **Propietarios e inquilinos:** priorizan comodidad, transparencia y acceso a documentación y decisiones sin desplazamientos.
+3. **Administradores de fincas:** aunque el discurso es "orientado al vecino", el producto incluye panel y flujos para gestión/operación de la comunidad.
+4. **Segmento por tamaño:** planes estándar para comunidades pequeñas/medias y condiciones especiales para comunidades grandes (venta más consultiva).
+
+#### 3. Análisis de UX/UI
+
+* **Enfoque operativo y directo:** el discurso se centra en "hacer tareas" (reservar, reportar, consultar documentos, votar) con pocos pasos.
+* **Notificaciones como elemento de control:** los avisos e incidencias se apoyan en notificaciones para reducir la necesidad de llamadas o insistencia.
+* **Reducción de fricción en reservas:** la propuesta enfatiza disponibilidad en tiempo real y reglas explícitas para evitar conflictos.
+* **Estrategia de adopción basada en puesta en marcha:** comunican instalación/configuración guiada y registro por vivienda, lo que reduce barrera inicial.
+* **Accesibilidad declarada:** presentan la interfaz como sencilla, pero no hay evidencia pública de un modo "senior" específico comparable a NexUS.
+
+#### 4. Tabla Comparativa y Oportunidades
+
+* **Comparativa Estratégica: TusVecinos vs. NexUS**
+
+| Característica                    | TusVecinos (Competencia)                                                                                          | NexUS                                                                                             |
+| :-------------------------------- | :---------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------ |
+| **Inteligencia Artificial**       | No se emplea un motor de IA para actas o decisiones; está enfocada en la digitalización y centralización.               | **IA de actas:** resumen automático y extracción de tareas/decisiones desde documentos.           |
+| **Gestión de Incidencias**        | **Reactiva:** reporte y seguimiento con notificaciones; no incluye automatización hacia seguro o prevención. | **Proactiva:** mantenimiento preventivo + conexión directa a seguro y alertas automatizadas.      |
+| **Finanzas y Pagos**              | Módulo de pagos integrado y "activable/desactivable" según tarifas; sin detalle de conciliación avanzada.         | Enfoque en transparencia y reducción de conflictos; posible evolución a integraciones y métricas. |
+| **Logística Urbana (Paquetería)** | La incluyen en planes, pero no se detalla públicamente el flujo completo y responsabilidades.                     | **Paquetería P2P:** "vecino receptor" como gancho diario con trazabilidad y reglas comunitarias.  |
+| **Cohesión Social**               | Tablón moderado y comunicación horizontal básica.                                                                 | **Red de ayudas gamificada (+1)** y mecanismos de convivencia para generar hábito de uso.         |
+| **Inclusión Digital**             | Accesibilidad declarada; no se evidencia un modo senior explícito.                                                | **Modo Vecino Mayor:** interfaz adaptada a todos los usuarios, lenguaje humano.                      |
+| **Conexión Vecinal**              | Comunidad organizada por tablón y comunicaciones; no se evidencia segmentación por intereses.                     | **Afinidades:** recomendación y segmentación por hobbies o intereses para conectar vecinos.         |
+| **Reservas**                      | Potentes: reglas y disponibilidad en tiempo real; foco en evitar conflictos de uso.                               | Reservas con UX cuidada + capa social (afinidades) para elevar participación y convivencia.       |
+
+#### 5. Puntos débiles explotables
+
+Tras analizar su propuesta pública, estos son puntos donde NexUS puede ganar ventaja clara:
+
+1.  **Diferenciación insuficiente en "comprensión" de documentos:** TusVecinos ofrece repositorio documental, pero no una automatización real para convertir actas en información accionable. NexUS, con la IA de actas, reduce tiempo de lectura y aumenta transparencia al convertir acuerdos en tareas y próximos pasos.
+2.  **Incidencias sin automatización "end-to-end":** El valor está en reportar y seguir, pero no consta de un puente operativo hacia seguros o prevención del mantenimiento. NexUS automatiza avisos preventivos y conexión con seguro, reduciendo fricción y descargando al presidente/administrador.
+3.  **Capa social limitada a comunicación genérica:** El tablón modera y ordena, pero no genera necesariamente hábitos diarios ni colaboración sostenida. NexUS, mediante afinidades y red de ayudas gamificada, construye convivencia y retención, atacando el "vacío vivencial" del mercado.
+4.  **Accesibilidad como declaración, no como feature de producto:** La accesibilidad se comunica como "sencillez", pero no presenta un modo específico para mayores. El modo "Vecino Mayor" de NexUS permite adopción real en perfiles con brecha digital, clave para masa crítica.
+5.  **Paquetería sin detalle público del flujo:** La funcionalidad existe, pero no se conoce el diseño operacional (responsabilidades, confirmaciones, incentivos). La paquetería P2P de NexUS con reglas y trazabilidad puede convertirse en el caso de uso diario que active la comunidad.
+
+#### 6. Modelo de Negocio (Estimado)
+
+* **SaaS por suscripción (por vivienda/mes):** tres planes (Básico, Medio y Premium) con precios escalonados publicados por vivienda.
+* **Modelo "modular":** las tarifas se plantean como "paga por lo que necesitas", con posibilidad de adaptar funcionalidades en comunidades grandes.
+* **Plan de prueba:** proponen un periodo DEMO de 1 mes para facilitar adopción inicial.
+* **Sin permanencia (declarado):** enfoque comercial orientado a reducir barreras de entrada y facilitar cambio de plan.
+* **Pagos como elemento transversal:** el módulo de pagos se presenta como independiente del plan, activable/desactivable.
+* **Personalización y desarrollo a medida (plan superior):** indican posibilidad de personalizar funcionalidades, especialmente en escenarios complejos.
 
 
 ## Comparativa de Funcionalidades
