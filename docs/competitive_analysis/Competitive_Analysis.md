@@ -243,6 +243,117 @@ Tras analizar su propuesta pública, estos son puntos donde NexUS puede ganar ve
 * **SaaS por suscripción:** Cobro mensual o anual por comunidad de vecinos.
 * **Lead Generation:** Posible monetización por módulos y servicios complementarios (servicios externos de fontanería, electricista...).
 
+---
+
+### Onzane
+#### 1. Features (Funcionalidades Clave)
+
+**A. Gestión de Incidencias y Operaciones**
+
+* **Reporte de Incidencias:** Sistema completo con ciclo de gestión (apertura, seguimiento, asignación, resolución). Permite incluir fotos, vídeos y comentarios. Asignación a proveedores, empleados o aseguradoras. Opción de apertura anónima.
+* **Gestión de Proveedores:** Onzane permite asignar incidencias directamente a proveedores desde el panel de control. La plataforma ofrece también un entorno digital que facilita a los proveedores gestionar los trabajos y actualizar la información de las incidencias que se les han asignado.
+* **Repositorio de Documentos:** Acceso ilimitado a actas de juntas, presupuestos, estatutos, pólizas y facturas. Organización en carpetas personalizable. Documentos públicos y privados con permisos específicos.
+* **Gestión Multipropiedad:** Cambio rápido entre comunidades para usuarios con varias propiedades. Sistema multicomunidad con único registro.
+* **Mancomunidades:** Agrupación de propiedades funcionando organizativamente como mancomunidades pero con una única cuenta.
+
+**B. Comunicación y Gobernanza**
+
+* **Tablón de Anuncios Digital (Comunicados):** Envío de comunicados con notificaciones push instantáneas. Posibilidad de segmentación por grupos de propiedades. Adjuntos de imágenes y documentos.
+* **Votaciones y Encuestas:** Toma de decisiones sobre asuntos comunitarios. Diferentes tipos de respuestas y alcance configurable entre vecinos.
+* **Foro Comunitario:** Espacio de comunicación organizado que mantiene la privacidad sin revelar datos personales. Permite añadir imágenes y documentos.
+* **Mensajería Completa:** Contacto directo con administrador o presidente. Mensajes con documentos adjuntos y notificaciones push.
+* **Grupos de Vecinos:** Espacios privados para colaboración entre miembros (ej: Junta de Gobierno). Comunicación y compartición de documentos privados.
+
+**C. Reservas y Pagos**
+
+* **Reservas de Zonas Comunes:** Sistema altamente flexible con horarios y franjas definibles por día. Bloqueos de fechas, horas y días de la semana. Límites de reservas por propiedad y período. Pre-reservas automatizadas con diferentes algoritmos. Control de aforo. Pago por uso definible por franja horaria. Listas de espera. Fianzas y devoluciones automáticas. Servicios opcionales por reserva.
+* **Pagos desde la App:** Monedero virtual para vecinos. Recarga con tarjeta de crédito o cargo a cuota de comunidad. Pagos directos a cuenta de la comunidad sin intermediarios. Devoluciones de saldo (ej: cancelación de reservas). Listado de transacciones en la app. Informes de recargas y pagos para contabilidad.
+* **Información Financiera:** Visualización de la situación financiera de la comunidad y de cada propiedad individual. Importación de datos desde sistemas de gestión/ERP (recibos, facturas de consumos).
+
+**D. Interacción Comunitaria**
+
+* **Gestión de Paquetería:** Sistema centralizado donde empleados (conserjes) registran paquetes recibidos. Notificaciones push cuando llega el paquete y cuando se recoge. Opción de añadir foto del paquete.
+* **Directorio de Contactos:** Acceso a todos los contactos de interés (teléfonos, direcciones, contratos, pólizas). Información actualizada y accesible desde el móvil.
+* **Eventos y Recordatorios:** Creación de eventos comunitarios con avisos automáticos y notificaciones. Visualización en pantalla principal de la app.
+* **Presupuestos Comunes:** Gestión del ciclo de compras comunitarias. Los vecinos pueden aportar ofertas y ver las demás, proceso transparente de toma de decisiones.
+* **Trámites Habituales:** Gestión de trámites comunes (cambio de cuenta, solicitud de permisos, certificados). Seguimiento del estado con notificaciones de resolución.
+* **Trámites Personalizados:** Creación de trámites a medida para necesidades específicas de cada comunidad.
+
+**E. Domótica y Control de Accesos**
+
+* **Control de Acceso:** Control de puertas comunitarias, garajes, zonas comunes y pistas deportivas desde la app. Utilización de tarjetas, llaveros o pulseras con lectores RFID/NFC. Gestión centralizada de todos los permisos. Reglas de acceso personalizadas. Llaves digitales compartibles. Permisos específicos para empleados y empresas de servicios. Integración con cámaras de lectura de matrículas para acceso automatizado a garajes.
+* **Programas de Pases:** Creación de programas de pases o carnets para residentes con reglas personalizadas. Integración con sistemas de acceso electrónico para piscinas, clubs y salas de eventos.
+* **Gestión de Vehículos:** Actualización autónoma por parte de vecinos de las matrículas de sus vehículos. Integración con sistemas de acceso con cámaras de lectura de matrículas.
+* **Control de Llaves:** Control de la situación de llaves físicas de residentes y de la comunidad. Gestión de entregas a empresas o terceros por parte de empleados.
+
+**F. Gestión de Personal y Roles**
+
+* **Uso por Empleados:** Perfiles específicos para empleados (conserjes, personal de mantenimiento) con funcionalidades adaptadas. Acceso a gestión de paquetería, incidencias y bitácora.
+* **Bitácora de Conserjería:** Control digital de la bitácora donde se anotan todos los sucesos del día a día de la comunidad.
+* **Autogestión o Control:** Configuración de si los propietarios pueden asignar vecinos/inquilinos de manera autónoma o solo desde el panel de control. Tres perfiles diferenciados (propietarios, convivientes, inquilinos) con diferentes permisos.
+* **Control de Inquilinos:** Definición global de permisos de inquilinos por parte de la comunidad. Asignación/desasignación autónoma por propietarios si así se configura.
+
+#### 2. Mercado que atacan
+
+* **Comunidades de Propietarios:** Todo tipo de comunidades, desde pequeñas hasta grandes (más de 450 comunidades activas, más 48,000 inmuebles gestionados).
+* **Presidentes de Comunidad:** Usuarios que buscan digitalizar y automatizar la gestión comunitaria.
+* **Propietarios/Inquilinos:** Residentes que desean transparencia, participación y comodidad en servicios.
+* **Administradores de Fincas:** Producto complementario que añade valor a sus servicios. Disponen de software y app específica para administradores.
+* **Empleados de Comunidades:** Conserjes y personal de mantenimiento que utilizan funcionalidades específicas.
+* **Empresas de Servicios:** Proveedores de mantenimiento que pueden usar la app gratuitamente para gestión de incidencias.
+* **Geografía:** Mercado principalmente español, adaptado a la Ley de Propiedad Horizontal (LPH). Soporte multi-idioma (8 idiomas) y zonas horarias.
+
+#### 3. Análisis de UX/UI
+
+* **Branding:** Estética corporativa y funcional, orientada principalmente a la gestión y el control administrativo. Enfoque en eficiencia operativa más que en interacción social.
+* **Accesibilidad:** Interfaz clara y ordenada con temas claro y oscuro. Multi-idioma (español, inglés, francés, alemán, neerlandés, catalán, euskera, gallego). Sin embargo, carece de modos específicos para usuarios mayores o con baja alfabetización digital.
+* **Personalización:** Alta capacidad de personalización (logo, colores, funcionalidades activables). Notificaciones personalizables por parte de cada usuario.
+* **Plataforma:** Mobile-First disponible en iOS y Android, con panel de control web para administración. Pensada para notificaciones rápidas, gestión de incidencias y operaciones diarias.
+* **Privacidad:** Diseño enfocado en máxima privacidad, sin exposición de datos personales. Modo anónimo disponible en ciertas funcionalidades, como abrir incidencias.
+
+#### 4. Tabla Comparativa y Oportunidades
+
+**Comparativa Estratégica: Onzane vs. NexUS:**
+
+| Característica | Onzane (Competencia) | NexUS |
+| :--- | :--- | :--- |
+| **Inteligencia Artificial** | Ausente. Gestión manual de actas y decisiones. | **Inteligencia artificial para actas:** Resúmenes automáticos de actas y generación de listas de tareas pendientes. |
+| **Gestión de Incidencias** | Sistema reactivo completo: los vecinos informan, se asigna a proveedores/empleados/aseguradoras, seguimiento y resolución. Sin alertas preventivas automáticas. | **Proactiva con IA:** Alerta automática al seguro y presidente, con notificaciones preventivas. |
+| **Finanzas y Pagos** | Sistema completo: monedero virtual, recarga con tarjeta o cargo a cuota, pagos directos sin intermediarios, informes para contabilidad. | **Portal de pagos:** Visualización del estado de cuenta y pago de cuotas. Posible evolución a integraciones y métricas. |
+| **Paquetería** | Gestión centralizada por conserjería con notificaciones push (llegada y recogida). Requiere personal. Opción de añadir foto. | **Gestión colaborativa P2P:** Sistema de "vecino receptor" con coordinación entre vecinos sin necesidad de portero. |
+| **Gamificación Social** | Ausente. No hay sistema de recompensas ni incentivos por participación comunitaria. | **Red de ayudas con puntos:** Recompensas simbólicas por ayuda comunitaria y participación activa. |
+| **Inclusión Digital** | Interfaz estándar con multi-idioma y temas claro/oscuro. Sin adaptación específica para usuarios mayores. | **Modo Vecino Mayor y Tutorial:** Lenguaje humano, botones grandes, guía interactiva paso a paso y accesibilidad avanzada. |
+| **Conexión Vecinal** | Foro comunitario, grupos de vecinos, directorio de contactos. Enfoque funcional sin matching social. | **Matching de Afinidad:** Algoritmo para conectar vecinos con intereses comunes (hobbies, necesidades). |
+| **Reservas de Espacios Comunes** | Sistema avanzado con horarios personalizables, pre-reservas automatizadas con algoritmos, control de aforo, pago por uso por franjas, fianzas, listas de espera, servicios opcionales. | **Reservas con integración social:** Funcionalidad estándar de reservas integrada con sistema de afinidades, permitiendo coordinar uso de instalaciones entre vecinos con intereses comunes. Valor en la conexión social |
+| **Domótica y Control de Accesos** | Sistema completo IoT: control de puertas/garajes/zonas comunes, RFID/NFC, llaves digitales compartibles, integración con cámaras de matrículas, programas de pases. | Servicios de control de acceso no contemplados. |
+| **Gestión de Proveedores** | App gratuita para proveedores. Marketplace existente con directorio de servicios. | **Base de datos de proveedores:** Directorio con contactos de distintos proveedores gestionado por los vecinos. |
+
+#### 5. Puntos débiles explotables
+
+Tras analizar Onzane y sus funcionalidades, se identifican varias oportunidades de ventaja competitiva:
+
+1. **Uso diario variable:** Onzane ofrece funcionalidades de uso cotidiano (reservas con +500 instalaciones gestionadas, paquetería centralizada, foro comunitario, control de acceso), pero carece de elementos que incentiven el engagement social diario. La aplicación es principalmente utilitaria. La incorporación de gamificación, matching de afinidades y red de ayudas vecinales podría transformar el uso funcional en participación comunitaria activa.
+
+2. **Ausencia total de Inteligencia Artificial:** Aunque Onzane digitaliza procesos operativos (notificaciones, reservas, control de accesos), carece completamente de IA para tareas cognitivas de alto valor. Las actas deben leerse manualmente, las decisiones extraerse a mano, los patrones de incidencias recurrentes no se detectan automáticamente, y no hay análisis predictivo de gastos ni sugerencias de mantenimiento preventivo. La IA podría facilitar la experiencia del presidente o administrador.
+
+3. **Brecha digital:** La interfaz es funcional, pero no está específicamente adaptada a usuarios mayores o con baja alfabetización digital. No existe un "modo simplificado" con botones grandes, lenguaje más humano o tutoriales interactivos específicos. Diseños más inclusivos con modos de uso simplificados podrían ampliar significativamente el alcance de adopción en comunidades con población senior.
+
+4. **Dimensión social limitada:** Onzane cuenta con foro comunitario, grupos de vecinos y directorio de contactos, pero el enfoque es puramente funcional. No existe gamificación, sistema de matching por afinidades, red de ayudas entre vecinos ni elementos que fomenten la construcción de comunidad más allá de la mera convivencia administrativa. La integración de elementos sociales y colaborativos podría aumentar el valor percibido y la retención de usuarios.
+
+5. **Monetización tradicional:** El modelo se centra principalmente en suscripción SaaS (pago mensual/anual por comunidad). Aunque cuentan con marketplace de proveedores, no explotan plenamente la economía colaborativa, servicios premium diferenciados por funcionalidad, o la gamificación como driver de engagement y cross-selling de servicios adicionales.
+
+#### 6. Modelo de Negocio (Estimado)
+
+* **SaaS por suscripción:** Modelo de pago por comunidad. Operan con más de 450 comunidades activas. Se posicionan como una opción más económica que la competencia.
+
+* **Servicios de Domótica:** Venta e instalación de hardware IoT (lectores RFID/NFC, controladores de puertas, cámaras de matrículas). Red de instaladores de confianza en toda España. Fuente adicional de ingresos recurrentes.
+
+* **Marketplace de Proveedores:** App gratuita para empresas de servicios que permite gestionar incidencias asignadas. Modelo de monetización no público (posible lead generation o comisiones).
+
+* **Valor añadido para Administradores:** Software y app específica para administraciones de fincas que complementa el ecosistema y genera ingresos adicionales.
+
+* **Personalización y Desarrollo a Medida:** Posibilidad de crear trámites personalizados y funcionalidades específicas para comunidades con necesidades particulares. No se detalla si es servicio adicional de pago o incluido en planes superiores.
+
 ## Comparativa de Funcionalidades
 
 Tabla comparativa de funcionalidades clave entre NexUS y las soluciones competidoras, destacando aquellas características diferenciales.
