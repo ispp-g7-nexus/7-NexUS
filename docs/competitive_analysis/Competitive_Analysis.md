@@ -452,6 +452,74 @@ Las siguientes debilidades se formulan a partir del análisis funcional y compar
 * **Ausencia de monetización directa visible en la app o web:** No se identifican en las fuentes oficiales mecanismos de monetización directa como publicidad, compras in-app, comisiones o suscripciones premium, lo que refuerza la idea de un modelo centrado en servicios externos o acuerdos comerciales.  
 ---
 
+### GestVecinos
+
+#### 1. Propósito y Visión
+
+* **Propósito:** Proveer una herramienta de escritorio (offline) para presidentes de comunidad que buscan digitalizar el "libro de cuentas" sin depender de gestores externos ni de conexión a internet constante. Su objetivo es la administración puramente funcional y local.
+* **Visión:** Mantener el control total de los datos dentro del ordenador personal del usuario, bajo la premisa del software tradicional en propiedad, donde la gestión es una tarea solitaria del presidente frente a su PC.
+* **Diferenciador Estratégico:** Se posicionan como la solución de **"Autogestión Local Gratuita"**. A diferencia de los SaaS modernos, eliminan la barrera de entrada del coste mensual y la desconfianza hacia la nube, apelando al usuario conservador.
+
+#### 2. Features (Funcionalidades Clave)
+
+##### A. Gestión Financiera y Administrativa (Core del negocio)
+
+* **Contabilidad Manual:** Sistema de entrada de datos tradicional para registrar cuotas de propietarios y facturas de proveedores. No existe sincronización bancaria; todo movimiento debe picarse a mano.
+* **Control de Morosidad:** Generación de listados básicos de deudores y estados de cuentas para imprimir.
+* **Gestión de Proveedores:** Base de datos local ("agenda") con fichas de empleados y proveedores de la finca.
+
+##### B. Operativa y Juntas
+
+* **Documentación de Juntas:** Plantillas predefinidas para la redacción de convocatorias y actas.
+* **Control de Asistencia:** Fichas digitales para registrar manualmente los asistentes presentes en la reunión.
+* **Legislación Integrada:** Acceso offline a textos legales (LPH), aunque con alto riesgo de desactualización normativa debido a la falta de mantenimiento del software (última versión 2018).
+
+##### C. Mantenimiento y Zonas Comunes
+
+* **Inventario de Activos:** Módulo para listar elementos comunes (ascensores, extintores) y asignarles tareas de mantenimiento.
+* **Gestión Estática:** El presidente anota las averías, pero el sistema no notifica al técnico ni permite al vecino reportar nada. Es un "cuaderno de bitácora" digital unidireccional.
+
+#### 3. Mercado que atacan
+
+* **Presidentes "Do it Yourself":** Usuarios de comunidades pequeñas (menos de 15 vecinos) que gestionan la finca en sus ratos libres para ahorrar costes.
+* **Perfil Tecnológico Conservador:** Usuarios de PC Windows acostumbrados a software de la década de 2000, que desconfían de las apps móviles y prefieren tener el dato "en su disco duro".
+* **Geografía:** España (adaptado a la estructura de la LPH, aunque no a sus últimas reformas).
+
+#### 4. Análisis de UX/UI
+
+* **Branding:** Estética funcional y obsoleta ("Windows Forms"), típica del software corporativo de hace 15 años. Transmite rigidez y burocracia.
+* **Tecnología:** **Software Legacy (Abandonware).** Es un ejecutable (.EXE) instalable. Carece de versión web, nube o app móvil. La experiencia de usuario se limita al teclado y ratón en un escritorio fijo.
+* **Usabilidad:** Curva de aprendizaje baja por simplicidad, pero operativa tediosa (introducción de datos campo a campo). No existe concepto de "experiencia de usuario" moderna.
+
+#### 5. Tabla Comparativa y Oportunidades
+
+**Comparativa Estratégica: GestVecinos vs. NexUS**
+
+| Característica | GestVecinos (Competencia Legacy) | NexUS (Nuestra Propuesta) |
+| --- | --- | --- |
+| **Inteligencia Artificial** | **Nula:** Base de datos local simple y estática. | **IA Generativa:** Automatización de actas, lectura de facturas y predicción de gastos. |
+| **Arquitectura** | **Local / Aislada:** Solo funciona en el PC del presidente. Si el PC falla, adiós datos. | **Cloud / Mobile-First:** Accesible 24/7 desde cualquier lugar y dispositivo con backups automáticos. |
+| **Gestión Bancaria** | **Manual:** El usuario debe teclear cada movimiento del extracto. | **Open Banking:** Conciliación bancaria automática en tiempo real. |
+| **Experiencia de Usuario** | **Obsolescente:** Interfaz gris de escritorio, sin app móvil. | **Moderna e Inclusiva:** Diseño fluido y **Modo Vecino Mayor** para romper la brecha digital. |
+| **Cohesión Social** | **Inexistente:** El vecino es un sujeto pasivo (un apunte contable). | **Comunidad Activa:** Afinidades, Gamificación y Red de Ayudas P2P. |
+| **Actualizaciones** | **Detenidas (2018):** Riesgo legal y de seguridad crítico. | **Continuas:** Siempre actualizado a la última normativa (LPH, RGPD). |
+
+#### 6. Puntos débiles explotables
+
+Tras analizar su estado actual de "abandonware", se identifican áreas críticas donde NexUS tiene una ventaja competitiva absoluta:
+
+* **Deuda Técnica Insalvable:** Al ser un software de 2018 no mantenido, su uso en Windows 11 o superior puede generar inestabilidad. NexUS ofrece tecnología de vanguardia y seguridad garantizada.
+* **Invisibilidad del Vecino:** En GestVecinos, el propietario no tiene acceso a nada; debe pedirle los papeles al presidente. NexUS ofrece transparencia total en el bolsillo del vecino, eliminando la desconfianza.
+* **Ineficiencia Operativa (El "Picadatos"):** Obliga al presidente a trabajar para el software (introduciendo datos). NexUS hace que el software trabaje para el presidente (automatizando procesos).
+* **Riesgo Legal y Fiscal:** No cumple con los estándares modernos de protección de datos (RGPD) ni facturación verificable (VeriFactu), exponiendo a la comunidad a sanciones.
+
+#### 7. Modelo de Negocio (Observado)
+
+* **Licencia / Freeware:** Modelo tradicional de descarga gratuita (posiblemente monetizaba con publicidad en web o servicios premium ya discontinuados).
+* **Sin Recurrencia:** Al no ser SaaS, carece de músculo financiero para ofrecer soporte técnico o actualizaciones, lo que explica su estancamiento.
+* **Soporte:** Inexistente. El usuario está solo ante cualquier error del programa.
+---
+
 ## Comparativa de Funcionalidades
 
 Tabla comparativa de funcionalidades clave entre NexUS y las soluciones competidoras, destacando aquellas características diferenciales.
