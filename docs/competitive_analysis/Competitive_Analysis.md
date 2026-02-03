@@ -29,7 +29,147 @@
 
 ## Resumen y Propuesta
 
-En este apartado se presenta una visión general del proyecto **NexUS**, junto con la propuesta de valor principal frente a las soluciones competidoras existentes en el mercado.
+### Visión del Proyecto NexUS
+
+**NexUS** es una plataforma de gestión comunitaria que trasciende la administración tradicional de comunidades de vecinos. NexUS pone al vecino en el centro, priorizando la experiencia de usuario, la convivencia social y la aplicación práctica de Inteligencia Artificial para resolver problemas reales del día a día.
+
+**Nuestra misión:** Transformar comunidades de vecinos de meros conjuntos de propiedades en redes de colaboración activa, donde la tecnología facilita tanto la gestión eficiente como la construcción de vínculos sociales significativos.
+
+---
+
+### El Problema que Aborda NexUS
+
+Las comunidades de vecinos presentan una serie de dificultades recurrentes en su gestión cotidiana que las soluciones actuales no siempre resuelven desde el punto de vista del vecino.
+
+#### 1. **Complejidad en la Gestión de la Información**
+- Actas de juntas extensas y difíciles de comprender
+- Información relevante dispersa en múltiples canales
+- Dificultad para acceder a acuerdos y decisiones pasadas
+- Falta de claridad en las comunicaciones comunitarias
+
+#### 2. **Baja Participación Vecinal**
+- Escasa implicación de los vecinos en la vida comunitaria
+- Comunicación limitada a momentos puntuales (incidencias o juntas)
+- Poca visibilidad del estado de los asuntos comunes
+
+#### 3. **Barreras de Accesibilidad Digital**
+- Herramientas poco intuitivas para usuarios no técnicos
+- Dificultades de uso para personas mayores
+- Falta de adaptación a distintos niveles de alfabetización digital
+
+---
+
+### Propuesta de Valor de NexUS
+
+NexUS redefine la gestión de comunidades de vecinos al ir más allá de la mera digitalización de procesos administrativos. Frente a las soluciones actuales, centradas en incidencias, comunicaciones, reservas y gestión general, NexUS introduce un enfoque diferencial basado en **automatización cognitiva, construcción de comunidad y accesibilidad universal**.
+
+La propuesta de valor de NexUS se articula en tres pilares complementarios, que atacan problemas estructurales no resueltos por las plataformas existentes.
+
+#### Pilar 1: Automatización Cognitiva mediante Inteligencia Artificial
+
+La mayoría de soluciones actuales digitalizan procesos, pero siguen dependiendo completamente de la intervención humana para comprender, resumir y tomar decisiones. NexUS introduce la inteligencia artificial como núcleo del sistema, reduciendo la carga mental y organizativa de presidentes y vecinos.
+
+La IA permite transformar información compleja y dispersa (actas, decisiones, incidencias recurrentes) en conocimiento accionable, facilitando la gobernanza, mejorando la transparencia y anticipando problemas antes de que se conviertan en conflictos o urgencias.
+
+Este enfoque desplaza la gestión comunitaria de un modelo reactivo a uno proactivo y asistido, donde el sistema ayuda a interpretar, priorizar y actuar.
+
+#### Pilar 2: Comunidad Activa y Economía Colaborativa Vecinal
+
+Las plataformas actuales conciben a la comunidad como un conjunto de usuarios que gestionan problemas. NexUS la concibe como una red social de proximidad con propósito, diseñada para fomentar la colaboración cotidiana entre vecinos.
+
+El sistema facilita la creación de vínculos a partir de afinidades, necesidades compartidas y ayuda mutua, transformando tareas individuales (recibir paquetes, pequeños favores, coordinación diaria) en dinámicas colectivas.
+
+Mediante incentivos simbólicos y mecánicas sociales, NexUS impulsa la participación voluntaria y sostenida, generando capital social, mayor sensación de pertenencia y uso recurrente de la aplicación más allá de situaciones puntuales.
+
+#### Pilar 3: Accesibilidad Universal y Diseño Inclusivo
+
+Uno de los principales frenos a la adopción tecnológica en comunidades es la brecha digital. NexUS aborda este problema desde el diseño, no como una adaptación posterior.
+
+La plataforma está pensada para ser usable por cualquier vecino, independientemente de su edad o nivel de alfabetización digital. Esto se traduce en interfaces simplificadas, lenguaje comprensible y acompañamiento guiado en el uso de la aplicación.
+
+El objetivo no es solo que la herramienta exista, sino que toda la comunidad pueda usarla de forma real y autónoma, evitando exclusiones y garantizando una adopción amplia y sostenida.
+
+---
+
+### Funcionalidades Core de NexUS
+
+NexUS integra las funcionalidades esenciales para la gestión comunitaria con innovaciones que generan uso diario y construcción de comunidad:
+
+#### **Gestión Administrativa Inteligente**
+
+**1. Actas de Reunión Automatizadas**
+- Resumen automático de actas subidas a la plataforma
+- Extracción de decisiones clave y acciones pendientes
+- Asignación automática de tareas a responsables
+
+**2. Votaciones Digitales**
+- Toma de decisiones rápidas sin necesidad de reuniones físicas
+- Sistema de encuestas para decisiones operativas
+
+**3. Repositorio Documental**
+- Acceso a documentación legal, actas, presupuestos y normativas
+- Organización clara y búsqueda simplificada
+- Disponible desde cualquier dispositivo
+
+**4. Portal de Pagos**
+- Visualización del estado de cuenta personal
+- Pago de cuotas comunitarias desde la aplicación
+- Transparencia financiera para todos los vecinos
+
+#### **Gestión Operativa Proactiva**
+
+**5. Sistema de Incidencias con Mantenimiento Preventivo**
+- **Reporte inteligente:** Los vecinos reportan problemas con fotos y descripción
+- **Aviso automático:** Si se detecta un desperfecto, se avisa directamente al seguro y al presidente
+- **Mantenimiento preventivo:** Alertas automáticas (ej: "Quedan 10 días para la revisión del ascensor")
+- **Seguimiento transparente:** Todos los vecinos pueden ver el estado de cada incidencia
+- **Valor diferencial:** Gestión proactiva vs. reactiva
+
+**6. Reserva de Espacios Comunes**
+- Funcionalidad de reservas para pistas de pádel, piscinas, merenderos
+- Integración sencilla y UX mejorada
+- **Conectada con sistema de afinidades:** Facilita la coordinación entre vecinos con intereses comunes
+- **Valor diferencial:** No solo reservas, sino conexión social
+
+**7. Base de Datos de Proveedores**
+- Directorio con contactos de fontaneros, electricistas, jardineros, limpiadoras
+- Gestión comunitaria del directorio por parte de los vecinos
+- Acceso rápido a profesionales de confianza
+
+#### **Comunicación y Convivencia**
+
+**8. Muro Virtual y Chat Vecinal**
+- Tablón de anuncios digital para noticias importantes
+- Foros de comunicación entre vecinos
+- Notificaciones para avisos críticos
+
+**9. Sistema de Afinidades**
+- Perfiles con categorías de intereses
+- Apartado de recomendaciones automáticas
+- Conexión de vecinos que buscan compañeros para actividades
+
+**10. Red de Ayudas Gamificada (Sistema +1)**
+- Anuncios de vecinos que necesitan ayuda
+- Sistema de ofrecimiento con recompensas simbólicas
+- Gamificación que incentiva la colaboración sostenida
+
+**11. Gestión de Paquetería P2P**
+- Sistema de "vecino receptor" sin necesidad de portero
+- Cada vecino indica disponibilidad para recibir paquetes
+- Coordinación colaborativa con trazabilidad
+
+#### **Inclusión y Accesibilidad**
+
+**12. Modo Vecino Mayor (Original)**
+- Interfaz adaptada con botones grandes
+- Texto simple y lenguaje humano
+- Accesibilidad para personas con brecha digital
+
+**13. Tutorial Interactivo y Soporte Contextual**
+- Guía paso a paso para entender las funcionalidades
+- Diseño pensado para que todos puedan usar la aplicación
+
+---
 
 
 ## Análisis de la Competencia
@@ -499,7 +639,7 @@ Las siguientes debilidades se formulan a partir del análisis funcional y compar
 | --- | --- | --- |
 | **Inteligencia Artificial** | **Nula:** Base de datos local simple y estática. | **IA Generativa:** Automatización de actas, lectura de facturas y predicción de gastos. |
 | **Arquitectura** | **Local / Aislada:** Solo funciona en el PC del presidente. Si el PC falla, adiós datos. | **Cloud / Mobile-First:** Accesible 24/7 desde cualquier lugar y dispositivo con backups automáticos. |
-| **Gestión Bancaria** | **Manual:** El usuario debe teclear cada movimiento del extracto. | **Open Banking:** Conciliación bancaria automática en tiempo real. |
+| **Gestión Bancaria** | **Manual:** El usuario debe teclear cada movimiento del extracto. | **Transparencia financiera simplificada:** Visualización clara del estado de cuenta, cuotas y pagos desde la app. |
 | **Experiencia de Usuario** | **Obsolescente:** Interfaz gris de escritorio, sin app móvil. | **Moderna e Inclusiva:** Diseño fluido y **Modo Vecino Mayor** para romper la brecha digital. |
 | **Cohesión Social** | **Inexistente:** El vecino es un sujeto pasivo (un apunte contable). | **Comunidad Activa:** Afinidades, Gamificación y Red de Ayudas P2P. |
 | **Actualizaciones** | **Detenidas (2018):** Riesgo legal y de seguridad crítico. | **Continuas:** Siempre actualizado a la última normativa (LPH, RGPD). |
