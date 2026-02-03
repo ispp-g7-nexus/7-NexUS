@@ -408,7 +408,7 @@ Tras analizar Onzane y sus funcionalidades, se identifican varias oportunidades 
 | **Reservas** | Funcionalidad básica de consulta o gestión simple. | **Gestión de Espacios:** Control de aforos, reservas y reglas de uso de zonas comunes. |
 
 
-#### 6.Puntos débiles explotables
+#### 6. Puntos débiles explotables
 Las siguientes debilidades se formulan a partir del análisis funcional y comparativo de ZiviApp, considerando exclusivamente la información observable en sus fuentes públicas y su propuesta de valor comunicada. Estas hipótesis permiten identificar oportunidades de diferenciación para soluciones alternativas como NexUS.
 
 1. **Hábito semanal frente a uso esporádico:**  
