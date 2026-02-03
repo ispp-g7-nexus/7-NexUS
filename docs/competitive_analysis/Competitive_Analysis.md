@@ -808,6 +808,150 @@ Fynkus no resuelve el problema de "no estoy en casa para recoger mi paquete".
 * SaaS Freemium: Versión gratuita limitada y versión PRO con coste por vivienda (aprox. 0,10€ al mes).
 * Servicios de Agregación: Monetización a través de la infraestructura tecnológica de conexión bancaria.
 
+---
+
+### Fincapp
+#### 1. Features (Funcionalidades Clave)
+
+**A. Gestión Administrativa y Documental**
+
+* **Repositorio de Documentación Comunitaria:**  
+  Fincapp permite a los propietarios acceder a la documentación oficial que el administrador de fincas pone a disposición de la comunidad. Esto incluye actas de juntas, presupuestos anuales, normas de régimen interno, pólizas de seguros, contratos de mantenimiento y otros archivos relevantes.  
+  La lógica es centralizada: los documentos no los suben los vecinos, sino el administrador desde su sistema de gestión. El vecino es un usuario consultor, no gestor documental activo.
+
+* **Consulta del Estado de Cuenta Individual:**  
+  Cada propietario puede ver su situación económica dentro de la comunidad: cuotas ordinarias, derramas, recibos emitidos, pagados y pendientes. Funciona como una “ventana” al módulo contable del administrador.  
+  El objetivo principal es transparencia financiera, pero desde un punto de vista individual, no analítico ni predictivo.
+
+* **Histórico de Recibos y Justificantes:**  
+  Acceso a recibos anteriores, con posibilidad de descargarlos como comprobante de pago. Útil para gestiones fiscales o administrativas del propietario.
+
+* **Actualización de Datos Personales:**  
+  El usuario puede modificar teléfono, email o dirección de notificación. Reduce llamadas y tareas administrativas repetitivas al despacho del administrador.
+
+
+**B. Comunicación Administrador–Vecino**
+
+* **Mensajería Directa con el Administrador:**  
+  Canal de comunicación privado entre propietario y administración. Sirve para consultas, solicitudes de certificados, dudas sobre recibos o incidencias.  
+  Es una comunicación vertical, no social. No está pensada para interacción entre vecinos, sino para agilizar la gestión administrativa.
+
+* **Comunicados Oficiales de la Comunidad:**  
+  El administrador puede enviar avisos generales: obras, cortes de suministros, convocatorias de juntas, recordatorios de pagos, etc.  
+  Funciona como tablón digital, pero unidireccional (administrador -> vecinos).
+
+* **Sistema de Notificaciones Push:**  
+  La app avisa cuando hay nuevos comunicados, mensajes o actualizaciones. Refuerza el papel de la app como canal oficial de información.
+
+
+**C. Gestión de Incidencias**
+
+* **Reporte de Incidencias en Zonas Comunes:**  
+  El vecino puede informar de averías o desperfectos (luz fundida, puerta rota, fuga de agua, etc.), generalmente mediante formulario con descripción y, según la configuración, fotos.
+
+* **Flujo de Gestión Centralizado:**  
+  Una vez enviada, la incidencia pasa al administrador, que la gestiona con proveedores. El vecino no interactúa con el proveedor ni ve procesos internos detallados.  
+  Es un sistema reactivo: actúa cuando el vecino informa, no hay alertas automáticas de mantenimiento preventivo.
+
+* **Seguimiento Básico del Estado:**  
+  El usuario puede ver si la incidencia está abierta, en proceso o cerrada, pero sin capa de inteligencia ni análisis de patrones.
+
+
+**D. Pagos y Finanzas**
+
+* **Visualización de Cuotas y Derramas:**  
+  El propietario consulta importes emitidos, fechas y estado (pagado/pendiente).
+
+* **Pago Online (dependiendo del administrador):**  
+  Algunas integraciones permiten abonar recibos desde la app mediante pasarela de pago. Esto depende del sistema del administrador, no siempre está activo.
+
+* **Historial de Movimientos:**  
+  Registro cronológico de cargos y pagos, útil para control personal.
+
+
+**E. Funcionalidades Complementarias**
+
+* **Reservas de Zonas Comunes (según comunidad):**  
+  Algunas comunidades pueden activar la reserva de espacios como salas, pistas o zonas comunes. No es el eje principal del producto, sino funcionalidad adicional.
+
+* **Información General de la Comunidad:**  
+  Datos básicos del edificio, contactos relevantes (administrador, presidente), normas internas.
+
+
+#### 2. Mercado que atacan
+
+* **Administradores de Fincas:** Su cliente principal es el despacho administrador. Fincapp funciona como extensión digital del software de gestión del administrador.
+* **Comunidades de Propietarios:** Comunidades que ya trabajan con un administrador que usa su sistema.
+* **Propietarios individuales:** Usuarios finales que acceden a información económica y documental.
+* **Geografía:** Principalmente mercado español, alineado con el modelo de administración de fincas tradicional.
+* **Tipo de producto:** Herramienta complementaria al software de gestión del administrador, no red social vecinal.
+
+
+#### 3. Análisis de UX/UI
+
+* **Branding:** Imagen sobria, corporativa y orientada a la gestión administrativa. Se percibe como herramienta profesional más que comunitaria.
+* **Enfoque de uso:** Diseñada para consultas puntuales (ver recibos, enviar mensaje, revisar acta), no para uso social diario.
+* **Curva de aprendizaje:** Baja en funciones básicas, pero limitada en interacción entre vecinos.
+* **Plataforma:** Aplicación móvil vinculada al sistema del administrador.
+* **Privacidad:** Flujo controlado por la administración. No hay exposición entre vecinos ni perfiles sociales.
+
+
+#### 4. Tabla Comparativa y Oportunidades
+
+**Comparativa Estratégica: Fincapp vs. NexUS**
+
+| Característica | Fincapp (Competencia) | NexUS |
+| :--- | :--- | :--- |
+| **Enfoque Principal** | Gestión administrativa ligada al administrador | Comunidad centrada en el vecino y la convivencia |
+| **Inteligencia Artificial** | No incorpora IA para actas ni análisis de decisiones | IA en actas: Resumen automático y generación de tareas |
+| **Comunicación Vecinal** | Comunicación vertical (vecino–administrador) | Horizontal + social: Afinidades, ayudas, red comunitaria |
+| **Incidencias** | Formulario básico gestionado por administración | Conexión directa a seguro + alertas preventivas |
+| **Dimensión Social** | Prácticamente inexistente | Red de ayudas, puntos, matching por intereses |
+| **Accesibilidad** | Interfaz estándar | Modo vecino mayor + lenguaje simplificado |
+| **Paquetería** | No orientado a esta necesidad | Sistema P2P de recepción de paquetes entre vecinos |
+| **Uso de la app** | Esporádico | Uso cotidiano y comunitario |
+
+
+#### 5. Puntos débiles explotables
+
+1. **No genera comunidad, solo digitaliza trámites**  
+   Fincapp está diseñada como una extensión del despacho del administrador, no como una plataforma vecinal. No existen herramientas que fomenten la relación entre vecinos, la colaboración o el sentimiento de pertenencia.  
+   El usuario entra para “consultar algo” (un recibo, un acta, un aviso), pero no para interactuar. Esto limita enormemente el engagement y convierte la app en un portal pasivo, no en un ecosistema comunitario.
+
+2. **Dependencia total del administrador**  
+   El valor de la aplicación depende directamente del nivel de implicación del administrador de fincas/comunidades.  
+   Si el administrador no sube documentos con frecuencia, no responde rápido o no activa funcionalidades adicionales, la experiencia del vecino se degrada. El vecino no tiene capacidad de dinamizar la plataforma por sí mismo.
+
+3. **Sin Inteligencia Artificial ni automatización cognitiva**  
+   Aunque digitaliza información, no ayuda a entenderla.  
+   Las actas siguen siendo documentos largos que el usuario debe leer completos. No hay resúmenes automáticos, extracción de decisiones, generación de tareas pendientes ni detección de patrones en incidencias o gastos.  
+   Esto deja sin cubrir uno de los mayores dolores reales de los vecinos: la sobrecarga de información administrativa.
+
+4. **Uso esporádico, no genera hábito**  
+   La app se usa de forma puntual: ver un recibo, pagar una cuota, enviar un mensaje.  
+   No existen funcionalidades de uso diario como interacción social, ayudas vecinales, gestión de paquetes, afinidades o participación continua. Esto reduce la retención y la percepción de valor continuo.
+
+5. **Experiencia impersonal y administrativa**  
+   El diseño y la lógica de uso están orientados a procesos, no a personas.  
+   No hay adaptación por perfiles (personas mayores, usuarios con baja alfabetización digital), ni lenguaje simplificado, ni tutoriales guiados. Esto puede generar barreras de uso en comunidades con población envejecida.
+
+6. **Modelo centrado en la burocracia, no en la vida real del edificio**  
+   Fincapp cubre la parte formal (recibos, actas, avisos), pero no resuelve problemas cotidianos como convivencia, ayuda entre vecinos, coordinación informal, o necesidades derivadas del día a día (paquetería, afinidades, colaboración).
+
+
+#### 6. Modelo de Negocio (Estimado)
+
+* **Modelo B2B2C (Administrador como cliente principal):**  
+  Fincapp no se comercializa directamente al vecino, sino al despacho de administración de fincas. El administrador es quien contrata el servicio y lo ofrece a sus comunidades como valor añadido.
+
+* **SaaS vinculado al software de gestión del administrador:**  
+  La aplicación suele formar parte de un ecosistema mayor (programa de contabilidad, gestión de incidencias, bases de datos de propietarios). La app actúa como interfaz móvil de ese sistema.
+
+* **Escasa diversificación de ingresos:**  
+  No se observan modelos basados en economía colaborativa, marketplace vecinal, servicios premium por funcionalidades sociales, ni monetización de interacción comunitaria. El valor está en la eficiencia administrativa, no en la dinamización de la comunidad.
+
+---
+
 ## Comparativa de Funcionalidades
 
 Tabla comparativa de funcionalidades clave entre NexUS y las soluciones competidoras, destacando aquellas características diferenciales.
