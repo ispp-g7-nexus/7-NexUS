@@ -518,6 +518,73 @@ Tras analizar su estado actual de "abandonware", se identifican áreas críticas
 * **Licencia / Freeware:** Modelo tradicional de descarga gratuita (posiblemente monetizaba con publicidad en web o servicios premium ya discontinuados).
 * **Sin Recurrencia:** Al no ser SaaS, carece de músculo financiero para ofrecer soporte técnico o actualizaciones, lo que explica su estancamiento.
 * **Soporte:** Inexistente. El usuario está solo ante cualquier error del programa.
+
+---
+
+### Plusvecinos (PropApp)
+
+#### 1. Propósito y Visión
+
+* **Propósito:** Democratizar la gestión de la comunidad devolviendo el "control de la información" a los propietarios. Buscan eliminar la dependencia total del Administrador de Fincas para acceder a datos básicos y acabar con la informalidad e invasión de privacidad de los grupos de WhatsApp.
+* **Visión:** Ser el ecosistema digital integral (*PropTech*) donde conviven propietarios, inquilinos y proveedores, transformando la comunidad en una "Red Social Privada" con validez legal certificada en sus decisiones.
+* **Diferenciador Estratégico:** Su fuerte alianza con certificadores legales (Evicertia) para otorgar validez jurídica a las votaciones online, posicionándose como la herramienta de "democracia digital" más segura frente a soluciones informales.
+
+#### 2. Features (Funcionalidades Clave)
+
+**A. Gobernanza y Legalidad (Punto Fuerte)**
+* **Voto Telemático Certificado:** Integración con terceros certificadores para que las decisiones tomadas en la app tengan peso legal, permitiendo juntas híbridas o totalmente online con garantías.
+* **Encuestas Vinculantes:** Herramientas de sondeo para decisiones operativas con resultados auditables.
+
+**B. Operativa y Gestión**
+* **Gestor de Incidencias con Trazabilidad:** Reporte de averías con fotos y seguimiento de estado visible para todos los vecinos (evitando duplicidades). Conexión directa con proveedores registrados.
+* **Calendario de Reservas:** Gestión de zonas comunes (pádel, piscina, salas) con control de bloqueos, tiempos y aforos.
+* **Gestor Documental en la Nube:** Repositorio que pertenece a la comunidad (no al administrador), garantizando que la información histórica se conserve aunque se cambie de gestor.
+
+**C. Capa Social y Privacidad**
+* **Privacidad (Anti-WhatsApp):** Sistema de comunicación interna (Muro y Mensajería) que oculta los datos personales como el teléfono o email, protegiendo la privacidad del vecino.
+* **Módulo de Intereses:** Funcionalidad social que permite a los vecinos etiquetar sus aficiones para encontrar personas afines en el edificio.
+* **Ahorro y Proveedores:** Herramientas para comparar servicios y buscar la bajada de la cuota comunitaria mediante la optimización de contratos.
+
+#### 3. Mercado que atacan
+
+* **Comunidades Autogestionadas:** Su mensaje de "toma el control" resuena en comunidades que sienten que su gestión actual es opaca.
+* **Promotores Inmobiliarios (Obra Nueva):** Estrategia B2B para entregar edificios nuevos con la app preinstalada como un valor añadido de "Edificio Inteligente".
+* **Administradores de Fincas:** Ofrecen la herramienta también al administrador para automatizar la recepción de incidencias, aunque el enfoque de marketing empodera más al vecino.
+
+#### 4. Análisis de UX/UI
+
+* **Branding:** Imagen moderna y tecnológica, utilizando terminología de red social ("Muro", "Perfil", "Intereses").
+* **Usabilidad:** Interfaz limpia y funcional, aunque densa en opciones debido a la gran cantidad de módulos disponibles.
+* **Enfoque:** Híbrido entre herramienta de trabajo y red social, lo cual a veces diluye la experiencia de usuario si este busca solo resolución operativa inmediata.
+
+#### 5. Tabla Comparativa y Oportunidades
+
+**Comparativa Estratégica: Plusvecinos vs. NexUS**
+
+| Característica | Plusvecinos (Competencia) | NexUS (Nuestra Propuesta) |
+| :--- | :--- | :--- |
+| **Inteligencia Artificial** | **Limitada:** Digitalización de procesos manuales, pero sin IA generativa para contenidos. | **IA Generativa:** Resumen automático de actas, redacción de comunicados y asistentes de decisión. |
+| **Gestión de Incidencias** | **Reactiva/Social:** Reporte manual y discusión en el muro sobre la avería. | **Proactiva/Preventiva:** Predicción de fallos, mantenimiento preventivo y conexión automática con seguros. |
+| **Cohesión Social** | **Pasiva (Intereses):** Etiquetado de hobbies para que los vecinos se busquen por su cuenta. | **Activa (Gamificación):** Sistema de **Red de Ayudas y Puntos (+1)** que incentiva la interacción real y recurrente. |
+| **Votaciones** | **Legalista:** Foco extremo en la certificación jurídica del voto (Evicertia). | **Facilitadora:** Foco en la participación y en la "digestión" de la propuesta mediante IA antes de votar. |
+| **Inclusión Digital** | Interfaz estándar moderna. Puede resultar compleja para mayores por el exceso de funciones sociales. | **Modo Vecino Mayor:** UX radicalmente simplificada para garantizar que nadie se quede fuera por brecha digital. |
+| **Logística (Paquetería)** | No destacan un flujo específico P2P, se centran más en proveedores externos. | **Logística P2P:** Solución específica para la "última milla" dentro del edificio con vecinos receptores. |
+
+#### 6. Puntos débiles explotables
+
+Tras analizar su modelo, se identifican las siguientes áreas críticas donde NexUS tiene ventaja competitiva:
+
+1.  **Exceso de "Ruido Social":** Al intentar replicar dinámicas de redes sociales (muros, comentarios), pueden generar fatiga en usuarios que solo buscan utilidad. NexUS se centra en la **gamificación con propósito** (ayuda mutua), no en la socialización vacía.
+2.  **IA Inexistente en Documentación:** Plusvecinos almacena documentos, pero no los "procesa". NexUS ofrece una ventaja clara al **leer y resumir** actas y contratos mediante IA, ahorrando tiempo real al usuario.
+3.  **Brecha Generacional:** Su apuesta por una "SuperApp" llena de funciones deja de lado a la tercera edad. El **Modo Vecino Mayor** de NexUS es un diferenciador clave para la adopción total en el edificio.
+4.  **Modelo de Negocio (Conflictos de Interés):** Su énfasis en el "ahorro" a menudo implica redirigir a proveedores patrocinados. NexUS ofrece un modelo más transparente centrado en la economía colaborativa interna (P2P).
+
+#### 7. Modelo de Negocio (Observado)
+
+* **Freemium:** Acceso gratuito a funcionalidades básicas para captar usuarios.
+* **Pago por Uso (Legal):** Cobro por funcionalidades avanzadas como la certificación legal de juntas y votaciones.
+* **Marketplace (Lead Generation):** Monetización a través de conectar a la comunidad con proveedores recomendados (seguros, alarmas, reformas).
+* **Licencias B2B:** Acuerdos con promotoras inmobiliarias para implantación masiva en nuevas construcciones.
 ---
 
 ## Comparativa de Funcionalidades
