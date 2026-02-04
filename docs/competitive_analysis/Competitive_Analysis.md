@@ -458,7 +458,7 @@ Tras analizar su propuesta pública, estos son puntos donde NexUS puede ganar ve
 | Característica | Onzane (Competencia) | NexUS |
 | :--- | :--- | :--- |
 | **Inteligencia Artificial** | Ausente. Gestión manual de actas y decisiones. | **Inteligencia artificial para actas:** Resúmenes automáticos de actas y generación de listas de tareas pendientes. |
-| **Gestión de Incidencias** | Sistema reactivo completo: los vecinos informan, se asigna a proveedores/empleados/aseguradoras, seguimiento y resolución. Sin alertas preventivas automáticas. | **Proactiva con IA:** Alerta automática al seguro y presidente, con notificaciones preventivas. |
+| **Gestión de Incidencias** | Sistema reactivo completo: los vecinos informan, se asigna a proveedores/empleados/aseguradoras, seguimiento y resolución. Sin alertas preventivas automáticas. | **Proactiva:** Alerta automática al seguro y presidente, con notificaciones preventivas. |
 | **Finanzas y Pagos** | Sistema completo: monedero virtual, recarga con tarjeta o cargo a cuota, pagos directos sin intermediarios, informes para contabilidad. | **Portal de pagos:** Visualización del estado de cuenta y pago de cuotas. Posible evolución a integraciones y métricas. |
 | **Paquetería** | Gestión centralizada por conserjería con notificaciones push (llegada y recogida). Requiere personal. Opción de añadir foto. | **Gestión colaborativa P2P:** Sistema de "vecino receptor" con coordinación entre vecinos sin necesidad de portero. |
 | **Gamificación Social** | Ausente. No hay sistema de recompensas ni incentivos por participación comunitaria. | **Red de ayudas con puntos:** Recompensas simbólicas por ayuda comunitaria y participación activa. |
@@ -954,8 +954,36 @@ Fynkus no resuelve el problema de "no estoy en casa para recoger mi paquete".
 
 ## Comparativa de Funcionalidades
 
-Tabla comparativa de funcionalidades clave entre NexUS y las soluciones competidoras, destacando aquellas características diferenciales.
+| Funcionalidad / Eje estratégico | **NexUS** | VecinosEnRed | TusVecinos | TuComunidad | Onzane | ZiviApp | GestVecinos | PlusVecinos | Fynkus | Fincapp |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Comunicación vecinal unificada** | :heavy_check_mark: Completa | :heavy_minus_sign: Básica | :heavy_check_mark: Moderada | :heavy_minus_sign: Básica | :heavy_check_mark: Completa | :heavy_minus_sign: Básica | :x: Limitada | :heavy_minus_sign: Básica | :x: No | :heavy_minus_sign: Básica |
+| **Gestión de incidencias** | :heavy_check_mark: Proactiva | :heavy_check_mark: Reactiva | :heavy_check_mark: Reactiva | :heavy_check_mark: Reactiva | :heavy_check_mark: Avanzada | :heavy_check_mark: Reactiva | :heavy_minus_sign: Manual | :heavy_check_mark: Reactiva | :heavy_minus_sign: Limitada | :heavy_check_mark: Reactiva |
+| **Repositorio documental** | :heavy_check_mark: Integral | :heavy_check_mark: Estático | :heavy_check_mark: Sí | :heavy_check_mark: Sí | :heavy_check_mark: Ilimitado | :heavy_check_mark: Sí | :heavy_check_mark: Offline | :heavy_minus_sign: Parcial | :heavy_minus_sign: Consulta | :heavy_check_mark: Sí |
+| **Reservas de espacios comunes** | :heavy_check_mark: Social+UX | :heavy_minus_sign: Básica | :heavy_check_mark: Sí | :heavy_minus_sign: Básica | :heavy_check_mark: Avanzado | :heavy_minus_sign: Básica | :x: No | :heavy_minus_sign: Funcional | :heavy_minus_sign: Funcional | :heavy_check_mark: Sí |
+| **Pagos / Finanzas integrados** | :heavy_check_mark: Pago de cuotas | :heavy_check_mark: Contable | :heavy_minus_sign: Integrado | :heavy_minus_sign: Básico | :heavy_check_mark: Monedero | :heavy_minus_sign: Consulta | :x: Manual | :x: Limitado | :heavy_minus_sign: Consulta | :heavy_minus_sign: Consulta |
+| **Votaciones / Encuestas** | :heavy_check_mark: Sí | :heavy_minus_sign: Básico | :heavy_check_mark: Sí | :heavy_check_mark: Sí | :heavy_check_mark: Sí | :heavy_check_mark: Sí | :heavy_minus_sign: Limitado | :heavy_minus_sign: Limitado | :heavy_minus_sign: Consultivo | :heavy_check_mark: Sí |
+| **Roles y permisos** | :heavy_check_mark: Sí | :heavy_minus_sign: Básico | :heavy_check_mark: Sí | :heavy_check_mark: Sí | :heavy_check_mark: Perfiles | :heavy_minus_sign: Básico | :x: No | :heavy_minus_sign: Básico | :heavy_minus_sign: Sí | :heavy_minus_sign: Sí |
+| **Funciones sociales (P2P)** | :heavy_check_mark: Sí | :x: No | :x: No | :x: No | :heavy_minus_sign: Básicas | :heavy_minus_sign: Básicas | :x: No | :x: No | :x: No | :x: No |
+| **Gestión con IA** | :heavy_check_mark: Sí | :x: No | :x: No | :x: No | :x: No | :x: No | :x: No | :x: No | :x: No | :x: No |
+| **Modo Senior / Accesib.** | :heavy_check_mark: Sí | :x: No | :x: No | :x: No | :x: No | :heavy_minus_sign: Parcial | :x: No | :x: No | :x: No | :x: No |
+| **Notificaciones** | :heavy_check_mark: Sí | :heavy_check_mark: Sí | :heavy_check_mark: Sí | :heavy_check_mark: Sí | :heavy_check_mark: Sí | :heavy_check_mark: Sí | :x: No | :heavy_minus_sign: Sí | :heavy_check_mark: Sí | :heavy_check_mark: Sí |
+| **Modelo de negocio (observado)** | Freemium | SaaS por niveles | SaaS | SaaS | SaaS (+ IoT) | B2B | Freeware | Freemium + servicios | SaaS Low-Cost | B2B2C |
 
+### Interpretación de la Comparativa
+
+La tabla anterior permite identificar con claridad dos grandes bloques de soluciones en el mercado:  las aplicaciones centradas en la **gestión administrativa tradicional** de la comunidad y aquellas que incorporan elementos de **interacción vecinal**, aunque de forma limitada.
+
+La mayoría de competidores (VecinosEnRed, TusVecinos, TuComunidad, Fincapp o Fynkus) cubren correctamente las funcionalidades básicas: comunicación, incidencias reactivas, repositorio documental y, en algunos casos, pagos o reservas. Sin embargo, estas capacidades se presentan de forma **aislada y reactiva**, orientadas principalmente a digitalizar procesos existentes sin transformar la experiencia del vecino ni reducir de forma significativa la carga cognitiva del presidente o administrador.
+
+Onzane destaca como la solución más completa a nivel operativo, especialmente en reservas, pagos y control de accesos. No obstante, su propuesta sigue siendo fundamentalmente **utilitaria y administrativa**, sin incorporar inteligencia artificial para la comprensión de la información ni mecanismos sociales que fomenten el uso diario y la cohesión vecinal.
+
+En contraste, NexUS introduce una diferenciación clara en tres ejes que no aparecen combinados en ninguna otra solución analizada:
+
+1. **Uso de inteligencia artificial como funcionalidad central**, aplicada a la automatización de actas, comprensión de decisiones e indicación de pasos a seguir, en lugar de limitarse a la mera digitalización documental.
+2. **Dimensión social estructurada**, mediante funciones P2P, sistema de ayudas y afinidades, que transforma la app en una herramienta de convivencia y no solo de gestión.
+3. **Accesibilidad real**, con un modo específico para personas mayores, abordando una brecha digital que el resto de soluciones ignora o trata únicamente de forma declarativa.
+
+En conjunto, la comparativa muestra que NexUS no compite por volumen de funcionalidades administrativas, sino por un **reposicionamiento del producto**: de gestor comunitario reactivo a plataforma de comunidad inteligente, inclusiva y orientada al uso cotidiano.
 
 ## Análisis
 
