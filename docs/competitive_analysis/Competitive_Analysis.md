@@ -16,14 +16,59 @@
   <img src="../images/logo-etsii.jpe" alt="Portada" width="400">
 </p>
 
+---
+
+## Historial de Versiones
+
+| Versión | Fecha       | Cambio principal                                      |
+|---------|-------------|-------------------------------------------------------|
+| 1.0.0   | 02/02/2026  | Creación del documento base                           |
+| 1.0.1   | 02/02/2026  | Corrección de imágenes                                |
+| 1.1.0   | 02/02/2026  | Añadido análisis de VecinosEnRed                      |
+| 1.2.0   | 02/02/2026  | Añadido análisis de TusVecinos                        |
+| 1.3.0   | 02/02/2026  | Añadido análisis de TuComunidad                       |
+| 1.3.1   | 02/02/2026  | Corrección de detalles en análisis                    |
+| 1.4.0   | 03/02/2026  | Refinamiento comparativa VecinosEnRed                 |
+| 1.5.0   | 03/02/2026  | Añadido análisis de Onzane                            |
+| 1.6.0   | 03/02/2026  | Añadido análisis de ZiviApp                           |
+| 1.7.0   | 03/02/2026  | Añadido análisis de GestVecinos                       |
+| 1.8.0   | 03/02/2026  | Añadido análisis de Plusvecinos (PropApp)             |
+| 1.9.0   | 03/02/2026  | Añadido análisis de Fynkus                            |
+| 1.10.0  | 03/02/2026  | Añadida sección Resumen y Propuesta                   |
+| 1.11.0  | 03/02/2026  | Añadido análisis de Fincapp                           |
+| 1.12.0  | 04/02/2026  | Añadida Comparativa de Funcionalidades                |
+| 1.12.1  | 04/02/2026  | Añadidas líneas horizontales entre secciones          |
+| 1.13.0  | 04/02/2026  | Añadidas secciones Análisis y Conclusiones            |
+| 1.14.0  | 04/02/2026  | Añadido análisis de TuComunidApp                      |
+| 1.14.1  | 04/02/2026  | Actualización del índice con subpuntos detallados     |
+| 1.15.0  | 04/02/2026  | Añadido historial de versiones e índice completo y ajustes de formato      |
+
+---
 
 ## Índice
 
-1. [Resumen y Propuesta](#resumen-y-propuesta)
-2. [Análisis de la Competencia](#análisis-de-la-competencia)
-3. [Comparativa de Funcionalidades](#comparativa-de-funcionalidades)
-4. [Análisis](#análisis)
-5. [Conclusiones y estrategias](#conclusiones-y-estrategias)
+1. [Resumen y Propuesta](#1-resumen-y-propuesta)
+   - [1.1. Visión del Proyecto NexUS](#11-visión-del-proyecto-nexus)
+   - [1.2. El Problema que Aborda NexUS](#12-el-problema-que-aborda-nexus)
+   - [1.3. Propuesta de Valor de NexUS](#13-propuesta-de-valor-de-nexus)
+   - [1.4. Funcionalidades Core de NexUS](#14-funcionalidades-core-de-nexus)
+   - [1.5. Modelo de negocio](#15-modelo-de-negocio)
+2. [Análisis de la Competencia](#2-análisis-de-la-competencia)
+   - [2.1. VecinosEnRed](#21-vecinosenred)
+   - [2.2. TusVecinos](#22-tusvecinos)
+   - [2.3. TuComunidad](#23-tucomunidad)
+   - [2.4. Onzane](#24-onzane)
+   - [2.5. ZiviApp](#25-ziviapp)
+   - [2.6. GestVecinos](#26-gestvecinos)
+   - [2.7. Plusvecinos (PropApp)](#27-plusvecinos-propapp)
+   - [2.8. Fynkus](#28-fynkus)
+   - [2.9. Fincapp](#29-fincapp)
+   - [2.10. TuComunidApp](#210-tucomunidapp)
+3. [Comparativa de Funcionalidades](#3-comparativa-de-funcionalidades)
+   - [3.1. Tabla Comparativa General](#31-tabla-comparativa-general)
+   - [3.2. Interpretación de la Comparativa](#32-interpretación-de-la-comparativa)
+4. [Análisis](#4-análisis)
+5. [Conclusiones y estrategias](#5-conclusiones-y-estrategias)
 
 ---
 
@@ -182,13 +227,9 @@ Se analizan los principales competidores de NexUS, identificando sus puntos fuer
 
 ### 2.1. VecinosEnRed
 
-#### 1. Propósito y Visión
+**VecinosEnRed** es una solución SaaS diseñada específicamente para la gestión administrativa y contable de fincas que centraliza en una sola plataforma la contabilidad, el control de morosidad y la gestión de remesas. Se posiciona como un ERP enfocado en digitalizar la operativa del despacho del administrador, priorizando el manejo de "datos duros" y balances financieros sobre la interacción social, ofreciendo un entorno robusto en la nube para la gestión documental y técnica.
 
-* **Propósito:** Proveer una herramienta SaaS (*Software as a Service*) enfocada casi exclusivamente en la gestión administrativa y contable de las fincas. Su objetivo principal es digitalizar la burocracia del Administrador de Fincas, relegando al propietario a un rol pasivo.
-* **Visión:** Convertirse en la herramienta de trabajo esencial para el despacho del administrador (ERP), permitiendo llevar la contabilidad, el control de morosos y la gestión documental desde la nube.
-* **Diferenciador Estratégico:** Se posicionan como un software de "Dato Duro" (cuentas, remesas, balances) frente a las soluciones de comunidad social.
-
-#### 2. Features (Funcionalidades Clave)
+#### 1. Funcionalidades Clave
 
 **A. Gestión Administrativa y Contable (Core del negocio)**
 * **Control Financiero Robusto:** Gestión avanzada de múltiples cuentas bancarias, cajas, control de ingresos/gastos y generación de informes de estados financieros.
@@ -203,19 +244,19 @@ Se analizan los principales competidores de NexUS, identificando sus puntos fuer
 * **Tablón de Anuncios Unidireccional:** Canal vertical (Admin $\to$ Vecino) para noticias oficiales. No fomenta la conversación horizontal.
 * **Portal del Propietario:** Espacio web y móvil de consulta de datos (no de interacción social).
 
-#### 3. Mercado que atacan
+#### 2. Mercado que atacan
 
 * **Administradores de Fincas (B2B):** Es su cliente principal y quien toma la decisión de compra. La herramienta optimiza el despacho, no el hogar.
 * **Comunidades Medianas/Grandes:** Su modelo de precios por volumen de propiedades las orienta a comunidades con presupuesto para software de gestión.
 * **Geografía:** Exclusivamente España, adaptado a la Ley de Propiedad Horizontal y normativas contables locales.
 
-#### 4. Análisis de UX/UI
+#### 3. Análisis de UX/UI
 
 * **Branding:** Institucional y sobrio. Transmite seriedad burocrática pero carece de cercanía o modernidad.
 * **Tecnología:** Percibida como "Software Legacy". Las aplicaciones móviles son *Web Views* (encapsulados del navegador), ofreciendo una experiencia de navegación lenta y poco fluida.
 * **Usabilidad:** Interfaz densa basada en tablas de datos. Criticada por usuarios finales por ser "básica, poco atractiva" y no estar diseñada bajo el paradigma *mobile-first*.
 
-#### 5. Tabla Comparativa y Oportunidades
+#### 4. Tabla Comparativa y Oportunidades
 
 * **Comparativa Estratégica: VecinosEnRed vs. NexUS**
 
@@ -226,16 +267,16 @@ Se analizan los principales competidores de NexUS, identificando sus puntos fuer
 | **Experiencia de Usuario** | **Legacy/Web Wrapper:** Interfaz antigua, lenta y poco atractiva. | **Inclusiva:** UX moderna y **Modo Vecino Mayor** adaptado a la brecha digital. |
 | **Paquetería** | No contemplado. | **Sistema P2P:** Red de vecinos receptores para solucionar el problema del e-commerce. |
 
-#### 6. Puntos débiles explotables
+#### 5. Puntos débiles explotables
 
 Tras analizar su modelo y el feedback de sus usuarios, se identifican las siguientes áreas críticas donde NexUS tiene ventaja competitiva:
 
-1.  **Tecnología Obsoleta (Deuda Técnica):** La competencia sufre de una arquitectura antigua y una app lenta. NexUS, con un stack moderno, ofrece una fluidez y estética superior.
-2.  **Gestión de la Soledad vs. Comunidad:** VecinosEnRed trata a los vecinos como apuntes contables. NexUS ataca la necesidad emocional mediante *Afinidades* y *Red de Ayudas*.
-3.  **Burocracia vs. Automatización (Factor IA):** Mientras ellos ofrecen un repositorio de PDFs (Actas), NexUS ofrece un asistente que lee y resume el contenido automáticamente, ahorrando tiempo real.
-4.  **Exclusión Demográfica:** Su interfaz compleja ignora a la tercera edad. El *Modo Vecino Mayor* de NexUS asegura la inclusión digital de todo el edificio.
+* **Tecnología Obsoleta (Deuda Técnica):** La competencia sufre de una arquitectura antigua y una app lenta. NexUS, con un stack moderno, ofrece una fluidez y estética superior.
+* **Gestión de la Soledad vs. Comunidad:** VecinosEnRed trata a los vecinos como apuntes contables. NexUS ataca la necesidad emocional mediante *Afinidades* y *Red de Ayudas*.
+* **Burocracia vs. Automatización (Factor IA):** Mientras ellos ofrecen un repositorio de PDFs (Actas), NexUS ofrece un asistente que lee y resume el contenido automáticamente, ahorrando tiempo real.
+* **Exclusión Demográfica:** Su interfaz compleja ignora a la tercera edad. El *Modo Vecino Mayor* de NexUS asegura la inclusión digital de todo el edificio.
 
-#### 7. Modelo de Negocio (Observado)
+#### 6. Modelo de Negocio
 
 * **SaaS por Niveles (Tiered Pricing):** Tarifas escalonadas (Medium 90€/año, Enterprise 190€/año).
 * **Upselling:** Cobro de suplementos por paquetes de propietarios adicionales.
@@ -245,7 +286,7 @@ Tras analizar su modelo y el feedback de sus usuarios, se identifican las siguie
 
 **TusVecinos** es una plataforma para comunidades de propietarios que centraliza en una sola app la comunicación (avisos y tablón), la operativa diaria (incidencias y reservas), la toma de decisiones (votaciones/encuestas), la documentación y los pagos. Ofrece acceso móvil y web, con planes por vivienda y opciones de personalización según las necesidades de cada comunidad.
 
-#### 1. Features (Funcionalidades Clave)
+#### 1. Funcionalidades Clave
 
 **A. Gestión de Incidencias y Operaciones**
 
@@ -274,10 +315,10 @@ Tras analizar su modelo y el feedback de sus usuarios, se identifican las siguie
 
 #### 2. Mercado que atacan
 
-1. **Presidentes y juntas de gobierno:** buscan reducir carga operativa (comunicaciones, incidencias, reservas) y disminuir conflictos por falta de información.
-2. **Propietarios e inquilinos:** priorizan comodidad, transparencia y acceso a documentación y decisiones sin desplazamientos.
-3. **Administradores de fincas:** aunque el discurso es "orientado al vecino", el producto incluye panel y flujos para gestión/operación de la comunidad.
-4. **Segmento por tamaño:** planes estándar para comunidades pequeñas/medias y condiciones especiales para comunidades grandes (venta más consultiva).
+* **Presidentes y juntas de gobierno:** buscan reducir carga operativa (comunicaciones, incidencias, reservas) y disminuir conflictos por falta de información.
+* **Propietarios e inquilinos:** priorizan comodidad, transparencia y acceso a documentación y decisiones sin desplazamientos.
+* **Administradores de fincas:** aunque el discurso es "orientado al vecino", el producto incluye panel y flujos para gestión/operación de la comunidad.
+* **Segmento por tamaño:** planes estándar para comunidades pequeñas/medias y condiciones especiales para comunidades grandes (venta más consultiva).
 
 #### 3. Análisis de UX/UI
 
@@ -306,13 +347,13 @@ Tras analizar su modelo y el feedback de sus usuarios, se identifican las siguie
 
 Tras analizar su propuesta pública, estos son puntos donde NexUS puede ganar ventaja clara:
 
-1.  **Diferenciación insuficiente en "comprensión" de documentos:** TusVecinos ofrece repositorio documental, pero no una automatización real para convertir actas en información accionable. NexUS, con la IA de actas, reduce tiempo de lectura y aumenta transparencia al convertir acuerdos en tareas y próximos pasos.
-2.  **Incidencias sin automatización "end-to-end":** El valor está en reportar y seguir, pero no consta de un puente operativo hacia seguros o prevención del mantenimiento. NexUS automatiza avisos preventivos y conexión con seguro, reduciendo fricción y descargando al presidente/administrador.
-3.  **Capa social limitada a comunicación genérica:** El tablón modera y ordena, pero no genera necesariamente hábitos diarios ni colaboración sostenida. NexUS, mediante afinidades y red de ayudas gamificada, construye convivencia y retención, atacando el "vacío vivencial" del mercado.
-4.  **Accesibilidad como declaración, no como feature de producto:** La accesibilidad se comunica como "sencillez", pero no presenta un modo específico para mayores. El modo "Vecino Mayor" de NexUS permite adopción real en perfiles con brecha digital, clave para masa crítica.
-5.  **Paquetería sin detalle público del flujo:** La funcionalidad existe, pero no se conoce el diseño operacional (responsabilidades, confirmaciones, incentivos). La paquetería P2P de NexUS con reglas y trazabilidad puede convertirse en el caso de uso diario que active la comunidad.
+* **Diferenciación insuficiente en "comprensión" de documentos:** TusVecinos ofrece repositorio documental, pero no una automatización real para convertir actas en información accionable. NexUS, con la IA de actas, reduce tiempo de lectura y aumenta transparencia al convertir acuerdos en tareas y próximos pasos.
+* **Incidencias sin automatización "end-to-end":** El valor está en reportar y seguir, pero no consta de un puente operativo hacia seguros o prevención del mantenimiento. NexUS automatiza avisos preventivos y conexión con seguro, reduciendo fricción y descargando al presidente/administrador.
+* **Capa social limitada a comunicación genérica:** El tablón modera y ordena, pero no genera necesariamente hábitos diarios ni colaboración sostenida. NexUS, mediante afinidades y red de ayudas gamificada, construye convivencia y retención, atacando el "vacío vivencial" del mercado.
+* **Accesibilidad como declaración, no como feature de producto:** La accesibilidad se comunica como "sencillez", pero no presenta un modo específico para mayores. El modo "Vecino Mayor" de NexUS permite adopción real en perfiles con brecha digital, clave para masa crítica.
+* **Paquetería sin detalle público del flujo:** La funcionalidad existe, pero no se conoce el diseño operacional (responsabilidades, confirmaciones, incentivos). La paquetería P2P de NexUS con reglas y trazabilidad puede convertirse en el caso de uso diario que active la comunidad.
 
-#### 6. Modelo de Negocio (Estimado)
+#### 6. Modelo de Negocio
 
 * **SaaS por suscripción (por vivienda/mes):** tres planes (Básico, Medio y Premium) con precios escalonados publicados por vivienda.
 * **Modelo "modular":** las tarifas se plantean como "paga por lo que necesitas", con posibilidad de adaptar funcionalidades en comunidades grandes.
@@ -321,9 +362,11 @@ Tras analizar su propuesta pública, estos son puntos donde NexUS puede ganar ve
 * **Pagos como elemento transversal:** el módulo de pagos se presenta como independiente del plan, activable/desactivable.
 * **Personalización y desarrollo a medida (plan superior):** indican posibilidad de personalizar funcionalidades, especialmente en escenarios complejos.
 
-### 2.3. TuComunidad (TucomunidApp)
+### 2.3. TuComunidad
 
-#### 1. Features (Funcionalidades Clave)
+**TuComunidad** es un portal integral para la gestión de fincas que conecta de forma eficiente a administradores, propietarios y proveedores de servicios en un entorno digital único. Centraliza la comunicación comunitaria, la consulta de recibos y documentos, la gestión de incidencias y la reserva de espacios comunes, permitiendo además la interacción directa con una red de proveedores homologados. Al estar integrada con las soluciones de IESA, automatiza el intercambio de información y ofrece acceso multi-dispositivo (web y app) para optimizar la transparencia y la operativa diaria de la comunidad.
+
+#### 1. Funcionalidades Clave
 
 **A. Comunicación y Organización Comunitaria**
 * Comunicación en tiempo real con notificaciones. 
@@ -374,20 +417,22 @@ Tras analizar su propuesta pública, estos son puntos donde NexUS puede ganar ve
 
 #### 6. Puntos débiles explotables
 
-1. **Sin IA para actas y decisiones automáticas:** La inteligencia artificial puede ser crucial a la hora de automatizar la creación de actas de las juntas..  
-2. **Incidencias sin automatización preventiva.**  
-3. **Comunidad social funcional pero poco retentiva.** : ofrecen comunicaciones vecinales, pero sin promover dicha comunicación, lo que puede generar que dicha funcionalidad sea intrascendente. 
-4. **Accesibilidad no especializada para mayores.** : interfaz poco intuitiva y poco adaptada, provocando exclusión de personas mayores dentro de las comunidades.
-5. **Flujos de servicios sin diseño de uso continuo.**
+* **Sin IA para actas y decisiones automáticas:** La inteligencia artificial puede ser crucial a la hora de automatizar la creación de actas de las juntas..  
+* **Incidencias sin automatización preventiva.**  
+* **Comunidad social funcional pero poco retentiva.** : ofrecen comunicaciones vecinales, pero sin promover dicha comunicación, lo que puede generar que dicha funcionalidad sea intrascendente. 
+* **Accesibilidad no especializada para mayores.** : interfaz poco intuitiva y poco adaptada, provocando exclusión de personas mayores dentro de las comunidades.
+* **Flujos de servicios sin diseño de uso continuo.**
 
-#### 7. Modelo de Negocio (Estimado)
+#### 7. Modelo de Negocio
 
 * **SaaS por suscripción:** Cobro mensual o anual por comunidad de vecinos.
 * **Lead Generation:** Posible monetización por módulos y servicios complementarios (servicios externos de fontanería, electricista...).
 
 ### 2.4. Onzane
-#### 1. Features (Funcionalidades Clave)
 
+**Onzane** es una plataforma de gestión integral para comunidades de propietarios que centraliza en una sola solución la comunicación, la gestión de incidencias, la reserva de espacios y las votaciones digitales. Facilita la administración de documentos y el control de presupuestos, promoviendo la transparencia y la participación de los vecinos. Ofrece acceso multiplataforma (web y app), optimizando la operativa diaria tanto para propietarios como para administradores profesionales.
+
+#### 1. Funcionalidades Clave
 **A. Gestión de Incidencias y Operaciones**
 
 * **Reporte de Incidencias:** Sistema completo con ciclo de gestión (apertura, seguimiento, asignación, resolución). Permite incluir fotos, vídeos y comentarios. Asignación a proveedores, empleados o aseguradoras. Opción de apertura anónima.
@@ -472,17 +517,17 @@ Tras analizar su propuesta pública, estos son puntos donde NexUS puede ganar ve
 
 Tras analizar Onzane y sus funcionalidades, se identifican varias oportunidades de ventaja competitiva:
 
-1. **Uso diario variable:** Onzane ofrece funcionalidades de uso cotidiano (reservas con +500 instalaciones gestionadas, paquetería centralizada, foro comunitario, control de acceso), pero carece de elementos que incentiven el engagement social diario. La aplicación es principalmente utilitaria. La incorporación de gamificación, matching de afinidades y red de ayudas vecinales podría transformar el uso funcional en participación comunitaria activa.
+* **Uso diario variable:** Onzane ofrece funcionalidades de uso cotidiano (reservas con +500 instalaciones gestionadas, paquetería centralizada, foro comunitario, control de acceso), pero carece de elementos que incentiven el engagement social diario. La aplicación es principalmente utilitaria. La incorporación de gamificación, matching de afinidades y red de ayudas vecinales podría transformar el uso funcional en participación comunitaria activa.
 
-2. **Ausencia total de Inteligencia Artificial:** Aunque Onzane digitaliza procesos operativos (notificaciones, reservas, control de accesos), carece completamente de IA para tareas cognitivas de alto valor. Las actas deben leerse manualmente, las decisiones extraerse a mano, los patrones de incidencias recurrentes no se detectan automáticamente, y no hay análisis predictivo de gastos ni sugerencias de mantenimiento preventivo. La IA podría facilitar la experiencia del presidente o administrador.
+* **Ausencia total de Inteligencia Artificial:** Aunque Onzane digitaliza procesos operativos (notificaciones, reservas, control de accesos), carece completamente de IA para tareas cognitivas de alto valor. Las actas deben leerse manualmente, las decisiones extraerse a mano, los patrones de incidencias recurrentes no se detectan automáticamente, y no hay análisis predictivo de gastos ni sugerencias de mantenimiento preventivo. La IA podría facilitar la experiencia del presidente o administrador.
 
-3. **Brecha digital:** La interfaz es funcional, pero no está específicamente adaptada a usuarios mayores o con baja alfabetización digital. No existe un "modo simplificado" con botones grandes, lenguaje más humano o tutoriales interactivos específicos. Diseños más inclusivos con modos de uso simplificados podrían ampliar significativamente el alcance de adopción en comunidades con población senior.
+* **Brecha digital:** La interfaz es funcional, pero no está específicamente adaptada a usuarios mayores o con baja alfabetización digital. No existe un "modo simplificado" con botones grandes, lenguaje más humano o tutoriales interactivos específicos. Diseños más inclusivos con modos de uso simplificados podrían ampliar significativamente el alcance de adopción en comunidades con población senior.
 
-4. **Dimensión social limitada:** Onzane cuenta con foro comunitario, grupos de vecinos y directorio de contactos, pero el enfoque es puramente funcional. No existe gamificación, sistema de matching por afinidades, red de ayudas entre vecinos ni elementos que fomenten la construcción de comunidad más allá de la mera convivencia administrativa. La integración de elementos sociales y colaborativos podría aumentar el valor percibido y la retención de usuarios.
+* **Dimensión social limitada:** Onzane cuenta con foro comunitario, grupos de vecinos y directorio de contactos, pero el enfoque es puramente funcional. No existe gamificación, sistema de matching por afinidades, red de ayudas entre vecinos ni elementos que fomenten la construcción de comunidad más allá de la mera convivencia administrativa. La integración de elementos sociales y colaborativos podría aumentar el valor percibido y la retención de usuarios.
 
-5. **Monetización tradicional:** El modelo se centra principalmente en suscripción SaaS (pago mensual/anual por comunidad). Aunque cuentan con marketplace de proveedores, no explotan plenamente la economía colaborativa, servicios premium diferenciados por funcionalidad, o la gamificación como driver de engagement y cross-selling de servicios adicionales.
+* **Monetización tradicional:** El modelo se centra principalmente en suscripción SaaS (pago mensual/anual por comunidad). Aunque cuentan con marketplace de proveedores, no explotan plenamente la economía colaborativa, servicios premium diferenciados por funcionalidad, o la gamificación como driver de engagement y cross-selling de servicios adicionales.
 
-#### 6. Modelo de Negocio (Estimado)
+#### 6. Modelo de Negocio
 
 * **SaaS por suscripción:** Modelo de pago por comunidad. Operan con más de 450 comunidades activas. Se posicionan como una opción más económica que la competencia.
 
@@ -496,13 +541,9 @@ Tras analizar Onzane y sus funcionalidades, se identifican varias oportunidades 
 
 
 ### 2.5. ZiviApp
+**ZiviApp** es una plataforma de gestión para comunidades de propietarios que actúa como un "sistema operativo" digital para centralizar la comunicación, la convivencia y la toma de decisiones, eliminando la burocracia física y el caos de los grupos de WhatsApp. A diferencia de los softwares contables tradicionales, se posiciona como una herramienta centrada exclusivamente en el vecino, priorizando la usabilidad y la capa social para conectar a residentes y presidentes. Ofrece un entorno ágil y transparente que busca profesionalizar la gestión del día a día y agilizar la vida en comunidad.
 
-#### 1. Propósito y Visión
-* **Propósito:** Digitalizar y centralizar la gestión de las comunidades de propietarios para eliminar la burocracia física, el uso de tablones de anuncios obsoletos y el caos de los grupos de WhatsApp.
-* **Visión:** Convertirse en el "sistema operativo" de las comunidades en España, conectando a vecinos y presidentes en una plataforma que agilice la convivencia y la toma de decisiones.
-* **Diferenciador Estratégico:** A diferencia de softwares contables para administradores, ZiviApp se posiciona como una herramienta **centrada en el vecino**, priorizando la usabilidad y la capa social.
-
-#### 2. Features (Funcionalidades Clave)
+#### 1. Funcionalidades Clave
 
 **A. Gestión de Incidencias y Operaciones**
 * **Reporte de Averías:** Sistema con fotos y descripción para notificar problemas en zonas comunes (ascensores, luces, humedades).
@@ -521,18 +562,18 @@ Tras analizar Onzane y sus funcionalidades, se identifican varias oportunidades 
 * **Directorio Vecinal:** Registro de miembros para facilitar el contacto (respetando la RGPD).
 
 
-#### 3. Mercado que atacan
-1.  **Presidentes de Comunidad:** Usuarios que buscan reducir la carga de trabajo y las llamadas constantes de los vecinos.
-2.  **Propietarios/Inquilinos:** Personas que desean transparencia y comodidad en la gestión de su hogar.
-3.  **Administradores de Fincas (Partner):** Aunque su marketing es B2C, buscan que el administrador adopte la herramienta como valor añadido para sus clientes.
-4.  **Geografía:** Mercado español exclusivamente, adaptado a la Ley de Propiedad Horizontal (LPH).
+#### 2. Mercado que atacan
+**A. Presidentes de Comunidad:** Usuarios que buscan reducir la carga de trabajo y las llamadas constantes de los vecinos.
+**B. Propietarios/Inquilinos:** Personas que desean transparencia y comodidad en la gestión de su hogar.
+**C. Administradores de Fincas (Partner):** Aunque su marketing es B2C, buscan que el administrador adopte la herramienta como valor añadido para sus clientes.
+**D. Geografía:** Mercado español exclusivamente, adaptado a la Ley de Propiedad Horizontal (LPH).
 
-#### 4. Análisis de UX/UI
+#### 3. Análisis de UX/UI
 * **Branding:** Uso de colores vivos (verde "Zivi") y lenguaje cercano. Evitan la estética fría de los softwares de gestión tradicionales.
 * **Accesibilidad:** Interfaz diseñada con jerarquías claras y botones grandes, pensada para usuarios de avanzada edad que no son nativos digitales.
 * **Plataforma:** Enfoque *Mobile-First*, optimizado para el uso rápido "en el portal" o "en el ascensor".
 
-#### 5. Tabla Comparativa y Oportunidades
+#### 4. Tabla Comparativa y Oportunidades
 
 **Comparativa Estratégica: ZiviApp vs. NexUS**
 
@@ -548,40 +589,40 @@ Tras analizar Onzane y sus funcionalidades, se identifican varias oportunidades 
 | **Reservas** | Funcionalidad básica de consulta o gestión simple. | **Gestión de Espacios:** Control de aforos, reservas y reglas de uso de zonas comunes. |
 
 
-#### 6. Puntos débiles explotables
+#### 5. Puntos débiles explotables
 Las siguientes debilidades se formulan a partir del análisis funcional y comparativo de ZiviApp, considerando exclusivamente la información observable en sus fuentes públicas y su propuesta de valor comunicada. Estas hipótesis permiten identificar oportunidades de diferenciación para soluciones alternativas como NexUS.
 
-1. **Hábito semanal frente a uso esporádico:**  
+* **Hábito semanal frente a uso esporádico:**  
    ZiviApp parece orientarse a un uso puntual ligado a incidencias, avisos o juntas, sin mecanismos explícitos que fomenten una recurrencia diaria o semanal sostenida. La ausencia de funcionalidades operativas frecuentes limita la generación de hábito continuo en el usuario.
 
-2. **Resolución operativa frente a gestión manual:**  
+* **Resolución operativa frente a gestión manual:**  
    El sistema de incidencias se presenta principalmente como un canal de comunicación, sin evidenciarse una automatización directa del contacto con aseguradoras o proveedores externos, manteniendo la carga administrativa en el presidente o administrador.
 
-3. **Inteligencia en actas frente a proceso analógico:**  
+* **Inteligencia en actas frente a proceso analógico:**  
    Aunque ZiviApp permite votaciones digitales, el proceso de redacción, resumen y seguimiento de acuerdos derivados de las juntas continúa siendo manual, lo que introduce fricción y lentitud en la ejecución de decisiones comunitarias.
 
-4. **Accesibilidad como principio frente a funcionalidad específica:**  
+* **Accesibilidad como principio frente a funcionalidad específica:**  
    Si bien la interfaz es clara y sencilla, no se identifican modos o flujos específicamente diseñados para usuarios de mayor edad, un perfil con alto peso en la toma de decisiones dentro de las comunidades.
 
-5. **Ecosistema de servicios frente a modelo SaaS limitado:**  
+* **Ecosistema de servicios frente a modelo SaaS limitado:**  
    La propuesta de ZiviApp no evidencia un marketplace estructurado de proveedores verificados ni mecanismos de intermediación que permitan monetizar servicios externos o mejorar las condiciones económicas para la comunidad.
 
-6. **Transparencia financiera y gestión de cobros:**  
+* **Transparencia financiera y gestión de cobros:**  
    El acceso a la información económica se limita a la consulta documental, sin integración de pasarelas de pago ni visualización dinámica de deudas o cuotas, lo que obliga a procesos externos y reduce la autonomía del vecino.
 
-7. **Mantenimiento preventivo frente a enfoque reactivo:**  
+* **Mantenimiento preventivo frente a enfoque reactivo:**  
    La gestión de incidencias depende de que el vecino detecte y comunique el problema, sin sistemas de avisos preventivos o recordatorios automáticos de mantenimiento que anticipen fallos en infraestructuras comunes.
 
-8. **Cohesión social mediante incentivos estructurados:**  
+* **Cohesión social mediante incentivos estructurados:**  
    Las funcionalidades sociales se presentan como tablones de intercambio básicos, sin sistemas de incentivos, métricas de participación o mecanismos de refuerzo que fomenten una colaboración vecinal sostenida y medible.
 
-9. **Otras debilidades identificadas:**  
+* **Otras debilidades identificadas:**  
    * **Fragmentación del flujo profesional:** La comunicación pierde trazabilidad cuando la incidencia pasa a manos de un proveedor externo, al no existir un panel que unifique el seguimiento del ciclo completo.  
    * **Dependencia del ecosistema B2C:** El enfoque centrado en el vecino puede generar fricción con administradores de fincas tradicionales si no se integra de forma natural en su flujo de trabajo profesional.  
    * **Escalabilidad de servicios limitada:** La ausencia de funcionalidades relacionadas con logística urbana reduce la capacidad de la plataforma para posicionarse como un nodo operativo clave en entornos urbanos densos.
 
 
-#### 7. Modelo de Negocio (Estimado)
+#### 6. Modelo de Negocio
 
 * **Uso gratuito para usuarios finales:**  En la web oficial de Zivi no se muestran precios, planes de suscripción ni opciones de pago para vecinos o comunidades, lo que indica que la app se ofrece gratuitamente para su adopción por parte de los usuarios finales.
 
@@ -590,17 +631,12 @@ Las siguientes debilidades se formulan a partir del análisis funcional y compar
 * **Prestación de servicios asociados como posible vía de monetización:**  En el Aviso Legal se indica que la empresa ofrece servicios de gestión de comunidades y todos los servicios asociados al principal, lo que apunta a un modelo basado en servicios profesionales más que en pagos directos dentro de la app.  
 
 * **Ausencia de monetización directa visible en la app o web:** No se identifican en las fuentes oficiales mecanismos de monetización directa como publicidad, compras in-app, comisiones o suscripciones premium, lo que refuerza la idea de un modelo centrado en servicios externos o acuerdos comerciales.  
----
 
 ### 2.6. GestVecinos
 
-#### 1. Propósito y Visión
+**GestVecinos** es una herramienta de escritorio orientada a la autogestión local que permite a los presidentes de comunidad digitalizar la administración y el "libro de cuentas" de forma privada y offline. Se posiciona como una solución de software tradicional en propiedad, diseñada para quienes prefieren mantener el control total de los datos en su ordenador personal sin depender de internet ni de cuotas mensuales. Ofrece una alternativa funcional y gratuita frente a los sistemas en la nube, enfocándose en una gestión administrativa sencilla y autónoma.
 
-* **Propósito:** Proveer una herramienta de escritorio (offline) para presidentes de comunidad que buscan digitalizar el "libro de cuentas" sin depender de gestores externos ni de conexión a internet constante. Su objetivo es la administración puramente funcional y local.
-* **Visión:** Mantener el control total de los datos dentro del ordenador personal del usuario, bajo la premisa del software tradicional en propiedad, donde la gestión es una tarea solitaria del presidente frente a su PC.
-* **Diferenciador Estratégico:** Se posicionan como la solución de **"Autogestión Local Gratuita"**. A diferencia de los SaaS modernos, eliminan la barrera de entrada del coste mensual y la desconfianza hacia la nube, apelando al usuario conservador.
-
-#### 2. Features (Funcionalidades Clave)
+#### 1. Funcionalidades Clave
 
 ##### A. Gestión Financiera y Administrativa (Core del negocio)
 
@@ -619,19 +655,19 @@ Las siguientes debilidades se formulan a partir del análisis funcional y compar
 * **Inventario de Activos:** Módulo para listar elementos comunes (ascensores, extintores) y asignarles tareas de mantenimiento.
 * **Gestión Estática:** El presidente anota las averías, pero el sistema no notifica al técnico ni permite al vecino reportar nada. Es un "cuaderno de bitácora" digital unidireccional.
 
-#### 3. Mercado que atacan
+#### 2. Mercado que atacan
 
 * **Presidentes "Do it Yourself":** Usuarios de comunidades pequeñas (menos de 15 vecinos) que gestionan la finca en sus ratos libres para ahorrar costes.
 * **Perfil Tecnológico Conservador:** Usuarios de PC Windows acostumbrados a software de la década de 2000, que desconfían de las apps móviles y prefieren tener el dato "en su disco duro".
 * **Geografía:** España (adaptado a la estructura de la LPH, aunque no a sus últimas reformas).
 
-#### 4. Análisis de UX/UI
+#### 3. Análisis de UX/UI
 
 * **Branding:** Estética funcional y obsoleta ("Windows Forms"), típica del software corporativo de hace 15 años. Transmite rigidez y burocracia.
 * **Tecnología:** **Software Legacy (Abandonware).** Es un ejecutable (.EXE) instalable. Carece de versión web, nube o app móvil. La experiencia de usuario se limita al teclado y ratón en un escritorio fijo.
 * **Usabilidad:** Curva de aprendizaje baja por simplicidad, pero operativa tediosa (introducción de datos campo a campo). No existe concepto de "experiencia de usuario" moderna.
 
-#### 5. Tabla Comparativa y Oportunidades
+#### 4. Tabla Comparativa y Oportunidades
 
 **Comparativa Estratégica: GestVecinos vs. NexUS**
 
@@ -644,7 +680,7 @@ Las siguientes debilidades se formulan a partir del análisis funcional y compar
 | **Cohesión Social** | **Inexistente:** El vecino es un sujeto pasivo (un apunte contable). | **Comunidad Activa:** Afinidades, Gamificación y Red de Ayudas P2P. |
 | **Actualizaciones** | **Detenidas (2018):** Riesgo legal y de seguridad crítico. | **Continuas:** Siempre actualizado a la última normativa (LPH, RGPD). |
 
-#### 6. Puntos débiles explotables
+#### 5. Puntos débiles explotables
 
 Tras analizar su estado actual de "abandonware", se identifican áreas críticas donde NexUS tiene una ventaja competitiva absoluta:
 
@@ -653,22 +689,17 @@ Tras analizar su estado actual de "abandonware", se identifican áreas críticas
 * **Ineficiencia Operativa (El "Picadatos"):** Obliga al presidente a trabajar para el software (introduciendo datos). NexUS hace que el software trabaje para el presidente (automatizando procesos).
 * **Riesgo Legal y Fiscal:** No cumple con los estándares modernos de protección de datos (RGPD) ni facturación verificable (VeriFactu), exponiendo a la comunidad a sanciones.
 
-#### 7. Modelo de Negocio (Observado)
+#### 6. Modelo de Negocio
 
 * **Licencia / Freeware:** Modelo tradicional de descarga gratuita (posiblemente monetizaba con publicidad en web o servicios premium ya discontinuados).
 * **Sin Recurrencia:** Al no ser SaaS, carece de músculo financiero para ofrecer soporte técnico o actualizaciones, lo que explica su estancamiento.
 * **Soporte:** Inexistente. El usuario está solo ante cualquier error del programa.
 
-
 ### 2.7. Plusvecinos (PropApp)
 
-#### 1. Propósito y Visión
+**PlusVecinos** es una plataforma PropTech que funciona como una red social privada para comunidades, centrada en devolver el control de la información a los propietarios y eliminar la informalidad de los grupos de WhatsApp. Destaca por su sistema de votación telemática con validez legal certificada y un muro de interacción social, ofreciendo herramientas para gestionar incidencias, reservas de zonas comunes y un repositorio documental independiente del administrador.
 
-* **Propósito:** Democratizar la gestión de la comunidad devolviendo el "control de la información" a los propietarios. Buscan eliminar la dependencia total del Administrador de Fincas para acceder a datos básicos y acabar con la informalidad e invasión de privacidad de los grupos de WhatsApp.
-* **Visión:** Ser el ecosistema digital integral (*PropTech*) donde conviven propietarios, inquilinos y proveedores, transformando la comunidad en una "Red Social Privada" con validez legal certificada en sus decisiones.
-* **Diferenciador Estratégico:** Su fuerte alianza con certificadores legales (Evicertia) para otorgar validez jurídica a las votaciones online, posicionándose como la herramienta de "democracia digital" más segura frente a soluciones informales.
-
-#### 2. Features (Funcionalidades Clave)
+#### 1. Funcionalidades Clave
 
 **A. Gobernanza y Legalidad (Punto Fuerte)**
 * **Voto Telemático Certificado:** Integración con terceros certificadores para que las decisiones tomadas en la app tengan peso legal, permitiendo juntas híbridas o totalmente online con garantías.
@@ -684,19 +715,19 @@ Tras analizar su estado actual de "abandonware", se identifican áreas críticas
 * **Módulo de Intereses:** Funcionalidad social que permite a los vecinos etiquetar sus aficiones para encontrar personas afines en el edificio.
 * **Ahorro y Proveedores:** Herramientas para comparar servicios y buscar la bajada de la cuota comunitaria mediante la optimización de contratos.
 
-#### 3. Mercado que atacan
+#### 2. Mercado que atacan
 
 * **Comunidades Autogestionadas:** Su mensaje de "toma el control" resuena en comunidades que sienten que su gestión actual es opaca.
 * **Promotores Inmobiliarios (Obra Nueva):** Estrategia B2B para entregar edificios nuevos con la app preinstalada como un valor añadido de "Edificio Inteligente".
 * **Administradores de Fincas:** Ofrecen la herramienta también al administrador para automatizar la recepción de incidencias, aunque el enfoque de marketing empodera más al vecino.
 
-#### 4. Análisis de UX/UI
+#### 3. Análisis de UX/UI
 
 * **Branding:** Imagen moderna y tecnológica, utilizando terminología de red social ("Muro", "Perfil", "Intereses").
 * **Usabilidad:** Interfaz limpia y funcional, aunque densa en opciones debido a la gran cantidad de módulos disponibles.
 * **Enfoque:** Híbrido entre herramienta de trabajo y red social, lo cual a veces diluye la experiencia de usuario si este busca solo resolución operativa inmediata.
 
-#### 5. Tabla Comparativa y Oportunidades
+#### 4. Tabla Comparativa y Oportunidades
 
 **Comparativa Estratégica: Plusvecinos vs. NexUS**
 
@@ -709,16 +740,16 @@ Tras analizar su estado actual de "abandonware", se identifican áreas críticas
 | **Inclusión Digital** | Interfaz estándar moderna. Puede resultar compleja para mayores por el exceso de funciones sociales. | **Modo Vecino Mayor:** UX radicalmente simplificada para garantizar que nadie se quede fuera por brecha digital. |
 | **Logística (Paquetería)** | No destacan un flujo específico P2P, se centran más en proveedores externos. | **Logística P2P:** Solución específica para la "última milla" dentro del edificio con vecinos receptores. |
 
-#### 6. Puntos débiles explotables
+#### 5. Puntos débiles explotables
 
 Tras analizar su modelo, se identifican las siguientes áreas críticas donde NexUS tiene ventaja competitiva:
 
-1.  **Exceso de "Ruido Social":** Al intentar replicar dinámicas de redes sociales (muros, comentarios), pueden generar fatiga en usuarios que solo buscan utilidad. NexUS se centra en la **gamificación con propósito** (ayuda mutua), no en la socialización vacía.
-2.  **IA Inexistente en Documentación:** Plusvecinos almacena documentos, pero no los "procesa". NexUS ofrece una ventaja clara al **leer y resumir** actas y contratos mediante IA, ahorrando tiempo real al usuario.
-3.  **Brecha Generacional:** Su apuesta por una "SuperApp" llena de funciones deja de lado a la tercera edad. El **Modo Vecino Mayor** de NexUS es un diferenciador clave para la adopción total en el edificio.
-4.  **Modelo de Negocio (Conflictos de Interés):** Su énfasis en el "ahorro" a menudo implica redirigir a proveedores patrocinados. NexUS ofrece un modelo más transparente centrado en la economía colaborativa interna (P2P).
+* **Exceso de "Ruido Social":** Al intentar replicar dinámicas de redes sociales (muros, comentarios), pueden generar fatiga en usuarios que solo buscan utilidad. NexUS se centra en la **gamificación con propósito** (ayuda mutua), no en la socialización vacía.
+* **IA Inexistente en Documentación:** Plusvecinos almacena documentos, pero no los "procesa". NexUS ofrece una ventaja clara al **leer y resumir** actas y contratos mediante IA, ahorrando tiempo real al usuario.
+* **Brecha Generacional:** Su apuesta por una "SuperApp" llena de funciones deja de lado a la tercera edad. El **Modo Vecino Mayor** de NexUS es un diferenciador clave para la adopción total en el edificio.
+* **Modelo de Negocio (Conflictos de Interés):** Su énfasis en el "ahorro" a menudo implica redirigir a proveedores patrocinados. NexUS ofrece un modelo más transparente centrado en la economía colaborativa interna (P2P).
 
-#### 7. Modelo de Negocio (Observado)
+#### 6. Modelo de Negocio
 
 * **Freemium:** Acceso gratuito a funcionalidades básicas para captar usuarios.
 * **Pago por Uso (Legal):** Cobro por funcionalidades avanzadas como la certificación legal de juntas y votaciones.
@@ -727,42 +758,39 @@ Tras analizar su modelo, se identifican las siguientes áreas críticas donde Ne
 
 ### 2.8. Fynkus
 
-#### 1. Propósito y Visión
-* Propósito: Automatizar la gestión financiera de las comunidades de propietarios mediante el uso de tecnología en la nube y conectividad bancaria directa.
-* Visión: Ser el software "4.0" que elimine el papel y las tareas manuales del administrador de fincas, prometiendo que la contabilidad "se haga sola".
-* Diferenciador Estratégico: Se posiciona como una herramienta de eficiencia contable extrema. Su foco no es la red social del edificio, sino la precisión del dato bancario y la rapidez en la gestión de cuotas.
+**Fynkus** es un software de administración de fincas 4.0 enfocado en la automatización contable mediante la integración bancaria y la nube. Centraliza la gestión de recibos, la contabilidad automática y el control de morosidad, ofreciendo una app para propietarios donde pueden consultar saldos y documentos. Destaca por simplificar la burocracia del administrador y por su modelo freemium escalable por vivienda.
 
-#### 2. Features (Funcionalidades Clave)
+#### 1. Funcionalidades Clave
 
-#### A. Automatización Financiera (Core)
-* Agregador Bancario: Conexión en tiempo real con bancos para descargar movimientos diariamente de forma automática.
-* Reglas de Categorización: Sistema que "aprende" a qué cuenta contable enviar cada gasto (ej. reconoce la factura de la luz y la registra sin intervención humana).
-* Generación de Remesas: Creación de ficheros bancarios XML para el cobro de recibos en segundos.
+##### A. Automatización Financiera (Core)
+* **Agregador Bancario**: Conexión en tiempo real con bancos para descargar movimientos diariamente de forma automática.
+* **Reglas de Categorización**: Sistema que "aprende" a qué cuenta contable enviar cada gasto (ej. reconoce la factura de la luz y la registra sin intervención humana).
+* **Generación de Remesas**: Creación de ficheros bancarios XML para el cobro de recibos en segundos.
 
-#### B. Gestión de la Comunidad y Gobernanza
-* Panel de Morosidad: Visualización instantánea de quién debe dinero con herramientas para enviar cartas de reclamación automáticas.
-* Gestión de Juntas y Actas: Generador de convocatorias y plantillas para actas, permitiendo el envío masivo a los propietarios.
-* Liquidación de Gastos: Cálculo automático de presupuestos basado en coeficientes de propiedad (LPH).
+##### B. Gestión de la Comunidad y Gobernanza
+* **Panel de Morosidad**: Visualización instantánea de quién debe dinero con herramientas para enviar cartas de reclamación automáticas.
+* **Gestión de Juntas y Actas**: Generador de convocatorias y plantillas para actas, permitiendo el envío masivo a los propietarios.
+* **Liquidación de Gastos**: Cálculo automático de presupuestos basado en coeficientes de propiedad (LPH).
 
-#### C. Operaciones y Proveedores
-* Gestión de Incidencias: Registro de averías con asignación automática de proveedores según el oficio (fontanería, electricidad, etc.).
-* Control de Contratos: Alertas de vencimiento de contratos de mantenimiento (ascensores, seguros, limpieza).
-* Modelos Fiscales: Autogeneración de modelos de Hacienda (347, 111, 190) a partir de las facturas registradas.
+##### C. Operaciones y Proveedores
+* **Gestión de Incidencias**: Registro de averías con asignación automática de proveedores según el oficio (fontanería, electricidad, etc.).
+* **Control de Contratos**: Alertas de vencimiento de contratos de mantenimiento (ascensores, seguros, limpieza).
+* **Modelos Fiscales**: Autogeneración de modelos de Hacienda (347, 111, 190) a partir de las facturas registradas.
 
 
-#### 3. Mercado que atacan
-1. Administradores de Fincas Profesionales: Su cliente principal, que busca gestionar más comunidades en menos tiempo.
-2. Comunidades Autogestionadas: Presidentes o vecinos que llevan sus propias cuentas y necesitan un sistema que no requiera conocimientos contables expertos.
-3. Administraciones 100% Digitales: Despachos que operan sin oficina física y necesitan todo en la nube.
-4. Geografía: Mercado español, estrictamente adaptado al Plan General Contable y la Ley de Propiedad Horizontal.
+#### 2. Mercado que atacan
+* **Administradores de Fincas Profesionales**: Su cliente principal, que busca gestionar más comunidades en menos tiempo.
+* **Comunidades Autogestionadas**: Presidentes o vecinos que llevan sus propias cuentas y necesitan un sistema que no requiera conocimientos contables expertos.
+* **Administraciones 100% Digitales**: Despachos que operan sin oficina física y necesitan todo en la nube.
+* **Geografía**: Mercado español, estrictamente adaptado al Plan General Contable y la Ley de Propiedad Horizontal.
 
-#### 4. Análisis de UX/UI
-* Branding: Estética limpia, moderna y profesional. Utiliza una paleta de azules y blancos que transmite confianza financiera.
-* Sistema Semafórico: Uso inteligente de colores (rojo/verde) para indicar qué movimientos bancarios faltan por procesar, facilitando la navegación rápida.
-* Multiplataforma: Disponible en Web y App móvil, con una interfaz muy visual que huye de las tablas de datos infinitas de los softwares antiguos.
+#### 3. Análisis de UX/UI
+* **Branding**: Estética limpia, moderna y profesional. Utiliza una paleta de azules y blancos que transmite confianza financiera.
+* **Sistema Semafórico**: Uso inteligente de colores (rojo/verde) para indicar qué movimientos bancarios faltan por procesar, facilitando la navegación rápida.
+* **Multiplataforma**: Disponible en Web y App móvil, con una interfaz muy visual que huye de las tablas de datos infinitas de los softwares antiguos.
 
 
-#### 5. Tabla Comparativa y Oportunidades
+#### 4. Tabla Comparativa y Oportunidades
 
 #### Comparativa Estratégica: Fynkus vs. NexUS
 
@@ -776,31 +804,21 @@ Tras analizar su modelo, se identifican las siguientes áreas críticas donde Ne
 | Accesibilidad Senior | Interfaz estándar moderna. | Modo Senior: Simplificación total de la UI y lenguaje adaptado. |
 | Gestión de Espacios | Funcionalidad secundaria. | Reserva Avanzada: Control de aforos y gestión de turnos para zonas comunes. |
 
-#### Puntos débiles explotables
-Tras analizar Fynkus, NexUS puede ganar terreno en estos huecos críticos:
+#### 5. Puntos débiles explotables
+* **Frialdad en la Relación Vecinal**. Fynkus es una herramienta excelente para saber cuánto debes, pero no para saber quién es tu vecino. 
+* **La barrera del "Dato Bancario**. Para que Fynkus brille, el administrador debe conectar el banco. Muchos vecinos son reticentes a dar acceso a sus cuentas a una app de terceros. 
+* **El "Aburrimiento" de las Actas**. Fynkus facilita la creación del acta, pero el resultado sigue siendo un documento denso. 
+* **Olvido de la logística moderna (E-commerce)**. Fynkus no resuelve el problema de "no estoy en casa para recoger mi paquete". 
 
-#### 1. Frialdad en la Relación Vecinal
-Fynkus es una herramienta excelente para saber cuánto debes, pero no para saber quién es tu vecino. 
-* NexUS: Al potenciar el Marketplace de favores y el Matching de afinidad, convertimos la app en una herramienta de uso diario, no solo de consulta de recibos.
-
-#### 2. La barrera del "Dato Bancario"
-Para que Fynkus brille, el administrador debe conectar el banco. Muchos vecinos son reticentes a dar acceso a sus cuentas a una app de terceros. 
-* NexUS: Podemos posicionarnos como una solución menos intrusiva y más centrada en la convivencia, dejando la parte bancaria como algo opcional o simplificado.
-
-#### 3. El "Aburrimiento" de las Actas
-Fynkus facilita la creación del acta, pero el resultado sigue siendo un documento denso. 
-* NexUS: Nuestra IA de lectura rápida genera un resumen de "3 puntos clave" que el vecino recibe por notificación push. Transformamos burocracia en información accionable.
-
-#### 4. Olvido de la logística moderna (E-commerce)
-Fynkus no resuelve el problema de "no estoy en casa para recoger mi paquete". 
-* NexUS: El sistema de Vecino Receptor integrado nos da una utilidad práctica que Fynkus ignora por completo al estar centrado en la contabilidad.
-
-#### 6. Modelo de Negocio (Observado)
+#### 6. Modelo de Negocio 
 * SaaS Freemium: Versión gratuita limitada y versión PRO con coste por vivienda (aprox. 0,10€ al mes).
 * Servicios de Agregación: Monetización a través de la infraestructura tecnológica de conexión bancaria.
 
 ### 2.9. Fincapp
-#### 1. Features (Funcionalidades Clave)
+
+**Fincapp** es una extensión digital del software de gestión del administrador de fincas que funciona como un portal de transparencia y consulta para el propietario. Centraliza el acceso a documentación oficial (actas, pólizas, presupuestos), permite la consulta individual del estado de cuentas y facilita el reporte de incidencias de forma vertical hacia el administrador. Su enfoque es puramente administrativo y reactivo, actuando como un tablón de anuncios unidireccional que digitaliza trámites burocráticos sin fomentar la interacción social o la colaboración entre los vecinos.
+
+#### 1. Funcionalidades Clave
 
 **A. Gestión Administrativa y Documental**
 
@@ -903,32 +921,32 @@ Fynkus no resuelve el problema de "no estoy en casa para recoger mi paquete".
 
 #### 5. Puntos débiles explotables
 
-1. **No genera comunidad, solo digitaliza trámites**  
+* **No genera comunidad, solo digitaliza trámites**  
    Fincapp está diseñada como una extensión del despacho del administrador, no como una plataforma vecinal. No existen herramientas que fomenten la relación entre vecinos, la colaboración o el sentimiento de pertenencia.  
    El usuario entra para “consultar algo” (un recibo, un acta, un aviso), pero no para interactuar. Esto limita enormemente el engagement y convierte la app en un portal pasivo, no en un ecosistema comunitario.
 
-2. **Dependencia total del administrador**  
+* **Dependencia total del administrador**  
    El valor de la aplicación depende directamente del nivel de implicación del administrador de fincas/comunidades.  
    Si el administrador no sube documentos con frecuencia, no responde rápido o no activa funcionalidades adicionales, la experiencia del vecino se degrada. El vecino no tiene capacidad de dinamizar la plataforma por sí mismo.
 
-3. **Sin Inteligencia Artificial ni automatización cognitiva**  
+* **Sin Inteligencia Artificial ni automatización cognitiva**  
    Aunque digitaliza información, no ayuda a entenderla.  
    Las actas siguen siendo documentos largos que el usuario debe leer completos. No hay resúmenes automáticos, extracción de decisiones, generación de tareas pendientes ni detección de patrones en incidencias o gastos.  
    Esto deja sin cubrir uno de los mayores dolores reales de los vecinos: la sobrecarga de información administrativa.
 
-4. **Uso esporádico, no genera hábito**  
+* **Uso esporádico, no genera hábito**  
    La app se usa de forma puntual: ver un recibo, pagar una cuota, enviar un mensaje.  
    No existen funcionalidades de uso diario como interacción social, ayudas vecinales, gestión de paquetes, afinidades o participación continua. Esto reduce la retención y la percepción de valor continuo.
 
-5. **Experiencia impersonal y administrativa**  
+* **Experiencia impersonal y administrativa**  
    El diseño y la lógica de uso están orientados a procesos, no a personas.  
    No hay adaptación por perfiles (personas mayores, usuarios con baja alfabetización digital), ni lenguaje simplificado, ni tutoriales guiados. Esto puede generar barreras de uso en comunidades con población envejecida.
 
-6. **Modelo centrado en la burocracia, no en la vida real del edificio**  
+* **Modelo centrado en la burocracia, no en la vida real del edificio**  
    Fincapp cubre la parte formal (recibos, actas, avisos), pero no resuelve problemas cotidianos como convivencia, ayuda entre vecinos, coordinación informal, o necesidades derivadas del día a día (paquetería, afinidades, colaboración).
 
 
-#### 6. Modelo de Negocio (Estimado)
+#### 6. Modelo de Negocio
 
 * **Modelo B2B2C (Administrador como cliente principal):**  
   Fincapp no se comercializa directamente al vecino, sino al despacho de administración de fincas. El administrador es quien contrata el servicio y lo ofrece a sus comunidades como valor añadido.
@@ -939,11 +957,11 @@ Fynkus no resuelve el problema de "no estoy en casa para recoger mi paquete".
 * **Escasa diversificación de ingresos:**  
   No se observan modelos basados en economía colaborativa, marketplace vecinal, servicios premium por funcionalidades sociales, ni monetización de interacción comunitaria. El valor está en la eficiencia administrativa, no en la dinamización de la comunidad.
 
----
+### 2.10.  TuComunidApp
 
-### TuComunidApp
+**TuComunidApp** es una plataforma híbrida que sincroniza la información económica y documental de la comunidad directamente desde el sistema del administrador para ofrecer transparencia al propietario. Destaca por permitir la delegación de voto y la participación en juntas con validez legal, además de facilitar gestiones administrativas como el cambio de domiciliación bancaria o la reserva de instalaciones comunes. Aunque introduce una capa social básica mediante la creación de eventos informales, la comunicación sigue siendo mayoritariamente vertical y el acceso a las funciones depende totalmente de la activación por parte del administrador de fincas.
 
-#### 1. Features (Funcionalidades Clave)
+#### 1. Funcionalidades Clave
 
 **A. Gestión Administrativa y Documental**
 
@@ -1053,26 +1071,26 @@ Fynkus no resuelve el problema de "no estoy en casa para recoger mi paquete".
 
 #### 5. Puntos débiles explotables
 
-1. **Dependencia total del administrador**  
+* **Dependencia total del administrador**  
    El acceso, la activación de funciones y la calidad de la experiencia dependen completamente del administrador de comunidades. El vecino no puede dinamizar la plataforma por sí mismo.
 
-2. **Interacción social limitada**  
+* **Interacción social limitada**  
    Aunque permite eventos y mensajes, no existe una verdadera red social vecinal ni herramientas que fomenten la colaboración diaria entre vecinos.
 
-3. **Sin inteligencia artificial ni automatización cognitiva**  
+* **Sin inteligencia artificial ni automatización cognitiva**  
    No ofrece resúmenes de actas, detección de decisiones clave, generación de tareas ni análisis de incidencias o gastos.
 
-4. **Uso no recurrente**  
+* **Uso no recurrente**  
    La app se utiliza principalmente en momentos concretos (juntas, incidencias, reservas), lo que limita la generación de hábito.
 
-5. **Complejidad para perfiles poco digitales**  
+* **Complejidad para perfiles poco digitales**  
    La cantidad de funcionalidades puede resultar abrumadora para personas mayores o con baja experiencia tecnológica.
 
-6. **Enfoque administrativo predominante**  
+* **Enfoque administrativo predominante**  
    A pesar de añadir participación, el núcleo sigue siendo la gestión formal, no la vida cotidiana ni la convivencia real del edificio.
 
 
-#### 6. Modelo de Negocio (Estimado)
+#### 6. Modelo de Negocio 
 
 * **Modelo B2B2C (Administrador como cliente principal):**  
   La comercialización se realiza a través de administradores de fincas, no directamente al vecino.
@@ -1082,10 +1100,11 @@ Fynkus no resuelve el problema de "no estoy en casa para recoger mi paquete".
 
 * **Valor centrado en eficiencia, no en monetización social:**  
   No se observa un modelo de ingresos basado en servicios vecinales, marketplace o funcionalidades premium orientadas a la comunidad.
-
 ---
 
 ## 3. Comparativa de Funcionalidades
+
+### 3.1 Tabla Comparativa General
 
 | Funcionalidad / Eje estratégico | **NexUS** | VecinosEnRed | TusVecinos | TuComunidad | Onzane | ZiviApp | GestVecinos | PlusVecinos | Fynkus | Fincapp | TuComunidApp |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -1103,7 +1122,7 @@ Fynkus no resuelve el problema de "no estoy en casa para recoger mi paquete".
 | **Modelo de negocio (observado)** | Freemium | SaaS por niveles | SaaS | SaaS | SaaS (+ IoT) | B2B | Freeware | Freemium + servicios | SaaS Low-Cost | B2B2C | B2B2C |
 
 
-### Interpretación de la Comparativa
+### 3.2 Interpretación de la Comparativa
 
 La tabla anterior permite identificar con claridad dos grandes bloques de soluciones en el mercado:  las aplicaciones centradas en la **gestión administrativa tradicional** de la comunidad y aquellas que incorporan elementos de **interacción vecinal**, aunque de forma limitada.
 
