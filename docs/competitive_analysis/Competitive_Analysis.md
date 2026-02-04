@@ -27,17 +27,16 @@
 
 ---
 
-## Resumen y Propuesta
+## 1. Resumen y Propuesta
 
-### Visión del Proyecto NexUS
+### 1.1. Visión del Proyecto NexUS
 
 **NexUS** es una plataforma de gestión comunitaria que trasciende la administración tradicional de comunidades de vecinos. NexUS pone al vecino en el centro, priorizando la experiencia de usuario, la convivencia social y la aplicación práctica de Inteligencia Artificial para resolver problemas reales del día a día.
 
 **Nuestra misión:** Transformar comunidades de vecinos de meros conjuntos de propiedades en redes de colaboración activa, donde la tecnología facilita tanto la gestión eficiente como la construcción de vínculos sociales significativos.
 
----
 
-### El Problema que Aborda NexUS
+### 1.2. El Problema que Aborda NexUS
 
 Las comunidades de vecinos presentan una serie de dificultades recurrentes en su gestión cotidiana que las soluciones actuales no siempre resuelven desde el punto de vista del vecino.
 
@@ -57,9 +56,8 @@ Las comunidades de vecinos presentan una serie de dificultades recurrentes en su
 - Dificultades de uso para personas mayores
 - Falta de adaptación a distintos niveles de alfabetización digital
 
----
 
-### Propuesta de Valor de NexUS
+### 1.3. Propuesta de Valor de NexUS
 
 NexUS redefine la gestión de comunidades de vecinos al ir más allá de la mera digitalización de procesos administrativos. Frente a las soluciones actuales, centradas en incidencias, comunicaciones, reservas y gestión general, NexUS introduce un enfoque diferencial basado en **automatización cognitiva, construcción de comunidad y accesibilidad universal**.
 
@@ -89,9 +87,8 @@ La plataforma está pensada para ser usable por cualquier vecino, independientem
 
 El objetivo no es solo que la herramienta exista, sino que toda la comunidad pueda usarla de forma real y autónoma, evitando exclusiones y garantizando una adopción amplia y sostenida.
 
----
 
-### Funcionalidades Core de NexUS
+### 1.4. Funcionalidades Core de NexUS
 
 NexUS integra las funcionalidades esenciales para la gestión comunitaria con innovaciones que generan uso diario y construcción de comunidad:
 
@@ -169,14 +166,21 @@ NexUS integra las funcionalidades esenciales para la gestión comunitaria con in
 - Guía paso a paso para entender las funcionalidades
 - Diseño pensado para que todos puedan usar la aplicación
 
+### 1.5. Modelo de negocio
+
+Para garantizar la sostenibilidad y el crecimiento de la plataforma, NexUS se apoya en un modelo de ingresos híbrido que equilibra la recurrencia del software con la generación de valor en servicios externos:
+
+* **SaaS por suscripción:** Se establece un modelo de pago recurrente (mensual o anual) por comunidad de vecinos. Este cobro permite el acceso total a la plataforma, soporte técnico y actualizaciones de la IA. El precio puede ser escalable en función del número de viviendas o módulos avanzados activos.
+* **Lead Generation (Marketplace de Servicios):** Monetización mediante el cobro de comisiones o cuotas de visibilidad a proveedores de servicios profesionales (fontanería, reformas, seguros, etc.) dentro del marketplace de NexUS. La plataforma actúa como conector entre las necesidades de la comunidad (detectadas a menudo por el sistema de incidencias) y profesionales de confianza, capturando valor de cada transacción o contacto generado.
+
 ---
 
 
-## Análisis de la Competencia
+## 2. Análisis de la Competencia
 
 Se analizan los principales competidores de NexUS, identificando sus puntos fuertes, debilidades y el posicionamiento que ocupan actualmente.
 
-### VecinosEnRed
+### 2.1. VecinosEnRed
 
 #### 1. Propósito y Visión
 
@@ -236,8 +240,8 @@ Tras analizar su modelo y el feedback de sus usuarios, se identifican las siguie
 * **SaaS por Niveles (Tiered Pricing):** Tarifas escalonadas (Medium 90€/año, Enterprise 190€/año).
 * **Upselling:** Cobro de suplementos por paquetes de propietarios adicionales.
 * **Soporte:** Servicios de soporte telefónico o premium cobrados aparte.
----
-### TusVecinos
+
+### 2.2. TusVecinos
 
 **TusVecinos** es una plataforma para comunidades de propietarios que centraliza en una sola app la comunicación (avisos y tablón), la operativa diaria (incidencias y reservas), la toma de decisiones (votaciones/encuestas), la documentación y los pagos. Ofrece acceso móvil y web, con planes por vivienda y opciones de personalización según las necesidades de cada comunidad.
 
@@ -317,9 +321,7 @@ Tras analizar su propuesta pública, estos son puntos donde NexUS puede ganar ve
 * **Pagos como elemento transversal:** el módulo de pagos se presenta como independiente del plan, activable/desactivable.
 * **Personalización y desarrollo a medida (plan superior):** indican posibilidad de personalizar funcionalidades, especialmente en escenarios complejos.
 
----
-
-### TuComunidad (TucomunidApp)
+### 2.3. TuComunidad (TucomunidApp)
 
 #### 1. Features (Funcionalidades Clave)
 
@@ -383,9 +385,7 @@ Tras analizar su propuesta pública, estos son puntos donde NexUS puede ganar ve
 * **SaaS por suscripción:** Cobro mensual o anual por comunidad de vecinos.
 * **Lead Generation:** Posible monetización por módulos y servicios complementarios (servicios externos de fontanería, electricista...).
 
----
-
-### Onzane
+### 2.4. Onzane
 #### 1. Features (Funcionalidades Clave)
 
 **A. Gestión de Incidencias y Operaciones**
@@ -494,8 +494,8 @@ Tras analizar Onzane y sus funcionalidades, se identifican varias oportunidades 
 
 * **Personalización y Desarrollo a Medida:** Posibilidad de crear trámites personalizados y funcionalidades específicas para comunidades con necesidades particulares. No se detalla si es servicio adicional de pago o incluido en planes superiores.
 
----
-### ZiviApp
+
+### 2.5. ZiviApp
 
 #### 1. Propósito y Visión
 * **Propósito:** Digitalizar y centralizar la gestión de las comunidades de propietarios para eliminar la burocracia física, el uso de tablones de anuncios obsoletos y el caos de los grupos de WhatsApp.
@@ -592,7 +592,7 @@ Las siguientes debilidades se formulan a partir del análisis funcional y compar
 * **Ausencia de monetización directa visible en la app o web:** No se identifican en las fuentes oficiales mecanismos de monetización directa como publicidad, compras in-app, comisiones o suscripciones premium, lo que refuerza la idea de un modelo centrado en servicios externos o acuerdos comerciales.  
 ---
 
-### GestVecinos
+### 2.6. GestVecinos
 
 #### 1. Propósito y Visión
 
@@ -659,9 +659,8 @@ Tras analizar su estado actual de "abandonware", se identifican áreas críticas
 * **Sin Recurrencia:** Al no ser SaaS, carece de músculo financiero para ofrecer soporte técnico o actualizaciones, lo que explica su estancamiento.
 * **Soporte:** Inexistente. El usuario está solo ante cualquier error del programa.
 
----
 
-### Plusvecinos (PropApp)
+### 2.7. Plusvecinos (PropApp)
 
 #### 1. Propósito y Visión
 
@@ -725,8 +724,8 @@ Tras analizar su modelo, se identifican las siguientes áreas críticas donde Ne
 * **Pago por Uso (Legal):** Cobro por funcionalidades avanzadas como la certificación legal de juntas y votaciones.
 * **Marketplace (Lead Generation):** Monetización a través de conectar a la comunidad con proveedores recomendados (seguros, alarmas, reformas).
 * **Licencias B2B:** Acuerdos con promotoras inmobiliarias para implantación masiva en nuevas construcciones.
----
-### Fynkus
+
+### 2.8. Fynkus
 
 #### 1. Propósito y Visión
 * Propósito: Automatizar la gestión financiera de las comunidades de propietarios mediante el uso de tecnología en la nube y conectividad bancaria directa.
@@ -800,9 +799,7 @@ Fynkus no resuelve el problema de "no estoy en casa para recoger mi paquete".
 * SaaS Freemium: Versión gratuita limitada y versión PRO con coste por vivienda (aprox. 0,10€ al mes).
 * Servicios de Agregación: Monetización a través de la infraestructura tecnológica de conexión bancaria.
 
----
-
-### Fincapp
+### 2.9. Fincapp
 #### 1. Features (Funcionalidades Clave)
 
 **A. Gestión Administrativa y Documental**
@@ -1088,9 +1085,7 @@ Fynkus no resuelve el problema de "no estoy en casa para recoger mi paquete".
 
 ---
 
-## Comparativa de Funcionalidades
-
-## Comparativa de Funcionalidades
+## 3. Comparativa de Funcionalidades
 
 | Funcionalidad / Eje estratégico | **NexUS** | VecinosEnRed | TusVecinos | TuComunidad | Onzane | ZiviApp | GestVecinos | PlusVecinos | Fynkus | Fincapp | TuComunidApp |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -1125,7 +1120,7 @@ En contraste, NexUS introduce una diferenciación clara en tres ejes que no apar
 En conjunto, la comparativa muestra que NexUS no compite por volumen de funcionalidades administrativas, sino por un **reposicionamiento del producto**: de gestor comunitario reactivo a plataforma de comunidad inteligente, inclusiva y orientada al uso cotidiano.
 
 ---
-## Análisis
+## 4. Análisis
 
 El mercado se divide con bastante claridad en dos bloques: por un lado, las soluciones **administrador/contabilidad** (VecinosEnRed, Fynkus, Fincapp, GestVecinos), donde el vecino actúa como usuario “consultor”; y por otro, las plataformas **todo-en-uno operativas** (TusVecinos, TuComunidad, TuComunidApp, Plusvecinos y, especialmente, Onzane) que cubren incidencias, avisos, reservas y, a veces, pagos. Entre ambos, se observa un hueco recurrente: una propuesta **vecino-centrista de uso diario**, que no se limite a “centralizar” sino que reduzca fricción real y aumente participación sostenida.
 
@@ -1144,7 +1139,7 @@ En este contexto, NexUS se diferencia de forma defendible en tres ejes: **(1) IA
 
 ---
 
-## Conclusiones y estrategias
+## 5. Conclusiones y estrategias
 
 **A) Conclusiones**
 
