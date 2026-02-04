@@ -985,6 +985,8 @@ En contraste, NexUS introduce una diferenciación clara en tres ejes que no apar
 
 En conjunto, la comparativa muestra que NexUS no compite por volumen de funcionalidades administrativas, sino por un **reposicionamiento del producto**: de gestor comunitario reactivo a plataforma de comunidad inteligente, inclusiva y orientada al uso cotidiano.
 
+---
+
 ## Análisis
 
 Evaluación crítica de los resultados obtenidos en la comparativa, considerando factores técnicos, funcionales y estratégicos.
