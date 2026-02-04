@@ -944,28 +944,175 @@ Fynkus no resuelve el problema de "no estoy en casa para recoger mi paquete".
 
 ---
 
+### TuComunidApp
+
+#### 1. Features (Funcionalidades Clave)
+
+**A. Gestión Administrativa y Documental**
+
+* **Integración con el Administrador de la comunidad:**  
+  La información económica, documental y organizativa de la comunidad se sincroniza automáticamente desde el sistema del administrador.  
+  El modelo es centralizado: el administrador controla los datos y el vecino actúa principalmente como usuario consultor.
+
+* **Repositorio de Documentación Comunitaria:**  
+  Los propietarios pueden acceder a actas de juntas, estatutos, normas internas, presupuestos, contratos y otra documentación relevante publicada por el administrador.  
+  No es un gestor documental colaborativo: los vecinos no suben documentos, solo consumen información oficial.
+
+* **Consulta del Estado de Cuenta Individual:**  
+  Cada usuario puede visualizar su situación económica dentro de la comunidad: recibos emitidos, pagos realizados, saldos pendientes y domiciliación bancaria asociada.  
+  La app prioriza la transparencia individual, no el análisis financiero colectivo.
+
+* **Gestión de Domiciliación Bancaria:**  
+  El propietario puede solicitar el cambio de cuenta bancaria desde la app, reduciendo gestiones manuales y comunicación externa con el administrador.
+
+
+**B. Comunicación y Participación Comunitaria**
+
+* **Mensajería con Administrador y Órganos de Gobierno:**  
+  Existe un canal de comunicación directa con el administrador de comunidades y, según configuración, con el presidente o miembros autorizados de la comunidad.  
+  La comunicación sigue siendo mayoritariamente vertical y administrativa.
+
+* **Comunicación entre Vecinos (limitada):**  
+  La app permite contactar con otros vecinos solo si estos aceptan ser visibles o contactables.  
+  No existe un feed social ni interacción abierta entre todos los propietarios.
+
+* **Convocatorias y Orden del Día:**  
+  Los vecinos pueden consultar convocatorias de juntas, el orden del día y la documentación asociada directamente desde la aplicación.
+
+* **Delegación de Voto y Votaciones:**  
+  TuComunidApp permite delegar el voto para juntas y participar en votaciones o encuestas propuestas por el administrador, con validez legal según el marco de la comunidad.
+
+
+**C. Gestión de Incidencias**
+
+* **Reporte de Incidencias en Zonas Comunes:**  
+  El vecino puede notificar averías o problemas en zonas comunes mediante formularios con descripción y seguimiento del estado.
+
+* **Gestión Centralizada por el Administrador:**  
+  Las incidencias son recibidas y gestionadas por el administrador, que coordina con proveedores.  
+  El vecino no interactúa directamente con el proveedor ni accede a información operativa avanzada.
+
+* **Seguimiento del Estado:**  
+  El usuario puede consultar si la incidencia está abierta, en proceso o cerrada, sin capas de análisis o mantenimiento preventivo.
+
+
+**D. Reservas y Uso de Espacios Comunes**
+
+* **Reserva de Instalaciones Comunitarias:**  
+  La app permite reservar espacios comunes como pistas deportivas, salas o zonas compartidas, según la configuración de la comunidad.
+
+* **Gestión de Aforo y Disponibilidad:**  
+  El sistema controla horarios y disponibilidad para evitar solapamientos, especialmente útil en comunidades grandes.
+
+
+**E. Funcionalidades Complementarias**
+
+* **Eventos Comunitarios:**  
+  Los vecinos pueden crear o consultar eventos comunitarios (reuniones informales, actividades, encuentros), fomentando cierta interacción social básica.
+
+* **Directorio de Servicios y Proveedores:**  
+  Acceso a un listado de profesionales o servicios recomendados por el administrador o la plataforma.
+
+* **Apertura Digital de Accesos (según comunidad):**  
+  Algunas comunidades permiten la apertura de puertas, garajes o accesos comunes desde la app, siempre que la infraestructura lo permita.
+
+* **Gestión de Roles de Usuario:**  
+  Posibilidad de invitar a inquilinos, propietarios o personal de la comunidad con distintos niveles de acceso.
+
+
+#### 2. Mercado que atacan
+
+* **Administradores de Fincas:** Cliente principal. La app se comercializa como herramienta para digitalizar la relación con las comunidades.
+* **Comunidades de Propietarios:** Comunidades que trabajan con administradores compatibles con la plataforma.
+* **Propietarios e Inquilinos:** Usuarios finales que acceden a información, votaciones y gestiones.
+* **Proveedores de Servicios:** Integración indirecta como canal de incidencias o directorio.
+* **Geografía:** Principalmente mercado español.
+* **Tipo de producto:** Plataforma híbrida entre gestión administrativa y participación comunitaria básica.
+
+
+#### 3. Análisis de UX/UI
+
+* **Branding:** Imagen funcional y orientada a la comunidad, menos corporativa que otras soluciones puramente administrativas.
+* **Enfoque de uso:** Combina gestión administrativa con participación puntual (votos, reservas, eventos).
+* **Curva de aprendizaje:** Media. La variedad de funcionalidades puede resultar compleja para usuarios con baja alfabetización digital.
+* **Plataforma:** Aplicación móvil (iOS) y acceso web.
+* **Privacidad:** Control de visibilidad y acceso definido por el administrador y la configuración de la comunidad.
+
+
+#### 4. Tabla Comparativa y Oportunidades
+
+**Comparativa Estratégica: TuComunidApp vs. NexUS**
+
+| Característica | TuComunidApp (Competencia) | NexUS |
+| :--- | :--- | :--- |
+| **Enfoque Principal** | Gestión administrativa + participación básica | Comunidad centrada en convivencia y relaciones |
+| **Voto en Juntas** | Sí, con delegación y encuestas | IA para resumen, decisiones y tareas |
+| **Comunicación Vecinal** | Limitada y opcional | Social, horizontal y por afinidades |
+| **Incidencias** | Formulario gestionado por administrador | Preventivas + conexión directa con seguros |
+| **Dimensión Social** | Moderada (eventos, mensajes) | Alta: red de ayudas y colaboración |
+| **Inteligencia Artificial** | No incorpora IA | IA en actas, decisiones y mantenimiento |
+| **Uso de la App** | Puntual | Uso continuo y cotidiano |
+
+
+#### 5. Puntos débiles explotables
+
+1. **Dependencia total del administrador**  
+   El acceso, la activación de funciones y la calidad de la experiencia dependen completamente del administrador de comunidades. El vecino no puede dinamizar la plataforma por sí mismo.
+
+2. **Interacción social limitada**  
+   Aunque permite eventos y mensajes, no existe una verdadera red social vecinal ni herramientas que fomenten la colaboración diaria entre vecinos.
+
+3. **Sin inteligencia artificial ni automatización cognitiva**  
+   No ofrece resúmenes de actas, detección de decisiones clave, generación de tareas ni análisis de incidencias o gastos.
+
+4. **Uso no recurrente**  
+   La app se utiliza principalmente en momentos concretos (juntas, incidencias, reservas), lo que limita la generación de hábito.
+
+5. **Complejidad para perfiles poco digitales**  
+   La cantidad de funcionalidades puede resultar abrumadora para personas mayores o con baja experiencia tecnológica.
+
+6. **Enfoque administrativo predominante**  
+   A pesar de añadir participación, el núcleo sigue siendo la gestión formal, no la vida cotidiana ni la convivencia real del edificio.
+
+
+#### 6. Modelo de Negocio (Estimado)
+
+* **Modelo B2B2C (Administrador como cliente principal):**  
+  La comercialización se realiza a través de administradores de fincas, no directamente al vecino.
+
+* **SaaS integrado con software de gestión:**  
+  Funciona como capa de acceso móvil/web al sistema del administrador (especialmente Gesfincas).
+
+* **Valor centrado en eficiencia, no en monetización social:**  
+  No se observa un modelo de ingresos basado en servicios vecinales, marketplace o funcionalidades premium orientadas a la comunidad.
+
+---
+
 ## Comparativa de Funcionalidades
 
-| Funcionalidad / Eje estratégico | **NexUS** | VecinosEnRed | TusVecinos | TuComunidad | Onzane | ZiviApp | GestVecinos | PlusVecinos | Fynkus | Fincapp |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Comunicación vecinal unificada** | :heavy_check_mark: Completa | :heavy_minus_sign: Básica | :heavy_check_mark: Moderada | :heavy_minus_sign: Básica | :heavy_check_mark: Completa | :heavy_minus_sign: Básica | :x: Limitada | :heavy_minus_sign: Básica | :x: No | :heavy_minus_sign: Básica |
-| **Gestión de incidencias** | :heavy_check_mark: Proactiva | :heavy_check_mark: Reactiva | :heavy_check_mark: Reactiva | :heavy_check_mark: Reactiva | :heavy_check_mark: Avanzada | :heavy_check_mark: Reactiva | :heavy_minus_sign: Manual | :heavy_check_mark: Reactiva | :heavy_minus_sign: Limitada | :heavy_check_mark: Reactiva |
-| **Repositorio documental** | :heavy_check_mark: Integral | :heavy_check_mark: Estático | :heavy_check_mark: Sí | :heavy_check_mark: Sí | :heavy_check_mark: Ilimitado | :heavy_check_mark: Sí | :heavy_check_mark: Offline | :heavy_minus_sign: Parcial | :heavy_minus_sign: Consulta | :heavy_check_mark: Sí |
-| **Reservas de espacios comunes** | :heavy_check_mark: Social+UX | :heavy_minus_sign: Básica | :heavy_check_mark: Sí | :heavy_minus_sign: Básica | :heavy_check_mark: Avanzado | :heavy_minus_sign: Básica | :x: No | :heavy_minus_sign: Funcional | :heavy_minus_sign: Funcional | :heavy_check_mark: Sí |
-| **Pagos / Finanzas integrados** | :heavy_check_mark: Pago de cuotas | :heavy_check_mark: Contable | :heavy_minus_sign: Integrado | :heavy_minus_sign: Básico | :heavy_check_mark: Monedero | :heavy_minus_sign: Consulta | :x: Manual | :x: Limitado | :heavy_minus_sign: Consulta | :heavy_minus_sign: Consulta |
-| **Votaciones / Encuestas** | :heavy_check_mark: Sí | :heavy_minus_sign: Básico | :heavy_check_mark: Sí | :heavy_check_mark: Sí | :heavy_check_mark: Sí | :heavy_check_mark: Sí | :heavy_minus_sign: Limitado | :heavy_minus_sign: Limitado | :heavy_minus_sign: Consultivo | :heavy_check_mark: Sí |
-| **Roles y permisos** | :heavy_check_mark: Sí | :heavy_minus_sign: Básico | :heavy_check_mark: Sí | :heavy_check_mark: Sí | :heavy_check_mark: Perfiles | :heavy_minus_sign: Básico | :x: No | :heavy_minus_sign: Básico | :heavy_minus_sign: Sí | :heavy_minus_sign: Sí |
-| **Funciones sociales (P2P)** | :heavy_check_mark: Sí | :x: No | :x: No | :x: No | :heavy_minus_sign: Básicas | :heavy_minus_sign: Básicas | :x: No | :x: No | :x: No | :x: No |
-| **Gestión con IA** | :heavy_check_mark: Sí | :x: No | :x: No | :x: No | :x: No | :x: No | :x: No | :x: No | :x: No | :x: No |
-| **Modo Senior / Accesib.** | :heavy_check_mark: Sí | :x: No | :x: No | :x: No | :x: No | :heavy_minus_sign: Parcial | :x: No | :x: No | :x: No | :x: No |
-| **Notificaciones** | :heavy_check_mark: Sí | :heavy_check_mark: Sí | :heavy_check_mark: Sí | :heavy_check_mark: Sí | :heavy_check_mark: Sí | :heavy_check_mark: Sí | :x: No | :heavy_minus_sign: Sí | :heavy_check_mark: Sí | :heavy_check_mark: Sí |
-| **Modelo de negocio (observado)** | Freemium | SaaS por niveles | SaaS | SaaS | SaaS (+ IoT) | B2B | Freeware | Freemium + servicios | SaaS Low-Cost | B2B2C |
+## Comparativa de Funcionalidades
+
+| Funcionalidad / Eje estratégico | **NexUS** | VecinosEnRed | TusVecinos | TuComunidad | Onzane | ZiviApp | GestVecinos | PlusVecinos | Fynkus | Fincapp | TuComunidApp |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Comunicación vecinal unificada** | :heavy_check_mark: Completa | :heavy_minus_sign: Básica | :heavy_check_mark: Moderada | :heavy_minus_sign: Básica | :heavy_check_mark: Completa | :heavy_minus_sign: Básica | :x: Limitada | :heavy_minus_sign: Básica | :x: No | :heavy_minus_sign: Básica | :heavy_minus_sign: Moderada |
+| **Gestión de incidencias** | :heavy_check_mark: Proactiva | :heavy_check_mark: Reactiva | :heavy_check_mark: Reactiva | :heavy_check_mark: Reactiva | :heavy_check_mark: Avanzada | :heavy_check_mark: Reactiva | :heavy_minus_sign: Manual | :heavy_check_mark: Reactiva | :heavy_minus_sign: Limitada | :heavy_check_mark: Reactiva | :heavy_check_mark: Reactiva |
+| **Repositorio documental** | :heavy_check_mark: Integral | :heavy_check_mark: Estático | :heavy_check_mark: Sí | :heavy_check_mark: Sí | :heavy_check_mark: Ilimitado | :heavy_check_mark: Sí | :heavy_check_mark: Offline | :heavy_minus_sign: Parcial | :heavy_minus_sign: Consulta | :heavy_check_mark: Sí | :heavy_check_mark: Sí |
+| **Reservas de espacios comunes** | :heavy_check_mark: Social+UX | :heavy_minus_sign: Básica | :heavy_check_mark: Sí | :heavy_minus_sign: Básica | :heavy_check_mark: Avanzado | :heavy_minus_sign: Básica | :x: No | :heavy_minus_sign: Funcional | :heavy_minus_sign: Funcional | :heavy_check_mark: Sí | :heavy_check_mark: Sí |
+| **Pagos / Finanzas integrados** | :heavy_check_mark: Pago de cuotas | :heavy_check_mark: Contable | :heavy_minus_sign: Integrado | :heavy_minus_sign: Básico | :heavy_check_mark: Monedero | :heavy_minus_sign: Consulta | :x: Manual | :x: Limitado | :heavy_minus_sign: Consulta | :heavy_minus_sign: Consulta | :heavy_minus_sign: Consulta |
+| **Votaciones / Encuestas** | :heavy_check_mark: Sí | :heavy_minus_sign: Básico | :heavy_check_mark: Sí | :heavy_check_mark: Sí | :heavy_check_mark: Sí | :heavy_check_mark: Sí | :heavy_minus_sign: Limitado | :heavy_minus_sign: Limitado | :heavy_minus_sign: Consultivo | :heavy_check_mark: Sí | :heavy_check_mark: Sí |
+| **Roles y permisos** | :heavy_check_mark: Sí | :heavy_minus_sign: Básico | :heavy_check_mark: Sí | :heavy_check_mark: Sí | :heavy_check_mark: Perfiles | :heavy_minus_sign: Básico | :x: No | :heavy_minus_sign: Básico | :heavy_minus_sign: Sí | :heavy_minus_sign: Sí | :heavy_check_mark: Sí |
+| **Funciones sociales (P2P)** | :heavy_check_mark: Sí | :x: No | :x: No | :x: No | :heavy_minus_sign: Básicas | :heavy_minus_sign: Básicas | :x: No | :x: No | :x: No | :x: No | :heavy_minus_sign: Muy básicas |
+| **Gestión con IA** | :heavy_check_mark: Sí | :x: No | :x: No | :x: No | :x: No | :x: No | :x: No | :x: No | :x: No | :x: No | :x: No |
+| **Modo Senior / Accesib.** | :heavy_check_mark: Sí | :x: No | :x: No | :x: No | :x: No | :heavy_minus_sign: Parcial | :x: No | :x: No | :x: No | :x: No | :x: No |
+| **Notificaciones** | :heavy_check_mark: Sí | :heavy_check_mark: Sí | :heavy_check_mark: Sí | :heavy_check_mark: Sí | :heavy_check_mark: Sí | :heavy_check_mark: Sí | :x: No | :heavy_minus_sign: Sí | :heavy_check_mark: Sí | :heavy_check_mark: Sí | :heavy_check_mark: Sí |
+| **Modelo de negocio (observado)** | Freemium | SaaS por niveles | SaaS | SaaS | SaaS (+ IoT) | B2B | Freeware | Freemium + servicios | SaaS Low-Cost | B2B2C | B2B2C |
+
 
 ### Interpretación de la Comparativa
 
 La tabla anterior permite identificar con claridad dos grandes bloques de soluciones en el mercado:  las aplicaciones centradas en la **gestión administrativa tradicional** de la comunidad y aquellas que incorporan elementos de **interacción vecinal**, aunque de forma limitada.
 
-La mayoría de competidores (VecinosEnRed, TusVecinos, TuComunidad, Fincapp o Fynkus) cubren correctamente las funcionalidades básicas: comunicación, incidencias reactivas, repositorio documental y, en algunos casos, pagos o reservas. Sin embargo, estas capacidades se presentan de forma **aislada y reactiva**, orientadas principalmente a digitalizar procesos existentes sin transformar la experiencia del vecino ni reducir de forma significativa la carga cognitiva del presidente o administrador.
+La mayoría de competidores (VecinosEnRed, TusVecinos, TuComunidad, Fincapp, TuComunidApp o Fynkus) cubren correctamente las funcionalidades básicas: comunicación, incidencias reactivas, repositorio documental y, en algunos casos, pagos o reservas. Sin embargo, estas capacidades se presentan de forma **aislada y reactiva**, orientadas principalmente a digitalizar procesos existentes sin transformar la experiencia del vecino ni reducir de forma significativa la carga cognitiva del presidente o administrador.
 
 Onzane destaca como la solución más completa a nivel operativo, especialmente en reservas, pagos y control de accesos. No obstante, su propuesta sigue siendo fundamentalmente **utilitaria y administrativa**, sin incorporar inteligencia artificial para la comprensión de la información ni mecanismos sociales que fomenten el uso diario y la cohesión vecinal.
 
@@ -980,7 +1127,7 @@ En conjunto, la comparativa muestra que NexUS no compite por volumen de funciona
 ---
 ## Análisis
 
-El mercado se divide con bastante claridad en dos bloques: por un lado, las soluciones **administrador/contabilidad** (VecinosEnRed, Fynkus, Fincapp, GestVecinos), donde el vecino actúa como usuario “consultor”; y por otro, las plataformas **todo-en-uno operativas** (TusVecinos, TuComunidad, Plusvecinos y, especialmente, Onzane) que cubren incidencias, avisos, reservas y, a veces, pagos. Entre ambos, se observa un hueco recurrente: una propuesta **vecino-centrista de uso diario**, que no se limite a “centralizar” sino que reduzca fricción real y aumente participación sostenida.
+El mercado se divide con bastante claridad en dos bloques: por un lado, las soluciones **administrador/contabilidad** (VecinosEnRed, Fynkus, Fincapp, GestVecinos), donde el vecino actúa como usuario “consultor”; y por otro, las plataformas **todo-en-uno operativas** (TusVecinos, TuComunidad, TuComunidApp, Plusvecinos y, especialmente, Onzane) que cubren incidencias, avisos, reservas y, a veces, pagos. Entre ambos, se observa un hueco recurrente: una propuesta **vecino-centrista de uso diario**, que no se limite a “centralizar” sino que reduzca fricción real y aumente participación sostenida.
 
 El patrón que se repite en la mayoría es una digitalización **reactiva**: repositorio documental con un canal de avisos y formulario de incidencias. Esto ordena la información, pero no elimina la carga cognitiva: el vecino sigue teniendo que leer actas largas, interpretar acuerdos y recordar tareas; el presidente sigue “persiguiendo” decisiones, proveedores y seguimiento.
 
