@@ -733,8 +733,6 @@ Tras analizar su modelo, se identifican las siguientes áreas críticas donde Ne
 * Visión: Ser el software "4.0" que elimine el papel y las tareas manuales del administrador de fincas, prometiendo que la contabilidad "se haga sola".
 * Diferenciador Estratégico: Se posiciona como una herramienta de eficiencia contable extrema. Su foco no es la red social del edificio, sino la precisión del dato bancario y la rapidez en la gestión de cuotas.
 
----
-
 #### 2. Features (Funcionalidades Clave)
 
 #### A. Automatización Financiera (Core)
@@ -752,7 +750,6 @@ Tras analizar su modelo, se identifican las siguientes áreas críticas donde Ne
 * Control de Contratos: Alertas de vencimiento de contratos de mantenimiento (ascensores, seguros, limpieza).
 * Modelos Fiscales: Autogeneración de modelos de Hacienda (347, 111, 190) a partir de las facturas registradas.
 
----
 
 #### 3. Mercado que atacan
 1. Administradores de Fincas Profesionales: Su cliente principal, que busca gestionar más comunidades en menos tiempo.
@@ -760,14 +757,11 @@ Tras analizar su modelo, se identifican las siguientes áreas críticas donde Ne
 3. Administraciones 100% Digitales: Despachos que operan sin oficina física y necesitan todo en la nube.
 4. Geografía: Mercado español, estrictamente adaptado al Plan General Contable y la Ley de Propiedad Horizontal.
 
----
-
 #### 4. Análisis de UX/UI
 * Branding: Estética limpia, moderna y profesional. Utiliza una paleta de azules y blancos que transmite confianza financiera.
 * Sistema Semafórico: Uso inteligente de colores (rojo/verde) para indicar qué movimientos bancarios faltan por procesar, facilitando la navegación rápida.
 * Multiplataforma: Disponible en Web y App móvil, con una interfaz muy visual que huye de las tablas de datos infinitas de los softwares antiguos.
 
----
 
 #### 5. Tabla Comparativa y Oportunidades
 
@@ -801,8 +795,6 @@ Fynkus facilita la creación del acta, pero el resultado sigue siendo un documen
 #### 4. Olvido de la logística moderna (E-commerce)
 Fynkus no resuelve el problema de "no estoy en casa para recoger mi paquete". 
 * NexUS: El sistema de Vecino Receptor integrado nos da una utilidad práctica que Fynkus ignora por completo al estar centrado en la contabilidad.
-
----
 
 #### 6. Modelo de Negocio (Observado)
 * SaaS Freemium: Versión gratuita limitada y versión PRO con coste por vivienda (aprox. 0,10€ al mes).
@@ -986,14 +978,51 @@ En contraste, NexUS introduce una diferenciación clara en tres ejes que no apar
 En conjunto, la comparativa muestra que NexUS no compite por volumen de funcionalidades administrativas, sino por un **reposicionamiento del producto**: de gestor comunitario reactivo a plataforma de comunidad inteligente, inclusiva y orientada al uso cotidiano.
 
 ---
-
 ## Análisis
 
-Evaluación crítica de los resultados obtenidos en la comparativa, considerando factores técnicos, funcionales y estratégicos.
+El mercado se divide con bastante claridad en dos bloques: por un lado, las soluciones **administrador/contabilidad** (VecinosEnRed, Fynkus, Fincapp, GestVecinos), donde el vecino actúa como usuario “consultor”; y por otro, las plataformas **todo-en-uno operativas** (TusVecinos, TuComunidad, Plusvecinos y, especialmente, Onzane) que cubren incidencias, avisos, reservas y, a veces, pagos. Entre ambos, se observa un hueco recurrente: una propuesta **vecino-centrista de uso diario**, que no se limite a “centralizar” sino que reduzca fricción real y aumente participación sostenida.
 
+El patrón que se repite en la mayoría es una digitalización **reactiva**: repositorio documental con un canal de avisos y formulario de incidencias. Esto ordena la información, pero no elimina la carga cognitiva: el vecino sigue teniendo que leer actas largas, interpretar acuerdos y recordar tareas; el presidente sigue “persiguiendo” decisiones, proveedores y seguimiento.
+
+El competidor fuerte por volumen y madurez operativa es **Onzane**: destaca en amplitud funcional (reservas avanzadas, pagos/monedero, roles, proveedores, perfiles de empleados) y en su capacidad de cubrir casos de uso de comunidades grandes. Aun así, su enfoque sigue siendo principalmente utilitario: no se evidencia IA para convertir documentación en acciones, ni mecanismos sociales con propósito que creen hábito diario; y su accesibilidad se mantiene en estándares generales sin un diseño inclusivo específico.
+
+En este contexto, NexUS se diferencia de forma defendible en tres ejes: **(1) IA aplicada a actas/decisiones/tareas**, para transformar burocracia en información accionable y reducir carga mental; **(2) capa social con propósito** (afinidades, sistema de ayudas (+1), paquetería P2P) orientada a colaboración cotidiana, no “ruido” social; y **(3) accesibilidad real** (Modo Vecino Mayor + tutorial/soporte contextual) para lograr adopción amplia, incluyendo perfiles con brecha digital.
+
+**Riesgos del posicionamiento:**
+
+* Adopción inicial y **masa crítica**: la capa social y P2P necesitan participación mínima para aportar valor.
+* **Confianza** en IA y en flujos de comunidad: si no se percibe fiable, se relega a “otra app más”.
+* Riesgo de **MVP demasiado amplio** (muchas features) que diluya el diferencial y complique el onboarding.
+* Fricción con **administradores/presidencia** si NexUS no encaja en su flujo (carga extra de configuración o mantenimiento).
+
+---
 
 ## Conclusiones y estrategias
 
-Conclusiones finales del análisis de competidores y definición de estrategias recomendadas para el desarrollo y posicionamiento del proyecto NexUS.
+**A) Conclusiones**
 
----
+* El mercado ya cubre bien la “centralización” (avisos, incidencias, documentos), pero no resuelve la **comprensión** ni la ejecución de acuerdos: se digitaliza, pero no se aligera la gestión.
+* Las soluciones centradas en administradores optimizan contabilidad y trámites; las todo-en-uno optimizan operaciones, pero siguen siendo mayoritariamente **reactivas**.
+* Onzane es el referente por completitud operativa, pero deja espacio en **automatización cognitiva**, accesibilidad específica y una capa social orientada a uso cotidiano.
+* NexUS tiene hueco real si se posiciona como “la app que te quita trabajo y activa la comunidad”.
+
+**B) Estrategias recomendadas**
+
+1. **Estrategia de producto (MVP y foco)**
+   MVP con foco en diferencial (4–6 features):
+
+* IA de actas: resumen + extracción de decisiones + creación de tareas asignables.
+* Votaciones/encuestas ligadas a acuerdos y tareas (cerrar el ciclo decisión → acción).
+* Incidencias con mantenimiento preventivo (alertas y seguimiento visible).
+* Paquetería P2P (vecino receptor) como caso de uso diario.
+* Modo Vecino Mayor + tutorial/soporte contextual (onboarding y uso real).
+* Muro/avisos básico (solo lo necesario para canal oficial, sin complejidad extra).
+
+2. **Estrategia de adopción (cómo entrar en comunidades)**
+
+* Pilotos con **presidente/junta** como sponsor: configuración mínima y objetivos claros (primer mes).
+* Onboarding por “quick wins”: primera acta resumida + tareas, primera incidencia trazada y primer flujo de paquetería activo.
+* Reducir fricción: tutorial guiado por rol (vecino/presidencia), plantillas y mensajes contextuales en cada acción.
+* Activación social progresiva: afinidades y +1 como opt-in, empujando primero casos prácticos (paquetes/ayudas puntuales).
+
+En conjunto, la estrategia debe reforzar la visión del documento: NexUS no busca ganar por “ser la más completa”, sino por **hacer la gestión más ligera, la participación más fácil y el uso más cotidiano**, convirtiendo la comunidad en una red colaborativa real.
