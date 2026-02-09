@@ -1,0 +1,492 @@
+# Plan de Desarrollo de Sprints – NexUS
+
+<p align="center">
+  <img src="../images/logo-app.jpeg" alt="Portada" width="700">
+</p>
+
+
+**Grupo:** B-Tarde 
+**Proyecto:** NexUS  
+**Fecha:** 09/02/2026  
+**Asignatura:** ISPP  
+**Institución:** ETSII, Universidad de Sevilla
+
+
+<p align="center">
+  <img src="../images/logo-etsii.jpe" alt="Portada" width="400">
+</p>
+
+---
+
+## Historial de Versiones
+
+| Versión | Fecha       | Cambio principal                                      |
+|---------|-------------|-------------------------------------------------------|
+| 1.0.0   | 09/02/2026  | Creación del documento base                           |
+
+---
+
+## Índice
+
+1. [Visión general del proyecto](#1-visión-general-del-proyecto)
+2. [Composición del equipo](#2-composición-del-equipo)
+3. [Sprint 1 - Funcionalidades Core del MVP](#3-sprint-1---funcionalidades-core-del-mvp)
+4. [Sprint 2 - MVP v1 Completo](#4-sprint-2---mvp-v1-completo)
+5. [Sprint 3 - MVP v2 y Diferenciadores](#5-sprint-3---mvp-v2-y-diferenciadores)
+6. [Metodología de trabajo](#6-metodología-de-trabajo)
+7. [Gestión de riesgos](#7-gestión-de-riesgos)
+
+---
+
+## 1. Visión general del proyecto
+
+### 1.1 Objetivo del proyecto
+
+ Nuestro objetivo consiste en desarrollar una plataforma integral de gestión de residencias de estudiantes que profesionalice los procesos internos, reduzca la carga operativa y mejore significativamente la experiencia de convivencia de los residentes, bajo el nombre de **NexUS**.
+
+### 1.2 Propuesta de valor única
+
+A diferencia de los ERPs complejos (StarRez, Yardi) y las soluciones parciales existentes, NexUS combina:
+- **Gestión operativa profesional** (habitaciones, incidencias, reservas)
+- **Automatización de procesos cotidianos** 
+- **Mejora activa de la convivencia** (matching social, eventos, comunidad)
+- **UX moderna** diseñada específicamente para estudiantes
+
+### 1.3 Modelo de negocio
+
+**B2B2C SaaS**: Las residencias pagan la suscripción, los estudiantes la usan gratuitamente.
+
+**Monetización**:
+- Plan base: Gestión básica (estudiantes, habitaciones, incidencias, reservas de espacios), panel administrativo y roles y permisos
+- Módulos premium: Analítica avanzada, marca blanca, automatizaciones, informes exportables
+
+### 1.4 Enfoque de desarrollo
+
+**MVP evolutivo** en 3 sprints que construye incrementalmente:
+1. **Sprint 1**: Casos de uso core + infraestructura
+2. **Sprint 2**: MVP v1 completo funcional + pilotaje
+3. **Sprint 3**: MVP v2 con diferenciadores clave + marketing
+
+---
+
+## 2. Composición del equipo
+
+### 2.1 Estructura organizativa
+
+**Total:** 21 personas organizadas en 4 equipos multidisciplinares
+- **Equipo A**
+- **Equipo B**
+- **Equipo C**
+- **Equipo D**
+
+3 de esos equipos estarán conformados por 5 integrantes, mientras que uno de ellos dispondrá de 6 miembros.
+
+### 2.2 Filosofía de equipos multidisciplinares
+
+Cada equipo es **autónomo y completo**, capaz de entregar módulos funcionales end-to-end (backend + frontend + UX + testing + documentación). Esto permite:
+
+- Mayor velocidad de entrega
+- Menos dependencias entre equipos
+- Ownership completo de funcionalidades
+- Aprendizaje multidisciplinar
+- Comunicación más eficiente
+
+### 2.3 Roles transversales
+
+#### Scrum Master
+**Funciones**:
+- Facilitación de reuniones Scrum (sprint planning, retrospectives)
+- Eliminación de impedimentos
+- Seguimiento del progreso del sprint
+- Comunicación con stakeholders y profesores
+- **También desarrolla dentro de su equipo**
+
+#### Product Owner
+**Funciones**:
+- Definición y priorización del Product Backlog
+- Validación de criterios de aceptación
+- Contacto con usuarios piloto
+- Decisiones sobre alcance y pivots
+- **También desarrolla dentro de su equipo**
+
+#### Coordinadores técnicos (1 por equipo)
+Cada equipo tiene un coordinador técnico que:
+- Coordina decisiones de arquitectura dentro del equipo
+- Participa en sincronización entre equipos semanalmente
+- Revisa código de su equipo
+- **También desarrolla activamente**
+
+### 2.4 Modelo de trabajo por sprints
+
+**Asignación de módulos funcionales**:
+Cada sprint, los equipos reciben módulos completos para implementar. Las asignaciones se acordarán en reuniones al principio de cada sprint.
+
+### 2.5 Sincronización entre equipos
+
+**Sincronización semanal** (Según disponibilidad: viernes, sábado o domingo):
+- Líderes de cada equipo, junto con otros integrantes designados según sea necesario.
+- Revisar implementación hasta el momento
+- Resolver conflictos
+- Acordar trabajo de la siguiente semana
+
+---
+
+## 3. Sprint 1 – Funcionalidades Core del MVP
+
+**Duración**: 19 febrero – 5 marzo (2 semanas)  
+**Peso**: 10% de la nota final  
+**Objetivo**: Implementar los casos de uso esenciales del MVP y establecer la base técnica del sistema.
+
+### 3.1 Objetivos del Sprint 1
+
+- Disponer de una **infraestructura técnica funcional**
+- Permitir **autenticación y gestión básica de usuarios**
+- Contar con un **panel administrativo inicial**
+- Implementar un **sistema básico de incidencias**
+- Definir una **base común de UX/UI y testing**
+- Desplegar la aplicación en la nube
+
+### 3.2 Backlog de Historias de Usuario del Sprint 1
+
+#### Infraestructura y base técnica
+
+| ID | Historia de Usuario |
+|----|---------------------|
+| S1-01 | Como desarrollador, necesito el stack tecnológico configurado para comenzar el desarrollo |
+| S1-02 | Como desarrollador, necesito repositorios y estrategia de ramas definidos |
+| S1-03 | Como desarrollador, necesito un pipeline CI/CD básico para automatizar builds |
+| S1-04 | Como desarrollador, necesito desplegar la aplicación en un entorno de desarrollo y de producción |
+| S1-05 | Como desarrollador, necesito una base de datos configurada y accesible |
+| S1-06 | Como desarrollador, necesito documentación técnica inicial del sistema |
+
+#### Autenticación y usuarios
+
+| ID | Historia de Usuario |
+|----|---------------------|
+| S1-07 | Como usuario, quiero registrarme en la plataforma usando mi email |
+| S1-08 | Como usuario, quiero iniciar sesión con email y contraseña |
+| S1-09 | Como usuario, quiero recuperar mi contraseña si la olvido |
+| S1-10 | Como administrador, quiero gestionar roles de usuario (Admin, Estudiante, Personal) |
+| S1-11 | Como usuario, quiero ver y editar mi perfil básico |
+
+#### Panel administrativo básico
+
+| ID | Historia de Usuario |
+|----|---------------------|
+| S1-12 | Como administrador, quiero ver un dashboard inicial con información básica |
+| S1-13 | Como administrador, quiero crear, editar y eliminar habitaciones |
+| S1-14 | Como administrador, quiero asignar estudiantes a habitaciones |
+| S1-15 | Como administrador, quiero ver un listado completo de estudiantes |
+| S1-16 | Como administrador, quiero visualizar el estado de ocupación de la residencia |
+
+#### Sistema de incidencias (versión inicial)
+
+| ID | Historia de Usuario |
+|----|---------------------|
+| S1-17 | Como estudiante, quiero crear una incidencia con una descripción |
+| S1-18 | Como estudiante, quiero ver el historial de mis incidencias |
+| S1-19 | Como administrador, quiero ver todas las incidencias reportadas |
+| S1-20 | Como administrador, quiero cambiar el estado de una incidencia |
+| S1-21 | Como administrador, quiero filtrar incidencias por estado |
+
+#### UX/UI y calidad
+
+| ID | Historia de Usuario |
+|----|---------------------|
+| S1-22 | Como diseñador, quiero definir una paleta de colores y tipografía base |
+| S1-23 | Como diseñador, quiero crear wireframes de las pantallas principales |
+| S1-24 | Como desarrollador, quiero un sistema inicial de componentes reutilizables |
+| S1-25 | Como equipo, quiero definir y ejecutar casos de prueba funcionales |
+| S1-26 | Como equipo, quiero realizar testing de integración básico |
+
+
+### 3.3 Hitos del Sprint 1
+
+| Fecha | Hito | Entregables |
+|-------|------|-------------|
+| **19 Feb** | Inicio Sprint 1 | Sprint planning completado, tareas asignadas |
+| **4 Mar** | **Entrega Sprint 1** (10%) | - Stack tecnológico configurado<br>- MVP desplegado en la nube<br>- Autenticación + Usuarios funcional<br>-Diseños UX/UI aprobados por el equipo<br>- Panel admin básico<br>- Incidencias básicas<br>- Demo funcional |
+
+---
+
+## 4. Sprint 2 - MVP v1 Completo
+
+**Duración**: 12 marzo - 26 marzo (2 semanas)  
+**Peso**: 15% de la nota final  
+**Objetivo**: Completar el MVP v1 funcional, iniciar pilotaje con usuarios reales, establecer ciclo de mejora continua
+
+### 4.1 Objetivos del Sprint 2
+
+1. **Completar funcionalidades esenciales del modelo base**
+   - Reservas de espacios comunes
+   - Comunicación institucional (avisos oficiales)
+   - Mejoras en sistema de incidencias (imágenes, priorización)
+
+2. **Implementar onboarding digital**
+   - Check-in digital
+   - Firma de normas
+   - Información práctica
+
+3. **Mejorar infraestructura**
+   - Monitorización y logging (si es necesario)
+   - Optimización de rendimiento
+   - Seguridad reforzada
+
+### 4.2 Backlog de Historias de Usuario – Sprint 2
+
+#### Reservas de espacios comunes
+
+| ID | Historia de Usuario |
+|----|---------------------|
+| S2-01 | Como administrador, quiero configurar espacios comunes |
+| S2-02 | Como administrador, quiero definir horarios y aforos |
+| S2-03 | Como estudiante, quiero ver la disponibilidad de espacios en tiempo real |
+| S2-04 | Como estudiante, quiero reservar un espacio común |
+| S2-05 | Como estudiante, quiero cancelar mis reservas |
+| S2-06 | Como administrador, quiero ver y gestionar todas las reservas |
+| S2-07 | Como sistema, quiero enviar recordatorios automáticos de reservas |
+
+#### Comunicación institucional
+
+| ID | Historia de Usuario |
+|----|---------------------|
+| S2-08 | Como administrador, quiero publicar avisos oficiales |
+| S2-09 | Como administrador, quiero segmentar avisos por grupos |
+| S2-10 | Como estudiante, quiero ver los avisos relevantes |
+| S2-11 | Como estudiante, quiero marcar avisos como leídos |
+| S2-12 | Como administrador, quiero ver estadísticas de lectura |
+| S2-13 | Como administrador, quiero gestionar una FAQ dinámica |
+
+#### Incidencias (mejoras)
+
+| ID | Historia de Usuario |
+|----|---------------------|
+| S2-14 | Como estudiante, quiero adjuntar imágenes a una incidencia |
+| S2-15 | Como administrador, quiero asignar incidencias a personal |
+| S2-16 | Como estudiante, quiero recibir notificaciones sobre mi incidencia |
+| S2-17 | Como administrador, quiero ver el historial completo de incidencias |
+| S2-18 | Como sistema, quiero priorizar incidencias según criterios básicos |
+
+#### Onboarding digital
+
+| ID | Historia de Usuario |
+|----|---------------------|
+| S2-19 | Como estudiante nuevo, quiero completar un check-in digital |
+| S2-20 | Como estudiante nuevo, quiero firmar digitalmente las normas |
+| S2-21 | Como estudiante nuevo, quiero ver un checklist de llegada |
+| S2-22 | Como estudiante nuevo, quiero acceder a información práctica |
+| S2-23 | Como administrador, quiero ver el estado de onboarding de los estudiantes |
+
+
+### 4.3 Hitos del Sprint 2
+
+| Fecha | Hito | Entregables |
+|-------|------|-------------|
+| **12 Mar** | Inicio Sprint 2 | Sprint planning, objetivos claros |
+| **25 Mar** | **Entrega Sprint 2** (15%) | - Reservas funcionales<br>- Incidencias mejoradas<br>- Onboarding implementado<br>- Comunicación institucional completa<br>- Despliegue en producción<br>- Primeros usuarios piloto onboardeados<br>- MVP v1 completo en producción<br>- Usuarios piloto activos<br>- Feedback inicial recogido<br>- Analytics configurados<br>- Informe de mejora continua |
+
+---
+
+## 5. Sprint 3 - MVP v2 y Diferenciadores
+
+**Duración**: 2 abril - 16 abril (2 semanas)  
+**Peso**: 30% de la nota final  
+**Objetivo**: Implementar funcionalidades diferenciadores (vida social, IA matching), pivotear basado en feedback de pilotaje, completar plan de marketing
+
+### 5.1 Objetivos del Sprint 3
+
+1. **Implementar últimas funcionalidades de NexUS**
+   - Matching social entre estudiantes (IA)
+   - Gestión de eventos y actividades
+
+2. **Pivotear basado en feedback de pilotaje**
+   - Analizar métricas del Sprint 2
+   - Ajustar prioridades según necesidades reales
+
+3. **Completar modelo premium**
+   - Marca blanca (configuración básica)
+   - Dashboard de analítica avanzada
+   - Exportación de informes
+
+4. **Pulir experiencia de usuario**
+   - Optimización de UX basada en feedback
+   - Corrección de bugs prioritarios
+   - Mejora de rendimiento
+
+### 5.2 Backlog de Historias de Usuario – Sprint 3
+
+#### Vida social y convivencia
+
+| ID | Historia de Usuario |
+|----|---------------------|
+| S3-01 | Como estudiante, quiero completar un perfil social |
+| S3-02 | Como estudiante, quiero recibir sugerencias de compañeros compatibles |
+| S3-03 | Como estudiante, quiero que el sistema me ayude a encontrar compañero de habitación |
+| S3-04 | Como administrador, quiero crear eventos para la residencia |
+| S3-05 | Como estudiante, quiero ver e inscribirme en eventos |
+| S3-06 | Como administrador, quiero gestionar la asistencia a eventos |
+| S3-07 | Como administrador, quiero crear encuestas de clima social |
+| S3-08 | Como estudiante, quiero responder encuestas de forma anónima |
+
+#### Módulos premium
+
+| ID | Historia de Usuario |
+|----|---------------------|
+| S3-09 | Como administrador, quiero personalizar el logo de la residencia |
+| S3-10 | Como administrador, quiero configurar colores corporativos |
+| S3-11 | Como administrador, quiero personalizar el nombre de la aplicación |
+| S3-12 | Como administrador, quiero exportar informes en PDF y Excel |
+
+#### Automatizaciones
+
+| ID | Historia de Usuario |
+|----|---------------------|
+| S3-13 | Como administrador, quiero que incidencias sin resolver se escalen automáticamente |
+| S3-14 | Como sistema, quiero enviar recordatorios automáticos de normas |
+| S3-15 | Como sistema, quiero enviar encuestas automáticas tras el check-out |
+
+#### UX, calidad y lanzamiento
+
+| ID | Historia de Usuario |
+|----|---------------------|
+| S3-16 | Como usuario, quiero una experiencia fluida |
+| S3-17 | Como usuario, quiero mensajes de error claros y útiles |
+| S3-18 | Como equipo, quiero realizar testing de seguridad básico |
+
+### 5.3 Hitos del Sprint 3
+
+| Fecha | Hito | Entregables |
+|-------|------|-------------|
+| **2 Abr** | Inicio Sprint 3 | Sprint planning, análisis de feedback Sprint 2 |
+| **15 Abr** | **Entrega Sprint 3** (30%) | - Matching social funcional<br>- Eventos implementados<br>- Marca blanca básica<br>- Analítica avanzada<br>- Automatizaciones<br>- UX pulida<br>- Landing page comercial<br>- MVP v2 completo<br>- Diferenciadores implementados<br>- Plan de marketing ejecutable<br>- Material de ventas<br>- Informe de pivot y mejoras<br>- Demo lista para WPL |
+
+---
+
+## 6. Metodología de trabajo
+
+### 6.1 Framework Scrum adaptado
+
+Aplicaremos Scrum con las siguientes reuniones, adaptadas a nuestra estructura de 4 equipos autónomos. No se realizarán Sprint Reviews como tal, sino que las exposiciones en clase a final de sprint cumplirán esa función:
+
+#### Sprint Planning (Inicio de cada sprint)
+**Parte 1: Definición de objetivos** (todos juntos)
+- Product Owner presenta prioridades del sprint
+- Equipos hacen preguntas y clarificaciones
+- Se asignan módulos funcionales a cada equipo
+
+**Parte 2: Planning por equipo** (equipos separados)
+- Cada equipo descompone su módulo en tareas
+- Estimación colectiva (planning poker)
+- Distribución de responsabilidades internas
+- Identificación de dependencias
+
+**Resultado**: Backlog del sprint claro con ownership por equipo
+
+#### Sprint Retrospective (final de cada sprint)
+**Parte 1: Retro por equipo** (equipos separados)
+- ¿Qué salió bien en nuestro equipo?
+- ¿Qué salió mal?
+- ¿Qué queremos mejorar?
+
+**Parte 2: Retro general** (coordinadores)
+- Cada equipo comparte 2-3 insights clave
+- Identificar problemas inter-equipos
+- Definir acciones de mejora concretas para el siguiente sprint
+
+**Responsable**: Scrum Master
+**Resultado**: Retrospectiva
+
+#### Sincronización técnica (semanal)
+**Participantes**: 4 coordinadores técnicos y otros miembros de cada equipo según sea necesario.
+
+**Contenido**:
+- Revisar implementación hasta el momento
+- Alinear decisiones
+- Resolver conflictos
+- Acordar trabajo semanal
+
+#### Documentación obligatoria por equipo
+Cada equipo debe mantener:
+   
+1. **API Documentation** (puede ser autogenerada):
+   - Endpoints expuestos
+   - Request/response schemas
+   - Ejemplos de uso
+
+2. **User Documentation**:
+   - Guías de uso para sus features
+   - Screenshots/videos si es necesario
+
+3. **ADRs** (Architecture Decision Records):
+   - Decisiones técnicas importantes
+
+### 6.5 Gestión de dependencias entre equipos
+
+**Principio**: Minimizar dependencias, maximizar autonomía
+
+**Cuando hay dependencias**:
+1. **Identificar temprano**
+2. **Definir contrato**: API o interfaz clara entre módulos
+3. **Mock early**: Equipo dependiente crea mocks para no bloquearse
+4. **Sincronizar**: Reunión específica entre equipos afectados si fuera necesario
+5. **Integrar continuamente**: Merges diarios a develop
+
+**Ejemplo**: 
+- Equipo B necesita datos de autenticación de Equipo A
+- Equipo A define y documenta API de auth en día 1
+- Equipo B usa mock de auth mientras Equipo A implementa
+- Integración real en día 5 con testing conjunto
+
+---
+
+## 7. Gestión de riesgos
+
+### 7.1 Riesgos identificados
+
+| ID | Riesgo | Probabilidad | Impacto | Mitigación |
+|----|--------|--------------|---------|------------|
+| R1 | Dificultad para conseguir usuarios piloto | Media | Alto | - Contactar múltiples residencias en paralelo<br>- Ofrecer periodo gratuito extendido<br>- Usar red de contactos de profesores |
+| R2 | Complejidad técnica del matching IA subestimada | Alta | Medio | - Empezar con matching basado en reglas simples<br>- Iterar a ML solo si hay tiempo<br>- Considerar APIs externas (Anthropic Claude) |
+| R3 | Conflictos entre miembros del equipo | Media | Medio | - Definir roles claros desde el inicio<br>- Retrospectivas honestas<br>- Scrum Master como mediador |
+| R4 | Enfermedad o ausencias de miembros clave | Media | Medio | - Documentar código y decisiones<br>- Colaboración entre equipos<br>- Pair programming para features críticas |
+| R5 | Scope creep (añadir features no prioritarias) | Alta | Alto | - Product Owner controla backlog estrictamente<br>- Revisión semanal de prioridades<br>- Decir "no" a features no MVP |
+| R6 | Feedback negativo de usuarios piloto | Media | Alto | - Hacer testing de usabilidad temprano<br>- Iterar rápido basado en feedback |
+| R7 | Performance pobre (app lenta) | Media | Medio | - Testing de performance desde Sprint 1<br>- Optimización continua<br>- Usar CDN para assets |
+| R8 | Bugs críticos cerca de entregas | Media | Alto | - Testing exhaustivo semana antes de entrega<br>- Feature freeze 3 días antes<br>- Buffer de tiempo en planificación |
+| R9 | Falta de diferenciación vs competencia | Baja | Alto | - Validar propuesta de valor con profesores<br>- Investigar competencia continuamente |
+
+### 7.2 Plan de contingencia
+
+Si vamos retrasados:
+1. **Repriorizar**: Mover historias de menor prioridad a siguiente sprint
+2. **Aumentar capacidad temporalmente**: Pedir a miembros hacer horas extra por semana
+3. **Simplificar scope**: Reducir features a versión más simple
+
+Si perdemos usuario piloto:
+1. Activar contactos de respaldo
+2. Ofrecer incentivos dentro de la aplicación
+
+Si hay problema técnico grave (servidor de despliegue caido continuamente...):
+1. Documentar problema detalladamente
+2. Buscar soluciones alternativas
+3. Escalar a profesores si necesario
+4. Mantener trabajo local mientras se resuelve
+
+---
+
+## Conclusión
+
+Este plan de desarrollo de 3 sprints está diseñado para construir NexUS, la plataforma de gestión de residencias de estudiantes. La planificación trata de ser:
+
+- **Realista**: Ajustada a la capacidad de 21 personas y los timings del syllabus
+- **Incremental**: Cada sprint añade valor significativo sobre el anterior
+- **Validada**: Con usuarios piloto reales desde
+
+**Factores clave de éxito**:
+1. Comunicación constante entre equipos
+2. Priorización rigurosa del Product Owner
+3. Feedback temprano y continuo de usuarios
+4. Calidad sobre cantidad en cada entrega
+5. Agilidad para pivotar basado en aprendizajes
+
+El equipo está preparado para entregar un producto que no solo cumple con los requisitos académicos, sino que tiene potencial real de mercado en el sector de gestión de residencias estudiantiles.
