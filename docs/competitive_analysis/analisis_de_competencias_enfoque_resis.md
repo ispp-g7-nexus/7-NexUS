@@ -118,6 +118,32 @@ Tras un análisis exhaustivo cruzando nuestras funcionalidades propuestas con la
 
 ---
 
+### 2.7 Sistema de Gestión de Comedor/Menús 
+
+| Aspecto | Estado del Mercado | Nuestra Propuesta |
+|---------|-------------------|-------------------|
+| **Competidor más cercano** | Campus Laude, Convivo App | — |
+| **Brecha identificada** | Las soluciones actuales actúan como tablones de anuncios estáticos (PDF). No hay conexión real entre el perfil del residente y la logística de producción en cocina. | Planificación nutricional dinámica con desglose de ingredientes y alérgenos, integrada con un sistema de autorizaciones cruzadas que permite delegar la recogida del menú de forma oficial, digital y trazable. |
+| **Valor diferencial** | — | Trazabilidad total de entregas, optimización de raciones por previsión de asistencia y seguridad garantizada en la gestión de alérgenos. |
+
+**Conclusión técnica:** Esta funcionalidad profesionaliza el servicio de restauración al transformar el menú en una herramienta operativa. Al integrar la delegación de recogida autorizada, se eliminan los conflictos  y se asegura que el personal de cocina o conserje tenga un registro en tiempo real de quién retira cada ración. Además, la capacidad de predecir la asistencia real permite reducir el desperdicio alimentario, impactando directamente en la rentabilidad de la residencia.
+
+**Nivel de competencia:** `PARCIALMENTE CUBIERTO` — Aunque existen aplicaciones que muestran el menú, ninguna ofrece un flujo logístico que incluya autorizaciones entre residentes, control de raciones por perfil y analítica de desperdicio.
+
+---
+### 2.8 Panel de Control Multi-Residencia (Vista Nexus)
+
+| Aspecto | Estado del Mercado | Nuestra Propuesta |
+|---------|-------------------|-------------------|
+| **Competidor más cercano** | TheHouseMonk | — |
+| **Brecha identificada** | Las soluciones actuales obligan a gestionar cada sede como una cuenta aislada. No existe una capa de inteligencia agregada para grandes gestoras. | Interfaz de mando centralizado (Vista Nexus) para la supervisión de múltiples residencias con analítica comparativa en tiempo real. |
+| **Valor diferencial** | — | Visibilidad total del portfolio, estandarización de procesos entre sedes y detección de desviaciones operativas mediante IA. |
+
+**Conclusión técnica:** Esta funcionalidad escala el producto de una "app de residencia" a una "herramienta de gestión de activos" (Asset Management). Permite a los directores  comparar el rendimiento social y operativo de sus centros, optimizando la toma de decisiones a nivel corporativo.
+
+**Nivel de competencia:** `BAJO` — Muy limitado en el mercado medio; solo presente en ERPs de coste extremadamente elevado.
+
+---
 ### Resumen de Funcionalidades Únicas
 
 | Funcionalidad | Nivel de Competencia | Complejidad de Implementación | Valor Estratégico |
@@ -128,6 +154,9 @@ Tras un análisis exhaustivo cruzando nuestras funcionalidades propuestas con la
 | Analítica de Clima Social | Inexistente | Alta | Alto |
 | Control de Invitados por QR | Inexistente | Media | Medio |
 | Marca Blanca Profunda | Parcial | Media-Alta | Alto |
+| Gestión de Comedor y Dieta | Parcial | Media | Alto |
+| Vista NexUS | Bajo | Alta | Crítico |
+
 
 ---
 
@@ -438,7 +467,54 @@ Se identifican **22 soluciones relevantes** organizadas en cinco bloques estrat�
 | Complejidad técnica de IA de convivencia | Media | Alto | Desarrollo incremental, validación temprana |
 
 ---
+
 ## 7. Modelo de negocio
+
+La plataforma NexUS opera bajo un modelo de negocio SaaS (Software as a Service) B2B. El cliente principal (quien financia el servicio) es la entidad gestora de la residencia, mientras que los usuarios finales (estudiantes y personal) acceden a la solución de forma gratuita, centralizando toda la operativa en un ecosistema digital unificado.
+
+---
+### 7.1 Estrategia de Monetización
+La estructura de ingresos se basa en un pago recurrente por parte de la residencia, escalado según el número de estudiantes, lo que garantiza que el coste sea proporcional al tamaño del centro. Se divide en dos niveles:
+
+**A. Plan Base (Operativo)**:
+Incluye las funcionalidades críticas para la gestión diaria mínima e indispensable para que la residencia funcione digitalmente.
+- Gestión de Inventario: Control de estudiantes y habitaciones.
+- Seguridad: Gestión de roles y permisos.
+- Operativa Básica: Incidencias simples, reservas básicas de espacios y comunicación institucional.
+- Infraestructura: Despliegue en la nube y mantenimiento incluido.
+
+
+**B. Plan Premium (Estratégico)**:
+Orientado a residencias que buscan una ventaja competitiva mediante la automatización avanzada, el análisis de datos y la personalización de marca.
+- Diferenciación: Módulos de vida social, convivencia e IA de matching.
+- Profesionalización: Onboarding digital completo, marca blanca y soporte prioritario.
+- Inteligencia de Negocio: Analítica avanzada e informes exportables para la toma de decisiones.
+
+---
+### 7.2 Matriz de Suscripción
+
+| Categoría | Plan Base (Operativo) | Plan Premium (Estratégico) |
+|---------|-------------------|-------------------|
+| Gestión de estudiantes y habitaciones | 🟢 Incluido | 🟢 Incluido |
+| Roles y permisos | 🟢 Incluido | 🟢 Incluido |
+| Gestión de incidencias | 🟡 Básica | 🟢 Avanzada |
+| Panel de administración | 🟢 Incluido | 🟢 Incluido |
+| Reservas de espacios | 🟡 Básicas | 🟢 Avanzadas |
+| Comunicación institucional | Avisos oficiales | Avisos, FAQ y Buzón privado |
+| Vida social y convivencia | 🔴 No incluido | 🟢 Incluido  |
+| Onboarding / Offboarding | 🟡 Básico | 🟢 Completo |
+| Analítica y Reportes | 🟡 Básica | 🟢 Avanzada + Exportación |
+| Marca blanca (Personalización) | 🔴 No incluido | 🟢 Incluido |
+| Soporte técnico | Estándar | Prioritario |
+
+---
+### 7.3 Propuesta de Valor Económica
+
+**Escalabilidad**: Al cobrar por plaza/estudiante, el software es accesible tanto para pequeños Colegios Mayores como para grandes residencias privadas.
+
+**Reducción de Costes Indirectos**: La automatización de flujos de trabajo (incidencias, reservas, comedor) reduce la carga administrativa del personal, permitiendo una gestión más eficiente con menos recursos humanos.
+
+**Retención del Residente**: El enfoque en la convivencia y el bienestar (Plan Premium) actúa como una barrera de salida, aumentando la tasa de renovación anual de los estudiantes.
 
 ---
 ## 8. Conclusiones y Recomendaciones
@@ -455,6 +531,8 @@ El mercado de software para residencias estudiantiles presenta las siguientes ca
 
 4. **Mercado hispanohablante vacío:** Oportunidad de posicionamiento geográfico con mínima competencia.
 
+---
+
 ### 8.2 Ventajas Competitivas Defendibles
 
 | Ventaja | Defensibilidad | Tiempo de Replicación Estimado |
@@ -464,6 +542,8 @@ El mercado de software para residencias estudiantiles presenta las siguientes ca
 | Especialización hispanohablante | Media | 6-12 meses |
 | UX Gen-Z optimizada | Media | 6-12 meses |
 | Marca blanca profunda | Media | 6-9 meses |
+
+---
 
 ### 8.3 Recomendaciones Finales
 
