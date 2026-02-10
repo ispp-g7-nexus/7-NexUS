@@ -1,20 +1,45 @@
-# Plan de Desarrollo de Sprints – NexUS
+<div align="center">
 
-<p align="center">
-  <img src="../images/logo-app.jpeg" alt="Portada" width="700">
+<table width="100%" style="border: none; background: none;">
+  <tr>
+    <td align="center" width="50%" style="border: none;">
+      <img src="../images/logo-app.jpeg" alt="Logo NexUS" width="250">
+    </td>
+    <td align="center" width="50%" style="border: none;">
+      <img src="../images/logo-etsii.jpe" alt="Logo ETSII" width="300">
+    </td>
+  </tr>
+</table>
+
+<h1>Plan de Desarrollo de Sprints – NexUS</h1>
+
+<p>
+  <img src="https://img.shields.io/badge/Versión-1.1.1-blue?style=flat-square" alt="Versión">
+  <img src="https://img.shields.io/badge/Estado-En_Desarrollo-yellow?style=flat-square" alt="Estado">
+  <img src="https://img.shields.io/badge/Grupo-B--Tarde-green?style=flat-square" alt="Grupo">
+  <img src="https://img.shields.io/badge/Asignatura-ISPP-red?style=flat-square" alt="Asignatura">
 </p>
 
-
-**Grupo:** B-Tarde 
-**Proyecto:** NexUS  
-**Fecha:** 09/02/2026  
-**Asignatura:** ISPP  
-**Institución:** ETSII, Universidad de Sevilla
-
-
-<p align="center">
-  <img src="../images/logo-etsii.jpe" alt="Portada" width="400">
+<p>
+  <strong>Plataforma integral de gestión y convivencia para residencias universitarias.</strong>
+  <br>
+  Universidad de Sevilla - Curso 2025/2026
 </p>
+
+</div>
+
+---
+
+## 📋 Ficha Técnica del Proyecto
+
+| Campo | Detalle |
+| :--- | :--- |
+| **Proyecto** | **NexUS** |
+| **Organización** | Grupo B-Tarde (21 integrantes) |
+| **Institución** | ETSII, Universidad de Sevilla |
+| **Asignatura** | Ingeniería de Software y Práctica Profesional (ISPP) |
+| **Fecha de actualización** | 10/02/2026 |
+| **Documento** | Planificación de Sprints y Metodología |
 
 ---
 
@@ -24,6 +49,18 @@
 |---------|-------------|----------------------------------------------------------------------------------|
 | 1.0.0   | 09/02/2026  | Creación del documento base                                                      |
 | 1.1.0   | 10/02/2026  | Inclusión de criterios de aceptación (DoD) y tareas legales (GDPR) en Sprint 2   |
+| 1.1.1   | 10/02/2026  | Actualización de identidad visual, badges de estado y tabla de enlaces rápidos   |
+
+---
+
+## 🚀 Enlaces Rápidos
+
+| Recurso | Descripción | Enlace |
+| :--- | :--- | :--- |
+| **Tablero Ágil** | Seguimiento de tareas (GitHub Projects) | [Ver Tablero](https://github.com/orgs/ispp-g11/projects/2) |
+| **Diseño UX/UI** | Prototipos y Mockups en Figma | [Ver Diseños](#) |
+| **Despliegue** | Entorno de producción  | [Ir a la App](#) |
+| **Wiki** | Documentación técnica detallada | [Ver Wiki](#) |
 
 ---
 
