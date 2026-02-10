@@ -29,6 +29,8 @@
 | 1.4.0   | 09/02/2026  | Añadida matriz comparativa consolidada                |
 | 1.5.0   | 09/02/2026  | Añadido modelo de negocio detallado                   |
 | 1.6.0   | 10/02/2026  | Reestructuración con formato profesional              |
+| 1.7.0   | 10/02/2026  | Añadido análisis DAFO estratégico                      |
+
 
 ---
 
@@ -74,6 +76,7 @@
   - [5. Matriz Comparativa Consolidada](#5-matriz-comparativa-consolidada)
     - [5.1. Comparativa de Funcionalidades Core](#51-comparativa-de-funcionalidades-core)
     - [5.2. Análisis de Cobertura](#52-análisis-de-cobertura)
+    - [5.3. Análisis DAFO](#53-análisis-dafo)
   - [6. Oportunidades de Mercado](#6-oportunidades-de-mercado)
     - [6.1. Gaps Estructurales Identificados](#61-gaps-estructurales-identificados)
       - [Gap 1: Integración vertical completa](#gap-1-integración-vertical-completa)
@@ -488,6 +491,41 @@ Se identifican **22 soluciones relevantes**, organizadas en cinco bloques estrat
 
 ---
 
+### 5.3 Análisis DAFO
+
+El siguiente análisis DAFO sintetiza la posición estratégica de NexUS teniendo en cuenta el contexto competitivo, técnico y de mercado identificado a lo largo del documento.
+
+### Debilidades (Factores internos)
+
+* **Alta exigencia técnica inicial:** necesidad de un equipo sólido para mantener backend, app móvil y modelos de IA en producción.
+* **Inversión elevada en I+D:** desarrollo, entrenamiento y validación de algoritmos de IA de convivencia conlleva un coste inicial significativo.
+* **Dependencia de adopción por parte del personal:** el valor completo de la plataforma se alcanza solo si el staff utiliza activamente las herramientas.
+
+### Amenazas (Factores externos)
+
+* **Inercia tecnológica del sector:** residencias con procesos muy consolidados y baja predisposición al cambio digital.
+* **Presupuesto y lock-in de grandes operadores:** presencia de ERPs legacy ya implantados (StarRez, Yardi) con altos costes de sustitución.
+* **Entrada de nuevos actores bien financiados:** riesgo de que startups internacionales repliquen parte del enfoque con mayor músculo financiero.
+
+### Fortalezas (Factores internos)
+
+* **Enfoque claro en el segmento medio:** producto diseñado específicamente para residencias con un volumen medio de estudiantes, actualmente desatendidas.
+* **Propuesta de valor diferencial:** foco en convivencia, bienestar y experiencia del estudiante, no solo en administración.
+* **UX moderna y mobile-first:** diseñada para maximizar adopción por estudiantes (Gen Z) y reducir fricción operativa.
+* **Integración vertical única:** combinación de operativa, comunidad y analítica social en una sola plataforma.
+
+### Oportunidades (Factores externos)
+
+* **Hueco de mercado evidente:** entre soluciones informales (WhatsApp, Excel) y ERPs enterprise complejos y costosos.
+* **Creciente demanda de experiencias residenciales:** las residencias compiten cada vez más por diferenciación y satisfacción del estudiante.
+* **Baja competencia en mercado hispanohablante:** oportunidad de posicionamiento temprano en España y Latinoamérica.
+* **Tendencia institucional hacia bienestar y retención:** alineación con métricas de satisfacción, permanencia y reputación del centro.
+
+**Conclusión DAFO:** NexUS se sitúa en una posición favorable para capturar un segmento claramente desatendido, siempre que priorice una ejecución técnica sólida, un onboarding sin fricción y una comunicación clara del valor diferencial frente a soluciones tradicionales.
+
+---
+
+
 ## 6. Oportunidades de Mercado
 
 ### 6.1. Gaps Estructurales Identificados
@@ -639,10 +677,3 @@ El mercado de software para residencias estudiantiles presenta, de forma general
 4. **Monitorizar Housing.Cloud de forma continua:** es el competidor más cercano en propuesta general.
 5. **No competir en funcionalidades comoditizadas:** evitar invertir de forma desproporcionada en incidencias básicas o reservas de espacios, donde ya existen alternativas sólidas.
 
----
-
-**Clasificación del documento:** uso interno — planificación estratégica
-**Próxima revisión recomendada:** trimestral o ante cambios significativos en el mercado
-
-
----
