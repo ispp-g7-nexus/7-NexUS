@@ -405,7 +405,29 @@ Aplicaremos Scrum con las siguientes reuniones, adaptadas a nuestra estructura d
 - Resolver conflictos
 - Acordar trabajo semanal
 
-#### Documentación obligatoria por equipo
+### 6.2 Criterios de Aceptación Globales (Definition of Done - DoD)
+
+Para garantizar la calidad y la integración continua entre los 4 equipos, ninguna Historia de Usuario (HU) o tarea se considerará "Termiada" hasta cumplir estrictamente con los siguientes criterios:
+
+1.  **Código**:
+    * El código está subido a la rama `develop` (o la rama de feature correspondiente).
+    * Cumple con las guías de estilo definidas (Linter sin errores).
+    * No existen credenciales ni secretos hardcodeados.
+
+2.  **Testing y Calidad**:
+    * La funcionalidad tiene tests unitarios asociados (si aplica).
+    * El pipeline de CI/CD (GitHub Actions/GitLab CI) ha pasado en verde (Build + Tests).
+    
+
+3.  **Revisión (Code Review)**:
+    * La Pull Request (PR) ha sido aprobada por al menos un desarrollador de otro equipo (cross-review) o por el coordinador técnico.
+    * Se han resuelto todos los comentarios de la revisión.
+
+4.  **Documentación**:
+    * Si hubo cambios en la API, la documentación está actualizada.
+    * Si es una funcionalidad compleja, se ha actualizado la Wiki del proyecto.
+
+#### 6.3 Documentación obligatoria por equipo
 Cada equipo debe mantener:
    
 1. **API Documentation** (puede ser autogenerada):
@@ -420,7 +442,7 @@ Cada equipo debe mantener:
 3. **ADRs** (Architecture Decision Records):
    - Decisiones técnicas importantes
 
-### 6.5 Gestión de dependencias entre equipos
+### 6.4 Gestión de dependencias entre equipos
 
 **Principio**: Minimizar dependencias, maximizar autonomía
 
