@@ -14,8 +14,8 @@
 <h1>📋 Plan de Usuarios Piloto – NexUS</h1>
 
 <p>
-  <img src="https://img.shields.io/badge/Versión-1.1.0-blue?style=flat-square" alt="Versión">
-  <img src="https://img.shields.io/badge/Estado-En_Desarrollo-yellow?style=flat-square" alt="Estado">
+  <img src="https://img.shields.io/badge/Versión-1.1.1-blue?style=flat-square" alt="Versión">
+  <img src="https://img.shields.io/badge/Estado-En_Revisión-yellow?style=flat-square" alt="Estado">
   <img src="https://img.shields.io/badge/Grupo-B--Tarde-green?style=flat-square" alt="Grupo">
   <img src="https://img.shields.io/badge/Asignatura-ISPP-red?style=flat-square" alt="Asignatura">
 </p>
@@ -36,7 +36,7 @@
 |---------|-------------|----------------------------------------------------------------------------------|
 | 1.0.0   | 09/02/2026  | Creación del documento base y estilos                                            |
 | 1.1.0   | 10/02/2026  | Añadidos apartados 3 y 4                                                         |
-|         |             |                                                                                  |
+| 1.1.1   | 10/02/2026  | Añadidos apartados 1, 2 y 5                                                        |
 
 ---
 
@@ -52,10 +52,38 @@
 
 
 ## 👥 1. Definición de perfiles piloto
+Los usuarios piloto principales son las residencias privadas independientes y empresas gestoras de residencias de estudiantes, ya que son quienes sufren actualmente la fragmentación de procesos con herramientas como Excel o WhatsApp. Estos centros buscan profesionalizar sus operaciones sin la rigidez de un ERP tradicional. Asimismo, los colegios mayores y las fundaciones vinculadas a universidades representan un perfil ideal para el piloto, dado que su enfoque no es puramente inmobiliario, sino que prioriza la convivencia y la vida social, permitiendo probar el valor diferencial de la plataforma en la creación de comunidad.
+
+- **Residencias privadas independientes:** Este perfil corresponde a centros de tamaño medio que operan actualmente bajo una "gestión fragmentada" basada en hojas de cálculo y llamadas telefónicas. Al participar como usuarios piloto, estos centros validarán cómo una plataforma específica para el día a día puede sustituir herramientas improvisadas, eliminando ineficiencias y la sobrecarga de trabajo para el personal gestor. Su objetivo principal será profesionalizar los procesos internos.
+
+- **Empresas gestoras de residencias de estudiantes:** Las compañías que administran diversos edificios necesitan una visión global de la ocupación y las incidencias. Como usuarios piloto, estas empresas permitirán testear la plataforma, así como la capacidad de escalar el sistema según el número de estudiantes. Además, son los candidatos ideales para probar el módulo de marca blanca, personalizando la plataforma con su identidad corporativa para ofrecer una imagen más profesional.
+
+- **Colegios mayores y fundaciones universitarias:** Dado que estas instituciones priorizan el bienestar y la vida estudiantil, su participación es fundamental para validar la diferencia clave del proyecto: la vida social integrada. Estos centros utilizarán los canales temáticos moderados, la organización de eventos y las inscripciones a actividades para demostrar que el sistema no solo gestiona infraestructura, sino que optimiza la convivencia.
+
+- **Residencias con problemas de comunicación interna:** Este grupo corresponde a centros que aún dependen de números de teléfono personales o grupos de WhatsApp, lo que genera caos informativo. Como usuarios pilotos, se centrarán en implementar el sistema de avisos oficiales con confirmación de lectura y el check-in y firma de normas digital. Su validación servirá para demostrar cómo una plataforma única puede eliminar la dependencia de herramientas externas no profesionales.
 
 ---
 
 ## 🔍 2. Estrategias de identificación y captación
+**Venta Directa**
+
+Esta táctica consiste en identificar residencias privadas independientes que aún gestionan su día a día de forma manual. Al buscar centros que dependen de herramientas como WhatsApp, hojas de cálculo o correos electrónicos, podemos ofrecer la plataforma como la solución definitiva para profesionalizar sus procesos internos y reducir la carga de trabajo. El objetivo es presentar nuestro sistema como una herramienta específica para el día a día que sustituye múltiples aplicaciones ineficientes por una sola plataforma moderna y accesible.
+
+**Alianza con asociaciones**
+
+Esta estrategia consiste en presentar la plataforma a entidades que agrupan múltiples residencias individuales, colegios mayores o fundaciones universitarias. Al proponer el sistema a una asociación, se busca que esta actúe como puente para llegar de golpe a varios clientes potenciales que comparten el mismo problema: la gestión fragmentada con Excel o WhatsApp. Se les ofrece como una solución intuitiva que automatiza el día a día sin complejidad técnica.
+
+**Socio Colaborador**
+
+Esta estrategia busca atraer a directores ofreciéndoles ser parte del desarrollo inicial del software. Se les propone probar los módulos básicos —como la gestión de habitaciones, incidencias y reservas— a cambio de adaptar la plataforma a sus necesidades operativas reales. Para incentivar su participación, se pueden ofrecer beneficios futuros como el módulo de la marca blanca.
+
+**Estudiantes Embajadores**
+
+Dado que los estudiantes residentes son los usuarios finales que más sufren la mala experiencia de gestión, esta táctica utiliza su influencia. Se busca a estudiantes que valoren la "vida social y convivencia" para que muestren a sus gestores cómo la app facilitaría el check-in digital, la inscripción a eventos y la comunicación sin usar números de teléfono. Al demostrar que los residentes prefieren una UX moderna sobre los sistemas antiguos de la competencia, se genera una presión positiva para que la residencia adopte el usuario piloto.
+
+**Concienciación**
+
+Consiste en atraer a los directores mostrándoles los riesgos reales de seguir usando herramientas como WhatsApp o Excel, como la pérdida de datos o la falta de privacidad. Se busca generar una reflexión en el gestor sobre cómo estas "soluciones improvisadas" están dañando su eficiencia y la convivencia de los estudiantes. Al educarlos sobre el problema, la plataforma se presenta no solo como una opción, sino como una necesidad urgente para profesionalizar la residencia.
 
 ---
 
@@ -111,6 +139,16 @@ Se aceptará un acuerdo de colaboración para el usuario piloto, que actuará co
 ---
 
 ## 💰 5. Incentivos y beneficios para usuarios piloto
+**Acceso gratuito y preferencial**
 
+El principal incentivo para los usuarios piloto es el uso de la plataforma sin coste alguno durante toda la fase de pruebas, permitiéndoles profesionalizar su gestión sin inversión inicial. Además, al ser los primeros, tendrán prioridad para solicitar pequeños ajustes en las funciones de día a día, como la gestión de habitaciones o el sistema de incidencias, asegurando que la herramienta se adapte perfectamente a su forma de trabajar.
+
+**Identidad corporativa y marca blanca**
+
+Uno de los beneficios más atractivos es la posibilidad de utilizar la función de marca blanca desde el inicio. Esto permite que la residencia ofrezca a sus estudiantes una aplicación que muestra su propio logo y colores corporativos, lo que mejora su imagen profesional y les ayuda a diferenciarse de otros centros que aún usan métodos anticuados como WhatsApp o Excel.
+
+**Soporte y formación prioritaria**
+
+Al participar en el usuario piloto, la residencia contará con un acompañamiento directo y personalizado para configurar el sistema y formar a su personal (recepción, mantenimiento y dirección). Esto garantiza que el cambio digital sea suave y sin errores, asegurando que el check-in digital de los estudiantes sea un éxito desde el primer día.
 
 ---
