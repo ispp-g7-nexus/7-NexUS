@@ -11,7 +11,7 @@
   </tr>
 </table>
 
-<h1>📋 Plan de Usuarios Piloto – NexUS</h1>
+<h1>Plan de Usuarios Piloto – NexUS</h1>
 
 <p>
   <img src="https://img.shields.io/badge/Versión-1.1.1-blue?style=flat-square" alt="Versión">
@@ -42,16 +42,16 @@
 
 ## Índice
 
-1. [👥 Definición de perfiles piloto](#-1-definición-de-perfiles-piloto)
-2. [🔍 Estrategias de identificación y captación](#-2-estrategias-de-identificación-y-captación)
-3. [🤝 Estrategia de relación y gestión con los usuarios piloto](#-3-estrategia-de-relación-y-gestión-con-los-usuarios-piloto)
-4. [🔐 Modelo de gestión y relación con usuarios piloto](#-4-modelo-de-gestión-y-relación-con-usuarios-piloto)
-5. [💰 Incentivos y beneficios para usuarios piloto](#-5-incentivos-y-beneficios-para-usuarios-piloto)
+1. [Definición de perfiles piloto](#1-definición-de-perfiles-piloto)
+2. [Estrategias de identificación y captación](#2-estrategias-de-identificación-y-captación)
+3. [Estrategia de relación y gestión con los usuarios piloto](#3-estrategia-de-relación-y-gestión-con-los-usuarios-piloto)
+4. [Modelo de gestión y relación con usuarios piloto](#4-modelo-de-gestión-y-relación-con-usuarios-piloto)
+5. [Incentivos y beneficios para usuarios piloto](#5-incentivos-y-beneficios-para-usuarios-piloto)
 
 ---
 
 
-## 👥 1. Definición de perfiles piloto
+## 1. Definición de perfiles piloto
 Los usuarios piloto principales son las residencias privadas independientes y empresas gestoras de residencias de estudiantes, ya que son quienes sufren actualmente la fragmentación de procesos con herramientas como Excel o WhatsApp. Estos centros buscan profesionalizar sus operaciones sin la rigidez de un ERP tradicional. Asimismo, los colegios mayores y las fundaciones vinculadas a universidades representan un perfil ideal para el piloto, dado que su enfoque no es puramente inmobiliario, sino que prioriza la convivencia y la vida social, permitiendo probar el valor diferencial de la plataforma en la creación de comunidad.
 
 - **Residencias privadas independientes:** Este perfil corresponde a centros de tamaño medio que operan actualmente bajo una "gestión fragmentada" basada en hojas de cálculo y llamadas telefónicas. Al participar como usuarios piloto, estos centros validarán cómo una plataforma específica para el día a día puede sustituir herramientas improvisadas, eliminando ineficiencias y la sobrecarga de trabajo para el personal gestor. Su objetivo principal será profesionalizar los procesos internos.
@@ -64,7 +64,7 @@ Los usuarios piloto principales son las residencias privadas independientes y em
 
 ---
 
-## 🔍 2. Estrategias de identificación y captación
+## 2. Estrategias de identificación y captación
 **Venta Directa**
 
 Esta táctica consiste en identificar residencias privadas independientes que aún gestionan su día a día de forma manual. Al buscar centros que dependen de herramientas como WhatsApp, hojas de cálculo o correos electrónicos, podemos ofrecer la plataforma como la solución definitiva para profesionalizar sus procesos internos y reducir la carga de trabajo. El objetivo es presentar nuestro sistema como una herramienta específica para el día a día que sustituye múltiples aplicaciones ineficientes por una sola plataforma moderna y accesible.
@@ -87,7 +87,7 @@ Consiste en atraer a los directores mostrándoles los riesgos reales de seguir u
 
 ---
 
-## 🤝 3. Estrategia de relación y gestión con los usuarios piloto
+## 3. Estrategia de relación y gestión con los usuarios piloto
 Nuestra relación con los usuarios se basará en un modelo de éxito compartido y mejora continua, garantizando eficiencia y coherencia.
 
 **Enfoque cercano y consultivo**
@@ -114,7 +114,7 @@ Se aceptará un acuerdo de colaboración para el usuario piloto, que actuará co
 
 ---
 
-## 🔐 4. Modelo de gestión y relación con usuarios piloto
+## 4. Modelo de gestión y relación con usuarios piloto
 **Acuerdo de confidencialidad y colaboración:** Un documento estandarizado que actuará como contrato base con todas las residencias piloto. Este acuerdo especificará:
 - _Duración de la prueba piloto_: el periodo definido del piloto (ej. 3 meses) y las funcionalidades específicas incluidas.
 - _Compromisos recíprocos_: nuestras obligaciones de soporte y sus obligaciones de participación y de feedback.
@@ -138,7 +138,7 @@ Se aceptará un acuerdo de colaboración para el usuario piloto, que actuará co
 - Documentaremos todas las decisiones de diseño o desarrollo tomadas como resultado del feedback piloto, esto servirá como material para el equipo de ventas y marketing final (“Implementamos X funcionalidad porque 5 residencias nos mostraron la necesidad de tenerla”).
 ---
 
-## 💰 5. Incentivos y beneficios para usuarios piloto
+## 5. Incentivos y beneficios para usuarios piloto
 **Acceso gratuito y preferencial**
 
 El principal incentivo para los usuarios piloto es el uso de la plataforma sin coste alguno durante toda la fase de pruebas, permitiéndoles profesionalizar su gestión sin inversión inicial. Además, al ser los primeros, tendrán prioridad para solicitar pequeños ajustes en las funciones de día a día, como la gestión de habitaciones o el sistema de incidencias, asegurando que la herramienta se adapte perfectamente a su forma de trabajar.
