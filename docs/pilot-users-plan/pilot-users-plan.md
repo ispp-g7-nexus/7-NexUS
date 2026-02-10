@@ -62,6 +62,8 @@ Los usuarios piloto pueden ser las residencias privadas, colegios mayores y empr
 
 - **Residencias con problemas de comunicación interna:** Este grupo corresponde a centros que aún dependen de números de teléfono personales o grupos de WhatsApp, lo que genera caos informativo. Como usuarios pilotos, se centrarán en implementar el sistema de avisos oficiales con confirmación de lectura y el check-in y firma de normas digital. Su validación servirá para demostrar cómo una plataforma única puede eliminar la dependencia de herramientas externas no profesionales.
 
+- **Perfiles especializados:** Este grupo está compuesto por expertos en gestión alojativa y desarrolladores de experiencia de usuario. Su función como usuarios piloto es auditar la plataforma desde una perspectiva técnica y operativa, simulando el uso diario de roles específicos (como el personal de cocina o mantenimiento). Su validación es clave para garantizar que la propuesta de valor cumpla con los estándares de calidad que exige el mercado actual.
+
 ---
 
 ## 2. Estrategias de identificación y captación
