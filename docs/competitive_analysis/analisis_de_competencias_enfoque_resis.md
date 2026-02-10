@@ -1,28 +1,85 @@
-# Análisis Competitivo (Benchmark)
-## Plataforma de Gestión Integral para Residencias Estudiantiles
+# Análisis Competitivo – NexUS (Enfoque Residencias)
 
-**Documento de análisis estratégico**  
-**Fecha de elaboración:** Febrero 2026  
-**Clasificación:** Uso interno - Planificación estratégica
+<p align="center">
+  <img src="../images/logo-app.jpeg" alt="Portada" width="700">
+</p>
+
+
+**Grupo:** B-Tarde  
+**Proyecto:** NexUS - Plataforma de Gestión Integral para Residencias Estudiantiles  
+**Fecha:** 10/02/2026  
+**Asignatura:** ISPP  
+**Institución:** ETSII, Universidad de Sevilla
+
+
+<p align="center">
+  <img src="../images/logo-etsii.jpe" alt="Portada" width="400">
+</p>
+
+---
+
+## Historial de Versiones
+
+| Versión | Fecha       | Cambio principal                                      |
+|---------|-------------|-------------------------------------------------------|
+| 1.0.0   | 10/02/2026  | Creación del documento base                           |
+| 1.1.0   | 10/02/2026  | Añadido análisis de funcionalidades core              |
+| 1.2.0   | 10/02/2026  | Añadido curiado y filtrado de competidores            |
+| 1.3.0   | 10/02/2026  | Añadido análisis profundo por segmento                |
+| 1.4.0   | 10/02/2026  | Añadida matriz comparativa consolidada                |
+| 1.5.0   | 10/02/2026  | Añadido modelo de negocio detallado                   |
+| 1.6.0   | 10/02/2026  | Reestructuración con formato profesional              |
 
 ---
 
 ## Índice
 
 1. [Resumen Ejecutivo](#1-resumen-ejecutivo)
+   - [1.1. Contexto del Análisis](#11-contexto-del-análisis)
+   - [1.2. Hallazgos Principales](#12-hallazgos-principales)
 2. [Funcionalidades Core Sin Competencia Directa](#2-funcionalidades-core-sin-competencia-directa)
+   - [2.1. Sistema de IA para Convivencia Post-Asignación](#21-sistema-de-ia-para-convivencia-post-asignación)
+   - [2.2. Transparencia Bidireccional en Gestión de Incidencias](#22-transparencia-bidireccional-en-gestión-de-incidencias)
+   - [2.3. Reserva de Objetos Comunes (No Solo Espacios)](#23-reserva-de-objetos-comunes-no-solo-espacios)
+   - [2.4. Analítica de Clima Social y Bienestar](#24-analítica-de-clima-social-y-bienestar)
+   - [2.5. Control de Acceso para Invitados mediante QR](#25-control-de-acceso-para-invitados-mediante-qr)
+   - [2.6. Marca Blanca Profunda](#26-marca-blanca-profunda-dominio--email--flujos-personalizados)
+   - [2.7. Sistema de Gestión de Comedor/Menús](#27-sistema-de-gestión-de-comedormenús)
+   - [2.8. Panel de Control Multi-Residencia (Vista Nexus)](#28-panel-de-control-multi-residencia-vista-nexus)
+   - [2.9. Resumen de Funcionalidades Únicas](#29-resumen-de-funcionalidades-únicas)
 3. [Curiado y Filtrado de Competidores](#3-curiado-y-filtrado-de-competidores)
+   - [3.1. Competidores Descartados (Falsos Competidores)](#31-competidores-descartados-falsos-competidores)
+   - [3.2. Competidores Relevantes Identificados](#32-competidores-relevantes-identificados)
 4. [Análisis Profundo por Segmento](#4-análisis-profundo-por-segmento)
+   - [4.1. Bloque Operativo: Gestión de Incidencias y Procesos](#41-bloque-operativo-gestión-de-incidencias-y-procesos)
+   - [4.2. Bloque Social: Matching y Convivencia](#42-bloque-social-matching-y-convivencia)
+   - [4.3. Bloque Legacy: Gigantes del Mercado](#43-bloque-legacy-gigantes-del-mercado)
+   - [4.4. Bloque Multi-Propiedad](#44-bloque-multi-propiedad)
 5. [Matriz Comparativa Consolidada](#5-matriz-comparativa-consolidada)
+   - [5.1. Comparativa de Funcionalidades Core](#51-comparativa-de-funcionalidades-core)
+   - [5.2. Análisis de Cobertura](#52-análisis-de-cobertura)
 6. [Oportunidades de Mercado](#6-oportunidades-de-mercado)
+   - [6.1. Gaps Estructurales Identificados](#61-gaps-estructurales-identificados)
+   - [6.2. Recomendaciones de Posicionamiento](#62-recomendaciones-de-posicionamiento)
+   - [6.3. Matriz de Riesgos](#63-matriz-de-riesgos)
 7. [Modelo de Negocio](#7-modelo-de-negocio)
+   - [7.1. Estrategia de Monetización](#71-estrategia-de-monetización)
+   - [7.2. Matriz de Suscripción](#72-matriz-de-suscripción)
+   - [7.3. Propuesta de Valor Económica](#73-propuesta-de-valor-económica)
 8. [Conclusiones y Recomendaciones](#8-conclusiones-y-recomendaciones)
+   - [8.1. Síntesis del Análisis](#81-síntesis-del-análisis)
+   - [8.2. Ventajas Competitivas Defendibles](#82-ventajas-competitivas-defendibles)
+   - [8.3. Recomendaciones Finales](#83-recomendaciones-finales)
 
 ---
 
 ## 1. Resumen Ejecutivo
 
+### 1.1. Contexto del Análisis
+
 El presente análisis evalúa el panorama competitivo del sector de software para gestión de residencias estudiantiles. Se han analizado más de 50 soluciones, de las cuales 22 presentan relevancia estratégica directa para nuestra propuesta de valor.
+
+### 1.2. Hallazgos Principales
 
 **Hallazgo principal:** Existe una fragmentación significativa del mercado donde los competidores se especializan en capas aisladas (gestión operativa, matching social, o experiencia de comunidad), pero **ninguno ofrece una solución verticalmente integrada** que combine gestión profesional con experiencia estudiantil mejorada mediante inteligencia artificial.
 
@@ -34,7 +91,9 @@ El presente análisis evalúa el panorama competitivo del sector de software par
 
 Tras un análisis exhaustivo cruzando nuestras funcionalidades propuestas con las 22 soluciones relevantes del mercado, se identifican las siguientes capacidades únicas:
 
-### 2.1 Sistema de IA para Convivencia Post-Asignación
+---
+
+### 2.1. Sistema de IA para Convivencia Post-Asignación
 
 | Aspecto | Estado del Mercado | Nuestra Propuesta |
 |---------|-------------------|-------------------|
@@ -48,7 +107,7 @@ Tras un análisis exhaustivo cruzando nuestras funcionalidades propuestas con la
 
 ---
 
-### 2.2 Transparencia Bidireccional en Gestión de Incidencias
+### 2.2. Transparencia Bidireccional en Gestión de Incidencias
 
 | Aspecto | Estado del Mercado | Nuestra Propuesta |
 |---------|-------------------|-------------------|
@@ -62,7 +121,7 @@ Tras un análisis exhaustivo cruzando nuestras funcionalidades propuestas con la
 
 ---
 
-### 2.3 Reserva de Objetos Comunes (No Solo Espacios)
+### 2.3. Reserva de Objetos Comunes (No Solo Espacios)
 
 | Aspecto | Estado del Mercado | Nuestra Propuesta |
 |---------|-------------------|-------------------|
@@ -76,7 +135,7 @@ Tras un análisis exhaustivo cruzando nuestras funcionalidades propuestas con la
 
 ---
 
-### 2.4 Analítica de Clima Social y Bienestar
+### 2.4. Analítica de Clima Social y Bienestar
 
 | Aspecto | Estado del Mercado | Nuestra Propuesta |
 |---------|-------------------|-------------------|
@@ -90,7 +149,7 @@ Tras un análisis exhaustivo cruzando nuestras funcionalidades propuestas con la
 
 ---
 
-### 2.5 Control de Acceso para Invitados mediante QR
+### 2.5. Control de Acceso para Invitados mediante QR
 
 | Aspecto | Estado del Mercado | Nuestra Propuesta |
 |---------|-------------------|-------------------|
@@ -104,7 +163,7 @@ Tras un análisis exhaustivo cruzando nuestras funcionalidades propuestas con la
 
 ---
 
-### 2.6 Marca Blanca Profunda (Dominio + Email + Flujos Personalizados)
+### 2.6. Marca Blanca Profunda (Dominio + Email + Flujos Personalizados)
 
 | Aspecto | Estado del Mercado | Nuestra Propuesta |
 |---------|-------------------|-------------------|
@@ -118,7 +177,7 @@ Tras un análisis exhaustivo cruzando nuestras funcionalidades propuestas con la
 
 ---
 
-### 2.7 Sistema de Gestión de Comedor/Menús 
+### 2.7. Sistema de Gestión de Comedor/Menús 
 
 | Aspecto | Estado del Mercado | Nuestra Propuesta |
 |---------|-------------------|-------------------|
@@ -131,7 +190,8 @@ Tras un análisis exhaustivo cruzando nuestras funcionalidades propuestas con la
 **Nivel de competencia:** `PARCIALMENTE CUBIERTO` — Aunque existen aplicaciones que muestran el menú, ninguna ofrece un flujo logístico que incluya autorizaciones entre residentes, control de raciones por perfil y analítica de desperdicio.
 
 ---
-### 2.8 Panel de Control Multi-Residencia (Vista Nexus)
+
+### 2.8. Panel de Control Multi-Residencia (Vista Nexus)
 
 | Aspecto | Estado del Mercado | Nuestra Propuesta |
 |---------|-------------------|-------------------|
@@ -144,7 +204,8 @@ Tras un análisis exhaustivo cruzando nuestras funcionalidades propuestas con la
 **Nivel de competencia:** `BAJO` — Muy limitado en el mercado medio; solo presente en ERPs de coste extremadamente elevado.
 
 ---
-### Resumen de Funcionalidades Únicas
+
+### 2.9. Resumen de Funcionalidades Únicas
 
 | Funcionalidad | Nivel de Competencia | Complejidad de Implementación | Valor Estratégico |
 |---------------|---------------------|------------------------------|-------------------|
@@ -180,7 +241,7 @@ Del listado inicial de 50+ aplicaciones, se descartan las siguientes por no repr
 
 ---
 
-### 3.2 Competidores Relevantes Identificados
+### 3.2. Competidores Relevantes Identificados
 
 Se identifican **22 soluciones relevantes** organizadas en cinco bloques estratégicos:
 
@@ -196,7 +257,7 @@ Se identifican **22 soluciones relevantes** organizadas en cinco bloques estrat�
 
 ## 4. Análisis Profundo por Segmento
 
-### 4.1 Bloque Operativo: Gestión de Incidencias y Procesos
+### 4.1. Bloque Operativo: Gestión de Incidencias y Procesos
 
 #### Arthur Online
 
@@ -258,7 +319,7 @@ Se identifican **22 soluciones relevantes** organizadas en cinco bloques estrat�
 
 ---
 
-### 4.2 Bloque Social: Matching y Convivencia
+### 4.2. Bloque Social: Matching y Convivencia
 
 #### RoomSync
 
@@ -320,7 +381,7 @@ Se identifican **22 soluciones relevantes** organizadas en cinco bloques estrat�
 
 ---
 
-### 4.3 Bloque Legacy: Gigantes del Mercado
+### 4.3. Bloque Legacy: Gigantes del Mercado
 
 #### StarRez
 
@@ -352,7 +413,7 @@ Se identifican **22 soluciones relevantes** organizadas en cinco bloques estrat�
 
 ---
 
-### 4.4 Bloque Multi-Propiedad
+### 4.4. Bloque Multi-Propiedad
 
 #### TheHouseMonk
 
@@ -371,7 +432,7 @@ Se identifican **22 soluciones relevantes** organizadas en cinco bloques estrat�
 
 ## 5. Matriz Comparativa Consolidada
 
-### 5.1 Comparativa de Funcionalidades Core
+### 5.1. Comparativa de Funcionalidades Core
 
 | Competidor | Incidencias Avanzadas | Matching IA | Marca Blanca | Reservas Espacios | Reservas Objetos | Comunidad Social | Analítica Social | UX Mobile |
 |------------|:---------------------:|:-----------:|:------------:|:-----------------:|:----------------:|:----------------:|:----------------:|:---------:|
@@ -391,7 +452,9 @@ Se identifican **22 soluciones relevantes** organizadas en cinco bloques estrat�
 
 **Leyenda:** 🟢 Completo/Diferencial | 🟡 Básico/Limitado | 🔴 Inexistente/Deficiente
 
-### 5.2 Análisis de Cobertura
+---
+
+### 5.2. Análisis de Cobertura
 
 | Funcionalidad | Competidores que la ofrecen | Gap de Mercado |
 |---------------|:---------------------------:|----------------|
@@ -410,7 +473,7 @@ Se identifican **22 soluciones relevantes** organizadas en cinco bloques estrat�
 
 ## 6. Oportunidades de Mercado
 
-### 6.1 Gaps Estructurales Identificados
+### 6.1. Gaps Estructurales Identificados
 
 #### Gap 1: Integración Vertical Completa
 
@@ -444,7 +507,7 @@ Se identifican **22 soluciones relevantes** organizadas en cinco bloques estrat�
 
 ---
 
-### 6.2 Recomendaciones de Posicionamiento
+### 6.2. Recomendaciones de Posicionamiento
 
 | Dimensión | Recomendación |
 |-----------|---------------|
@@ -456,7 +519,7 @@ Se identifican **22 soluciones relevantes** organizadas en cinco bloques estrat�
 
 ---
 
-### 6.3 Matriz de Riesgos
+### 6.3. Matriz de Riesgos
 
 | Riesgo | Probabilidad | Impacto | Mitigación |
 |--------|:------------:|:-------:|------------|
@@ -468,12 +531,13 @@ Se identifican **22 soluciones relevantes** organizadas en cinco bloques estrat�
 
 ---
 
-## 7. Modelo de negocio
+## 7. Modelo de Negocio
 
-La plataforma NexUS opera bajo un modelo de negocio SaaS (Software as a Service) B2B. El cliente principal (quien financia el servicio) es la entidad gestora de la residencia, mientras que los usuarios finales (estudiantes y personal) acceden a la solución de forma gratuita, centralizando toda la operativa en un ecosistema digital unificado.
+La plataforma NexUS opera bajo un modelo de negocio **SaaS (Software as a Service) B2B**. El cliente principal (quien financia el servicio) es la entidad gestora de la residencia, mientras que los usuarios finales (estudiantes y personal) acceden a la solución de forma gratuita, centralizando toda la operativa en un ecosistema digital unificado.
 
 ---
-### 7.1 Estrategia de Monetización
+
+### 7.1. Estrategia de Monetización
 La estructura de ingresos se basa en un pago recurrente por parte de la residencia, escalado según el número de estudiantes, lo que garantiza que el coste sea proporcional al tamaño del centro. Se divide en dos niveles:
 
 **A. Plan Base (Operativo)**:
@@ -484,14 +548,15 @@ Incluye las funcionalidades críticas para la gestión diaria mínima e indispen
 - Infraestructura: Despliegue en la nube y mantenimiento incluido.
 
 
-**B. Plan Premium (Estratégico)**:
+**B. Plan Premium (Estratégico):**
 Orientado a residencias que buscan una ventaja competitiva mediante la automatización avanzada, el análisis de datos y la personalización de marca.
 - Diferenciación: Módulos de vida social, convivencia e IA de matching.
 - Profesionalización: Onboarding digital completo, marca blanca y soporte prioritario.
 - Inteligencia de Negocio: Analítica avanzada e informes exportables para la toma de decisiones.
 
 ---
-### 7.2 Matriz de Suscripción
+
+### 7.2. Matriz de Suscripción
 
 | Categoría | Plan Base (Operativo) | Plan Premium (Estratégico) |
 |---------|-------------------|-------------------|
@@ -508,7 +573,8 @@ Orientado a residencias que buscan una ventaja competitiva mediante la automatiz
 | Soporte técnico | Estándar | Prioritario |
 
 ---
-### 7.3 Propuesta de Valor Económica
+
+### 7.3. Propuesta de Valor Económica
 
 **Escalabilidad**: Al cobrar por plaza/estudiante, el software es accesible tanto para pequeños Colegios Mayores como para grandes residencias privadas.
 
@@ -517,9 +583,10 @@ Orientado a residencias que buscan una ventaja competitiva mediante la automatiz
 **Retención del Residente**: El enfoque en la convivencia y el bienestar (Plan Premium) actúa como una barrera de salida, aumentando la tasa de renovación anual de los estudiantes.
 
 ---
+
 ## 8. Conclusiones y Recomendaciones
 
-### 8.1 Síntesis del Análisis
+### 8.1. Síntesis del Análisis
 
 El mercado de software para residencias estudiantiles presenta las siguientes características:
 
@@ -533,7 +600,7 @@ El mercado de software para residencias estudiantiles presenta las siguientes ca
 
 ---
 
-### 8.2 Ventajas Competitivas Defendibles
+### 8.2. Ventajas Competitivas Defendibles
 
 | Ventaja | Defensibilidad | Tiempo de Replicación Estimado |
 |---------|:--------------:|-------------------------------|
@@ -545,7 +612,7 @@ El mercado de software para residencias estudiantiles presenta las siguientes ca
 
 ---
 
-### 8.3 Recomendaciones Finales
+### 8.3. Recomendaciones Finales
 
 1. **Priorizar MVP con funcionalidades únicas:** Concentrar desarrollo inicial en IA de convivencia y transparencia de incidencias (gaps críticos sin competencia).
 
@@ -562,4 +629,4 @@ El mercado de software para residencias estudiantiles presenta las siguientes ca
 **Clasificación del documento:** Uso interno - Planificación estratégica  
 **Próxima revisión recomendada:** Trimestral o ante cambio significativo del mercado
 
-
+---
