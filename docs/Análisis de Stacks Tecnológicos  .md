@@ -1,8 +1,8 @@
-# **Análisis de Stacks Tecnológicos \- NexUS**
+# **Análisis de stacks tecnológicos \- NexUS**
 
 Este documento presenta un análisis de la competencia y una evaluación de los posibles stacks tecnológicos para el proyecto **NexUS**. El objetivo es seleccionar un conjunto de tecnologías frontend y backend óptimo que garantice la escalabilidad, mantenibilidad y rendimiento del producto final.
 
-# **1\. Análisis de la Competencia**
+# **1\. Análisis de la competencia**
 
 El patrón observado tras comprobar los stacks de la competencia muestra una fuerte tendencia hacia frameworks de JavaScript en el frontend aunque hay gran diversidad en el backend, siendo notable la presencia de .NET. Para llevar a cabo el análisis se han tenido en cuenta datos publicados por los propios competidores en sus respectivas webs o en foros como [stackshare](https://stackshare.io/). En algunos casos se han usado datos inferidos proporcionados por plataformas fiables como [builtwith](https://builtwith.com/).
 
@@ -158,7 +158,7 @@ Guardar fotos de averías y contratos directamente en la base de datos es un err
 
 ---
 
-## 4.3. El Reto del tiempo: Procesamiento asíncrono (Queue + Workers)
+## 4.3. El reto del tiempo: Procesamiento asíncrono (Queue + Workers)
 Imagina que pides una hamburguesa personalizada. Si el cajero tuviera que ir él mismo a la cocina a cocinarla mientras tú esperas en la caja, la fila no avanzaría y el cajero se cansará. En software, esto es un bloqueo o timeout.
 
 * **Problema:** Tareas como leer un PDF, hacer OCR a una foto de una avería o generar vectores para la IA son "pedidos pesados". Si el servidor intenta hacerlos mientras el usuario espera la respuesta HTTP, la conexión se cortará por tiempo de espera y el usuario pensará que la app se ha roto.
@@ -176,7 +176,7 @@ Imagina que pides una hamburguesa personalizada. Si el cajero tuviera que ir él
 
 ---
 
-# 5. Recomendación Preliminar
+# 5. Recomendación preliminar
 Tras el análisis detallado de los stacks y la evaluación de las capacidades del equipo, se determina que la Alternativa D: Agilidad JS (Node.js + React) es la opción óptima para el desarrollo de NexUS.
 
 ## 5.1. Justificación de la elección técnica
