@@ -123,3 +123,79 @@ Para el *backend*, se proponen dos stacks robustos que ofrecen diferentes enfoqu
 | C\# previene errores en tiempo de compilación, ideal para manejar cálculos de cuotas y presupuestos. | Requiere más líneas de código para tareas simples en comparación con Python o Node.js. |
 | Integración de IA: Gracias a Semantic Kernel, la integración de modelos de lenguaje (LLMs) en C\# es ahora tan fluida como en Python. | Los servicios gestionados de nivel profesional suelen asociarse al ecosistema de pago de Azure. |
 
+# 4. Desafíos tecnológicos y estrategias de mitigación
+
+Desarrollar una aplicación de gestión para residencias universitarias implica manejar dos grandes retos: **optimizar los costes de IA** y garantizar la **estabilidad del sistema** ante cargas simultáneas de archivos.
+
+## 4.1. El reto de la IA: ¿Cómo ahorrar en "Tokens"?
+Cada palabra que la IA lee o escribe tiene un coste (tokens). Si enviamos reglamentos de 50 páginas enteros cada vez que alguien pregunta algo, el coste sería inviable.
+
+* **Problema:** Indexar cientos de documentos masivos puede agotar el presupuesto en minutos y bloquear el acceso por exceso de peticiones.
+* **Soluciones planteadas:**
+    * **La Solución (RAG):** No le damos todo el libro a la IA. Dividimos el texto en "trozos" (*chunks*) y los guardamos en una base de datos especial (**PostgreSQL con pgvector**). Cuando el alumno pregunta, buscamos solo los 2 o 3 trozos relevantes y se los pasamos a la IA.
+    * **La Estrategia de Trazabilidad:** Usamos un "DNI" para cada archivo (**Hash SHA-256**). Si el archivo no ha cambiado, no dejamos que la IA lo vuelva a leer. Esto ahorra un **95% del coste**.
+    * **Persistencia:** Para cada documento, el sistema persistirá en PostgreSQL no solo los vectores, sino también un resumen automático, la versión del modelo utilizado y la fecha de indexación, garantizando la trazabilidad total.
+
+### 4.1.1. Cuantificación y estimación de costes (Justificación del Riesgo)
+Para que la residencia acepte el proyecto, usamos esta fórmula simple de presupuesto:
+
+$$Total = (Páginas \times Tokens \times Precio) + (Consultas \times Tokens \times Precio)$$
+
+Usando modelos económicos como **GPT-4o mini**, el coste de procesar 500 páginas baja de varios euros a apenas unos céntimos. Además, usamos **Redis** para guardar las respuestas de las preguntas más típicas, evitando llamar a la IA dos veces por lo mismo.
+
+---
+
+## 4.2. Almacenamiento eficiente y seguridad de datos sensibles
+Guardar fotos de averías y contratos directamente en la base de datos es un error crítico que ralentiza el sistema.
+
+* **Problema:** Si guardamos archivos binarios (PDF o imágenes) "dentro" de PostgreSQL, el tamaño de la base de datos crece exponencialmente, haciendo que las copias de seguridad tarden horas. Además, los enlaces públicos permanentes son una vulnerabilidad de seguridad.
+* **Soluciones planteadas:**
+    * **Object Storage:** Se utilizará un servicio especializado (**Supabase Storage o S3**). La base de datos sólo almacenará la "Object Key" (una referencia de ruta), manteniéndose ligera.
+    * **URLs firmadas (Acceso bajo demanda):** El sistema generará una URL firmada temporal cada vez que un usuario autenticado solicite ver un documento. El enlace caduca en minutos (ej. 5 min).
+    * **Políticas de acceso (RLS/Middleware):** Solo el residente propietario o el administrador pueden solicitar la generación de dicha URL.
+
+---
+
+## 4.3. El Reto del tiempo: Procesamiento asíncrono (Queue + Workers)
+Las tareas pesadas como leer un PDF o hacer OCR no deben bloquear la conexión del usuario.
+
+* **Problema:** Si el servidor intenta procesar archivos mientras el usuario espera la respuesta HTTP, la conexión se cortará por *timeout*.
+* **Solución (Sistema de "Ticket de Pedido"):**
+    1.  **Cajero (API):** Recibe el archivo, lo guarda y devuelve un ID de tarea ("Pedido recibido").
+    2.  **Tablón de anuncios (Redis):** Cola donde se anotan los pedidos pendientes.
+    3.  **Cocineros (Workers):** Procesos en segundo plano que ejecutan el OCR, generan miniaturas, crean los *chunks* y los *embeddings*.
+    4.  **Pantalla de estado (Frontend):** El estudiante ve un estado de "Procesando" que se actualiza a "¡Listo!" vía **WebSockets** sin necesidad de refrescar.
+
+---
+
+# 5. Recomendación Preliminar
+Tras el análisis detallado, se determina que la **Alternativa D: Agilidad JS (Node.js + React)** es la opción óptima para NexUS.
+
+## 5.1. Justificación de la elección técnica
+* **Agilidad en el Servidor (Node.js + Express):** Entorno orientado a eventos ideal para el Pipeline de IA. Permite atender peticiones mientras se espera a la API de OpenAI.
+* **Robustez en el Frontend (TypeScript + React):** TypeScript actúa como un contrato que evita errores de tipado en componentes complejos como el "Modo Senior".
+* **Reducción de carga cognitiva:** Mantener un lenguaje común (JS/TS) en todo el stack permite que el equipo sea polivalente y acelera la resolución de bugs.
+
+## 5.2. Estrategia de infraestructura y despliegue (Coste Cero/Bajo)
+
+| Componente | Proveedor Seleccionado | Modelo de Coste |
+| :--- | :--- | :--- |
+| Backend (Node.js) | **Azure App Service** | Créditos Azure for Students |
+| Frontend (React) | **Cloudflare Pages** | Gratis (Tier ilimitado) |
+| Archivos (Contratos) | **Cloudflare R2** | Gratis (hasta 10GB) |
+| Base de datos | **Supabase** | Gratis (Shared Instance) |
+| Cola de tareas | **Upstash** | Gratis (Serverless Tier) |
+
+## 5.3. Matriz de decisión de stacks (Scores)
+
+| Criterio de Evaluación | A. IA-First | B. Full-Stack | C. Tradicional | **D. Agilidad JS** | E. Potencia Ent. |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| Velocidad de Desarrollo | 3 | 5 | 2 | **5** | 3 |
+| Curva de Aprendizaje | 3 | 4 | 2 | **5** | 1 |
+| Integración de IA | 5 | 5 | 3 | **4** | 4 |
+| Integración Diseño (Figma)| 2 | 3 | 2 | **5** | 3 |
+| Consistencia de Datos | 4 | 5 | 5 | **4** | 5 |
+| **TOTAL SCORE** | **17** | **22** | **14** | **23** | **16** |
+
+## 5.4. Conclusión estratégica
+La **Opción D** se consolida como la ganadora con **23 puntos**. Esta elección minimiza el riesgo financiero del MVP y maximiza la velocidad de entrega, permitiendo que NexUS crezca de forma estable y escalable.
