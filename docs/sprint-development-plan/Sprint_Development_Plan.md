@@ -277,6 +277,17 @@ Cada sprint, los equipos reciben módulos completos para implementar. Las asigna
 | S2-22 | Como estudiante nuevo, quiero acceder a información práctica |
 | S2-23 | Como administrador, quiero ver el estado de onboarding de los estudiantes |
 
+#### Legal y Cumplimiento (GDPR/RGPD)
+
+| ID | Historia de Usuario |
+|----|---------------------|
+| S2-24 | Como usuario, quiero leer y aceptar la Política de Privacidad y Términos de Uso antes de registrarme |
+| S2-25 | Como usuario, quiero poder descargar una copia de todos mis datos personales (Derecho a la Portabilidad) |
+| S2-26 | Como usuario, quiero solicitar la eliminación de mi cuenta y mis datos (Derecho al Olvido) |
+| S2-27 | Como administrador, quiero gestionar un registro de consentimientos de los usuarios |
+| S2-28 | Como sistema, quiero asegurar que las contraseñas y datos sensibles estén encriptados en la base de datos |
+| S2-29 | Como usuario, quiero ver un aviso de cookies y configurar mis preferencias |
+
 
 ### 4.3 Hitos del Sprint 2
 
