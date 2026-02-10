@@ -52,7 +52,7 @@
 
 
 ## 1. Definición de perfiles piloto
-Los usuarios piloto principales son las residencias privadas independientes y empresas gestoras de residencias de estudiantes, ya que son quienes sufren actualmente la fragmentación de procesos con herramientas como Excel o WhatsApp. Estos centros buscan profesionalizar sus operaciones sin la rigidez de un ERP tradicional. Asimismo, los colegios mayores y las fundaciones vinculadas a universidades representan un perfil ideal para el piloto, dado que su enfoque no es puramente inmobiliario, sino que prioriza la convivencia y la vida social, permitiendo probar el valor diferencial de la plataforma en la creación de comunidad.
+Los usuarios piloto pueden ser las residencias privadas, colegios mayores y empresas gestoras de residencias de estudiantes, ya que son quienes sufren actualmente la fragmentación de procesos con herramientas como Excel o WhatsApp. Estos centros buscan profesionalizar sus operaciones sin la rigidez de un ERP tradicional. Asimismo, incluiremos en el piloto a perfiles especializados externos (expertos en el sector, estudiantes o usuarios avanzados) que puedan evaluar de forma integral la experiencia de cada tipo de usuario final de la app (como el estudiante, el cocinero o el administrador) asegurando que la experiencia sea intuitiva, completa y valiosa para todos los roles involucrados en el día a día de la residencia.
 
 - **Residencias privadas independientes:** Este perfil corresponde a centros de tamaño medio que operan actualmente bajo una "gestión fragmentada" basada en hojas de cálculo y llamadas telefónicas. Al participar como usuarios piloto, estos centros validarán cómo una plataforma específica para el día a día puede sustituir herramientas improvisadas, eliminando ineficiencias y la sobrecarga de trabajo para el personal gestor. Su objetivo principal será profesionalizar los procesos internos.
 
@@ -100,22 +100,22 @@ El gestor de usuarios pilotos será el punto de contacto principal, asegurando u
 
 **Sesiones de onboarding personalizadas**
 
-Documentación estructurada, videotutoriales breves por roles y plantillas para facilitar el despliegue inicial de prueba. Sesiones programadas para diferentes perfiles (administradores, personal de mantenimiento, coordinadores, cocineros...).Seguimiento automatizado del progreso de cada residencia en la implementación.
+Documentación estructurada, videotutoriales breves por roles y plantillas para facilitar el despliegue inicial de prueba. Se realizarán sesiones programadas para diferentes perfiles (administradores, personal de mantenimiento, coordinadores, cocineros).
 
 **Feedback continuo**
 
-Reuniones semanales o quincenales para recoger necesidades, problemas y sugerencias de mejora. Obtendremos feedback proveniente de reuniones, encuestas y comunicación directa. Las primeras reuniones analizarán el feedback inicial de usabilidad, las intermedias evaluarán las funcionalidades básicas y las finales comprobarán la satisfacción general y el impacto operativo. Contaremos con reuniones de seguimiento programadas individuales con las residencias.
+Reuniones semanales o quincenales para recoger necesidades, problemas y sugerencias de mejora. Obtendremos feedback proveniente de reuniones, encuestas y comunicación directa. Las _primeras reuniones_ analizarán el feedback inicial de usabilidad, las _intermedias_ evaluarán las funcionalidades básicas y las _finales_ comprobarán la satisfacción general y el impacto operativo. Contaremos con reuniones de seguimiento programadas individuales con los usuarios de prueba.
 
 **Gestión de expectativas y compromisos**
 
 Se aceptará un acuerdo de colaboración para el usuario piloto, que actuará como guía, recogiendo la duración del período, el alcance de las funcionalidades incluidas y los compromisos de ambas partes.
 - _Nuestros compromisos_: Horario de soporte, tiempo máximo de respuesta para incidencias, y la implementación de mejoras acordadas.
-- _Sus compromisos_: Designar un encargado interno, participar en al menos el 75% de las sesiones y usar la plataforma.
+- _Sus compromisos_: Designar un encargado en caso de empresas gestoras o residencias, participar en al menos el 75% de las sesiones y usar la plataforma.
 
 ---
 
 ## 4. Modelo de gestión y relación con usuarios piloto
-**Acuerdo de confidencialidad y colaboración:** Un documento estandarizado que actuará como contrato base con todas las residencias piloto. Este acuerdo especificará:
+**Acuerdo de confidencialidad y colaboración:** Un documento estandarizado que actuará como contrato base con todas los usuarios piloto. Este acuerdo especificará:
 - _Duración de la prueba piloto_: el periodo definido del piloto (ej. 3 meses) y las funcionalidades específicas incluidas.
 - _Compromisos recíprocos_: nuestras obligaciones de soporte y sus obligaciones de participación y de feedback.
 - _Propiedad_: quedará claro que el software y sus mejoras derivadas son de nuestra propiedad.
@@ -128,14 +128,14 @@ Se aceptará un acuerdo de colaboración para el usuario piloto, que actuará co
 
 **Estrategia de datos flexible:**
 - _Datos reales_: Para residencias que lo autoricen, migraremos sus datos reales (estudiantes, habitaciones, personal) al entorno piloto.
-- _Datos sintéticos_: Ofreceremos la posibilidad de comenzar con un conjunto de datos anónimos y ficticios generados por nosotros. Esto permite a la residencia capacitar a su personal y explorar la plataforma con total seguridad antes de decidir cargar información real.
+- _Datos sintéticos_: Ofreceremos la posibilidad de comenzar con un conjunto de datos anónimos y ficticios generados por nosotros. Esto permite a la residencia conocer y explorar la plataforma con total seguridad antes de decidir cargar información real.
 
-**Gestión estricta de roles y permisos:** Configuraremos los perfiles de acceso. Para que cada perfil tenga acceso estrictamente a lo que le corresponde, por ejemplo, administrador de la residencia (acceso total a la configuración y datos de su centro), personal operativo (acceso a módulos como incidencias, reservas, comunicación) y usuario Estudiante (pruebas de funcionalidades como residente).
+**Gestión estricta de roles y permisos:** Configuraremos los perfiles de acceso. Para que cada perfil tenga acceso estrictamente a lo que le corresponde, por ejemplo, _administrador de la residencia_ (acceso total a la configuración y datos de su centro), _personal operativo_ (acceso a módulos como incidencias, reservas, comunicación) y usuario _Estudiante_ (pruebas de funcionalidades como residente).
 
 **Sistema de reportes y mejora continua:** El feedback será procesado, priorizado y convertido en acción.
 - Registraremos todo el feedback recibido en una herramienta (email, formularios…) y nuestro equipo ***revisará***, ***etiquetará*** (Bugs, mejoras, nuevas funcionalidades) y ***priorizará*** (alta, media, baja) según impacto y frecuencia.
-- Se notificará a la residencia piloto que la sugerencia o reporte ha sido aceptada y que se programa para la versión X de entrega.
-- Documentaremos todas las decisiones de diseño o desarrollo tomadas como resultado del feedback piloto, esto servirá como material para el equipo de ventas y marketing final (“Implementamos X funcionalidad porque 5 residencias nos mostraron la necesidad de tenerla”).
+- Se notificará a los usuarios piloto que la sugerencia o reporte ha sido aceptada y que se programa para la versión X de entrega.
+- Documentaremos todas las decisiones de diseño o desarrollo tomadas como resultado del feedback piloto, esto servirá como material para el equipo de ventas y marketing final (“Implementamos X funcionalidad porque 5 residencias o estudiantes nos mostraron la necesidad de tenerla”).
 ---
 
 ## 5. Incentivos y beneficios para usuarios piloto
