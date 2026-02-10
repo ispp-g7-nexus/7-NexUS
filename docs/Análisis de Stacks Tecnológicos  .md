@@ -144,6 +144,7 @@ $$Total = (Páginas \times Tokens \times Precio) + (Consultas \times Tokens \tim
 
 Usando modelos económicos como GPT-4o mini, el coste de procesar 500 páginas baja de varios euros a apenas unos céntimos. Además, usamos Redis para guardar las respuestas de las preguntas más típicas, evitando llamar a la IA dos veces por lo mismo.
 La indexación es un proceso único por documento. El sistema solo lanzará un re-procesamiento si detecta un cambio en el Hash del archivo o si el administrador fuerza una actualización tras un cambio mayor en el motor de IA.
+
 ---
 
 ## 4.2. Almacenamiento eficiente y seguridad de datos sensibles
@@ -163,9 +164,13 @@ Imagina que pides una hamburguesa personalizada. Si el cajero tuviera que ir él
 * **Problema:** Tareas como leer un PDF, hacer OCR a una foto de una avería o generar vectores para la IA son "pedidos pesados". Si el servidor intenta hacerlos mientras el usuario espera la respuesta HTTP, la conexión se cortará por tiempo de espera y el usuario pensará que la app se ha roto.
 * **Solución (Sistema de "Ticket de Pedido"):**
     1.  **Cajero (API):** Recibe el archivo, lo guarda y te da un ticket (ID de tarea). Te dice: "Pedido recibido".
-    2.  **Tablón de anuncios (Redis):** Cola donde se anotan los pedidos pendientes.
+    2.  **Tablón de anuncios (Redis):** Es la cola donde se anotan los pedidos pendientes.
     3.  **Cocineros (Workers):** Procesos en segundo plano que leen el PDF u optimizan las imágenes sin molestar al servidor principal.
-   El worker se encargará de:  
+         El worker se encargará de:  
+            Leer el PDF (OCR si es imagen). 
+            Generar miniaturas (thumbnails) optimizadas.
+            Crear los trozos de texto (chunking).
+            Generar los embeddings.]
 
     4.  **Pantalla de estado (Frontend):** El estudiante ve: "Cocinando... (Procesando)" y, gracias a WebSockets, la pantalla se actualiza sola a "¡Listo!" cuando termina.
 
@@ -200,6 +205,7 @@ Se han reevaluado las alternativas considerando el beneficio de usar herramienta
 | Integración Diseño (Figma)| 2 | 3 | 2 | **5** | 3 |
 | Consistencia de Datos | 4 | 5 | 5 | **4** | 5 |
 | **TOTAL SCORE** | **17** | **22** | **14** | **23** | **16** |
+
 Esta decisión se alinea con las tendencias observadas en los competidores más ágiles (como Convivo App) y aprovecha la infraestructura de bajo coste de proveedores modernos como Cloudflare y Supabase, minimizando el riesgo financiero del MVP.
 
 ## 5.4. Conclusión estratégica
