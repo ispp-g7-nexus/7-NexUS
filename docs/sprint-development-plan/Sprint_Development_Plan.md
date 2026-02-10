@@ -20,9 +20,10 @@
 
 ## Historial de Versiones
 
-| Versión | Fecha       | Cambio principal                                      |
-|---------|-------------|-------------------------------------------------------|
-| 1.0.0   | 09/02/2026  | Creación del documento base                           |
+| Versión | Fecha       | Cambio principal                                                                 |
+|---------|-------------|----------------------------------------------------------------------------------|
+| 1.0.0   | 09/02/2026  | Creación del documento base                                                      |
+| 1.1.0   | 10/02/2026  | Inclusión de criterios de aceptación (DoD) y tareas legales (GDPR) en Sprint 2   |
 
 ---
 
