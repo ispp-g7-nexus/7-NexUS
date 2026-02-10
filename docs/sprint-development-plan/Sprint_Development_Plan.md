@@ -390,9 +390,9 @@ Cada sprint, los equipos reciben módulos completos para implementar. Las asigna
 
 | ID | Historia de Usuario |
 |----|---------------------|
-| S3-16 | Como usuario, quiero una experiencia fluida |
-| S3-17 | Como usuario, quiero mensajes de error claros y útiles |
-| S3-18 | Como equipo, quiero realizar testing de seguridad básico |
+| S3-13 | Como usuario, quiero una experiencia fluida |
+| S3-14 | Como usuario, quiero mensajes de error claros y útiles |
+| S3-15 | Como equipo, quiero realizar testing de seguridad básico |
 
 ### 5.3 Hitos del Sprint 3
 
