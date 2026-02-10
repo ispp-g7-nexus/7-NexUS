@@ -386,14 +386,6 @@ Cada sprint, los equipos reciben módulos completos para implementar. Las asigna
 | S3-11 | Como administrador, quiero personalizar el nombre de la aplicación |
 | S3-12 | Como administrador, quiero exportar informes en PDF y Excel |
 
-#### Automatizaciones
-
-| ID | Historia de Usuario |
-|----|---------------------|
-| S3-13 | Como administrador, quiero que incidencias sin resolver se escalen automáticamente |
-| S3-14 | Como sistema, quiero enviar recordatorios automáticos de normas |
-| S3-15 | Como sistema, quiero enviar encuestas automáticas tras el check-out |
-
 #### UX, calidad y lanzamiento
 
 | ID | Historia de Usuario |
