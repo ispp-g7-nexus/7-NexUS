@@ -7,7 +7,7 @@
 <div align="center">
 
 <p>
-  <img src="https://img.shields.io/badge/Versión-1.1.2-blue?style=flat-square" alt="Versión">
+  <img src="https://img.shields.io/badge/Versión-1.1.3-blue?style=flat-square" alt="Versión">
   <img src="https://img.shields.io/badge/Estado-En_Desarrollo-yellow?style=flat-square" alt="Estado">
   <img src="https://img.shields.io/badge/Grupo-B--Tarde-green?style=flat-square" alt="Grupo">
   <img src="https://img.shields.io/badge/Asignatura-ISPP-red?style=flat-square" alt="Asignatura">
@@ -43,7 +43,8 @@
 | 1.0.0   | 09/02/2026  | Creación del documento base                                                      |
 | 1.1.0   | 10/02/2026  | Inclusión de criterios de aceptación (DoD) y tareas legales (GDPR) en Sprint 2   |
 | 1.1.1   | 10/02/2026  | Actualización de identidad visual, badges de estado y tabla de enlaces rápidos   |
-| 1.1.2   | 10/02/2026  | Reorganización de la cabecera y mejora del formato del documento    |
+| 1.1.2   | 10/02/2026  | Reorganización de la cabecera y mejora del formato del documento                 |
+| 1.1.3   | 11/02/2026  | Ajustes en sprint 3 y corrección de errores en la conclusión                     |
 
 ---
 
@@ -370,13 +371,13 @@ Cada sprint, los equipos reciben módulos completos para implementar. Las asigna
 | S3-11 | Como administrador, quiero personalizar el nombre de la aplicación |
 | S3-12 | Como administrador, quiero exportar informes en PDF y Excel |
 
-#### UX, calidad y lanzamiento
+#### Calidad, seguridad y lanzamiento
 
 | ID | Historia de Usuario |
 |----|---------------------|
-| S3-13 | Como usuario, quiero una experiencia fluida |
-| S3-14 | Como usuario, quiero mensajes de error claros y útiles |
-| S3-15 | Como equipo, quiero realizar testing de seguridad básico |
+| S3-14 | Como equipo, queremos realizar un testing de seguridad básico para asegurar que la aplicación no tiene vulnerabilidades críticas antes del lanzamiento |
+| S3-15 | Como equipo, queremos verificar que la PWA funciona correctamente en distintos navegadores (Chrome, Firefox) |
+| S3-16 | Como equipo, queremos revisar y corregir los bugs e incidencias de UX más críticos detectados durante el pilotaje del Sprint 2 |
 
 ### 5.3 Hitos del Sprint 3
 
@@ -527,7 +528,7 @@ Este plan de desarrollo de 3 sprints está diseñado para construir NexUS, la pl
 
 - **Realista**: Ajustada a la capacidad de 21 personas y los timings del syllabus
 - **Incremental**: Cada sprint añade valor significativo sobre el anterior
-- **Validada**: Con usuarios piloto reales desde
+- **Validada**: Con usuarios piloto reales
 
 **Factores clave de éxito**:
 1. Comunicación constante entre equipos
