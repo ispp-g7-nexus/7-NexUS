@@ -22,7 +22,7 @@
 ---
 
 **Proyecto:** NexUS  
-**Grupo:** B-Tarde  
+**Grupo:** 7 - NexUS  
 **Asignatura:** Ingeniería del Software y Práctica Profesional (ISPP)  
 **Institución:** ETSII – Universidad de Sevilla  
 **Curso académico:** 2025/2026  
@@ -38,14 +38,14 @@
 
 ## Historial de Versiones
 
-| Versión | Fecha       | Cambio principal                                                                 |
-|---------|-------------|----------------------------------------------------------------------------------|
-| 1.0.0   | 09/02/2026  | Creación del documento base                                                      |
-| 1.1.0   | 10/02/2026  | Inclusión de criterios de aceptación (DoD) y tareas legales (GDPR) en Sprint 2   |
-| 1.1.1   | 10/02/2026  | Actualización de identidad visual, badges de estado y tabla de enlaces rápidos   |
-| 1.1.2   | 10/02/2026  | Reorganización de la cabecera y mejora del formato del documento                 |
-| 1.1.3   | 11/02/2026  | Ajustes en sprint 3 y corrección de errores en la conclusión                     |
-
+| Versión | Fecha | Cambio principal |
+|---------|-------|------------------|
+| 1.0.0 | 09/02/2026 | Creación del documento base |
+| 1.1.0 | 10/02/2026 | Inclusión de criterios de aceptación (DoD) y tareas legales (GDPR) en Sprint 2 |
+| 1.1.1 | 10/02/2026 | Actualización de identidad visual, badges de estado y tabla de enlaces rápidos |
+| 1.1.2 | 10/02/2026 | Reorganización de la cabecera y mejora del formato del documento |
+| 1.1.3 | 11/02/2026 | Ajustes en sprint 3 y corrección de errores en la conclusión |
+| 1.2.0 | 15/02/2026 | Ajustes del formato de documento, planificación temporal de tareas, clasificación MoSCoW y corrección de errores |
 ---
 
 
@@ -129,7 +129,7 @@ Cada equipo es **autónomo y completo**, capaz de entregar módulos funcionales 
 - Definición y priorización del Product Backlog
 - Validación de criterios de aceptación
 - Contacto con usuarios piloto
-- Decisiones sobre alcance y pivots
+- Decisiones sobre alcance y cambios
 - **También desarrolla dentro de su equipo**
 
 #### Coordinadores técnicos (1 por equipo)
@@ -153,14 +153,36 @@ Cada sprint, los equipos reciben módulos completos para implementar. Las asigna
 - Acordar trabajo de la siguiente semana
 
 ---
+## 3 Estrategia de Priorización – Método MoSCoW
 
-## 3. Sprint 1 – Funcionalidades Core del MVP
+Para priorizar las historias de usuario utilizaremos la metodología **MoSCoW**, que clasifica cada funcionalidad en cuatro niveles:
+
+- **Must Have (M)**: Imprescindible para que el sistema funcione correctamente. Sin esto el sprint no se considera entregable.
+- **Should Have (S)**: Importante pero no bloqueante. Puede aplazarse si hay restricciones de tiempo.
+- **Could Have (C)**: Deseable, aporta valor diferencial pero no es crítica para la versión actual.
+- **Won't Have (W)**: No se implementará
+
+### Criterios de priorización utilizados
+
+1. Impacto en el MVP funcional.
+2. Valor estratégico diferencial.
+3. Dependencias técnicas.
+4. Riesgo de implementación.
+5. Capacidad real del equipo (21 personas, 6 semanas).
+
+El objetivo es garantizar que:
+- El **Sprint 1 entregue una base sólida y operativa**.
+- El **Sprint 2 complete el MVP comercializable**.
+- El **Sprint 3 incorpore los grandes diferenciadores estratégicos restantes**.
+---
+
+## 4. Sprint 1 – Funcionalidades Core del MVP
 
 **Duración**: 19 febrero – 5 marzo (2 semanas)  
 **Peso**: 10% de la nota final  
 **Objetivo**: Implementar los casos de uso esenciales del MVP y establecer la base técnica del sistema.
 
-### 3.1 Objetivos del Sprint 1
+### 4.1 Objetivos del Sprint 1
 
 - Disponer de una **infraestructura técnica funcional**
 - Permitir **autenticación y gestión básica de usuarios**
@@ -169,61 +191,61 @@ Cada sprint, los equipos reciben módulos completos para implementar. Las asigna
 - Definir una **base común de UX/UI y testing**
 - Desplegar la aplicación en la nube
 
-### 3.2 Backlog de Historias de Usuario del Sprint 1
+### 4.2 Backlog de Historias de Usuario del Sprint 1
 
 #### Infraestructura y base técnica
 
-| ID | Historia de Usuario |
-|----|---------------------|
-| S1-01 | Como desarrollador, necesito el stack tecnológico configurado para comenzar el desarrollo |
-| S1-02 | Como desarrollador, necesito repositorios y estrategia de ramas definidos |
-| S1-03 | Como desarrollador, necesito un pipeline CI/CD básico para automatizar builds |
-| S1-04 | Como desarrollador, necesito desplegar la aplicación en un entorno de desarrollo y de producción |
-| S1-05 | Como desarrollador, necesito una base de datos configurada y accesible |
-| S1-06 | Como desarrollador, necesito documentación técnica inicial del sistema |
+| ID | Historia de Usuario | MoSCoW |
+|----|---------------------|--------|
+| S1-01 | Como desarrollador, necesito el stack tecnológico configurado para comenzar el desarrollo | **M** |
+| S1-02 | Como desarrollador, necesito repositorios y estrategia de ramas definidos | **M** |
+| S1-03 | Como desarrollador, necesito un pipeline CI/CD básico para automatizar builds | **M** |
+| S1-04 | Como desarrollador, necesito desplegar la aplicación en un entorno de desarrollo y de producción | **M** |
+| S1-05 | Como desarrollador, necesito una base de datos configurada y accesible | **M** |
+| S1-06 | Como desarrollador, necesito documentación técnica inicial del sistema | **C** |
 
 #### Autenticación y usuarios
 
-| ID | Historia de Usuario |
-|----|---------------------|
-| S1-07 | Como usuario, quiero registrarme en la plataforma usando mi email |
-| S1-08 | Como usuario, quiero iniciar sesión con email y contraseña |
-| S1-09 | Como usuario, quiero recuperar mi contraseña si la olvido |
-| S1-10 | Como administrador, quiero gestionar roles de usuario (Admin, Estudiante, Personal) |
-| S1-11 | Como usuario, quiero ver y editar mi perfil básico |
+| ID | Historia de Usuario | MoSCoW |
+|----|---------------------|--------|
+| S1-07 | Como usuario, quiero registrarme en la plataforma usando mi email | **M** |
+| S1-08 | Como usuario, quiero iniciar sesión con email y contraseña | **M** |
+| S1-09 | Como usuario, quiero recuperar mi contraseña si la olvido | **S** |
+| S1-10 | Como administrador, quiero gestionar roles de usuario (Admin, Estudiante, Personal) | **M** |
+| S1-11 | Como usuario, quiero ver y editar mi perfil básico | **S** |
 
 #### Panel administrativo básico
 
-| ID | Historia de Usuario |
-|----|---------------------|
-| S1-12 | Como administrador, quiero ver un dashboard inicial con información básica |
-| S1-13 | Como administrador, quiero crear, editar y eliminar habitaciones |
-| S1-14 | Como administrador, quiero asignar estudiantes a habitaciones |
-| S1-15 | Como administrador, quiero ver un listado completo de estudiantes |
-| S1-16 | Como administrador, quiero visualizar el estado de ocupación de la residencia |
+| ID | Historia de Usuario | MoSCoW |
+|----|---------------------|--------|
+| S1-12 | Como administrador, quiero ver un dashboard inicial con información básica | **M** |
+| S1-13 | Como administrador, quiero crear, editar y eliminar habitaciones | **M**|
+| S1-14 | Como administrador, quiero asignar estudiantes a habitaciones | **M**|
+| S1-15 | Como administrador, quiero ver un listado completo de estudiantes | **S**|
+| S1-16 | Como administrador, quiero visualizar el estado de ocupación de la residencia | **S**|
 
 #### Sistema de incidencias (versión inicial)
 
-| ID | Historia de Usuario |
-|----|---------------------|
-| S1-17 | Como estudiante, quiero crear una incidencia con una descripción |
-| S1-18 | Como estudiante, quiero ver el historial de mis incidencias |
-| S1-19 | Como administrador, quiero ver todas las incidencias reportadas |
-| S1-20 | Como administrador, quiero cambiar el estado de una incidencia |
-| S1-21 | Como administrador, quiero filtrar incidencias por estado |
+| ID | Historia de Usuario | MoSCoW |
+|----|---------------------|--------|
+| S1-17 | Como estudiante, quiero crear una incidencia con una descripción | **M** |
+| S1-18 | Como estudiante, quiero ver el historial de mis incidencias | **S** |
+| S1-19 | Como administrador, quiero ver todas las incidencias reportadas | **M** |
+| S1-20 | Como administrador, quiero cambiar el estado de una incidencia | **M** |
+| S1-21 | Como administrador, quiero filtrar incidencias por estado | **S** |
 
 #### UX/UI y calidad
 
-| ID | Historia de Usuario |
-|----|---------------------|
-| S1-22 | Como diseñador, quiero definir una paleta de colores y tipografía base |
-| S1-23 | Como diseñador, quiero crear wireframes de las pantallas principales |
-| S1-24 | Como desarrollador, quiero un sistema inicial de componentes reutilizables |
-| S1-25 | Como equipo, quiero definir y ejecutar casos de prueba funcionales |
-| S1-26 | Como equipo, quiero realizar testing de integración básico |
+| ID | Historia de Usuario | MoSCoW |
+|----|---------------------|--------|
+| S1-22 | Como diseñador, quiero definir una paleta de colores y tipografía base | **M**|
+| S1-23 | Como diseñador, quiero crear wireframes de las pantallas principales | **C** |
+| S1-24 | Como desarrollador, quiero un sistema inicial de componentes reutilizables | **S** |
+| S1-25 | Como equipo, quiero definir y ejecutar casos de prueba funcionales | **M** |
+| S1-26 | Como equipo, quiero realizar testing de integración básico | **S** |
 
 
-### 3.3 Hitos del Sprint 1
+### 4.3 Hitos del Sprint 1
 
 | Fecha | Hito | Entregables |
 |-------|------|-------------|
@@ -232,13 +254,13 @@ Cada sprint, los equipos reciben módulos completos para implementar. Las asigna
 
 ---
 
-## 4. Sprint 2 - MVP v1 Completo
+## 5. Sprint 2 - MVP v1 Completo
 
 **Duración**: 12 marzo - 26 marzo (2 semanas)  
 **Peso**: 15% de la nota final  
 **Objetivo**: Completar el MVP v1 funcional, iniciar pilotaje con usuarios reales, establecer ciclo de mejora continua
 
-### 4.1 Objetivos del Sprint 2
+### 5.1 Objetivos del Sprint 2
 
 1. **Completar funcionalidades esenciales del modelo base**
    - Reservas de espacios comunes
@@ -255,64 +277,89 @@ Cada sprint, los equipos reciben módulos completos para implementar. Las asigna
    - Optimización de rendimiento
    - Seguridad reforzada
 
-### 4.2 Backlog de Historias de Usuario – Sprint 2
+4. **Implementar funcionalidades operativas adicionales**
+   - Reserva de objetos comunes
+
+### 5.2 Backlog de Historias de Usuario – Sprint 2
 
 #### Reservas de espacios comunes
 
-| ID | Historia de Usuario |
-|----|---------------------|
-| S2-01 | Como administrador, quiero configurar espacios comunes |
-| S2-02 | Como administrador, quiero definir horarios y aforos |
-| S2-03 | Como estudiante, quiero ver la disponibilidad de espacios en tiempo real |
-| S2-04 | Como estudiante, quiero reservar un espacio común |
-| S2-05 | Como estudiante, quiero cancelar mis reservas |
-| S2-06 | Como administrador, quiero ver y gestionar todas las reservas |
-| S2-07 | Como sistema, quiero enviar recordatorios automáticos de reservas |
+| ID | Historia de Usuario | MoSCoW |
+|----|---------------------|--------|
+| S2-01 | Como administrador, quiero configurar espacios comunes | **M** |
+| S2-02 | Como administrador, quiero definir horarios y aforos | **M** |
+| S2-03 | Como estudiante, quiero ver la disponibilidad de espacios en tiempo real | **M** |
+| S2-04 | Como estudiante, quiero reservar un espacio común | **M** |
+| S2-05 | Como estudiante, quiero cancelar mis reservas | **S** |
+| S2-06 | Como administrador, quiero ver y gestionar todas las reservas | **M** |
+| S2-07 | Como sistema, quiero enviar recordatorios automáticos de reservas | **C** |
 
 #### Comunicación institucional
 
-| ID | Historia de Usuario |
-|----|---------------------|
-| S2-08 | Como administrador, quiero publicar avisos oficiales |
-| S2-09 | Como administrador, quiero segmentar avisos por grupos |
-| S2-10 | Como estudiante, quiero ver los avisos relevantes |
-| S2-11 | Como estudiante, quiero marcar avisos como leídos |
-| S2-12 | Como administrador, quiero ver estadísticas de lectura |
-| S2-13 | Como administrador, quiero gestionar una FAQ dinámica |
+| ID | Historia de Usuario | MoSCoW |
+|----|---------------------|--------|
+| S2-08 | Como administrador, quiero publicar avisos oficiales | **M** |
+| S2-09 | Como administrador, quiero segmentar avisos por grupos | **S** |
+| S2-10 | Como estudiante, quiero ver los avisos relevantes | **M** |
+| S2-11 | Como estudiante, quiero marcar avisos como leídos | **C** |
+| S2-12 | Como administrador, quiero ver estadísticas de lectura | **S** |
+| S2-13 | Como administrador, quiero gestionar una FAQ dinámica | **C** |
 
 #### Incidencias (mejoras)
 
-| ID | Historia de Usuario |
-|----|---------------------|
-| S2-14 | Como estudiante, quiero adjuntar imágenes a una incidencia |
-| S2-15 | Como administrador, quiero asignar incidencias a personal |
-| S2-16 | Como estudiante, quiero recibir notificaciones sobre mi incidencia |
-| S2-17 | Como administrador, quiero ver el historial completo de incidencias |
-| S2-18 | Como sistema, quiero priorizar incidencias según criterios básicos |
+| ID  | Historia de Usuario | MoSCoW |
+|-----|---------------------|--------|
+| S2-14 | Como estudiante, quiero adjuntar imágenes a una incidencia | **M** |
+| S2-15 | Como administrador, quiero asignar incidencias a personal | **M** |
+| S2-16 | Como estudiante, quiero recibir notificaciones sobre mi incidencia | **S** |
+| S2-17 | Como administrador, quiero ver el historial completo de incidencias| **M** |
+| S2-19 | Como sistema, quiero priorizar incidencias según criterios básicos | **S** |
+| S2-20 | Como administrador, quiero dividir una incidencia en subtareas internas para organizar su resolución | **M** |
+| S2-21 | Como administrador, quiero asignar estados independientes a cada subtarea | **M** |
+| S2-22 | Como administrador, quiero ver el progreso global de la incidencia basado en el estado de sus subtareas | **C** |
+
 
 #### Onboarding digital
 
-| ID | Historia de Usuario |
-|----|---------------------|
-| S2-19 | Como estudiante nuevo, quiero completar un check-in digital |
-| S2-20 | Como estudiante nuevo, quiero firmar digitalmente las normas |
-| S2-21 | Como estudiante nuevo, quiero ver un checklist de llegada |
-| S2-22 | Como estudiante nuevo, quiero acceder a información práctica |
-| S2-23 | Como administrador, quiero ver el estado de onboarding de los estudiantes |
+| ID | Historia de Usuario | MoSCoW |
+|----|---------------------|--------|
+| S2-23 | Como estudiante nuevo, quiero completar un check-in digital | **M** |
+| S2-24 | Como estudiante nuevo, quiero firmar digitalmente las normas | **M** |
+| S2-25 | Como estudiante nuevo, quiero ver un checklist de llegada | **S** |
+| S2-26 | Como estudiante nuevo, quiero acceder a información práctica | **S** |
+| S2-27 | Como administrador, quiero ver el estado de onboarding de los estudiantes | **S** |
+
+#### Buzón Dirección-Estudiante
+
+| ID | Historia de Usuario | MoSCoW |
+|----|---------------------|--------|
+| S2-28 | Como estudiante, quiero enviar un mensaje privado a la dirección de la residencia | **M** |
+| S2-29 | Como administrador, quiero responder mensajes privados de estudiantes desde un panel centralizado | **M** |
+| S2-30 | Como administrador, quiero ver el historial completo de conversaciones con cada estudiante | **S** |
+| S2-31 | Como usuario, quiero ser notificado cuando haya nuevos mensajes pendientes de respuesta | **S** |
+
+#### Reserva de Objetos Comunes
+
+| ID | Historia de Usuario | MoSCoW |
+|----|---------------------|--------|
+| S2-32 | Como administrador, quiero registrar objetos comunes en un inventario digital | **M** |
+| S2-33 | Como administrador, quiero definir disponibilidad y condiciones de préstamo de cada objeto | **M** |
+| S2-34 | Como estudiante, quiero ver la disponibilidad de objetos en tiempo real | **M** |
+| S2-35 | Como estudiante, quiero reservar un objeto para una franja horaria | **M** |
+| S2-36 | Como sistema, quiero enviar recordatorios automáticos de devolución | **C** |
+| S2-37 | Como administrador, quiero ver el historial de uso y préstamos de cada objeto | **S** |
 
 #### Legal y Cumplimiento (GDPR/RGPD)
 
-| ID | Historia de Usuario |
-|----|---------------------|
-| S2-24 | Como usuario, quiero leer y aceptar la Política de Privacidad y Términos de Uso antes de registrarme |
-| S2-25 | Como usuario, quiero poder descargar una copia de todos mis datos personales (Derecho a la Portabilidad) |
-| S2-26 | Como usuario, quiero solicitar la eliminación de mi cuenta y mis datos (Derecho al Olvido) |
-| S2-27 | Como administrador, quiero gestionar un registro de consentimientos de los usuarios |
-| S2-28 | Como sistema, quiero asegurar que las contraseñas y datos sensibles estén encriptados en la base de datos |
-| S2-29 | Como usuario, quiero ver un aviso de cookies y configurar mis preferencias |
+| ID | Historia de Usuario | MoSCoW |
+|----|---------------------|--------|
+| S2-38 | Como usuario, quiero leer y aceptar la Política de Privacidad y Términos de Uso antes de registrarme | **M** |
+| S2-39 | Como usuario, quiero poder descargar una copia de todos mis datos personales (Derecho a la Portabilidad) | **S** |
+| S2-40 | Como usuario, quiero solicitar la eliminación de mi cuenta y mis datos (Derecho al Olvido) | **M** |
+| S2-41 | Como administrador, quiero asegurar que las contraseñas y datos sensibles estén encriptados en la base de datos | **M** |
 
 
-### 4.3 Hitos del Sprint 2
+### 5.3 Hitos del Sprint 2
 
 | Fecha | Hito | Entregables |
 |-------|------|-------------|
@@ -321,17 +368,18 @@ Cada sprint, los equipos reciben módulos completos para implementar. Las asigna
 
 ---
 
-## 5. Sprint 3 - MVP v2 y Diferenciadores
+## 6. Sprint 3 - MVP v2 y Diferenciadores
 
 **Duración**: 2 abril - 16 abril (2 semanas)  
 **Peso**: 30% de la nota final  
 **Objetivo**: Implementar funcionalidades diferenciadores (vida social, IA matching), pivotear basado en feedback de pilotaje, completar plan de marketing
 
-### 5.1 Objetivos del Sprint 3
+### 6.1 Objetivos del Sprint 3
 
 1. **Implementar últimas funcionalidades de NexUS**
    - Matching social entre estudiantes (IA)
    - Gestión de eventos y actividades
+   - Gestión digital del comedor y menús
 
 2. **Pivotear basado en feedback de pilotaje**
    - Analizar métricas del Sprint 2
@@ -342,44 +390,66 @@ Cada sprint, los equipos reciben módulos completos para implementar. Las asigna
    - Dashboard de analítica avanzada
    - Exportación de informes
 
-4. **Pulir experiencia de usuario**
+4. **Implementar Vista NexUS multi-residencia**
+   - Supervisión centralizada de múltiples residencias
+   - Analítica comparativa entre sedes
+   - Roles corporativos para gestoras
+
+5. **Pulir experiencia de usuario**
    - Optimización de UX basada en feedback
    - Corrección de bugs prioritarios
    - Mejora de rendimiento
 
-### 5.2 Backlog de Historias de Usuario – Sprint 3
+### 6.2 Backlog de Historias de Usuario – Sprint 3
 
 #### Vida social y convivencia
 
-| ID | Historia de Usuario |
-|----|---------------------|
-| S3-01 | Como estudiante, quiero completar un perfil social |
-| S3-02 | Como estudiante, quiero recibir sugerencias de compañeros compatibles |
-| S3-03 | Como estudiante, quiero que el sistema me ayude a encontrar compañero de habitación |
-| S3-04 | Como administrador, quiero crear eventos para la residencia |
-| S3-05 | Como estudiante, quiero ver e inscribirme en eventos |
-| S3-06 | Como administrador, quiero gestionar la asistencia a eventos |
-| S3-07 | Como administrador, quiero crear encuestas de clima social |
-| S3-08 | Como estudiante, quiero responder encuestas de forma anónima |
+| ID | Historia de Usuario | MoSCoW |
+|----|---------------------|--------|
+| S3-01 | Como estudiante, quiero completar un perfil social | **M** |
+| S3-02 | Como estudiante, quiero recibir sugerencias de compañeros compatibles | **M** |
+| S3-03 | Como estudiante, quiero que el sistema me ayude a encontrar compañero de habitación | **M** |
+| S3-04 | Como administrador, quiero crear eventos para la residencia | **M** |
+| S3-05 | Como estudiante, quiero ver e inscribirme en eventos | **M** |
+| S3-06 | Como administrador, quiero gestionar la asistencia a eventos | **M** |
+| S3-07 | Como administrador, quiero crear encuestas de clima social | **C** |
+| S3-08 | Como estudiante, quiero responder encuestas de forma anónima | **C** |
 
 #### Módulos premium
 
-| ID | Historia de Usuario |
-|----|---------------------|
-| S3-09 | Como administrador, quiero personalizar el logo de la residencia |
-| S3-10 | Como administrador, quiero configurar colores corporativos |
-| S3-11 | Como administrador, quiero personalizar el nombre de la aplicación |
-| S3-12 | Como administrador, quiero exportar informes en PDF y Excel |
+| ID | Historia de Usuario | MoSCoW |
+|----|---------------------|--------|
+| S3-09 | Como administrador, quiero personalizar el logo de la residencia | **M** |
+| S3-10 | Como administrador, quiero configurar colores corporativos | **M** |
+| S3-11 | Como administrador, quiero personalizar el nombre de la aplicación | **S** |
+| S3-12 | Como administrador, quiero exportar informes en PDF y Excel | **C** |
+
+#### Gestión de Comedor y Menús
+
+| ID | Historia de Usuario | MoSCoW |
+|----|---------------------|--------|
+| S3-13 | Como administrador, quiero crear y publicar el menú semanal con desglose de ingredientes y alérgenos | **M** |
+| S3-14 | Como estudiante, quiero consultar el menú adaptado a mi perfil (alergias o restricciones alimentarias) | **M** |
+| S3-15 | Como estudiante, quiero confirmar mi asistencia al comedor para optimizar previsiones | **S** |
+| S3-16 | Como estudiante, quiero autorizar digitalmente a otro residente para recoger mi menú | **C** |
+
+#### Vista NexUS – Panel Multi-Residencia
+
+| ID | Historia de Usuario | MoSCoW |
+|----|---------------------|--------|
+| S3-17 | Como administrador, quiero visualizar todas mis residencias desde un único panel central | **M** |
+| S3-18 | Como administrador corporativo, quiero comparar métricas operativas entre residencias | **C** |
+| S3-19 | Como sistema, quiero permitir la gestión independiente de cada residencia bajo una misma cuenta corporativa | **M** |
 
 #### Calidad, seguridad y lanzamiento
 
-| ID | Historia de Usuario |
-|----|---------------------|
-| S3-14 | Como equipo, queremos realizar un testing de seguridad básico para asegurar que la aplicación no tiene vulnerabilidades críticas antes del lanzamiento |
-| S3-15 | Como equipo, queremos verificar que la PWA funciona correctamente en distintos navegadores (Chrome, Firefox) |
-| S3-16 | Como equipo, queremos revisar y corregir los bugs e incidencias de UX más críticos detectados durante el pilotaje del Sprint 2 |
+| ID | Historia de Usuario | MoSCoW |
+|----|---------------------|--------|
+| S3-20 | Como equipo, queremos realizar un testing de seguridad básico para asegurar que la aplicación no tiene vulnerabilidades críticas antes del lanzamiento | **M** |
+| S3-21 | Como equipo, queremos verificar que la PWA funciona correctamente en distintos navegadores (Chrome, Firefox) | **M** |
+| S3-22 | Como equipo, queremos revisar y corregir los bugs e incidencias de UX más críticos detectados durante el pilotaje del Sprint 2 | **M** |
 
-### 5.3 Hitos del Sprint 3
+### 6.3 Hitos del Sprint 3
 
 | Fecha | Hito | Entregables |
 |-------|------|-------------|
@@ -388,9 +458,9 @@ Cada sprint, los equipos reciben módulos completos para implementar. Las asigna
 
 ---
 
-## 6. Metodología de trabajo
+## 7. Metodología de trabajo
 
-### 6.1 Framework Scrum adaptado
+### 7.1 Framework Scrum adaptado
 
 Aplicaremos Scrum con las siguientes reuniones, adaptadas a nuestra estructura de 4 equipos autónomos. No se realizarán Sprint Reviews como tal, sino que las exposiciones en clase a final de sprint cumplirán esa función:
 
@@ -431,7 +501,7 @@ Aplicaremos Scrum con las siguientes reuniones, adaptadas a nuestra estructura d
 - Resolver conflictos
 - Acordar trabajo semanal
 
-### 6.2 Criterios de Aceptación Globales (Definition of Done - DoD)
+### 7.2 Criterios de Aceptación Globales (Definition of Done - DoD)
 
 Para garantizar la calidad y la integración continua entre los 4 equipos, ninguna Historia de Usuario (HU) o tarea se considerará "Termiada" hasta cumplir estrictamente con los siguientes criterios:
 
@@ -453,7 +523,7 @@ Para garantizar la calidad y la integración continua entre los 4 equipos, ningu
     * Si hubo cambios en la API, la documentación está actualizada.
     * Si es una funcionalidad compleja, se ha actualizado la Wiki del proyecto.
 
-#### 6.3 Documentación obligatoria por equipo
+#### 7.3 Documentación obligatoria por equipo
 Cada equipo debe mantener:
    
 1. **API Documentation** (puede ser autogenerada):
@@ -468,7 +538,7 @@ Cada equipo debe mantener:
 3. **ADRs** (Architecture Decision Records):
    - Decisiones técnicas importantes
 
-### 6.4 Gestión de dependencias entre equipos
+### 7.4 Gestión de dependencias entre equipos
 
 **Principio**: Minimizar dependencias, maximizar autonomía
 
@@ -487,9 +557,9 @@ Cada equipo debe mantener:
 
 ---
 
-## 7. Gestión de riesgos
+## 8. Gestión de riesgos
 
-### 7.1 Riesgos identificados
+### 8.1 Riesgos identificados
 
 | ID | Riesgo | Probabilidad | Impacto | Mitigación |
 |----|--------|--------------|---------|------------|
@@ -503,7 +573,7 @@ Cada equipo debe mantener:
 | R8 | Bugs críticos cerca de entregas | Media | Alto | - Testing exhaustivo semana antes de entrega<br>- Feature freeze 3 días antes<br>- Buffer de tiempo en planificación |
 | R9 | Falta de diferenciación vs competencia | Baja | Alto | - Validar propuesta de valor con profesores<br>- Investigar competencia continuamente |
 
-### 7.2 Plan de contingencia
+### 8.2 Plan de contingencia
 
 Si vamos retrasados:
 1. **Repriorizar**: Mover historias de menor prioridad a siguiente sprint
@@ -512,7 +582,7 @@ Si vamos retrasados:
 
 Si perdemos usuario piloto:
 1. Activar contactos de respaldo
-2. Ofrecer incentivos dentro de la aplicación
+2. Ofrecer nuevos incentivos dentro de la aplicación
 
 Si hay problema técnico grave (servidor de despliegue caido continuamente...):
 1. Documentar problema detalladamente
