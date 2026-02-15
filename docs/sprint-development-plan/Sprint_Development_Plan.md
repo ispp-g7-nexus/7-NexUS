@@ -8,7 +8,7 @@
 
 <p>
   <img src="https://img.shields.io/badge/Versión-1.2.0-blue?style=flat-square" alt="Versión">
-  <img src="https://img.shields.io/badge/Estado-En_Desarrollo-yellow?style=flat-square" alt="Estado">
+  <img src="https://img.shields.io/badge/Estado-Completado-yellow?style=flat-square" alt="Estado">
   <img src="https://img.shields.io/badge/Grupo-B--Tarde-green?style=flat-square" alt="Grupo">
   <img src="https://img.shields.io/badge/Asignatura-ISPP-red?style=flat-square" alt="Asignatura">
 </p>
@@ -252,6 +252,10 @@ El objetivo es garantizar que:
 | **19 Feb** | Inicio Sprint 1 | Sprint planning completado, tareas asignadas |
 | **4 Mar** | **Entrega Sprint 1** (10%) | - Stack tecnológico configurado<br>- MVP desplegado en la nube<br>- Autenticación + Usuarios funcional<br>-Diseños UX/UI aprobados por el equipo<br>- Panel admin básico<br>- Incidencias básicas<br>- Demo funcional |
 
+### 4.4 Diagrama de Gantt simplificado del Sprint 1
+
+![Diagrama de Gantt Sprint 1](../images/sprint_plan/gantt_s1.png)
+
 ---
 
 ## 5. Sprint 2 - MVP v1 Completo
@@ -366,6 +370,10 @@ El objetivo es garantizar que:
 | **12 Mar** | Inicio Sprint 2 | Sprint planning, objetivos claros |
 | **25 Mar** | **Entrega Sprint 2** (15%) | - Reservas funcionales<br>- Incidencias mejoradas<br>- Onboarding implementado<br>- Comunicación institucional completa<br>- Despliegue en producción<br>- Primeros usuarios piloto onboardeados<br>- MVP v1 completo en producción<br>- Usuarios piloto activos<br>- Feedback inicial recogido<br>- Analytics configurados<br>- Informe de mejora continua |
 
+### 5.4 Diagrama de Gantt simplificado del Sprint 2
+
+![Diagrama de Gantt Sprint 2](../images/sprint_plan/gantt_s2.png)
+
 ---
 
 ## 6. Sprint 3 - MVP v2 y Diferenciadores
@@ -455,6 +463,10 @@ El objetivo es garantizar que:
 |-------|------|-------------|
 | **2 Abr** | Inicio Sprint 3 | Sprint planning, análisis de feedback Sprint 2 |
 | **15 Abr** | **Entrega Sprint 3** (30%) | - Matching social funcional<br>- Eventos implementados<br>- Marca blanca básica<br>- Analítica avanzada<br>- Automatizaciones<br>- UX pulida<br>- Landing page comercial<br>- MVP v2 completo<br>- Diferenciadores implementados<br>- Plan de marketing ejecutable<br>- Material de ventas<br>- Informe de pivot y mejoras<br>- Demo lista para WPL |
+
+### 6.4 Diagrama de Gantt simplificado del Sprint 2
+
+![Diagrama de Gantt Sprint 3](../images/sprint_plan/gantt_s3.png)
 
 ---
 
