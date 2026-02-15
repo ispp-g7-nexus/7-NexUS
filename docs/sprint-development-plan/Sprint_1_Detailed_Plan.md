@@ -1,4 +1,4 @@
-# Sprint 1 - NexUS
+# Plan de Desarrollo del Sprint 1 - NexUS
 
 <p align="center">
   <img src="../images/logo-app.jpeg" alt="Logo NexUS" width="500">
@@ -34,8 +34,6 @@
 
 ---
 
-
-
 ## Historial de Versiones
 
 | Versión | Fecha | Cambio principal |
@@ -44,7 +42,7 @@
 
 ---
 
-## Funcionalidades Core del MVP - Guía Detallada
+## Sprint 1 - Funcionalidades Core del MVP: Guía Detallada
 
 | Duración | 19 febrero – 5 marzo (2 semanas) |
 |---|---|
@@ -52,7 +50,6 @@
 | Fecha entrega | 4 de marzo de 2026 |
 
 ---
-
 
 ## Índice
 
