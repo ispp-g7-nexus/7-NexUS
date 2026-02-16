@@ -29,8 +29,8 @@
 | 1.4.0   | 09/02/2026  | Añadida matriz comparativa consolidada                |
 | 1.5.0   | 09/02/2026  | Añadido modelo de negocio detallado                   |
 | 1.6.0   | 10/02/2026  | Reestructuración con formato profesional              |
-| 1.7.0   | 10/02/2026  | Añadido análisis DAFO estratégico                      |
-
+| 1.7.0   | 10/02/2026  | Añadido análisis DAFO estratégico                     |
+| 1.7.1   | 16/02/2026  | Refactorización de Análisis DAFO                      |
 
 ---
 
@@ -68,11 +68,9 @@
       - [Spaceflow](#spaceflow)
     - [4.3. Bloque Legacy: Gigantes del Mercado](#43-bloque-legacy-gigantes-del-mercado)
       - [StarRez](#starrez)
-  - [**Oportunidad:** StarRez es muy fuerte en entornos de gran escala, pero su propuesta parece menos adecuada para el mercado medio. Su UX y complejidad de implantación son un punto claro para diferenciación.](#oportunidad-starrez-es-muy-fuerte-en-entornos-de-gran-escala-pero-su-propuesta-parece-menos-adecuada-para-el-mercado-medio-su-ux-y-complejidad-de-implantación-son-un-punto-claro-para-diferenciación)
       - [RentCafe Student Housing (Yardi)](#rentcafe-student-housing-yardi)
     - [4.4. Bloque Multi-Propiedad](#44-bloque-multi-propiedad)
       - [TheHouseMonk](#thehousemonk)
-  - [**Oportunidad:** Su principal punto débil parece estar en la experiencia del residente en móvil; existe margen para diferenciarnos con una app más completa y orientada al estudiante.](#oportunidad-su-principal-punto-débil-parece-estar-en-la-experiencia-del-residente-en-móvil-existe-margen-para-diferenciarnos-con-una-app-más-completa-y-orientada-al-estudiante)
   - [5. Matriz Comparativa Consolidada](#5-matriz-comparativa-consolidada)
     - [5.1. Comparativa de Funcionalidades Core](#51-comparativa-de-funcionalidades-core)
     - [5.2. Análisis de Cobertura](#52-análisis-de-cobertura)
@@ -88,10 +86,10 @@
     - [7.1. Estrategia de monetización](#71-estrategia-de-monetización)
     - [7.2. Matriz de Suscripción](#72-matriz-de-suscripción)
     - [7.3. Propuesta de valor económica](#73-propuesta-de-valor-económica)
-  - [8. Conclusiones y recomendaciones](#8-conclusiones-y-recomendaciones)
+  - [8. Conclusiones](#8-conclusiones)
     - [8.1. Síntesis del análisis](#81-síntesis-del-análisis)
     - [8.2. Ventajas competitivas defendibles](#82-ventajas-competitivas-defendibles)
-    - [8.3. Recomendaciones finales](#83-recomendaciones-finales)
+
 
 ---
 
@@ -495,31 +493,21 @@ Se identifican **22 soluciones relevantes**, organizadas en cinco bloques estrat
 
 El siguiente análisis DAFO sintetiza la posición estratégica de NexUS teniendo en cuenta el contexto competitivo, técnico y de mercado identificado a lo largo del documento.
 
-### Debilidades (Factores internos)
 
-* **Alta exigencia técnica inicial:** necesidad de un equipo sólido para mantener backend, app móvil y modelos de IA en producción.
-* **Inversión elevada en I+D:** desarrollo, entrenamiento y validación de algoritmos de IA de convivencia conlleva un coste inicial significativo.
-* **Dependencia de adopción por parte del personal:** el valor completo de la plataforma se alcanza solo si el staff utiliza activamente las herramientas.
+| **FACTORES INTERNOS** | **FACTORES EXTERNOS**|
+| --------------------- | -------------------- |
+| **🟢FORTALEZAS**      | **🟡 OPORTUNIDADES** |
+| **Enfoque claro en el segmento medio**<br>Producto diseñado específicamente para residencias de tamaño medio, actualmente desatendidas por soluciones *enterprise*. | **Hueco de mercado evidente**<br>Existe una brecha clara entre herramientas informales (WhatsApp, Excel) y ERPs complejos como StarRez o Yardi. |
+| **Propuesta de valor diferencial**<br>Foco en convivencia, bienestar y experiencia del estudiante, no solo en la gestión administrativa.                            | **Creciente demanda de experiencias residenciales**<br>Las residencias compiten por satisfacción y retención del estudiante.                    |
+| **UX moderna y mobile-first**<br>Diseño centrado en Gen Z que mejora la adopción y reduce la fricción operativa.                                                    | **Mercado hispanohablante poco atendido**<br>Oportunidad de posicionamiento temprano en España y Latinoamérica.                                 |
+| **Integración vertical única**<br>Combina operativa, comunidad, analítica social e inteligencia artificial en una única plataforma.                                 | **Tendencia institucional hacia bienestar**<br>Las universidades priorizan métricas de satisfacción, retención y reputación.                    |
 
-### Amenazas (Factores externos)
+| **🔴 DEBILIDADES**  | **⚠️ AMENAZAS**|
+| ------------------- | --------------- |
+| **Alta exigencia técnica inicial**<br>Necesidad de un equipo sólido para backend, app móvil e IA en producción.              | **Inercia tecnológica del sector**<br>Muchas residencias presentan baja predisposición al cambio digital.                |
+| **Inversión elevada en I+D**<br>El desarrollo y entrenamiento de algoritmos de convivencia requiere recursos significativos. | **Lock-in de grandes operadores**<br>Presencia de soluciones consolidadas con altos costes de sustitución.               |
+| **Dependencia de adopción interna**<br>El valor total depende del uso activo por parte del personal de la residencia.        | **Entrada de nuevos actores bien financiados**<br>Startups internacionales podrían replicar el modelo con mayor capital. |
 
-* **Inercia tecnológica del sector:** residencias con procesos muy consolidados y baja predisposición al cambio digital.
-* **Presupuesto y lock-in de grandes operadores:** presencia de ERPs legacy ya implantados (StarRez, Yardi) con altos costes de sustitución.
-* **Entrada de nuevos actores bien financiados:** riesgo de que startups internacionales repliquen parte del enfoque con mayor músculo financiero.
-
-### Fortalezas (Factores internos)
-
-* **Enfoque claro en el segmento medio:** producto diseñado específicamente para residencias con un volumen medio de estudiantes, actualmente desatendidas.
-* **Propuesta de valor diferencial:** foco en convivencia, bienestar y experiencia del estudiante, no solo en administración.
-* **UX moderna y mobile-first:** diseñada para maximizar adopción por estudiantes (Gen Z) y reducir fricción operativa.
-* **Integración vertical única:** combinación de operativa, comunidad y analítica social en una sola plataforma.
-
-### Oportunidades (Factores externos)
-
-* **Hueco de mercado evidente:** entre soluciones informales (WhatsApp, Excel) y ERPs enterprise complejos y costosos.
-* **Creciente demanda de experiencias residenciales:** las residencias compiten cada vez más por diferenciación y satisfacción del estudiante.
-* **Baja competencia en mercado hispanohablante:** oportunidad de posicionamiento temprano en España y Latinoamérica.
-* **Tendencia institucional hacia bienestar y retención:** alineación con métricas de satisfacción, permanencia y reputación del centro.
 
 **Conclusión DAFO:** NexUS se sitúa en una posición favorable para capturar un segmento claramente desatendido, siempre que priorice una ejecución técnica sólida, un onboarding sin fricción y una comunicación clara del valor diferencial frente a soluciones tradicionales.
 
@@ -644,7 +632,7 @@ Dirigido a residencias que buscan diferenciarse mediante automatización avanzad
 
 ---
 
-## 8. Conclusiones y recomendaciones
+## 8. Conclusiones
 
 ### 8.1. Síntesis del análisis
 
@@ -669,11 +657,4 @@ El mercado de software para residencias estudiantiles presenta, de forma general
 
 ---
 
-### 8.3. Recomendaciones finales
-
-1. **Priorizar un MVP con funcionalidades realmente diferenciales:** centrar el desarrollo inicial en IA de convivencia y transparencia de incidencias (los *gaps* más claros).
-2. **Acelerar la entrada en el mercado hispanohablante:** aprovechar la ventana de oportunidad antes de una posible expansión de competidores anglosajones.
-3. **Construir un caso de éxito temprano:** un piloto con 3–5 residencias puede aportar evidencia y credibilidad para escalar.
-4. **Monitorizar Housing.Cloud de forma continua:** es el competidor más cercano en propuesta general.
-5. **No competir en funcionalidades comoditizadas:** evitar invertir de forma desproporcionada en incidencias básicas o reservas de espacios, donde ya existen alternativas sólidas.
 
