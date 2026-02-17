@@ -1,7 +1,7 @@
 # Plan de Desarrollo del Sprint 1 - NexUS
 
 <p align="center">
-  <img src="../images/logo-app.jpeg" alt="Logo NexUS" width="500">
+  <img src="../images/logo-app.png" alt="Logo NexUS" width="500">
 </p>
 
 <div align="center">
@@ -9,7 +9,7 @@
 <p>
   <img src="https://img.shields.io/badge/Versión-1.0.0-blue?style=flat-square" alt="Versión">
   <img src="https://img.shields.io/badge/Estado-Completado-yellow?style=flat-square" alt="Estado">
-  <img src="https://img.shields.io/badge/Grupo-B--Tarde-green?style=flat-square" alt="Grupo">
+  <img src="https://img.shields.io/badge/Grupo-7--NexUS-green?style=flat-square" alt="Grupo">
   <img src="https://img.shields.io/badge/Asignatura-ISPP-red?style=flat-square" alt="Asignatura">
 </p>
 
@@ -39,6 +39,8 @@
 | Versión | Fecha | Cambio principal |
 |---------|-------|------------------|
 | 1.0.0 | 15/02/2026 | Creación del documento base |
+| 1.1.0 | 17/02/2026 | Revisión del documento |
+
 
 ---
 
@@ -492,13 +494,13 @@ Como estudiante, quiero crear una incidencia con una descripción.
 
 #### Descripción
 
-Permitir que estudiantes reporten problemas en la residencia.
+Permitir que estudiantes reporten problemas en la residencia, tanto problemas personales (habitación del estudiante) como en zonas comunes.
 
 #### Tareas Específicas
 
 - Crear modelo para incidencias: id, id usuario, descripción, estado, fecha creación...
 - Crear endpoint para crear las incidencias
-- UI formulario: título opcional, descripción, categoría básica
+- UI formulario: título opcional, descripción, categoría básica, tipo (personal o común)
 - Validaciones: descripción obligatoria
 - Incidencia se crea en estado “Abierta”
 
@@ -584,11 +586,11 @@ Actualizar estado a “En progreso”, “Resuelta”, etc.
 - Estado inválido rechazado
 - Registro correcto de fecha cierre
 
-### S1-21: Filtrado de Incidencias por Estado (S)
+### S1-21: Filtrado de Incidencias (S)
 
 #### Historia de Usuario
 
-Como administrador, quiero filtrar incidencias por estado.
+Como administrador, quiero filtrar incidencias por tipo, estado y prioridad.
 
 #### Descripción
 
@@ -604,7 +606,7 @@ Mejorar gestión mostrando solo incidencias relevantes.
 #### Criterios de Aceptación
 
 - Filtrado funciona correctamente
-- UI permite seleccionar estado fácilmente
+- UI permite seleccionar tipo, estado y prioridad fácilmente
 - Paginación mantiene filtros
 - Resultados correctos
 - Reset de filtros disponible

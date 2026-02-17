@@ -1,7 +1,7 @@
 # Plan de Desarrollo de Sprints – NexUS
 
 <p align="center">
-  <img src="../images/logo-app.jpeg" alt="Logo NexUS" width="500">
+  <img src="../images/logo-app.png" alt="Logo NexUS" width="500">
 </p>
 
 <div align="center">
@@ -9,7 +9,7 @@
 <p>
   <img src="https://img.shields.io/badge/Versión-1.2.0-blue?style=flat-square" alt="Versión">
   <img src="https://img.shields.io/badge/Estado-Completado-yellow?style=flat-square" alt="Estado">
-  <img src="https://img.shields.io/badge/Grupo-B--Tarde-green?style=flat-square" alt="Grupo">
+  <img src="https://img.shields.io/badge/Grupo-7--NexUS-green?style=flat-square" alt="Grupo">
   <img src="https://img.shields.io/badge/Asignatura-ISPP-red?style=flat-square" alt="Asignatura">
 </p>
 
@@ -232,7 +232,7 @@ El objetivo es garantizar que:
 | S1-18 | Como estudiante, quiero ver el historial de mis incidencias | **S** |
 | S1-19 | Como administrador, quiero ver todas las incidencias reportadas | **M** |
 | S1-20 | Como administrador, quiero cambiar el estado de una incidencia | **M** |
-| S1-21 | Como administrador, quiero filtrar incidencias por estado | **S** |
+| S1-21 | Como administrador, quiero filtrar incidencias por tipo, estado y prioridad | **S** |
 
 #### UX/UI y calidad
 
@@ -308,59 +308,62 @@ El objetivo es garantizar que:
 | S2-11 | Como estudiante, quiero marcar avisos como leídos | **C** |
 | S2-12 | Como administrador, quiero ver estadísticas de lectura | **S** |
 | S2-13 | Como administrador, quiero gestionar una FAQ dinámica | **C** |
+| S2-14 | Como administrador, quiero que existan canales de comunicación moderados y estructurados | **S** |
 
 #### Incidencias (mejoras)
 
 | ID  | Historia de Usuario | MoSCoW |
 |-----|---------------------|--------|
-| S2-14 | Como estudiante, quiero adjuntar imágenes a una incidencia | **M** |
-| S2-15 | Como administrador, quiero asignar incidencias a personal | **M** |
-| S2-16 | Como estudiante, quiero recibir notificaciones sobre mi incidencia | **S** |
-| S2-17 | Como administrador, quiero ver el historial completo de incidencias| **M** |
+| S2-15 | Como estudiante, quiero adjuntar imágenes a una incidencia | **M** |
+| S2-16 | Como administrador, quiero asignar incidencias a personal interno o proveedores | **M** |
+| S2-17 | Como estudiante, quiero recibir notificaciones sobre mi incidencia | **S** |
+| S2-18 | Como administrador, quiero ver el historial completo de incidencias| **M** |
 | S2-19 | Como sistema, quiero priorizar incidencias según criterios básicos | **S** |
 | S2-20 | Como administrador, quiero dividir una incidencia en subtareas internas para organizar su resolución | **M** |
 | S2-21 | Como administrador, quiero asignar estados independientes a cada subtarea | **M** |
 | S2-22 | Como administrador, quiero ver el progreso global de la incidencia basado en el estado de sus subtareas | **C** |
+| S2-23 | Como administrador, quiero que el sistema registre y analice automáticamente las incidencias para que en el futuro se puedan aplicar automatizaciones y mecanismsos de priorización inteligente | **C** |
 
 
 #### Onboarding digital
 
 | ID | Historia de Usuario | MoSCoW |
 |----|---------------------|--------|
-| S2-23 | Como estudiante nuevo, quiero completar un check-in digital | **M** |
-| S2-24 | Como estudiante nuevo, quiero firmar digitalmente las normas | **M** |
-| S2-25 | Como estudiante nuevo, quiero ver un checklist de llegada | **S** |
-| S2-26 | Como estudiante nuevo, quiero acceder a información práctica | **S** |
-| S2-27 | Como administrador, quiero ver el estado de onboarding de los estudiantes | **S** |
+| S2-24 | Como estudiante nuevo, quiero completar un check-in digital | **M** |
+| S2-25 | Como estudiante nuevo, quiero firmar digitalmente las normas | **M** |
+| S2-26 | Como estudiante nuevo, quiero ver un checklist de llegada | **S** |
+| S2-27 | Como estudiante nuevo, quiero acceder a información práctica | **S** |
+| S2-28 | Como administrador, quiero ver el estado de onboarding de los estudiantes | **S** |
+| S2-29 | Como administrador, quiero ver un checklist de llegada y salida de los invitados, así como su nombre completo y el residente que lo invitó | **S** |
 
 #### Buzón Dirección-Estudiante
 
 | ID | Historia de Usuario | MoSCoW |
 |----|---------------------|--------|
-| S2-28 | Como estudiante, quiero enviar un mensaje privado a la dirección de la residencia | **M** |
-| S2-29 | Como administrador, quiero responder mensajes privados de estudiantes desde un panel centralizado | **M** |
-| S2-30 | Como administrador, quiero ver el historial completo de conversaciones con cada estudiante | **S** |
-| S2-31 | Como usuario, quiero ser notificado cuando haya nuevos mensajes pendientes de respuesta | **S** |
+| S2-30 | Como estudiante, quiero enviar un mensaje privado a la dirección de la residencia | **M** |
+| S2-31 | Como administrador, quiero responder mensajes privados de estudiantes desde un panel centralizado | **M** |
+| S2-32 | Como administrador, quiero ver el historial completo de conversaciones con cada estudiante | **S** |
+| S2-33 | Como usuario, quiero ser notificado cuando haya nuevos mensajes pendientes de respuesta | **S** |
 
 #### Reserva de Objetos Comunes
 
 | ID | Historia de Usuario | MoSCoW |
 |----|---------------------|--------|
-| S2-32 | Como administrador, quiero registrar objetos comunes en un inventario digital | **M** |
-| S2-33 | Como administrador, quiero definir disponibilidad y condiciones de préstamo de cada objeto | **M** |
-| S2-34 | Como estudiante, quiero ver la disponibilidad de objetos en tiempo real | **M** |
-| S2-35 | Como estudiante, quiero reservar un objeto para una franja horaria | **M** |
-| S2-36 | Como sistema, quiero enviar recordatorios automáticos de devolución | **C** |
-| S2-37 | Como administrador, quiero ver el historial de uso y préstamos de cada objeto | **S** |
+| S2-34 | Como administrador, quiero registrar objetos comunes en un inventario digital | **M** |
+| S2-35 | Como administrador, quiero definir disponibilidad y condiciones de préstamo de cada objeto | **M** |
+| S2-36 | Como estudiante, quiero ver la disponibilidad de objetos en tiempo real | **M** |
+| S2-37 | Como estudiante, quiero reservar un objeto para una franja horaria | **M** |
+| S2-38 | Como sistema, quiero enviar recordatorios automáticos de devolución | **C** |
+| S2-39 | Como administrador, quiero ver el historial de uso y préstamos de cada objeto | **S** |
 
 #### Legal y Cumplimiento (GDPR/RGPD)
 
 | ID | Historia de Usuario | MoSCoW |
 |----|---------------------|--------|
-| S2-38 | Como usuario, quiero leer y aceptar la Política de Privacidad y Términos de Uso antes de registrarme | **M** |
-| S2-39 | Como usuario, quiero poder descargar una copia de todos mis datos personales (Derecho a la Portabilidad) | **S** |
-| S2-40 | Como usuario, quiero solicitar la eliminación de mi cuenta y mis datos (Derecho al Olvido) | **M** |
-| S2-41 | Como administrador, quiero asegurar que las contraseñas y datos sensibles estén encriptados en la base de datos | **M** |
+| S2-40 | Como usuario, quiero leer y aceptar la Política de Privacidad y Términos de Uso antes de registrarme | **M** |
+| S2-41 | Como usuario, quiero poder descargar una copia de todos mis datos personales (Derecho a la Portabilidad) | **S** |
+| S2-42 | Como usuario, quiero solicitar la eliminación de mi cuenta y mis datos (Derecho al Olvido) | **M** |
+| S2-43 | Como administrador, quiero asegurar que las contraseñas y datos sensibles estén encriptados en la base de datos | **M** |
 
 
 ### 5.3 Hitos del Sprint 2
@@ -436,26 +439,28 @@ El objetivo es garantizar que:
 
 | ID | Historia de Usuario | MoSCoW |
 |----|---------------------|--------|
-| S3-13 | Como administrador, quiero crear y publicar el menú semanal con desglose de ingredientes y alérgenos | **M** |
-| S3-14 | Como estudiante, quiero consultar el menú adaptado a mi perfil (alergias o restricciones alimentarias) | **M** |
+| S3-13 | Como administrador, quiero crear y publicar el menú semanal | **M** |
+| S3-14 | Como estudiante, quiero elegir los platos del menú que desee | **S** |
 | S3-15 | Como estudiante, quiero confirmar mi asistencia al comedor para optimizar previsiones | **S** |
 | S3-16 | Como estudiante, quiero autorizar digitalmente a otro residente para recoger mi menú | **C** |
+| S3-17 | Como estudiante, quiero ver las solicitudes que tengo para recoger comida por parte de otros estudiantes y aceptarlas o denegarlas | **C** |
+| S3-18 | Como trabajador del comedor, quiero ver que pedidos van a ser recogidos por un estudiante distinto al que realizó el pedido | **C** |
 
 #### Vista NexUS – Panel Multi-Residencia
 
 | ID | Historia de Usuario | MoSCoW |
 |----|---------------------|--------|
-| S3-17 | Como administrador, quiero visualizar todas mis residencias desde un único panel central | **M** |
-| S3-18 | Como administrador corporativo, quiero comparar métricas operativas entre residencias | **C** |
-| S3-19 | Como sistema, quiero permitir la gestión independiente de cada residencia bajo una misma cuenta corporativa | **M** |
+| S3-19 | Como administrador, quiero visualizar todas mis residencias desde un único panel central | **C** |
+| S3-20 | Como administrador corporativo, quiero comparar métricas operativas entre residencias | **C** |
+| S3-21 | Como sistema, quiero permitir la gestión independiente de cada residencia bajo una misma cuenta corporativa | **C** |
 
 #### Calidad, seguridad y lanzamiento
 
 | ID | Historia de Usuario | MoSCoW |
 |----|---------------------|--------|
-| S3-20 | Como equipo, queremos realizar un testing de seguridad básico para asegurar que la aplicación no tiene vulnerabilidades críticas antes del lanzamiento | **M** |
-| S3-21 | Como equipo, queremos verificar que la PWA funciona correctamente en distintos navegadores (Chrome, Firefox) | **M** |
-| S3-22 | Como equipo, queremos revisar y corregir los bugs e incidencias de UX más críticos detectados durante el pilotaje del Sprint 2 | **M** |
+| S3-22 | Como equipo, queremos realizar un testing de seguridad básico para asegurar que la aplicación no tiene vulnerabilidades críticas antes del lanzamiento | **M** |
+| S3-23 | Como equipo, queremos verificar que la PWA funciona correctamente en distintos navegadores (Chrome, Firefox) | **M** |
+| S3-24 | Como equipo, queremos revisar y corregir los bugs e incidencias de UX más críticos detectados durante el pilotaje del Sprint 2 | **M** |
 
 ### 6.3 Hitos del Sprint 3
 
