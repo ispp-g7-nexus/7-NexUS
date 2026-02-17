@@ -45,7 +45,7 @@
 
 ## 1. Objetivo del documento
 
-Este documento establece cómo se gestionará y supervisará el proyecto NexUS, asegurando que todo el equipo trabaja alineado, midiendo el progreso de manera objetiva y mostrando al profesor evidencia de buena gestión. Contempla la planificación, seguimiento, calidad, métricas y presentaciones de los sprints.
+Este documento establece cómo se gestionará y supervisará el proyecto NexUS, asegurando que todo el equipo trabaja alineado, midiendo el progreso de manera objetiva y mostrando al  evidencia de buena gestión. Contempla la planificación, seguimiento, calidad, métricas y presentaciones de los sprints.
 
 ---
 
@@ -92,7 +92,7 @@ Al inicio del proyecto se realizará una sesión de alineación para todo el equ
 | ------------------------ | ---------------------------- | ---------------------------------------------------------------- |
 | **Sprint Planning**      | Todos                        | Definir objetivos del sprint, asignar módulos, estimar tareas.   |
 | **Revisión semanal**     | Coordinadores y Scrum Master | Revisar progreso, identificar bloqueos, ajustar prioridades.     |
-| **Sprint Review**        | Todo el equipo, PO, profesor | Mostrar lo desarrollado, demo funcional, comparar con objetivos. |
+| **Sprint Review**        | Todo el equipo, PO           | Mostrar lo desarrollado, demo funcional, comparar con objetivos. |
 | **Sprint Retrospective** | Por equipo + coordinadores   | Qué salió bien, qué mal, acciones de mejora para próximo sprint. |
 
 **Formato de las exposiciones de sprint:**
@@ -119,11 +119,6 @@ Al inicio del proyecto se realizará una sesión de alineación para todo el equ
 * Builds fallidos en **CI/CD (GitHub Actions)**.
 * Pull Requests que requieren múltiples revisiones.
 
-### 6.3 Producto
-
-* Uso por usuarios piloto (si aplica).
-* Feedback recibido y registrado.
-
 ### 6.4 Visualización
 
 * **GitHub Project** para tracking de tareas y estados (To Do / In Progress / Done).
@@ -132,19 +127,7 @@ Al inicio del proyecto se realizará una sesión de alineación para todo el equ
 
 ---
 
-## 7. Definición de “Terminado” (DoD)
-
-Una historia o tarea se considera terminada solo si:
-
-1. El código funciona correctamente y está en la rama develop o feature correspondiente.
-2. Ha pasado los tests unitarios o integrados correspondientes.
-3. Ha sido revisado por al menos un compañero o coordinador técnico (cross-review).
-4. La documentación mínima (README, endpoints, arquitectura) está actualizada.
-5. Las builds CI/CD pasan correctamente.
-
----
-
-## 8. Gestión de riesgos y bloqueos
+## 7. Gestión de riesgos y bloqueos
 
 El Scrum Master supervisa:
 
@@ -161,24 +144,14 @@ Si se detectan problemas:
 
 ---
 
-## 9. Herramientas del proyecto
-
-* **Repositorio:** GitHub
-* **CI/CD:** GitHub Actions
-* **Tracking de tareas:** GitHub Project
-* **Comunicación:** WhatsApp / Discord
-* **Diseño y prototipado:** Figma Maker
-
----
-
-## 10. Mejora continua
+## 8. Mejora continua
 
 Después de cada sprint:
 
 * Revisar qué ha funcionado y qué no.
 * Identificar problemas recurrentes.
 * Ajustar metodología, flujo o herramientas si es necesario.
-* Incorporar feedback de usuarios y del profesor.
+* Incorporar feedback de los desarrolladores.
 
 ---
 
@@ -191,7 +164,3 @@ Después de cada sprint:
 3. Registro de problemas y cómo se resolvieron.
 4. Aprendizajes y mejoras para siguiente sprint.
 5. Métricas visuales: burndown chart, % tareas Must completadas, bugs críticos.
-
----
-
-**Nota:** Este documento consolida la planificación, seguimiento, métricas, calidad, exposiciones, roles y herramientas, dejando claro el rol del Scrum Master y del Product Owner.
