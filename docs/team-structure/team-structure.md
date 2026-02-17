@@ -187,7 +187,7 @@ La matriz RACI es la base operativa de nuestra Definition of Done (DoD). Ninguna
 | **B** | Nicolás Gómez Claraco | Desarrollador |
 | **B** | Ignacio Martínez Díaz | **Desarrollador, Coordinador**  |
 | **B** | Manuel Jesús Niza Cobo | **Desarrollador, Scrum Master** |
-| **B** | Miguel Regidor García | Desarrollador |
+| **B** | Miguel Regidor García | **Desarrollador, Product Owner** |
 | | | |
 | **C** | Olga Cantalejo Gómez | Desarrolladora |
 | **C** | Carolina Murillo Gómez | Desarrolladora |
@@ -200,4 +200,4 @@ La matriz RACI es la base operativa de nuestra Definition of Done (DoD). Ninguna
 | **D** | Jesús García Pérez | Desarrollador |
 | **D** | Alberto García Sanz | Desarrollador |
 | **D** | Ángel Mateos Marín | Desarrollador |
-| **D** | Pablo Pérez Gaspar | **Desarrollador, Product Owner** |
+| **D** | Pablo Pérez Gaspar | Desarrollador |
