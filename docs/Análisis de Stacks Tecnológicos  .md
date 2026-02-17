@@ -179,3 +179,307 @@ Tras el análisis detallado de los stacks y la evaluación de las capacidades de
 ## **5.4. Conclusión estratégica**
 
 La **Opción B** se consolida como la ganadora con **24 puntos**. Esta elección maximiza la velocidad de entrega del MVP sin sacrificar seguridad ni mantenibilidad, y encaja especialmente bien con los retos del proyecto: multi-tenant, RBAC, auditoría, gestión documental y pipeline de IA con procesamiento asíncrono.
+
+# **6. Control de versiones y estrategia de releases**
+
+## **6.1. Adopción de Golden Git Flow**
+
+NexUS implementará **Golden Git Flow**, una metodología de control de versiones de alta higiene que establece una separación clara entre entornos mediante el uso de ramas específicas y tags como mecanismo de despliegue.
+
+### **Estructura de ramas y entornos**
+
+El proyecto contará con cuatro tipos de ramas principales, cada una asociada a un entorno específico:
+
+* **Ramas sprint** (formato: `sprint/*`): Representan el desarrollo activo durante cada sprint. Todo el trabajo de nuevas features se integra aquí primero. Estas ramas despliegan automáticamente al entorno de **desarrollo (dev)**, donde los desarrolladores pueden probar sus cambios de forma temprana.
+
+* **Rama develop**: Actúa como rama de integración continua. Cuando un sprint finaliza, su contenido se fusiona a develop. Esta rama despliega al entorno de **staging (stg)**, donde se realizan pruebas de integración más exhaustivas con datos similares a producción.
+
+* **Ramas release** (formato: `release/*`): Se crean desde develop cuando se prepara una nueva versión para producción. En estas ramas se realizan las últimas correcciones y ajustes de QA sin añadir nuevas funcionalidades. Despliegan al entorno de **pre-producción (pre)**, réplica exacta de producción para validación final.
+
+* **Rama master**: Contiene únicamente código que está o ha estado en producción. Es la rama más estable del proyecto y despliega al entorno de **producción (prod)**.
+
+### **Flujo de promoción de código**
+
+El código progresa de forma unidireccional a través de las ramas siguiendo este orden:
+
+```
+sprint/* → develop → release/* → master
+   (dev)     (stg)      (pre)      (prod)
+```
+
+Esta progresión garantiza que cada cambio pase por todos los niveles de testing antes de llegar a producción, reduciendo significativamente el riesgo de bugs en el entorno productivo.
+
+### **Despliegues controlados mediante tags**
+
+A diferencia de otros flujos donde el despliegue se activa automáticamente con cada push, Golden Git Flow utiliza **tags** como "órdenes de despliegue". Esto significa que el equipo decide explícitamente cuándo realizar un despliegue creando un tag en la rama correspondiente.
+
+**Ventajas de este enfoque:**
+
+* **Control deliberado:** Los despliegues no ocurren accidentalmente. Alguien debe crear conscientemente el tag para disparar el deployment.
+* **Trazabilidad completa:** Cada versión desplegada tiene un tag asociado, lo que permite saber exactamente qué código está corriendo en cada entorno.
+* **Reversibilidad sencilla:** Si algo falla, volver a una versión anterior es tan simple como redesplegar desde el tag de la versión funcional anterior.
+* **Auditoría:** Todos los despliegues quedan registrados en el historial de tags del repositorio.
+
+## **6.2. Versionado semántico automatizado**
+
+### **Implementación de SemVer (Semantic Versioning)**
+
+El proyecto adoptará el estándar de versionado semántico con formato `MAJOR.MINOR.PATCH`:
+
+* **MAJOR** (X.0.0): Se incrementa cuando hay cambios que rompen la compatibilidad hacia atrás. Por ejemplo, cambios en la estructura de la API que requieren que los clientes actualicen su código, o modificaciones en el modelo de datos que requieren migraciones especiales.
+
+* **MINOR** (0.Y.0): Se incrementa cuando se añade nueva funcionalidad de forma compatible. Por ejemplo, añadir un nuevo endpoint REST, agregar una nueva feature en la UI, o implementar un nuevo módulo del sistema.
+
+* **PATCH** (0.0.Z): Se incrementa para correcciones de bugs que no cambian funcionalidad. Por ejemplo, arreglar un error de validación, corregir un bug visual, o mejorar el rendimiento de una consulta existente.
+
+### **Conventional Commits para automatización**
+
+Para automatizar el cálculo de versiones, el equipo utilizará **Conventional Commits**, un estándar que estructura los mensajes de commit de forma que herramientas automáticas puedan determinar el tipo de cambio realizado.
+
+**Formato de commits:**
+
+* **fix:** Indica una corrección de bug. Ejemplo: `fix: corregir validación de email en formulario de registro`. Este tipo de commit incrementará el número PATCH.
+
+* **feat:** Indica una nueva funcionalidad. Ejemplo: `feat: añadir filtro de búsqueda avanzada en dashboard`. Este tipo de commit incrementará el número MINOR.
+
+* **feat!** o **fix!:** El símbolo de exclamación indica un cambio que rompe compatibilidad. También se puede incluir `BREAKING CHANGE:` en el footer del commit. Estos commits incrementan el número MAJOR.
+
+**Casos especiales:**
+
+* Cuando hay múltiples commits en una PR, se aplica la regla del "mayor impacto": si hay un commit MAJOR, la versión sube MAJOR aunque haya también commits MINOR o PATCH.
+
+* En el flujo de trabajo con squash merge (fusión de commits), el título de la Pull Request se convierte en el único mensaje de commit que queda en el historial. Por tanto, es crítico que los títulos de PR sigan el formato Conventional Commits.
+
+* Para evitar errores, se implementará validación automática de títulos de PR mediante GitHub Actions, rechazando PRs cuyos títulos no cumplan el formato.
+
+### **Herramienta Release Please**
+
+Se utilizará **Release Please**, una herramienta desarrollada por Google que automatiza completamente el proceso de versionado:
+
+**Funcionamiento:**
+
+1. Release Please analiza todos los commits nuevos en la rama develop desde la última versión.
+2. Determina el tipo de bump (major/minor/patch) basándose en los prefijos de Conventional Commits.
+3. Crea automáticamente una **Release PR** (Pull Request de release) que incluye:
+   - El nuevo número de versión calculado
+   - Un CHANGELOG actualizado con todos los cambios
+   - Actualización de archivos de versión en el proyecto
+4. Cuando el equipo aprueba y fusiona esta Release PR, Release Please crea automáticamente un tag en GitHub con la nueva versión.
+
+**Configuración para monorepo:**
+
+Dado que NexUS es un monorepo (frontend y backend en el mismo repositorio), se configurará Release Please para mantener una única versión sincronizada en tres lugares:
+
+* Un archivo `version.txt` en la raíz del proyecto, que será la fuente de verdad.
+* El campo `version` en `frontend/package.json` para el frontend.
+* El campo `version` en `backend/pyproject.toml` para el backend Python.
+
+Esta sincronización evita desajustes de versiones entre componentes y simplifica la gestión de releases.
+
+## **6.3. Convenciones de tags y despliegues**
+
+### **Tags canónicos de versión**
+
+El tag principal de cada release seguirá el formato `vX.Y.Z`. Por ejemplo: `v1.4.0`, `v2.0.0`, `v1.4.1`.
+
+Este tag se crea en la rama master cuando el código llega a producción, y representa la versión "oficial" del sistema.
+
+### **Tags de promoción por entorno**
+
+Para facilitar el tracking de qué versión está en cada entorno, se utilizarán tags con prefijos de entorno:
+
+| Entorno    | Patrón de tag | Ejemplo      | Rama base   |
+| :--------- | :------------ | :----------- | :---------- |
+| Desarrollo | `dev-vX.Y.Z`  | `dev-v1.4.0` | `sprint/*`  |
+| Staging    | `stg-vX.Y.Z`  | `stg-v1.4.0` | `develop`   |
+| Pre-prod   | `pre-vX.Y.Z`  | `pre-v1.4.0` | `release/*` |
+| Producción | `vX.Y.Z`      | `v1.4.0`     | `master`    |
+
+**Creación de tags:**
+
+Los tags no se crean manualmente. En su lugar, se implementará un workflow manual de GitHub Actions llamado "Promote to Environment" que:
+
+* Lee la versión actual del archivo `version.txt`
+* Crea el tag apropiado según el entorno seleccionado
+* Apunta el tag al HEAD de la rama correspondiente
+* Pushea el tag al repositorio, lo que automáticamente dispara el despliegue
+
+Este proceso manual garantiza que los despliegues sean deliberados pero evita errores humanos en la creación de tags.
+
+### **Enforcement de convenciones**
+
+Para garantizar que el sistema de versionado funcione correctamente, se implementarán dos controles automáticos:
+
+1. **Validación de títulos de PR:** Un GitHub Action validará que todos los títulos de Pull Request sigan el formato Conventional Commits antes de permitir la fusión. Si el título no cumple el formato, la PR se bloqueará hasta que se corrija.
+
+2. **Definición clara de BREAKING CHANGES:** El equipo documentará qué tipos de cambios se consideran breaking (cambios en APIs públicas, modificaciones de esquema de base de datos que requieren migraciones especiales, cambios en contratos de integración con terceros). Esto evitará incrementos de versión MAJOR accidentales y garantizará que se incrementen cuando sea realmente necesario.
+
+---
+
+# **7. Estrategia de contenedorización con Docker**
+
+## **7.1. Enfoque de arquitectura containerizada**
+
+NexUS adoptará **Docker** como tecnología de contenedorización para empaquetar y ejecutar todos los componentes del sistema. Esta decisión se fundamenta en tres pilares:
+
+### **Consistencia entre entornos**
+
+El problema clásico de "en mi máquina funciona" desaparece con Docker. El mismo contenedor que un desarrollador ejecuta en su laptop es idéntico al que corre en los servidores de staging y producción. Esto elimina bugs causados por diferencias en versiones de dependencias, configuraciones del sistema operativo, o variables de entorno.
+
+### **Portabilidad entre proveedores cloud**
+
+Aunque inicialmente el despliegue se realizará en Azure (aprovechando créditos de Azure for Students), la arquitectura containerizada permite migrar a cualquier proveedor (AWS, GCP, DigitalOcean, etc.) con mínimas modificaciones. Los contenedores son agnósticos al proveedor de infraestructura.
+
+### **Versionado sincronizado con el código**
+
+Cada tag de versión de código generará imágenes Docker con ese mismo tag. Por ejemplo, cuando se crea el tag `v1.4.0`, se construirán automáticamente:
+* `ghcr.io/nexus/nexus-backend:v1.4.0`
+* `ghcr.io/nexus/nexus-worker:v1.4.0`
+* `ghcr.io/nexus/nexus-frontend-ssr:v1.4.0`
+
+Esto permite rollbacks instantáneos simplemente cambiando qué versión de imagen está corriendo en cada entorno.
+
+## **7.2. Componentes contenedorizados**
+
+El sistema se dividirá en tres contenedores principales:
+
+### **Backend (Django + DRF con ASGI)**
+
+**Propósito:** Servir la API REST con Django REST Framework. Correrá bajo Uvicorn, un servidor ASGI de alto rendimiento, en lugar del tradicional Gunicorn WSGI. Esto permite aprovechar las capacidades asíncronas de Django 4.x+ y Django Channels para websockets.
+
+**Características clave:**
+* Expone el puerto 8000
+* Incluye Django Admin para gestión interna
+* Se configura con múltiples workers de Uvicorn para aprovechar múltiples cores
+* Ejecuta collectstatic durante el build para servir archivos estáticos de Admin/DRF
+
+**Registry:** Las imágenes se alojarán en GitHub Container Registry (GHCR), que es gratuito para repositorios públicos y tiene integración nativa con GitHub Actions.
+
+### **Worker (Celery para procesamiento asíncrono)**
+
+**Propósito:** Ejecutar tareas en segundo plano como procesamiento de documentos con OCR, generación de embeddings para RAG, envío de emails, y generación de reportes pesados.
+
+**Arquitectura:** Utilizará la **misma imagen base que el backend** (Django + DRF), pero con un comando de inicio diferente. En lugar de arrancar Uvicorn, ejecutará `celery worker`. Esto evita duplicar el código y las dependencias, simplificando el mantenimiento.
+
+**Configuración:**
+* Se conecta a Redis como broker de mensajes (configurado en Upstash Redis para plan gratuito)
+* Se configura con concurrencia de 4 workers por defecto (ajustable según carga)
+* Consume tareas de la misma cola Redis a la que el backend Django envía trabajos
+
+**Nota importante:** Al ser la misma imagen, cualquier actualización de dependencias o del código Django se refleja automáticamente en ambos servicios (API y workers), manteniendo la sincronización perfecta.
+
+### **Frontend SSR (React + TypeScript + Vite)**
+
+**Propósito:** Servir la aplicación React con Server-Side Rendering para mejorar el rendimiento percibido (Time To First Byte, First Contentful Paint) y la indexabilidad SEO de páginas públicas.
+
+**Arquitectura de build:**
+* **Stage 1 (Build):** Compila el código TypeScript y genera los bundles optimizados con Vite. Instala todas las dependencias (incluidas las de desarrollo).
+* **Stage 2 (Runtime):** Copia solo los artefactos compilados y las dependencias de producción a una imagen limpia. Esto reduce el tamaño final de la imagen en un 60-70%.
+
+**Configuración:**
+* Expone el puerto 3000
+* Corre sobre Node.js 20 (versión LTS con mejor rendimiento)
+* Usa Alpine Linux como base para minimizar el footprint (la imagen final pesa ~150MB vs ~800MB sin Alpine)
+* El entry point SSR renderiza React en el servidor y envía HTML hidratado al cliente
+
+## **7.3. Convenciones de nombrado y tagging de imágenes**
+
+### **Nombres de imágenes**
+
+Las imágenes seguirán el patrón `ghcr.io/<organización>/nexus-<componente>`:
+* `ghcr.io/nexus-team/nexus-backend`
+* `ghcr.io/nexus-team/nexus-worker`
+* `ghcr.io/nexus-team/nexus-frontend-ssr`
+
+### **Tags de versión**
+
+Cada imagen se etiquetará con múltiples tags simultáneamente:
+
+**Tag principal (SemVer):**
+* `v1.4.0` - El tag canónico de la versión
+* `dev-v1.4.0`, `stg-v1.4.0`, `pre-v1.4.0` - Tags de entorno con la versión
+
+**Tags flotantes (opcionales):**
+* `latest` - Apunta siempre a la última versión estable en producción
+* `dev`, `stg`, `pre`, `prod` - Tags que se actualizan para apuntar a la última versión desplegada en cada entorno
+
+**Tags de debugging (opcionales):**
+* `sha-a3f5c2d` - Tag basado en el commit hash corto para builds de prueba o investigación de bugs específicos
+
+Esta estrategia de multi-tagging permite flexibilidad: en producción se puede apuntar a un tag específico como `v1.4.0` para máxima estabilidad, mientras que en desarrollo se puede usar el tag flotante `dev` que siempre obtiene la última versión.
+
+## **7.4. Entorno de desarrollo local**
+
+Para el desarrollo local se utilizará **Docker Compose**, que orquestará todos los servicios necesarios:
+
+**Servicios incluidos:**
+
+1. **PostgreSQL 16:** Base de datos principal con extensión pgvector para embeddings de IA. Los datos se persisten en un volume Docker para no perderlos entre reinicios.
+
+2. **Redis 7:** Broker de mensajes para Celery. Corre en memoria (sin persistencia) ya que las tareas son efímeras.
+
+3. **Backend:** El servicio Django corriendo en modo desarrollo con auto-reload. Los cambios en el código se reflejan inmediatamente sin necesidad de rebuild.
+
+4. **Worker:** El servicio Celery también con auto-reload para desarrollo ágil de tareas asíncronas.
+
+5. **Frontend:** El servidor de desarrollo de Vite con hot module replacement. Los cambios en React se actualizan instantáneamente en el navegador.
+
+**Configuración de desarrollo:**
+
+* Todos los servicios montan el código fuente como volumes, permitiendo desarrollo sin rebuild constante
+* Las variables de entorno se configuran para desarrollo (DEBUG=True, logging verboso)
+* El frontend se configura para apuntar a `localhost:8000` para la API
+* Los puertos se exponen al host para acceso directo: 3000 (frontend), 8000 (backend), 5432 (postgres), 6379 (redis)
+
+**Ventajas:**
+
+* Un desarrollador nuevo puede levantar el stack completo con un solo comando
+* Todos los desarrolladores trabajan con exactamente las mismas versiones de servicios
+* Se pueden probar flujos completos (frontend → backend → worker → base de datos) en local antes de subir código
+
+---
+
+# **8. Pipeline de CI/CD (Integración y Despliegue Continuos)**
+
+## **8.1. Arquitectura general del pipeline**
+
+El pipeline de CI/CD de NexUS se estructura en tres fases principales que garantizan la calidad del código antes de llegar a producción:
+
+### **Fase 1: Validación continua (CI)**
+
+Esta fase se ejecuta automáticamente en cada Push y Pull Request. Su objetivo es detectar problemas lo antes posible:
+
+* **Ejecución de tests:** Tanto frontend (tests unitarios con Vitest, tests de componentes con React Testing Library) como backend (tests unitarios y de integración con Pytest) se ejecutan en paralelo.
+
+* **Análisis estático:** Se verifica que el código cumple los estándares de calidad mediante linters (ESLint para frontend, Ruff para backend) y type checking (TypeScript para frontend, MyPy para backend).
+
+* **Validación de commits:** Se verifica que los títulos de Pull Request sigan el formato Conventional Commits, bloqueando la fusión si no cumplen.
+
+* **Reporte de cobertura:** Se calcula y reporta la cobertura de tests, con integración a Codecov para tracking histórico.
+
+### **Fase 2: Construcción de artefactos**
+
+Esta fase se dispara únicamente cuando se crea un tag de versión (dev-v*, stg-v*, pre-v*, v*):
+
+* **Build de imágenes Docker:** Se construyen las tres imágenes (backend, worker, frontend-ssr) utilizando Docker Buildx para aprovechar caché y acelerar builds.
+
+* **Optimización de build:** Se utiliza caché de GitHub Actions para reutilizar layers de Docker entre builds, reduciendo el tiempo de construcción de ~10 minutos a ~3 minutos en builds incrementales.
+
+* **Publicación a registry:** Las imágenes se publican en GitHub Container Registry con los tags apropiados (tanto el tag de versión como los tags flotantes).
+
+* **Escaneo de seguridad:** Cada imagen se escanea con Trivy para detectar vulnerabilidades conocidas en dependencias. Los resultados se publican en GitHub Security Dashboard.
+
+### **Fase 3: Despliegue automático**
+
+Esta fase se ejecuta inmediatamente después del build exitoso, desplegando automáticamente a los entornos según el tipo de tag:
+
+* **Tag dev-v*:** Despliega a entorno de desarrollo
+* **Tag stg-v*:** Despliega a entorno de staging
+* **Tag pre-v*:** Despliega a entorno de pre-producción
+* **Tag v* (sin prefijo):** Despliega a producción
+
+Cada despliegue incluye:
+* Autenticación con el proveedor cloud (Azure)
+* Pull de las imágenes Docker desde GHCR
+* Actualización del servicio con la nueva versión
+* Verificación de health checks antes de dar el despliegue como exitoso
