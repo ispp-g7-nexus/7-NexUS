@@ -178,16 +178,16 @@ La matriz RACI es la base operativa de nuestra Definition of Done (DoD). Ninguna
 | Equipo | Nombre del integrante | Rol en el Proyecto |
 |--------|------------------------|-------------------|
 | **A** | Javier Castilla Rodríguez | Desarrollador |
-| **A** | Javier Gutiérrez Pastor | **Desarrollador, Coordinador** |
+| **A** | Javier Gutiérrez Pastor | Desarrollador |
 | **A** | Nuno José del Pino Escalante | Desarrollador |
-| **A** | Alejandro de los Reyes Pérez | Desarrollador |
+| **A** | Alejandro de los Reyes Pérez | **Desarrollador, Coordinador** |
 | **A** | Javier Soria Blanco | Desarrollador |
 | | | |
 | **B** | Juan José Cardesa Sosa | Desarrollador |
 | **B** | Nicolás Gómez Claraco | Desarrollador |
-| **B** | Ignacio Martínez Díaz | Desarrollador |
+| **B** | Ignacio Martínez Díaz | **Desarrollador, Coordinador**  |
 | **B** | Manuel Jesús Niza Cobo | **Desarrollador, Scrum Master** |
-| **B** | Miguel Regidor García | **Desarrollador, Coordinador** |
+| **B** | Miguel Regidor García | Desarrollador |
 | | | |
 | **C** | Olga Cantalejo Gómez | Desarrolladora |
 | **C** | Carolina Murillo Gómez | Desarrolladora |
@@ -196,8 +196,8 @@ La matriz RACI es la base operativa de nuestra Definition of Done (DoD). Ninguna
 | **C** | Paula María Suárez Linares | Desarrolladora |
 | | | |
 | **D** | Francisco de Castro Mañas | Desarrollador |
-| **D** | Carlos Gallero Rodríguez | **Desarrollador, Product Owner** |
+| **D** | Carlos Gallero Rodríguez | **Desarrollador, Coordinador** |
 | **D** | Jesús García Pérez | Desarrollador |
 | **D** | Alberto García Sanz | Desarrollador |
 | **D** | Ángel Mateos Marín | Desarrollador |
-| **D** | Pablo Pérez Gaspar | **Desarrollador, Coordinador** |
+| **D** | Pablo Pérez Gaspar | **Desarrollador, Product Owner** |
