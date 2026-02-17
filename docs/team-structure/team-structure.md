@@ -1,3 +1,4 @@
+# Estructura de equipo – NexUS
 <div align="center">
 
 <table width="100%" style="border: none; background: none;">
@@ -5,13 +6,8 @@
     <td align="center" width="50%" style="border: none;">
       <img src="../images/logo-app.jpeg" alt="Logo NexUS" width="250">
     </td>
-    <td align="center" width="50%" style="border: none;">
-      <img src="../images/logo-etsii.jpe" alt="Logo ETSII" width="300">
-    </td>
   </tr>
 </table>
-
-<h1>Estructura de equipo – NexUS</h1>
 
 <p>
   <img src="https://img.shields.io/badge/Versión-1.4.0-blue?style=flat-square" alt="Versión">
@@ -20,28 +16,24 @@
   <img src="https://img.shields.io/badge/Asignatura-ISPP-red?style=flat-square" alt="Asignatura">
 </p>
 
-<p>
-  <strong>Plataforma integral de gestión y convivencia para residencias universitarias.</strong>
-  <br>
-  Universidad de Sevilla - Curso 2025/2026
-</p>
-
 </div>
 
 ---
 
-## 📋 Ficha Técnica del Proyecto
+**Proyecto:** NexUS  
+**Grupo:** 7 - NexUS  
+**Asignatura:** Ingeniería del Software y Práctica Profesional (ISPP)  
+**Institución:** ETSII – Universidad de Sevilla  
+**Curso académico:** 2025/2026  
+**Fecha:** 16/02/2026  
 
-| Campo | Detalle |
-| :--- | :--- |
-| **Proyecto** | **NexUS** |
-| **Organización** | Grupo 7-NexUS (21 integrantes) |
-| **Institución** | ETSII, Universidad de Sevilla |
-| **Asignatura** | Ingeniería de Software y Práctica Profesional (ISPP) |
-| **Fecha de actualización** | 16/02/2026 |
-| **Documento** | Organización y estructura de equipo |
+<p align="center">
+  <img src="../images/logo-etsii.jpe" alt="Logo ETSII" width="400">
+</p>
 
 ---
+
+
 
 ## Historial de Versiones
 
@@ -52,16 +44,6 @@
 
 ---
 
-## 🚀 Enlaces Rápidos
-
-| Recurso | Descripción | Enlace |
-| :--- | :--- | :--- |
-| **Tablero Ágil** | Seguimiento de tareas (GitHub Projects) | [Ver Tablero](https://github.com/orgs/ispp-g11/projects/2) |
-| **Diseño UX/UI** | Prototipos y Mockups en Figma | [Ver Diseños](#) |
-| **Despliegue** | Entorno de producción  | [Ir a la App](#) |
-| **Wiki** | Documentación técnica detallada | [Ver Wiki](#) |
-
----
 
 ## Índice
 
