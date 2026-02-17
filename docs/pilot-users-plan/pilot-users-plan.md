@@ -37,6 +37,8 @@
 | 1.0.0   | 09/02/2026  | Creación del documento base y estilos                                            |
 | 1.1.0   | 10/02/2026  | Añadidos apartados 3 y 4                                                         |
 | 1.1.1   | 10/02/2026  | Añadidos apartados 1, 2 y 5                                                        |
+| 1.2.0   | 17/02/2026  | Aplicación del feedback recibido
+  |
 
 ---
 
@@ -60,32 +62,34 @@ Los usuarios piloto pueden ser las residencias privadas, colegios mayores y empr
 
 - **Colegios mayores y fundaciones universitarias:** Dado que estas instituciones priorizan el bienestar y la vida estudiantil, su participación es fundamental para validar la diferencia clave del proyecto: la vida social integrada. Estos centros utilizarán los canales temáticos moderados, la organización de eventos y las inscripciones a actividades para demostrar que el sistema no solo gestiona infraestructura, sino que optimiza la convivencia.
 
-- **Residencias con problemas de comunicación interna:** Este grupo corresponde a centros que aún dependen de números de teléfono personales o grupos de WhatsApp, lo que genera caos informativo. Como usuarios pilotos, se centrarán en implementar el sistema de avisos oficiales con confirmación de lectura y el check-in y firma de normas digital. Su validación servirá para demostrar cómo una plataforma única puede eliminar la dependencia de herramientas externas no profesionales.
+- **Staff Operativo:** Este grupo incluye al personal de cocina, limpieza y mantenimiento, cuya participación es crítica para validar la usabilidad de la herramienta en entornos de movilidad y alta carga de trabajo. Al participar en el piloto, estos usuarios permiten testear si la interfaz es lo suficientemente intuitiva para ser utilizada con "curva de aprendizaje cero", asegurando que ciertas tareas se realicen de forma más rápida y eficiente que los métodos analógicos actuales. Su feedback directo permite ajustar elementos de diseño (tamaño de botones, flujos de navegación y notificaciones) para garantizar que la tecnología sea una ayuda operativa y no una carga administrativa adicional.
 
-- **Perfiles especializados:** Este grupo está compuesto por expertos en gestión alojativa y desarrolladores de experiencia de usuario. Su función como usuarios piloto es auditar la plataforma desde una perspectiva técnica y operativa, simulando el uso diario de roles específicos (como el personal de cocina o mantenimiento). Su validación es clave para garantizar que la propuesta de valor cumpla con los estándares de calidad que exige el mercado actual.
+-**Estudiantes residentes:** Este grupo constituye el núcleo de usuarios de la plataforma y su participación en el piloto es esencial para validar el engagement y la dinamización de la vida en el centro. Al ser nativos digitales, su función es testear si las funcionalidades sociales son realmente atractivas y capaces de sustituir el ruido de los grupos de WhatsApp. Su feedback permitirá asegurar que la herramienta no se perciba como una imposición administrativa, sino como un beneficio directo que mejora su calidad de vida, fomenta la participación comunitaria y simplifica su interacción diaria con la residencia.
+
+- **Perfiles especializados:** Este perfil está integrado por diseñadores de experiencia de usuario y analistas de calidad, cuya función es realizar una auditoría técnica y heurística de la plataforma durante el piloto. Su objetivo es identificar fricciones en los flujos de navegación, detectar errores de interfaz y asegurar que la arquitectura de la información sea coherente para todos los roles de la residencia. Al simular escenarios de uso intensivo, su validación técnica garantiza que la aplicación no solo sea funcional, sino que cumpla con los más altos estándares de accesibilidad y rendimiento que el mercado de gestión alojativa exige actualmente.
 
 ---
 
 ## 2. Estrategias de identificación y captación
-**Venta Directa**
+**Captación de Early Adopters (Enfoque Consultivo)**
 
-Esta táctica consiste en identificar residencias privadas independientes que aún gestionan su día a día de forma manual. Al buscar centros que dependen de herramientas como WhatsApp, hojas de cálculo o correos electrónicos, podemos ofrecer la plataforma como la solución definitiva para profesionalizar sus procesos internos y reducir la carga de trabajo. El objetivo es presentar nuestro sistema como una herramienta específica para el día a día que sustituye múltiples aplicaciones ineficientes por una sola plataforma moderna y accesible.
+Esta táctica se centra en identificar centros que operan actualmente con procesos manuales (WhatsApp, Excel) para invitarlos a realizar un diagnóstico operativo gratuito. El objetivo es detectar sus puntos críticos de fricción y ofrecerles participar en el programa piloto como una oportunidad para digitalizar sus flujos de trabajo de forma guiada. La propuesta no se presenta como la adquisición de un producto final, sino como una invitación a colaborar en el refinamiento de una herramienta diseñada para resolver sus problemas específicos de sobrecarga administrativa.
 
 **Alianza con asociaciones**
 
-Esta estrategia consiste en presentar la plataforma a entidades que agrupan múltiples residencias individuales, colegios mayores o fundaciones universitarias. Al proponer el sistema a una asociación, se busca que esta actúe como puente para llegar de golpe a varios clientes potenciales que comparten el mismo problema: la gestión fragmentada con Excel o WhatsApp. Se les ofrece como una solución intuitiva que automatiza el día a día sin complejidad técnica.
+Se buscará la colaboración de asociaciones de colegios mayores y fundaciones universitarias para posicionar el piloto como un proyecto de innovación sectorial. En lugar de buscar una adopción masiva inmediata, el objetivo es que estas entidades actúen como filtros para seleccionar centros de referencia que deseen liderar la transformación digital del sector. Se les ofrece formar parte del "comité de validación", participando en la definición de los estándares de gestión que regirán la plataforma en el futuro.
 
-**Socio Colaborador**
+**Programa de Directores Co-Creadores**
 
-Esta estrategia busca atraer a directores ofreciéndoles ser parte del desarrollo inicial del software. Se les propone probar los módulos básicos —como la gestión de habitaciones, incidencias y reservas— a cambio de adaptar la plataforma a sus necesidades operativas reales. Para incentivar su participación, se pueden ofrecer beneficios futuros como el módulo de la marca blanca.
+Esta estrategia está diseñada para atraer a directores proactivos que deseen influir directamente en el plan de desarrollo del software. Se les invita a testear las funcionalidades core bajo el compromiso de que sus sugerencias de mejora tendrán prioridad en el ciclo de desarrollo. El incentivo principal es el privilegio de utilizar una herramienta moldeada según sus necesidades operativas reales, incluyendo el acceso anticipado a la personalización de marca blanca.
 
 **Estudiantes Embajadores**
 
-Dado que los estudiantes residentes son los usuarios finales que más sufren la mala experiencia de gestión, esta táctica utiliza su influencia. Se busca a estudiantes que valoren la "vida social y convivencia" para que muestren a sus gestores cómo la app facilitaría el check-in digital, la inscripción a eventos y la comunicación sin usar números de teléfono. Al demostrar que los residentes prefieren una UX moderna sobre los sistemas antiguos de la competencia, se genera una presión positiva para que la residencia adopte el usuario piloto.
+Se aprovechará el perfil del estudiante nativo digital para que actúe como motor de cambio interno. Identificaremos a delegados o estudiantes con perfil "conector", interesados en la mejora de la convivencia, para que propongan a sus centros la implementación del piloto. El enfoque es demostrar a la dirección que existe una demanda real de los usuarios finales por una experiencia digital moderna, convirtiendo al estudiante en un aliado estratégico que valida la usabilidad y el grado de adopción del sistema.
 
-**Concienciación**
+**Análisis de Riesgos y Mejora de Estándares**
 
-Consiste en atraer a los directores mostrándoles los riesgos reales de seguir usando herramientas como WhatsApp o Excel, como la pérdida de datos o la falta de privacidad. Se busca generar una reflexión en el gestor sobre cómo estas "soluciones improvisadas" están dañando su eficiencia y la convivencia de los estudiantes. Al educarlos sobre el problema, la plataforma se presenta no solo como una opción, sino como una necesidad urgente para profesionalizar la residencia.
+Esta táctica se enfoca en la educación sobre la profesionalización de la gestión de datos y la privacidad. Mediante sesiones informativas sobre los riesgos de seguridad y pérdida de información inherentes al uso de herramientas genéricas (como WhatsApp), se invita a los centros a participar en el piloto como una fase de transición segura hacia el cumplimiento normativo (RGPD). La plataforma se presenta como un entorno controlado para validar estándares de comunicación oficial sin los riesgos técnicos de las soluciones improvisadas.
 
 ---
 
@@ -143,7 +147,7 @@ Se aceptará un acuerdo de colaboración para el usuario piloto, que actuará co
 ## 5. Incentivos y beneficios para usuarios piloto
 **Acceso gratuito y preferencial**
 
-El principal incentivo para los usuarios piloto es el uso de la plataforma sin coste alguno durante toda la fase de pruebas, permitiéndoles profesionalizar su gestión sin inversión inicial. Además, al ser los primeros, tendrán prioridad para solicitar pequeños ajustes en las funciones de día a día, como la gestión de habitaciones o el sistema de incidencias, asegurando que la herramienta se adapte perfectamente a su forma de trabajar.
+El principal incentivo para los usuarios piloto es el uso de la plataforma sin coste alguno durante toda la fase de pruebas, permitiéndoles profesionalizar su gestión sin inversión inicial. Además, al ser los primeros, tendrán prioridad para solicitar pequeños ajustes en las funciones de día a día, como la gestión de habitaciones o el sistema de incidencias, asegurando que la herramienta se adapte perfectamente a su forma de trabajar.Asimismo, los centros participantes obtendrán una tarifa preferencial vitalicia como agradecimiento por su contribución al desarrollo inicial de la plataforma.
 
 **Identidad corporativa y marca blanca**
 
