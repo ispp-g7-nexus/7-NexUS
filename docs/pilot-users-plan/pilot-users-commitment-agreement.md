@@ -1,3 +1,5 @@
+# NexUS: Acuerdo de Compromiso para Usuarios Piloto
+
 Yo, [Nombre del Colaborador], en calidad de [Rol: Director / Estudiante / Staff], me comprometo a participar activamente en la fase de pruebas de la plataforma NexUS durante el curso académico 2025–26, bajo las siguientes condiciones:
 
 **Uso Activo y Real:** Me comprometo a integrar el uso de la plataforma en mi rutina diaria dentro de la residencia, utilizando las funcionalidades correspondientes a mi perfil para validar su utilidad en escenarios reales.
