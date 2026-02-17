@@ -48,6 +48,7 @@
 | Versión | Fecha       | Cambio principal                                                                 |
 |---------|-------------|----------------------------------------------------------------------------------|
 | 1.0.0   | 16/02/2026  | Creación y desarrollo del documento                                              |
+| 1.1.0   | 17/02/2026  | Asignación de roles nominales (SM/PO)                                            |
 
 ---
 
@@ -185,17 +186,17 @@ La matriz RACI es la base operativa de nuestra Definition of Done (DoD). Ninguna
 | **B** | Juan José Cardesa Sosa | Desarrollador |
 | **B** | Nicolás Gómez Claraco | Desarrollador |
 | **B** | Ignacio Martínez Díaz | Desarrollador |
-| **B** | Manuel Jesús Niza Cobo | Desarrollador |
+| **B** | Manuel Jesús Niza Cobo | **Desarrollador, Scrum Master** |
 | **B** | Miguel Regidor García | **Desarrollador, Coordinador** |
 | | | |
-| **C** | Olga Cantalejo Gómez | Desarrollador |
-| **C** | Carolina Murillo Gómez | Desarrollador |
-| **C** | Marta Recio Gil | **Desarrollador, Coordinadora** |
-| **C** | Celia Suárez Coronel | Desarrollador |
-| **C** | Paula María Suárez Linares | Desarrollador |
+| **C** | Olga Cantalejo Gómez | Desarrolladora |
+| **C** | Carolina Murillo Gómez | Desarrolladora |
+| **C** | Marta Recio Gil | **Desarrolladora, Coordinadora** |
+| **C** | Celia Suárez Coronel | Desarrolladora |
+| **C** | Paula María Suárez Linares | Desarrolladora |
 | | | |
-| **D** | Francisco de Castro Mañas Ángel Mateos Marín | Desarrollador |
-| **D** | Carlos Gallero Rodríguez | Desarrollador |
+| **D** | Francisco de Castro Mañas | Desarrollador |
+| **D** | Carlos Gallero Rodríguez | **Desarrollador, Product Owner** |
 | **D** | Jesús García Pérez | Desarrollador |
 | **D** | Alberto García Sanz | Desarrollador |
 | **D** | Ángel Mateos Marín | Desarrollador |
