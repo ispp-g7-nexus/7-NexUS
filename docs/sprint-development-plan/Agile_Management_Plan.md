@@ -155,7 +155,7 @@ Después de cada sprint:
 
 ---
 
-## 11. Presentación y entrega del sprint
+## 9. Presentación y entrega del sprint
 
 **Contenido mínimo para cada demo:**
 
