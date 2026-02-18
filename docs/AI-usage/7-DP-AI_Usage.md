@@ -1,28 +1,47 @@
 # Análisis Competitivo – NexUS (Enfoque Residencias)
 
 <p align="center">
-  <img src="../images/logo-app.jpeg" alt="Portada" width="700">
+  <img src="../images/logo-app.jpeg" alt="Logo NexUS" width="500">
 </p>
 
+<div align="center">
 
-**Grupo:** B-Tarde  
-**Proyecto:** NexUS - Plataforma de Gestión Integral para Residencias Estudiantiles  
+<p>
+  <img src="https://img.shields.io/badge/Versión-1.0.0-blue?style=flat-square" alt="Versión">
+  <img src="https://img.shields.io/badge/Estado-Completado-yellow?style=flat-square" alt="Estado">
+  <img src="https://img.shields.io/badge/Grupo-B--Tarde-green?style=flat-square" alt="Grupo">
+  <img src="https://img.shields.io/badge/Asignatura-ISPP-red?style=flat-square" alt="Asignatura">
+</p>
+
+<p>
+  <strong>Plataforma integral de gestión y convivencia para residencias universitarias</strong>
+</p>
+
+</div>
+
+---
+
+**Proyecto:** NexUS  
+**Grupo:** 7 - NexUS  
+**Asignatura:** Ingeniería del Software y Práctica Profesional (ISPP)  
+**Institución:** ETSII – Universidad de Sevilla  
+**Curso académico:** 2025/2026  
 **Fecha:** 16/02/2026  
-**Asignatura:** ISPP  
-**Institución:** ETSII, Universidad de Sevilla
-
 
 <p align="center">
-  <img src="../images/logo-etsii.jpe" alt="Portada" width="400">
+  <img src="../images/logo-etsii.jpe" alt="Logo ETSII" width="400">
 </p>
 
 ---
+
 
 ## Historial de Versiones
 
 | Versión | Fecha       | Cambio principal                                      |
 |---------|-------------|-------------------------------------------------------|
 | 1.0.0   | 16/02/2026  | Creación del documento base                           |
+| 1.0.1   | 16/02/2026  | Modificación de la portadan                           |
+
 
 
 ---
