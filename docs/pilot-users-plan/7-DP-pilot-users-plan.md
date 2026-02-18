@@ -1,18 +1,37 @@
+<h1>Plan de Usuarios Piloto – NexUS</h1>
+<p align="center">
+  <img src="../images/logo-app.png" alt="Logo NexUS" width="500">
+</p>
+
 <div align="center">
 
-<table width="100%" style="border: none; background: none;">
-  <tr>
-    <td align="center" width="50%" style="border: none;">
-      <img src="../images/logo-app.jpeg" alt="Logo NexUS" width="250">
-    </td>
-    <td align="center" width="50%" style="border: none;">
-      <img src="../images/logo-etsii.jpe" alt="Logo ETSII" width="300">
-    </td>
-  </tr>
-</table>
+<p>
+  <img src="https://img.shields.io/badge/Versión-1.0.0-blue?style=flat-square" alt="Versión">
+  <img src="https://img.shields.io/badge/Estado-Completado-yellow?style=flat-square" alt="Estado">
+  <img src="https://img.shields.io/badge/Grupo-B--Tarde-green?style=flat-square" alt="Grupo">
+  <img src="https://img.shields.io/badge/Asignatura-ISPP-red?style=flat-square" alt="Asignatura">
+</p>
 
-<h1>Plan de Usuarios Piloto – NexUS</h1>
+<p>
+  <strong>Plataforma integral de gestión y convivencia para residencias universitarias</strong>
+</p>
 
+</div>
+
+---
+
+**Proyecto:** NexUS  
+**Grupo:** 7 - NexUS  
+**Asignatura:** Ingeniería del Software y Práctica Profesional (ISPP)  
+**Institución:** ETSII – Universidad de Sevilla  
+**Curso académico:** 2025/2026  
+**Fecha:** 09/02/2026  
+
+<p align="center">
+  <img src="../images/logo-etsii.jpe" alt="Logo ETSII" width="400">
+</p>
+
+---
 <p>
   <img src="https://img.shields.io/badge/Versión-1.1.1-blue?style=flat-square" alt="Versión">
   <img src="https://img.shields.io/badge/Estado-En_Revisión-yellow?style=flat-square" alt="Estado">

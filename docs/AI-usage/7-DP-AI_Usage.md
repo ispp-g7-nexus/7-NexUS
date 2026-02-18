@@ -1,7 +1,7 @@
 # Análisis Competitivo – NexUS (Enfoque Residencias)
 
 <p align="center">
-  <img src="../images/logo-app.jpeg" alt="Logo NexUS" width="500">
+  <img src="../images/logo-app.png" alt="Logo NexUS" width="500">
 </p>
 
 <div align="center">
