@@ -1,4 +1,4 @@
-# Plan de Desarrollo del Sprint 1 - NexUS
+<h1>Plan de Desarrollo del Sprint 1 – NexUS</h1>
 
 <p align="center">
   <img src="../images/logo-app.png" alt="Logo NexUS" width="500">

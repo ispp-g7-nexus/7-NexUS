@@ -1,4 +1,5 @@
-# Estructura de equipo – NexUS
+<h1>Estructura de equipo – NexUS</h1>
+
 <div align="center">
 
 <table width="100%" style="border: none; background: none;">
@@ -11,7 +12,7 @@
 
 <p>
   <img src="https://img.shields.io/badge/Versión-1.4.0-blue?style=flat-square" alt="Versión">
-  <img src="https://img.shields.io/badge/Estado-En_Desarrollo-yellow?style=flat-square" alt="Estado">
+  <img src="https://img.shields.io/badge/Estado-Completado-yellow?style=flat-square" alt="Estado">
   <img src="https://img.shields.io/badge/Grupo-7--NexUS-green?style=flat-square" alt="Grupo">
   <img src="https://img.shields.io/badge/Asignatura-ISPP-red?style=flat-square" alt="Asignatura">
 </p>
