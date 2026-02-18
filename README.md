@@ -21,10 +21,10 @@
 
 ---
 
-**Proyecto:** NexUS
-**Grupo:** 7 - NexUS
-**Asignatura:** Ingeniería del Software y Práctica Profesional (ISPP)
-**Institución:** ETSII – Universidad de Sevilla
+**Proyecto:** NexUS<br>
+**Grupo:** 7 - NexUS<br>
+**Asignatura:** Ingeniería del Software y Práctica Profesional (ISPP)<br>
+**Institución:** ETSII – Universidad de Sevilla<br>
 **Curso académico:** 2025/2026
 
 <p align="center">
@@ -54,7 +54,7 @@ Modelo SaaS B2B con planes base y premium, precio de referencia entre 8 y 12 eur
 | **Base de datos** | ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=postgresql&logoColor=white) ![pgvector](https://img.shields.io/badge/pgvector-4169E1?style=flat-square&logo=postgresql&logoColor=white) | Base de datos relacional con soporte de vectores para IA |
 | **Tareas asíncronas** | ![Redis](https://img.shields.io/badge/Redis-DC382D?style=flat-square&logo=redis&logoColor=white) ![Celery](https://img.shields.io/badge/Celery-37814A?style=flat-square&logo=celery&logoColor=white) | Procesamiento en segundo plano para matching y notificaciones |
 | **Infraestructura** | ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white) ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=flat-square&logo=github-actions&logoColor=white) | Contenedorización del entorno y pipeline de CI/CD |
-| **Despliegue** | ![Cloudflare](https://img.shields.io/badge/Cloudflare-F38020?style=flat-square&logo=cloudflare&logoColor=white) ![Azure](https://img.shields.io/badge/Azure-0078D4?style=flat-square&logo=microsoft-azure&logoColor=white) ![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=flat-square&logo=supabase&logoColor=white) | Frontend en Cloudflare Pages, backend en Azure App Service, base de datos en Supabase |
+| **Despliegue** | ![Cloudflare](https://img.shields.io/badge/Cloudflare-F38020?style=flat-square&logo=cloudflare&logoColor=white) ![Azure](https://img.shields.io/badge/Azure-0078D4?style=flat-square&logo=microsoft-azure&logoColor=white) | Frontend en Cloudflare Pages, backend y base de datos en Azure App Service |
 
 ## Equipo
 
@@ -70,3 +70,4 @@ Modelo SaaS B2B con planes base y premium, precio de referencia entre 8 y 12 eur
 | | | | | Pablo Pérez Gaspar |
 
 **Scrum Master:** Manuel Jesús Niza Cobo · **Product Owner:** Miguel Regidor García
+
