@@ -4,7 +4,7 @@
 <table width="100%" style="border: none; background: none;">
   <tr>
     <td align="center" width="50%" style="border: none;">
-      <img src="../images/logo-app.jpeg" alt="Logo NexUS" width="250">
+      <img src="../images/logo-app.png" alt="Logo NexUS" width="250">
     </td>
   </tr>
 </table>
