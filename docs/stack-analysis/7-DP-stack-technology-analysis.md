@@ -170,11 +170,11 @@ Se mantienen las opciones comparadas (Node, Python, .NET), pero la recomendació
 
 ---
 
-# **5. Recomendación preliminar (ACTUALIZADA)**
+# **5. Recomendación preliminar**
 
 Tras el análisis detallado de los stacks y la evaluación de las capacidades del equipo, se determina que la alternativa ganadora para NexUS es la **Alternativa B: React + TypeScript (Vite + SSR) en frontend, y Django + DRF en backend**.
 
-## **5.1. Justificación de la elección técnica (actualizada)**
+## **5.1. Justificación de la elección técnica**
 
 * **Django como base estable para el MVP y escalado:**
   Reduce riesgo por incluir autenticación, administración, ORM, validaciones y un ecosistema probado para permisos y auditoría. Acelera módulos críticos: residentes, roles, incidencias, contratos, habitaciones, facturación.
