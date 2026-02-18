@@ -1,4 +1,5 @@
 <h1>Plan de Usuarios Piloto – NexUS</h1>
+
 <p align="center">
   <img src="../images/logo-app.png" alt="Logo NexUS" width="500">
 </p>
@@ -8,7 +9,7 @@
 <p>
   <img src="https://img.shields.io/badge/Versión-1.0.0-blue?style=flat-square" alt="Versión">
   <img src="https://img.shields.io/badge/Estado-Completado-yellow?style=flat-square" alt="Estado">
-  <img src="https://img.shields.io/badge/Grupo-B--Tarde-green?style=flat-square" alt="Grupo">
+  <img src="https://img.shields.io/badge/Grupo-7--NexUS-green?style=flat-square" alt="Grupo">
   <img src="https://img.shields.io/badge/Asignatura-ISPP-red?style=flat-square" alt="Asignatura">
 </p>
 
@@ -34,8 +35,8 @@
 ---
 <p>
   <img src="https://img.shields.io/badge/Versión-1.1.1-blue?style=flat-square" alt="Versión">
-  <img src="https://img.shields.io/badge/Estado-En_Revisión-yellow?style=flat-square" alt="Estado">
-  <img src="https://img.shields.io/badge/Grupo-B--Tarde-green?style=flat-square" alt="Grupo">
+  <img src="https://img.shields.io/badge/Estado-Completado-yellow?style=flat-square" alt="Estado">
+  <img src="https://img.shields.io/badge/Grupo-7--NexUS-green?style=flat-square" alt="Grupo">
   <img src="https://img.shields.io/badge/Asignatura-ISPP-red?style=flat-square" alt="Asignatura">
 </p>
 
@@ -55,9 +56,8 @@
 |---------|-------------|----------------------------------------------------------------------------------|
 | 1.0.0   | 09/02/2026  | Creación del documento base y estilos                                            |
 | 1.1.0   | 10/02/2026  | Añadidos apartados 3 y 4                                                         |
-| 1.1.1   | 10/02/2026  | Añadidos apartados 1, 2 y 5                                                        |
-| 1.2.0   | 17/02/2026  | Aplicación del feedback recibido
-  |
+| 1.1.1   | 10/02/2026  | Añadidos apartados 1, 2 y 5                                                      |
+| 1.2.0   | 17/02/2026  | Aplicación del feedback recibido                                                 |
 
 ---
 

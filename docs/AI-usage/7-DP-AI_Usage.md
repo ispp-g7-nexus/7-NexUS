@@ -1,4 +1,4 @@
-# Análisis Competitivo – NexUS (Enfoque Residencias)
+<h1>AI-Usage – NexUS</h1>
 
 <p align="center">
   <img src="../images/logo-app.png" alt="Logo NexUS" width="500">
@@ -9,7 +9,7 @@
 <p>
   <img src="https://img.shields.io/badge/Versión-1.0.0-blue?style=flat-square" alt="Versión">
   <img src="https://img.shields.io/badge/Estado-Completado-yellow?style=flat-square" alt="Estado">
-  <img src="https://img.shields.io/badge/Grupo-B--Tarde-green?style=flat-square" alt="Grupo">
+  <img src="https://img.shields.io/badge/Grupo-7--NexUS-green?style=flat-square" alt="Grupo">
   <img src="https://img.shields.io/badge/Asignatura-ISPP-red?style=flat-square" alt="Asignatura">
 </p>
 
@@ -40,7 +40,7 @@
 | Versión | Fecha       | Cambio principal                                      |
 |---------|-------------|-------------------------------------------------------|
 | 1.0.0   | 16/02/2026  | Creación del documento base                           |
-| 1.0.1   | 16/02/2026  | Modificación de la portadan                           |
+| 1.0.1   | 16/02/2026  | Modificación de la portada                            |
 
 
 

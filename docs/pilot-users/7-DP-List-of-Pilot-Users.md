@@ -1,6 +1,59 @@
-DOCUMENTO USUARIOS PARA PRUEBAS PILOTO
+<h1>Lista de Usuarios Pilotos – NexUS</h1>
 
-# Residencia One
+<p align="center">
+  <img src="../images/logo-app.png" alt="Logo NexUS" width="500">
+</p>
+
+<div align="center">
+
+<p>
+  <img src="https://img.shields.io/badge/Versión-1.0.0-blue?style=flat-square" alt="Versión">
+  <img src="https://img.shields.io/badge/Estado-Completado-yellow?style=flat-square" alt="Estado">
+  <img src="https://img.shields.io/badge/Grupo-7--NexUS-green?style=flat-square" alt="Grupo">
+  <img src="https://img.shields.io/badge/Asignatura-ISPP-red?style=flat-square" alt="Asignatura">
+</p>
+
+<p>
+  <strong>Plataforma integral de gestión y convivencia para residencias universitarias</strong>
+</p>
+
+</div>
+
+---
+
+**Proyecto:** NexUS  
+**Grupo:** 7 - NexUS  
+**Asignatura:** Ingeniería del Software y Práctica Profesional (ISPP)  
+**Institución:** ETSII – Universidad de Sevilla  
+**Curso académico:** 2025/2026  
+**Fecha:** 18/02/2026  
+
+<p align="center">
+  <img src="../images/logo-etsii.jpe" alt="Logo ETSII" width="400">
+</p>
+
+---
+
+
+## Historial de Versiones
+
+| Versión | Fecha       | Cambio principal                                      |
+|---------|-------------|-------------------------------------------------------|
+| 1.0.0   | 18/02/2026  | Creación del documento base                           |
+| 1.0.1   | 18/02/2026  | Modificación de la portada                            |
+
+
+
+---
+
+## Índice
+- [Residencia One](#Residencia-one)
+- [Colegio Mayor San Juan Bosco](#Colegio-mayor-san-juan-bosco)
+- [Xior Student Housing](#Xior-student-housing)
+- [Datos Usuarios Pilotos](#Datos-usuarios-pilotos)
+---
+
+## Residencia One
 
 - Director: Pedro
 - Gerente: Carmen
@@ -9,7 +62,7 @@ DOCUMENTO USUARIOS PARA PRUEBAS PILOTO
 - Facebook: One Sevilla Residencia
 - Dirección: C/ Páez de Rivera, 1, 41012 Sevilla
 
-## Situación actual:
+### Situación actual:
 
 - Gestión administrativa centralizada en la recepción (todo en papel).
 - Comunicación ineficiente vía WhatsApp, con múltiples grupos y acumulación de contactos.
@@ -18,7 +71,8 @@ DOCUMENTO USUARIOS PARA PRUEBAS PILOTO
 
 **Potencial para piloto:** Alto. Necesidad clara de digitalización y mejora comunicativa.
 
-# Colegio Mayor San Juan Bosco
+
+## Colegio Mayor San Juan Bosco
 
 - Director: Miguel Ángel Álvarez Paulino
 - Web: cmusanjuanbosco.es
@@ -26,7 +80,7 @@ DOCUMENTO USUARIOS PARA PRUEBAS PILOTO
 - Facebook: CMU San Juan Bosco
 - Dirección: C/ Salesianos, 3ºB, Sevilla
 
-## Situación actual:
+### Situación actual:
 
 - Uso de la aplicación “Socialo” para control de entradas y salidas (horarios obligatorios).
 - Comunicación de incidencias vía WhatsApp.
@@ -34,23 +88,22 @@ DOCUMENTO USUARIOS PARA PRUEBAS PILOTO
 
 **Potencial para piloto:** Medio. Ya usan una app, pero limitada a control horario. Posible interés en ampliar funcionalidades.
 
-DOCUMENTO USUARIOS PARA PRUEBAS PILOTO
 
-# Xior Student Housing
+## Xior Student Housing
 
 - Contacto (residente): Leyla Jiménez
 - Web: xior.es/residencia-estudiantes-sevilla
 - Instagram: @xiorstudenthousing
 - Dirección: Av. De la Palmera, 17, 41013, Sevilla
 
-## Situación actual:
+### Situación actual:
 
 - Gestión interna opaca para los residentes.
 - Notificaciones individuales por WhatsApp.
 - Control de accesos de invitados mediante firmas en papel.
 - Nula digitalización orientada al residente.
 
-## Potencial para piloto: Alto. Carencia total de herramientas digitales para residentes. Procesos manuales y comunicación fragmentada.
+**Potencial para piloto:** Alto. Carencia total de herramientas digitales para residentes. Procesos manuales y comunicación fragmentada.
 
 ## Datos Usuarios Pilotos
 
