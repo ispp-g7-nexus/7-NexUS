@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.sqlite3
+
+# Virtualenv
+.venv/
+venv/
+
+# Env files
+.env
+.env.local
+.env.prod
+backend/.env
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build / logs
+*.log
+backend/staticfiles/
+volumes/
+frontend/node_modules/
+frontend/dist/
