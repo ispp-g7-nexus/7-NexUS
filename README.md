@@ -157,7 +157,8 @@ Tags por entorno:
    - `Docker Compose validate`
    - `Validate conventional PR title`
 3. Desactivar push directo a ramas protegidas.
-4. Configurar secretos opcionales de deploy webhook:
+4. Configurar `RELEASE_PLEASE_TOKEN` (PAT con permisos de `contents` y `pull requests`) para activar `release-please`.
+5. Configurar secretos opcionales de deploy webhook:
    - `DEPLOY_WEBHOOK_DEV`
    - `DEPLOY_WEBHOOK_STG`
    - `DEPLOY_WEBHOOK_PRE`
