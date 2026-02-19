@@ -1,0 +1,82 @@
+name: Promote Tag
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_environment:
+        description: "Entorno destino"
+        required: true
+        type: choice
+        options:
+          - dev
+          - stg
+          - pre
+          - prod
+      version:
+        description: "Version semver sin prefijo v (ej: 1.2.3)"
+        required: true
+        type: string
+      source_ref:
+        description: "Rama o commit a etiquetar (ej: sprint/s1, develop, release/v1.2.3, main)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  create-tag:
+    name: Create promotion tag
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source ref
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_ref }}
+          fetch-depth: 0
+
+      - name: Build tag name
+        id: tag
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION="${{ inputs.version }}"
+          TARGET="${{ inputs.target_environment }}"
+
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Version invalida: $VERSION. Usa formato X.Y.Z"
+            exit 1
+          fi
+
+          case "$TARGET" in
+            dev)  TAG="dev-v${VERSION}" ;;
+            stg)  TAG="stg-v${VERSION}" ;;
+            pre)  TAG="pre-v${VERSION}" ;;
+            prod) TAG="v${VERSION}" ;;
+            *) echo "Entorno no valido: $TARGET"; exit 1 ;;
+          esac
+
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Create and push annotated tag
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          TAG="${{ steps.tag.outputs.tag }}"
+          SOURCE="${{ inputs.source_ref }}"
+
+          git fetch --tags
+          if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+            echo "El tag ${TAG} ya existe."
+            exit 1
+          fi
+
+          git tag -a "${TAG}" -m "Promote ${SOURCE} to ${TAG}"
+          git push origin "${TAG}"
+
+      - name: Summary
+        run: |
+          echo "Tag creado: ${{ steps.tag.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "Ref origen: ${{ inputs.source_ref }}" >> $GITHUB_STEP_SUMMARY

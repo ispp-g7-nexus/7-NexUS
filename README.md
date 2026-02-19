@@ -122,3 +122,43 @@ Detalles de produccion:
 ## Documentacion
 
 Toda la documentacion del proyecto se mantiene en `docs/`.
+
+## Golden Flow (Git + CI/CD)
+
+Se implementaron workflows base en `.github/workflows/`:
+
+- `ci.yml`: checks de backend, frontend y validacion de compose.
+- `pr-title.yml`: obliga Conventional Commits en titulo de PR.
+- `release-please.yml`: prepara release PR sobre `develop`.
+- `promote-tag.yml`: workflow manual para crear tags de promocion.
+- `tagged-release.yml`: pipeline por tag (`dev-v*`, `stg-v*`, `pre-v*`, `v*`) y publicacion en GHCR.
+
+Ramas recomendadas:
+
+- `main` -> produccion
+- `develop` -> staging
+- `sprint/*` -> desarrollo por sprint
+- `release/*` -> pre-produccion
+- `hotfix/*` -> fixes urgentes desde prod
+
+Tags por entorno:
+
+- `dev-vX.Y.Z`
+- `stg-vX.Y.Z`
+- `pre-vX.Y.Z`
+- `vX.Y.Z`
+
+### Configuracion manual necesaria en GitHub
+
+1. Activar branch protection en `main`, `develop`, `release/*`.
+2. Exigir checks obligatorios:
+   - `Backend checks`
+   - `Frontend checks`
+   - `Docker Compose validate`
+   - `Validate conventional PR title`
+3. Desactivar push directo a ramas protegidas.
+4. Configurar secretos opcionales de deploy webhook:
+   - `DEPLOY_WEBHOOK_DEV`
+   - `DEPLOY_WEBHOOK_STG`
+   - `DEPLOY_WEBHOOK_PRE`
+   - `DEPLOY_WEBHOOK_PROD`
