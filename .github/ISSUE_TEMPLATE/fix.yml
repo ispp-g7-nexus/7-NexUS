@@ -8,7 +8,6 @@ body:
     attributes:
       value: |
         # 🔧 Reportar un error
-
         ---
 
   - type: input
@@ -20,7 +19,6 @@ body:
     validations:
       required: true
 
-
   - type: textarea
     id: descripcion
     attributes:
@@ -30,7 +28,6 @@ body:
         Los avisos no aparecen en el panel
     validations:
       required: true
-
 
   - type: dropdown
     id: modulo
@@ -59,10 +56,10 @@ body:
   - type: input
     id: otro-modulo
     attributes:
-      label: "Si seleccionaste 'Otro':"
+      label: "Si seleccionaste 'Otro', especifica aquí"
+      placeholder: "Ejemplo: API de pagos"
     validations:
       required: false
-
 
   - type: dropdown
     id: prioridad
@@ -77,9 +74,10 @@ body:
     validations:
       required: true
 
-
   - type: textarea
     id: info-adicional
     attributes:
       label: "📸 Adjunta información adicional (capturas, mensajes de error)"
       placeholder: "Mensajes de error, capturas de pantalla"
+    validations:
+      required: false
