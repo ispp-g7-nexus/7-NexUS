@@ -4,8 +4,3 @@ contact_links:
   - name: "📚 Documentación"
     url: https://github.com/ispp-g7-nexus/7-NexUS.git#readme
     about: "Nuestra documentación oficial"
-
-# Orden de aparición de las plantillas
-template_order:
-  - issue.yml
-  - fix.yml
