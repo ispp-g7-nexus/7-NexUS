@@ -7,15 +7,17 @@ body:
   - type: markdown
     attributes:
       value: |
-        # 📋 Nueva Tarea
+        # 📋 Tarea
         ---
 
-  - type: input
-    id: titulo
+  - type: textarea
+    id: descripcion
     attributes:
-      label: "Título de la tarea"
-      description: "Describe brevemente qué hay que hacer"
-      placeholder: "Ejemplo: Implementar login"
+      label: "🔍 Descripción"
+      description: "Explica detalladamente información sobre la tarea"
+      placeholder: |
+        Ejemplo:
+        Necesitamos implementar la autenticación para facilitar el registro de usuarios.
     validations:
       required: true
 
@@ -39,14 +41,14 @@ body:
         - "Calidad"
         - "Documentación"
         - "Presentación"
-        - "Otro (especificar)"
+        - "➕ Otro (especificar)"
     validations:
       required: true
 
   - type: input
     id: otro-modulo
     attributes:
-      label: "Si seleccionaste 'Otro', especifica aquí"
+      label: "➕ 'Otro':"
       placeholder: "Ejemplo: Comunicación usuarios pilotos"
     validations:
       required: false
@@ -54,7 +56,7 @@ body:
   - type: dropdown
     id: prioridad
     attributes:
-      label: "Prioridad"
+      label: "⚠️ Prioridad"
       description: "¿Qué prioridad tiene esta tarea?"
       options:
         - "🔥 Urgente - Bloquea otras tareas / Urgente"
@@ -64,21 +66,10 @@ body:
     validations:
       required: true
 
-  - type: textarea
-    id: descripcion
-    attributes:
-      label: "Descripción"
-      description: "Explica detalladamente información sobre la tarea"
-      placeholder: |
-        Ejemplo:
-        Necesitamos implementar la autenticación para facilitar el registro de usuarios.
-    validations:
-      required: true
-
   - type: dropdown
     id: sprint
     attributes:
-      label: "Entrega correspondiente"
+      label: "🔔 Entrega correspondiente"
       description: "Selecciona en qué entrega se planifica esta tarea"
       options:
         - "DP"
@@ -86,16 +77,5 @@ body:
         - "Sprint 2"
         - "Sprint 3"
         - "PPL"
-    validations:
-      required: true
-
-  - type: dropdown
-    id: tipo
-    attributes:
-      label: "Tipo de issue"
-      description: "¿Es una fix o una nueva funcionalidad?"
-      options:
-        - "Nueva funcionalidad"
-        - "Fix"
     validations:
       required: true
