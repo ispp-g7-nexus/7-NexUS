@@ -10,15 +10,6 @@ body:
         # 🔧 Reportar un error
         ---
 
-  - type: input
-    id: titulo
-    attributes:
-      label: "Título del fix"
-      description: "Nombre del error a corregir"
-      placeholder: "Ejemplo: Error en avisos"
-    validations:
-      required: true
-
   - type: textarea
     id: descripcion
     attributes:
@@ -49,15 +40,15 @@ body:
         - "Calidad"
         - "Documentación"
         - "Presentación"
-        - "Otro (especificar abajo)"
+        - "➕Otro (especificar)"
     validations:
       required: true
 
   - type: input
     id: otro-modulo
     attributes:
-      label: "Si seleccionaste 'Otro', especifica aquí"
-      placeholder: "Ejemplo: API de pagos"
+      label: "➕ 'Otro':"
+      placeholder: "Ejemplo: Comunicación usuarios pilotos"
     validations:
       required: false
 
@@ -81,3 +72,18 @@ body:
       placeholder: "Mensajes de error, capturas de pantalla"
     validations:
       required: false
+
+
+  - type: dropdown
+    id: sprint
+    attributes:
+      label: "🔔 Entrega correspondiente"
+      description: "Selecciona en qué entrega se corrige este error"
+      options:
+        - "DP"
+        - "Sprint 1"
+        - "Sprint 2"
+        - "Sprint 3"
+        - "PPL"
+    validations:
+      required: true
