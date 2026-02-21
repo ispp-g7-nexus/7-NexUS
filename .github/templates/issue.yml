@@ -1,0 +1,103 @@
+name: "📋 Nueva tarea"
+description: "Crear una nueva tarea"
+title: "[TAREA] "
+labels: ["Issue"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        # 📋 Nueva Tarea
+        
+        ---
+
+  - type: input
+    id: titulo
+    attributes:
+      label: "Título de la tarea"
+      description: "Describe brevemente qué hay que hacer"
+      placeholder: "Ejemplo: Implementar login"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: modulo
+    attributes:
+      label: "📍 Módulo / Área de la aplicación"
+      description: "Selecciona el módulo al que pertenece esta tarea"
+      options:
+        - "Panel admin"
+        - "Autenticación"
+        - "Avisos"
+        - "Eventos"
+        - "Incidencias"
+        - "Matching"
+        - "Onboarding"
+        - "Infraestructura"
+        - "Espacios comunes"
+        - "Objetos"
+        - "Diseño UX/UI"
+        - "Calidad"
+        - "Documentación"
+        - "Presentación"
+        - "Otro (especificar)"
+    validations:
+      required: true
+
+  - type: input
+    id: otro-modulo
+    attributes:
+      label: "Si seleccionaste 'Otro', especifica aquí"
+      placeholder: "Ejemplo: Comunicación usuarios pilotos"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: prioridad
+    attributes:
+      label: "Prioridad"
+      description: "¿Qué prioridad tiene esta tarea?"
+      options:
+        - "🔥 Urgente - Bloquea otras tareas / Urgente"
+        - "🔴 Alta - Debería hacerse lo antes posible"
+        - "🟡 Media - Importante pero no urgente"
+        - "🟢 Baja - Detalle menor"
+    validations:
+      required: true
+
+  - type: textarea
+    id: descripcion
+    attributes:
+      label: "Descripción"
+      description: "Explica detalladamente información sobre la tarea"
+      placeholder: |
+        Ejemplo:
+        Necesitamos implementar la autenticación para facilitar el registro de usuarios.
+        
+    validations:
+      required: true
+
+  - type: dropdown
+    id: sprint
+    attributes:
+      label: "Entrega correspondiente"
+      description: "Selecciona en qué entrega se planifica esta tarea"
+      options:
+        - "DP"
+        - "Sprint 1"
+        - "Sprint 2"
+        - "Sprint 3"
+        - "PPL"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: tipo
+    attributes:
+      label: "Tipo de issue"
+      description: "¿Es una fix o una nueva funcionalidad?"
+      options:
+        - "Nueva funcionalidad"
+        - "Fix"
+    validations:
+      required: true

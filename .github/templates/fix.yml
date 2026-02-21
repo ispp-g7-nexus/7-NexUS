@@ -1,0 +1,85 @@
+name: "🔧 Fix"
+description: "Reportar un error o bug para corregir"
+title: "[FIX] "
+labels: ["Fix"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        # 🔧 Reportar un error
+
+        ---
+
+  - type: input
+    id: titulo
+    attributes:
+      label: "Título del fix"
+      description: "Nombre del error a corregir"
+      placeholder: "Ejemplo: Error en avisos"
+    validations:
+      required: true
+
+
+  - type: textarea
+    id: descripcion
+    attributes:
+      label: "📝 Descripción del error"
+      placeholder: |
+        Ejemplo:
+        Los avisos no aparecen en el panel
+    validations:
+      required: true
+
+
+  - type: dropdown
+    id: modulo
+    attributes:
+      label: "📍 Módulo / Área de la aplicación"
+      description: "Selecciona el módulo donde ocurre el error"
+      options:
+        - "Panel admin"
+        - "Autenticación"
+        - "Avisos"
+        - "Eventos"
+        - "Incidencias"
+        - "Matching"
+        - "Onboarding"
+        - "Infraestructura"
+        - "Espacios comunes"
+        - "Objetos"
+        - "Diseño UX/UI"
+        - "Calidad"
+        - "Documentación"
+        - "Presentación"
+        - "Otro (especificar abajo)"
+    validations:
+      required: true
+
+  - type: input
+    id: otro-modulo
+    attributes:
+      label: "Si seleccionaste 'Otro':"
+    validations:
+      required: false
+
+
+  - type: dropdown
+    id: prioridad
+    attributes:
+      label: "⚠️ Prioridad"
+      description: "¿Qué tan urgente es este error?"
+      options:
+        - "🔥 Crítico - Bloquea y no se puede trabajar"
+        - "🔴 Alta - Funcionalidad principal rota"
+        - "🟡 Media - Error molesto pero tiene solución alternativa"
+        - "🟢 Baja - Error menor / UI / Texto"
+    validations:
+      required: true
+
+
+  - type: textarea
+    id: info-adicional
+    attributes:
+      label: "📸 Adjunta información adicional (capturas, mensajes de error)"
+      placeholder: "Mensajes de error, capturas de pantalla"
