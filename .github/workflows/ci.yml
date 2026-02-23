@@ -84,6 +84,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Prepare CI env file
+        shell: bash
+        run: |
+          if [ -f .env.local.example ]; then
+            cp .env.local.example .env
+          elif [ -f .env.example ]; then
+            cp .env.example .env
+          else
+            echo "No se encontro plantilla de entorno (.env.local.example o .env.example)."
+            exit 1
+          fi
+
       - name: Validate dev compose
         run: docker compose -f docker-compose.yml config
 
