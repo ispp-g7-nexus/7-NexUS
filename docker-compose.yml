@@ -112,6 +112,25 @@ services:
     command: >
       sh -c "npm ci && npm run dev -- --host"
 
+  tenant_gateway:
+    build:
+      context: ./tenant-gateway
+      dockerfile: Dockerfile
+    container_name: nexus_tenant_gateway
+    env_file:
+      - .env
+    environment:
+      PORT: 3000
+      FRONTEND_UPSTREAM_URL: ${FRONTEND_UPSTREAM_URL:-http://frontend:5173}
+      BACKEND_UPSTREAM_URL: ${BACKEND_UPSTREAM_URL:-http://backend:8000}
+      TENANT_CONTEXT_HOST: ${TENANT_CONTEXT_HOST:-${DEMO_TENANT_DOMAIN:-demo.nexus.local}}
+      TENANT_CONTEXT_PATH: ${TENANT_CONTEXT_PATH:-/api/public/tenant-context/}
+      TENANT_BOOTSTRAP_GLOBAL: ${TENANT_BOOTSTRAP_GLOBAL:-__NEXUS_DATA__}
+      REQUEST_TIMEOUT_MS: ${TENANT_GATEWAY_TIMEOUT_MS:-5000}
+    depends_on:
+      - frontend
+      - backend
+
   nginx:
     image: nginx:1.27-alpine
     container_name: nexus_nginx
@@ -120,4 +139,4 @@ services:
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
-      - frontend
+      - tenant_gateway
