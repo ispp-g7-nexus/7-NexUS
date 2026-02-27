@@ -47,11 +47,11 @@ NexUS esta enfocado en residencias de tamano medio (100-400 camas) con capacidad
 
 | Capa | Tecnologias | Descripcion |
 |---|---|---|
-| Frontend | React, TypeScript, Vite SSR, React Router | Interfaz web SSR con hidratacion y enrutado cliente/servidor |
+| Frontend | React, TypeScript, Vite, React Router | Interfaz web cliente (sin SSR) y enrutado en cliente |
 | Backend | Django 5, django-tenants | API multitenant con aislamiento por esquema |
 | Base de datos | PostgreSQL 16 + pgvector | Persistencia relacional y soporte vectorial |
 | Asincronia | Redis + Celery | Cola de tareas y procesos en segundo plano |
-| Infraestructura | Docker Compose + Nginx | Orquestacion local y reverse proxy por dominio |
+| Infraestructura | Docker Compose + Nginx + tenant_gateway | Orquestacion local, reverse proxy e inyeccion de tenant context |
 
 ## Desarrollo rapido
 
@@ -64,7 +64,10 @@ docker compose up -d
 ### Prerequisitos minimos
 
 1. Tener `.env` (copiado desde `.env.local.example`).
-2. Anadir en hosts: `127.0.0.1 demo.nexus.local`.
+2. Configurar tenant por entorno (sin tocar hosts):
+   - `TENANT_CONTEXT_HOST=demo.nexus.local`
+   - `DEMO_TENANT_DOMAIN=demo.nexus.local`
+   - si `TENANT_CONTEXT_HOST` no existe, se usa `DEMO_TENANT_DOMAIN`
 3. Primera vez recomendable: `docker compose up -d --build`.
 
 Comando recomendado:
@@ -73,12 +76,69 @@ Comando recomendado:
 cp .env.local.example .env
 ```
 
+### Flujo HTTP actual
+
+```mermaid
+flowchart LR
+    B[Browser] --> N[Nginx :80]
+    N --> G[Tenant Gateway :3000]
+    G --> F[Frontend Vite :5173]
+    G --> BE[Backend Django :8000]
+    BE --> PG[(Postgres)]
+    BE --> R[(Redis)]
+    BE --> CW[Celery Worker]
+    BE --> CB[Celery Beat]
+```
+
+Flujo operativo del proyecto:
+
+1. Navegador -> `nginx:80`
+2. Nginx -> `tenant_gateway:3000`
+3. `tenant_gateway` -> frontend para HTML + consulta a backend para inyectar tenant context
+4. Frontend (cliente) -> `/api` -> `tenant_gateway` -> `backend:8000`
+
+Nota: el frontend es cliente (sin SSR). El `tenant_gateway` no renderiza React en servidor; solo inyecta contexto tenant en el HTML de entrada.
+
+Entrada recomendada:
+
+- `http://localhost`
+- `http://demo.nexus.local` (opcional, solo si configuras `hosts`)
+
+No usar `http://localhost:5173` como entrada principal.
+
+### API, tenancy y decisiones arquitectonicas
+
+Decisiones aplicadas en esta base:
+
+1. API por mismo origen: `VITE_API_URL=/api` para evitar CORS innecesario y simplificar entornos.
+2. `tenant_gateway` como capa intermedia para inyectar contexto tenant en el HTML inicial.
+   - Si hay branding, inyecta `favicon_url` y `custom_css` en el `<head>`.
+3. Tenant configurable por entorno: `TENANT_CONTEXT_HOST` (si no existe, se usa `DEMO_TENANT_DOMAIN`).
+4. Resolucion multitenant por cabecera `Host` en backend (`django-tenants`).
+5. `frontend:5173` como puerto interno del stack, no endpoint publico.
+6. `"/admin"` no se proxifica porque Django Admin esta deshabilitado.
+
+Reglas de routing del gateway:
+
+- `"/api"` y `"/api/*"` -> backend
+- `"/health/"` -> backend
+- resto de rutas -> frontend
+
+### Por que no otra arquitectura ahora
+
+No es que otras opciones sean imposibles; en el estado actual del proyecto generan mas coste o inconsistencia:
+
+1. Entrar por `localhost:5173` rompe el punto de control unico y no replica el flujo real por proxy.
+2. Quitar `tenant_gateway` obliga a mover la inyeccion tenant/branding al cliente, con peor primer render.
+3. Usar URL absoluta de backend en frontend aumenta friccion (CORS, cookies y configuracion por entorno).
+4. Hardcodear un dominio tenant limita pruebas multitenant y white-label.
+
 ## Validacion realizada en desarrollo
 
 Se levanto el stack y se valido:
 
 - `GET /` por Nginx responde `200`.
-- `GET /api/public/tenant-context/` con host `demo.nexus.local` responde `200`.
+- `GET /api/public/tenant-context/` por `http://localhost` responde `200` usando el tenant configurado en `TENANT_CONTEXT_HOST`.
 - Login admin y estudiante demo responden `200`.
 
 ## Seed demo automatico al arrancar backend
@@ -116,12 +176,14 @@ Detalles de produccion:
 
 - Backend con `gunicorn` y `config.settings.production`.
 - Seed demo desactivado (`SEED_DEMO_ON_STARTUP=0`).
-- Frontend SSR en modo `production` (`npm run build` + `npm run preview:ssr`).
+- Frontend cliente en modo `production` (`npm run build` + `npm run preview`).
 - Nginx expuesto en `:80`.
 
 ## Documentacion
 
 Toda la documentacion del proyecto se mantiene en `docs/`.
+- Setup base y arquitectura local: `docs/setup/7-DP-Base-Setup-Docker-Compose.md`.
+- Guia de desarrollo (backend, frontend, tenants y auth): `docs/setup/7-DP-Developer-Guide.md`.
 
 ## Golden Flow (Git + CI/CD)
 
