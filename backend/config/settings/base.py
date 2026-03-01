@@ -1,6 +1,5 @@
 from pathlib import Path
 import os
-
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -33,6 +32,7 @@ TENANT_APPS = [
     "apps.common",
     "apps.residences",
     "apps.residents",
+    "apps.staff",
 ]
 
 INSTALLED_APPS = SHARED_APPS + [app for app in TENANT_APPS if app not in SHARED_APPS]
