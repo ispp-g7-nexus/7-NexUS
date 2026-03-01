@@ -1,5 +1,5 @@
 from django.http import JsonResponse
-from django.urls import path
+from django.urls import path, include
 
 from apps.common.views import auth_login, auth_logout, auth_me, tenant_context
 
@@ -14,4 +14,5 @@ urlpatterns = [
     path("api/auth/login/", auth_login, name="auth-login"),
     path("api/auth/logout/", auth_logout, name="auth-logout"),
     path("api/auth/me/", auth_me, name="auth-me"),
+    path("api/", include('apps.events.urls')),
 ]
