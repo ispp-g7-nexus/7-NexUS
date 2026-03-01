@@ -88,16 +88,16 @@ jobs:
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/nexus-worker:${{ steps.meta.outputs.environment }}
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/nexus-worker:sha-${{ github.sha }}
 
-      - name: Build and push frontend SSR image
+      - name: Build and push frontend image
         uses: docker/build-push-action@v6
         with:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/nexus-frontend-ssr:${{ steps.meta.outputs.tag_name }}
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/nexus-frontend-ssr:${{ steps.meta.outputs.environment }}
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/nexus-frontend-ssr:sha-${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/nexus-frontend:${{ steps.meta.outputs.tag_name }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/nexus-frontend:${{ steps.meta.outputs.environment }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/nexus-frontend:sha-${{ github.sha }}
 
       - name: Summary
         run: |
