@@ -1,17 +1,21 @@
 import React, { useState, useEffect } from "react";
-import { fetchWithAuth, API_URL } from "../../utils/api";
+import { fetchWithAuth, API_URL, devLogin } from "../../utils/api";
 import "./Events.css";
 
 export function Events() {
     const [events, setEvents] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isCreateEventOpen, setIsCreateEventOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
+    const [selectedEvent, setSelectedEvent] = useState<any>(null);
+    const [participants, setParticipants] = useState<any[]>([]);
 
     const [newEvent, setNewEvent] = useState({
         name: "",
         description: "",
         photo: "",
         dateTime: "",
+        endDateTime: "",
         location: "",
         limit: "",
         labels: "",
@@ -19,7 +23,11 @@ export function Events() {
     });
 
     useEffect(() => {
-        fetchEvents();
+        const init = async () => {
+            await devLogin(); // Ensure we have a session cookie
+            fetchEvents();
+        };
+        init();
     }, []);
 
     const fetchEvents = async () => {
@@ -35,6 +43,20 @@ export function Events() {
             console.error("Error fetching events:", error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleOpenDetails = async (event: any) => {
+        setSelectedEvent(event);
+        setParticipants([]);
+        try {
+            const response = await fetchWithAuth(`${API_URL}${event.id}/participants/`);
+            if (response.ok) {
+                const data = await response.json();
+                setParticipants(data);
+            }
+        } catch (error) {
+            console.error("Error fetching participants:", error);
         }
     };
 
@@ -85,7 +107,7 @@ export function Events() {
                     title: newEvent.name,
                     description: newEvent.description,
                     start_time: new Date(newEvent.dateTime).toISOString(),
-                    end_time: new Date(new Date(newEvent.dateTime).getTime() + 2 * 60 * 60 * 1000).toISOString(), // Add 2 hours as simple end_time
+                    end_time: new Date(newEvent.endDateTime).toISOString(),
                     location: newEvent.location,
                     max_participants: newEvent.limit ? parseInt(newEvent.limit) : null,
                     image_url: newEvent.photo || null,
@@ -96,7 +118,7 @@ export function Events() {
                 alert("Evento creado con éxito.");
                 setIsCreateEventOpen(false);
                 setNewEvent({
-                    name: "", description: "", photo: "", dateTime: "", location: "", limit: "", labels: "", preRegistered: "",
+                    name: "", description: "", photo: "", dateTime: "", endDateTime: "", location: "", limit: "", labels: "", preRegistered: "",
                 });
                 fetchEvents();
             } else {
@@ -109,15 +131,35 @@ export function Events() {
         }
     };
 
+    const now = new Date();
+    const upcomingEvents = events.filter(e => new Date(e.end_time) >= now);
+    const pastEvents = events.filter(e => new Date(e.end_time) < now);
+    const displayedEvents = activeTab === 'upcoming' ? upcomingEvents : pastEvents;
+
     return (
         <div className="events-container">
             <div className="events-header">
-                <h2 className="section-title">Próximas Actividades</h2>
+                <h2 className="section-title">Actividades de la Residencia</h2>
                 <button
                     className="btn-primary"
                     onClick={() => setIsCreateEventOpen(true)}
                 >
                     ➕ Crear Evento
+                </button>
+            </div>
+
+            <div className="events-tabs">
+                <button
+                    className={`tab-btn ${activeTab === 'upcoming' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('upcoming')}
+                >
+                    Próximas Actividades
+                </button>
+                <button
+                    className={`tab-btn ${activeTab === 'past' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('past')}
+                >
+                    Eventos Pasados
                 </button>
             </div>
 
@@ -151,15 +193,29 @@ export function Events() {
                             </div>
                             <div className="form-row">
                                 <div className="form-group half">
-                                    <label htmlFor="dateTime">Fecha y hora</label>
+                                    <label htmlFor="dateTime">Fecha de inicio</label>
                                     <input
                                         id="dateTime"
                                         type="datetime-local"
                                         value={newEvent.dateTime}
+                                        min={new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
                                         onChange={(e) => setNewEvent({ ...newEvent, dateTime: e.target.value })}
                                         required
                                     />
                                 </div>
+                                <div className="form-group half">
+                                    <label htmlFor="endDateTime">Fecha de fin</label>
+                                    <input
+                                        id="endDateTime"
+                                        type="datetime-local"
+                                        value={newEvent.endDateTime}
+                                        min={newEvent.dateTime || new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
+                                        onChange={(e) => setNewEvent({ ...newEvent, endDateTime: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                            </div>
+                            <div className="form-row">
                                 <div className="form-group half">
                                     <label htmlFor="limit">Límite de personas</label>
                                     <input
@@ -226,13 +282,63 @@ export function Events() {
                 </div>
             )}
 
+            {selectedEvent && (
+                <div className="dialog-overlay" onClick={() => setSelectedEvent(null)}>
+                    <div className="dialog-content event-details-modal" onClick={e => e.stopPropagation()}>
+                        <div className="details-header-image">
+                            <img src={selectedEvent.image_url || "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&q=80&w=400"} alt={selectedEvent.title} />
+                            <div className="close-btn" onClick={() => setSelectedEvent(null)}>✕</div>
+                        </div>
+                        <div className="details-body">
+                            <h2>{selectedEvent.title}</h2>
+                            <p className="details-host">Organizado por {selectedEvent.host?.first_name || 'Usuario'} {selectedEvent.host?.last_name || ''}</p>
+
+                            <div className="details-info-row">
+                                <span>📅 {new Date(selectedEvent.start_time).toLocaleString('es-ES', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                                <span>📍 {selectedEvent.location}</span>
+                            </div>
+
+                            <div className="details-description">
+                                <h3>Acerca de este evento</h3>
+                                <p>{selectedEvent.description}</p>
+                            </div>
+
+                            <div className="details-participants">
+                                <h3>Asistentes ({selectedEvent.participants_count}{selectedEvent.max_participants ? `/${selectedEvent.max_participants}` : ''})</h3>
+                                {participants.length > 0 ? (
+                                    <ul className="participants-list">
+                                        {participants.map((p: any, idx) => (
+                                            <li key={idx} className="participant-item">
+                                                <div className="participant-avatar">{p.user?.first_name?.charAt(0) || 'U'}</div>
+                                                <span>{p.user?.first_name} {p.user?.last_name}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : (
+                                    <p className="no-participants">Aún no hay asistentes o están cargando...</p>
+                                )}
+                            </div>
+                        </div>
+                        <div className="dialog-footer" style={{ padding: '0 24px 24px 24px', margin: 0 }}>
+                            {new Date(selectedEvent.end_time) < now ? (
+                                <p className="no-participants" style={{ width: '100%', textAlign: 'center' }}>Este evento ya ha finalizado.</p>
+                            ) : selectedEvent.is_joined ? (
+                                <button className="btn-leave" style={{ width: '100%' }} onClick={async () => { await handleLeaveEvent(selectedEvent.id); setSelectedEvent(null); }}>Desapuntarme</button>
+                            ) : (
+                                <button className="btn-join" style={{ width: '100%', justifyContent: 'center' }} onClick={async () => { await handleJoinEvent(selectedEvent.id); setSelectedEvent(null); }}>Apuntarme al Evento</button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="events-list">
                 {loading ? (
                     <p>Cargando eventos...</p>
-                ) : events.length === 0 ? (
-                    <p>No hay eventos próximos.</p>
+                ) : displayedEvents.length === 0 ? (
+                    <p>{activeTab === 'upcoming' ? "No hay eventos próximos." : "No hay eventos pasados."}</p>
                 ) : (
-                    events.map((event) => (
+                    displayedEvents.map((event) => (
                         <CommunityEvent
                             key={event.id}
                             id={event.id}
@@ -245,6 +351,7 @@ export function Events() {
                             isJoined={event.is_joined}
                             onJoin={handleJoinEvent}
                             onLeave={handleLeaveEvent}
+                            onClick={() => handleOpenDetails(event)}
                         />
                     ))
                 )}
@@ -262,9 +369,10 @@ function CommunityEvent({
     isJoined,
     onJoin,
     onLeave,
+    onClick,
 }: any) {
     return (
-        <div className="event-card">
+        <div className="event-card clickable-card" onClick={onClick}>
             <div className="event-image-container">
                 <img
                     src={image}
@@ -275,13 +383,14 @@ function CommunityEvent({
             </div>
             <div className="event-content">
                 <h3 className="event-title">{title}</h3>
-                <p className="event-date">📅 {date}</p>
-                <div className="event-footer">
+                <p className="event-date">{date}</p>
+                <div className="event-footer" onClick={(e) => e.stopPropagation()}>
                     <div className="event-attendees">
                         <span className="attendees-text">
                             +{attendees} van
                         </span>
                     </div>
+                    {new Date(date.split(',')[0]) && false /* Past Check via Date could be done, or we assume disabled buttons */}
                     {isJoined ? (
                         <div className="event-actions">
                             <button

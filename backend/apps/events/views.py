@@ -8,6 +8,8 @@ from django.db.utils import IntegrityError
 from django.contrib.auth import get_user_model
 from django.views.decorators.csrf import csrf_exempt
 from apps.common.utils.jwt_auth import resolve_user_from_request
+from django.utils.dateparse import parse_datetime
+from django.utils import timezone
 
 @method_decorator(csrf_exempt, name='dispatch')
 class AuthenticatedView(View):
@@ -59,6 +61,37 @@ class EventListView(AuthenticatedView):
             
         try:
             body = json.loads(request.body)
+            
+            start_time_str = body.get('start_time')
+            end_time_str = body.get('end_time')
+            
+            if not start_time_str or not end_time_str:
+                return JsonResponse({"detail": "Se requiere fecha de inicio y fin."}, status=400)
+                
+            start_time = parse_datetime(start_time_str)
+            end_time = parse_datetime(end_time_str)
+            
+            if start_time and start_time < timezone.now():
+                return JsonResponse({"detail": "La fecha de inicio no puede ser en el pasado."}, status=400)
+                
+            if start_time and end_time and end_time <= start_time:
+                return JsonResponse({"detail": "La fecha de fin debe ser posterior a la de inicio."}, status=400)
+
+            # Validar superposición de horarios para el creador
+            overlapping_hosted = Event.objects.filter(
+                host=request.user,
+                start_time__lt=end_time,
+                end_time__gt=start_time
+            ).exists()
+            overlapping_participating = EventParticipation.objects.filter(
+                user=request.user,
+                event__start_time__lt=end_time,
+                event__end_time__gt=start_time
+            ).exists()
+            
+            if overlapping_hosted or overlapping_participating:
+                return JsonResponse({"detail": "Ya tienes otro evento organizado o al que asistes en ese horario."}, status=400)
+
             event = Event.objects.create(
                 title=body.get('title'),
                 description=body.get('description'),
@@ -111,6 +144,21 @@ class EventJoinView(AuthenticatedView):
         
         if not event.can_join():
             return JsonResponse({"detail": "El evento ha alcanzado el límite de participantes."}, status=400)
+
+        # Validar superposición
+        overlapping_hosted = Event.objects.exclude(id=event.id).filter(
+            host=request.user,
+            start_time__lt=event.end_time,
+            end_time__gt=event.start_time
+        ).exists()
+        overlapping_participating = EventParticipation.objects.exclude(event=event).filter(
+            user=request.user,
+            event__start_time__lt=event.end_time,
+            event__end_time__gt=event.start_time
+        ).exists()
+
+        if overlapping_hosted or overlapping_participating:
+            return JsonResponse({"detail": "Este evento coincide en horario con otro al que ya asistes u organizas."}, status=400)
 
         try:
             EventParticipation.objects.create(event=event, user=request.user)

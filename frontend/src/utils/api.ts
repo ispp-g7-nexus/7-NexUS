@@ -46,3 +46,25 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}) {
 
     return response;
 }
+
+// Development utility to auto-login with the seed user
+export async function devLogin() {
+    try {
+        const res = await fetch('/api/auth/login/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                email: 'estudiante@demo.nexus.local',
+                password: 'demo1234',
+                portal: 'student'
+            })
+        });
+        if (res.ok) {
+            console.log("Auto-login successful for development");
+        } else {
+            console.warn("Auto-login failed:", await res.text());
+        }
+    } catch (e) {
+        console.error("Auto-login request failed:", e);
+    }
+}
