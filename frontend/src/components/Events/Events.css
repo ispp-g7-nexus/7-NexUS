@@ -398,7 +398,8 @@ textarea {
 
 .event-details-modal {
   padding: 0;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .details-header-image {

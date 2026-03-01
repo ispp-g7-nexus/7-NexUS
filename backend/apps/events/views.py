@@ -35,6 +35,7 @@ class EventListView(AuthenticatedView):
         data = []
         for event in events:
             is_joined = event.participations.filter(user=request.user).exists()
+            can_edit = event.host == request.user or getattr(request.user, 'is_staff', False)
             data.append({
                 'id': event.id,
                 'title': event.title,
@@ -47,6 +48,7 @@ class EventListView(AuthenticatedView):
                 'max_participants': event.max_participants,
                 'participants_count': event.participants_count,
                 'can_join': event.can_join(),
+                'can_edit': can_edit,
                 'is_joined': is_joined,
                 'host': {
                     'id': event.host.id,
@@ -113,6 +115,7 @@ class EventDetailView(AuthenticatedView):
     def get(self, request, event_id):
         event = get_object_or_404(Event, id=event_id, residence=request.residence)
         is_joined = event.participations.filter(user=request.user).exists()
+        can_edit = event.host == request.user or getattr(request.user, 'is_staff', False)
         return JsonResponse({
             'id': event.id,
             'title': event.title,
@@ -125,6 +128,7 @@ class EventDetailView(AuthenticatedView):
             'max_participants': event.max_participants,
             'participants_count': event.participants_count,
             'can_join': event.can_join(),
+            'can_edit': can_edit,
             'is_joined': is_joined,
             'host': {
                 'id': event.host.id,
@@ -133,10 +137,62 @@ class EventDetailView(AuthenticatedView):
             }
         })
         
+    def put(self, request, event_id):
+        event = get_object_or_404(Event, id=event_id, residence=request.residence)
+        can_edit = event.host == request.user or getattr(request.user, 'is_staff', False)
+        if not can_edit:
+            return JsonResponse({"detail": "Unauthorized"}, status=403)
+            
+        try:
+            body = json.loads(request.body)
+            
+            start_time_str = body.get('start_time')
+            end_time_str = body.get('end_time')
+            
+            if not start_time_str or not end_time_str:
+                return JsonResponse({"detail": "Se requiere fecha de inicio y fin."}, status=400)
+                
+            start_time = parse_datetime(start_time_str)
+            end_time = parse_datetime(end_time_str)
+            
+            if start_time and end_time and end_time <= start_time:
+                return JsonResponse({"detail": "La fecha de fin debe ser posterior a la de inicio."}, status=400)
+                
+            # Validar superposición de horarios solo si las fechas cambiaron
+            if start_time != event.start_time or end_time != event.end_time:
+                overlapping_hosted = Event.objects.exclude(id=event.id).filter(
+                    host=request.user,
+                    start_time__lt=end_time,
+                    end_time__gt=start_time
+                ).exists()
+                overlapping_participating = EventParticipation.objects.exclude(event=event).filter(
+                    user=request.user,
+                    event__start_time__lt=end_time,
+                    event__end_time__gt=start_time
+                ).exists()
+                
+                if overlapping_hosted or overlapping_participating:
+                    return JsonResponse({"detail": "Ya tienes otro evento en ese horario."}, status=400)
+            
+            event.title = body.get('title', event.title)
+            event.description = body.get('description', event.description)
+            event.start_time = start_time
+            event.end_time = end_time
+            event.location = body.get('location', event.location)
+            event.image_url = body.get('image_url', event.image_url)
+            event.tags = body.get('tags', event.tags)
+            event.max_participants = body.get('max_participants', event.max_participants)
+            
+            event.save()
+            return JsonResponse({'id': event.id, 'detail': 'Event updated successfully'}, status=200)
+        except Exception as e:
+            return JsonResponse({"detail": str(e)}, status=400)
+
     def delete(self, request, event_id):
         event = get_object_or_404(Event, id=event_id, residence=request.residence)
-        # Check permissions - simplistic check
-        if event.host != request.user:
+        # Check permissions
+        can_edit = event.host == request.user or getattr(request.user, 'is_staff', False)
+        if not can_edit:
             return JsonResponse({"detail": "Unauthorized"}, status=403)
         event.delete()
         return JsonResponse({"detail": "Event deleted"}, status=204)

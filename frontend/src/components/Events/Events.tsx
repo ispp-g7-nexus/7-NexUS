@@ -7,6 +7,8 @@ export function Events() {
     const [loading, setLoading] = useState(true);
     const [isUnauthorized, setIsUnauthorized] = useState(false);
     const [isCreateEventOpen, setIsCreateEventOpen] = useState(false);
+    const [isEditingEvent, setIsEditingEvent] = useState(false);
+    const [editingEventId, setEditingEventId] = useState<number | null>(null);
     const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
     const [selectedEvent, setSelectedEvent] = useState<any>(null);
     const [participants, setParticipants] = useState<any[]>([]);
@@ -116,11 +118,14 @@ export function Events() {
         }
     };
 
-    const handleCreateEvent = async (e: React.FormEvent) => {
+    const handleSaveEvent = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const response = await fetchWithAuth(API_URL, {
-                method: 'POST',
+            const method = isEditingEvent ? 'PUT' : 'POST';
+            const url = isEditingEvent ? `${API_URL}${editingEventId}/` : API_URL;
+
+            const response = await fetchWithAuth(url, {
+                method: method,
                 body: JSON.stringify({
                     title: newEvent.name,
                     description: newEvent.description,
@@ -139,8 +144,10 @@ export function Events() {
             }
 
             if (response.ok) {
-                alert("Evento creado con éxito.");
+                alert(isEditingEvent ? "Evento guardado con éxito." : "Evento creado con éxito.");
                 setIsCreateEventOpen(false);
+                setIsEditingEvent(false);
+                setEditingEventId(null);
                 setNewEvent({
                     name: "", description: "", photo: "", date: "", startTime: "", endTime: "", location: "", limit: "", labels: "",
                 });
@@ -150,8 +157,8 @@ export function Events() {
                 alert(`Error: ${JSON.stringify(data.detail || data)}`);
             }
         } catch (error) {
-            console.error("Error creating event:", error);
-            alert("Error de conexión al crear el evento");
+            console.error("Error saving event:", error);
+            alert("Error de conexión al guardar el evento");
         }
     };
 
@@ -184,7 +191,14 @@ export function Events() {
                 <h2 className="section-title">Actividades de la Residencia</h2>
                 <button
                     className="btn-primary"
-                    onClick={() => setIsCreateEventOpen(true)}
+                    onClick={() => {
+                        setNewEvent({
+                            name: "", description: "", photo: "", date: "", startTime: "", endTime: "", location: "", limit: "", labels: "",
+                        });
+                        setIsEditingEvent(false);
+                        setEditingEventId(null);
+                        setIsCreateEventOpen(true);
+                    }}
                 >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                     Crear Evento
@@ -210,10 +224,10 @@ export function Events() {
                 <div className="dialog-overlay">
                     <div className="dialog-content">
                         <div className="dialog-header">
-                            <h3>Nuevo Evento</h3>
-                            <p>Organiza una actividad para compartir con otros residentes.</p>
+                            <h3>{isEditingEvent ? "Editar Evento" : "Nuevo Evento"}</h3>
+                            <p>{isEditingEvent ? "Modifica los detalles del evento." : "Organiza una actividad para compartir con otros residentes."}</p>
                         </div>
-                        <form onSubmit={handleCreateEvent} className="dialog-form">
+                        <form onSubmit={handleSaveEvent} className="dialog-form">
                             <div className="form-group">
                                 <label htmlFor="name">Nombre del evento</label>
                                 <input
@@ -320,7 +334,7 @@ export function Events() {
                             </div>
                             <div className="dialog-footer">
                                 <button type="button" className="btn-secondary" onClick={() => setIsCreateEventOpen(false)}>Cancelar</button>
-                                <button type="submit" className="btn-primary submit-btn">Publicar Evento</button>
+                                <button type="submit" className="btn-primary submit-btn">{isEditingEvent ? "Guardar Cambios" : "Publicar Evento"}</button>
                             </div>
                         </form>
                     </div>
@@ -364,7 +378,32 @@ export function Events() {
                                 )}
                             </div>
                         </div>
-                        <div className="dialog-footer" style={{ padding: '0 24px 24px 24px', margin: 0 }}>
+                        <div className="dialog-footer" style={{ padding: '0 24px 24px 24px', margin: 0, flexDirection: 'column', gap: '8px' }}>
+                            {selectedEvent.can_edit && (
+                                <button
+                                    className="btn-secondary"
+                                    style={{ width: '100%' }}
+                                    onClick={() => {
+                                        setNewEvent({
+                                            name: selectedEvent.title,
+                                            description: selectedEvent.description,
+                                            photo: selectedEvent.image_url || "",
+                                            date: selectedEvent.start_time.split('T')[0],
+                                            startTime: new Date(selectedEvent.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+                                            endTime: new Date(selectedEvent.end_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+                                            location: selectedEvent.location,
+                                            limit: selectedEvent.max_participants ? selectedEvent.max_participants.toString() : "",
+                                            labels: selectedEvent.tags || "",
+                                        });
+                                        setEditingEventId(selectedEvent.id);
+                                        setIsEditingEvent(true);
+                                        setIsCreateEventOpen(true);
+                                        setSelectedEvent(null);
+                                    }}
+                                >
+                                    Editar Evento
+                                </button>
+                            )}
                             {new Date(selectedEvent.end_time) < now ? (
                                 <p className="no-participants" style={{ width: '100%', textAlign: 'center' }}>Este evento ya ha finalizado.</p>
                             ) : selectedEvent.is_joined ? (
@@ -420,7 +459,7 @@ function CommunityEvent({
     onLeave,
     onClick,
 }: any) {
-    const displayTag = tags ? tags.split(',')[0].trim() : "Social";
+    const displayTag = tags ? tags.split(',')[0].trim() : null;
 
     return (
         <div className="event-card clickable-card" onClick={onClick}>
@@ -430,7 +469,7 @@ function CommunityEvent({
                     alt={title}
                     className="event-image"
                 />
-                <div className="event-badge">{displayTag}</div>
+                {displayTag && <div className="event-badge">{displayTag}</div>}
             </div>
             <div className="event-content">
                 <h3 className="event-title">{title}</h3>
