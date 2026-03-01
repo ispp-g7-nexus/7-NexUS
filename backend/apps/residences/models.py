@@ -20,7 +20,9 @@ class Residence(models.Model):
 
 
 class ResidenceBranding(models.Model):
-    residence = models.OneToOneField(Residence, on_delete=models.CASCADE, related_name="branding")
+    residence = models.OneToOneField(
+        Residence, on_delete=models.CASCADE, related_name="branding"
+    )
     primary_color = models.CharField(max_length=7, default="#0F4C81")
     secondary_color = models.CharField(max_length=7, default="#F4B400")
     accent_color = models.CharField(max_length=7, default="#2E7D32")
@@ -34,7 +36,9 @@ class ResidenceBranding(models.Model):
 
 
 class ResidenceDomain(models.Model):
-    residence = models.ForeignKey(Residence, on_delete=models.CASCADE, related_name="domains")
+    residence = models.ForeignKey(
+        Residence, on_delete=models.CASCADE, related_name="domains"
+    )
     domain = models.CharField(max_length=253, unique=True)
     is_primary = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
@@ -51,7 +55,14 @@ class Membership(models.Model):
     class Role(models.TextChoices):
         PORTFOLIO_ADMIN = "portfolio_admin", "Admin de grupo"
         RESIDENCE_ADMIN = "residence_admin", "Admin de residencia"
-        RESIDENT = "resident", "Residente"
+        RESIDENT = (
+            "resident",
+            "Residente",
+        )
+        STAFF = (
+            "staff",
+            "Personal",
+        )
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -81,8 +92,14 @@ class Membership(models.Model):
 
     def clean(self) -> None:
         if self.role == self.Role.PORTFOLIO_ADMIN and self.residence_id is not None:
-            raise ValidationError("El rol de admin de grupo no puede ligarse a una residencia concreta.")
-        if self.role in {self.Role.RESIDENCE_ADMIN, self.Role.RESIDENT} and self.residence_id is None:
+            raise ValidationError(
+                "El rol de admin de grupo no puede ligarse a una residencia concreta."
+            )
+        if (
+            self.role
+            in {self.Role.RESIDENCE_ADMIN, self.Role.RESIDENT, self.Role.STAFF}
+            and self.residence_id is None
+        ):
             raise ValidationError("Este rol requiere una residencia asociada.")
 
     def __str__(self) -> str:
