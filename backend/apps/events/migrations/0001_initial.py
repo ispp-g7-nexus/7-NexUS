@@ -24,6 +24,7 @@ class Migration(migrations.Migration):
                 ('start_time', models.DateTimeField()),
                 ('end_time', models.DateTimeField()),
                 ('location', models.CharField(max_length=255)),
+                ('image_url', models.URLField(blank=True, max_length=500, null=True)),
                 ('max_participants', models.PositiveIntegerField(blank=True, null=True)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),

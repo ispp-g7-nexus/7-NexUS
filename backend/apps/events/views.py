@@ -40,6 +40,7 @@ class EventListView(AuthenticatedView):
                 'start_time': event.start_time.isoformat(),
                 'end_time': event.end_time.isoformat(),
                 'location': event.location,
+                'image_url': event.image_url,
                 'max_participants': event.max_participants,
                 'participants_count': event.participants_count,
                 'can_join': event.can_join(),
