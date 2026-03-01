@@ -18,6 +18,7 @@ a {
   color: #646cff;
   text-decoration: inherit;
 }
+
 a:hover {
   color: #535bf2;
 }
@@ -46,9 +47,11 @@ button {
   cursor: pointer;
   transition: border-color 0.25s;
 }
+
 button:hover {
   border-color: #646cff;
 }
+
 button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
@@ -59,10 +62,61 @@ button:focus-visible {
     color: #213547;
     background-color: #ffffff;
   }
+
   a:hover {
     color: #747bff;
   }
+
   button {
     background-color: #f9f9f9;
+  }
+}
+
+/* --- Nexus Design Tokens --- */
+:root {
+  --background: #F5F5F5;
+  --foreground: #1F2937;
+  --card: #ffffff;
+  --card-foreground: #1F2937;
+  --popover: #ffffff;
+  --popover-foreground: #1F2937;
+  --primary: #35C759;
+  --primary-foreground: #ffffff;
+  --secondary: #F3F4F6;
+  --secondary-foreground: #1F2937;
+  --muted: #F3F4F6;
+  --muted-foreground: #6B7280;
+  --accent: #7BD14F;
+  --accent-foreground: #1B5E20;
+  --destructive: #EF4444;
+  --destructive-foreground: #ffffff;
+  --border: rgba(0, 0, 0, 0.08);
+  --input: transparent;
+  --input-background: #F9FAFB;
+  --ring: #35C759;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #09090b;
+    --foreground: #FAFAFA;
+    --card: #09090b;
+    --card-foreground: #FAFAFA;
+    --popover: #09090b;
+    --popover-foreground: #FAFAFA;
+    --primary: #35C759;
+    --primary-foreground: #052e16;
+    --secondary: #27272a;
+    --secondary-foreground: #FAFAFA;
+    --muted: #27272a;
+    --muted-foreground: #a1a1aa;
+    --accent: #1B5E20;
+    --accent-foreground: #ffffff;
+    --destructive: #7f1d1d;
+    --destructive-foreground: #FAFAFA;
+    --border: #27272a;
+    --input: #27272a;
+    --input-background: #27272a;
+    --ring: #35C759;
   }
 }

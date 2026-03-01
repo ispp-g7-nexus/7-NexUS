@@ -43,6 +43,7 @@ class EventListView(AuthenticatedView):
                 'end_time': event.end_time.isoformat(),
                 'location': event.location,
                 'image_url': event.image_url,
+                'tags': event.tags,
                 'max_participants': event.max_participants,
                 'participants_count': event.participants_count,
                 'can_join': event.can_join(),
@@ -99,6 +100,7 @@ class EventListView(AuthenticatedView):
                 end_time=body.get('end_time'),
                 location=body.get('location'),
                 image_url=body.get('image_url'),
+                tags=body.get('tags'),
                 max_participants=body.get('max_participants'),
                 residence=request.residence,
                 host=request.user
@@ -119,6 +121,7 @@ class EventDetailView(AuthenticatedView):
             'end_time': event.end_time.isoformat(),
             'location': event.location,
             'image_url': event.image_url,
+            'tags': event.tags,
             'max_participants': event.max_participants,
             'participants_count': event.participants_count,
             'can_join': event.can_join(),

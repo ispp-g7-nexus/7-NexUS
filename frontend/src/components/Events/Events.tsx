@@ -14,12 +14,12 @@ export function Events() {
         name: "",
         description: "",
         photo: "",
-        dateTime: "",
-        endDateTime: "",
+        date: "",
+        startTime: "",
+        endTime: "",
         location: "",
         limit: "",
         labels: "",
-        preRegistered: "",
     });
 
     useEffect(() => {
@@ -106,9 +106,10 @@ export function Events() {
                 body: JSON.stringify({
                     title: newEvent.name,
                     description: newEvent.description,
-                    start_time: new Date(newEvent.dateTime).toISOString(),
-                    end_time: new Date(newEvent.endDateTime).toISOString(),
+                    start_time: new Date(`${newEvent.date}T${newEvent.startTime}`).toISOString(),
+                    end_time: new Date(`${newEvent.date}T${newEvent.endTime}`).toISOString(),
                     location: newEvent.location,
+                    tags: newEvent.labels || null,
                     max_participants: newEvent.limit ? parseInt(newEvent.limit) : null,
                     image_url: newEvent.photo || null,
                 })
@@ -118,7 +119,7 @@ export function Events() {
                 alert("Evento creado con éxito.");
                 setIsCreateEventOpen(false);
                 setNewEvent({
-                    name: "", description: "", photo: "", dateTime: "", endDateTime: "", location: "", limit: "", labels: "", preRegistered: "",
+                    name: "", description: "", photo: "", date: "", startTime: "", endTime: "", location: "", limit: "", labels: "",
                 });
                 fetchEvents();
             } else {
@@ -144,7 +145,8 @@ export function Events() {
                     className="btn-primary"
                     onClick={() => setIsCreateEventOpen(true)}
                 >
-                    ➕ Crear Evento
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    Crear Evento
                 </button>
             </div>
 
@@ -193,24 +195,35 @@ export function Events() {
                             </div>
                             <div className="form-row">
                                 <div className="form-group half">
-                                    <label htmlFor="dateTime">Fecha de inicio</label>
+                                    <label htmlFor="date">Fecha del evento</label>
                                     <input
-                                        id="dateTime"
-                                        type="datetime-local"
-                                        value={newEvent.dateTime}
-                                        min={new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
-                                        onChange={(e) => setNewEvent({ ...newEvent, dateTime: e.target.value })}
+                                        id="date"
+                                        type="date"
+                                        value={newEvent.date}
+                                        min={new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0]}
+                                        onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                            </div>
+                            <div className="form-row">
+                                <div className="form-group half">
+                                    <label htmlFor="startTime">Hora de inicio</label>
+                                    <input
+                                        id="startTime"
+                                        type="time"
+                                        value={newEvent.startTime}
+                                        onChange={(e) => setNewEvent({ ...newEvent, startTime: e.target.value })}
                                         required
                                     />
                                 </div>
                                 <div className="form-group half">
-                                    <label htmlFor="endDateTime">Fecha de fin</label>
+                                    <label htmlFor="endTime">Hora de fin</label>
                                     <input
-                                        id="endDateTime"
-                                        type="datetime-local"
-                                        value={newEvent.endDateTime}
-                                        min={newEvent.dateTime || new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
-                                        onChange={(e) => setNewEvent({ ...newEvent, endDateTime: e.target.value })}
+                                        id="endTime"
+                                        type="time"
+                                        value={newEvent.endTime}
+                                        onChange={(e) => setNewEvent({ ...newEvent, endTime: e.target.value })}
                                         required
                                     />
                                 </div>
@@ -264,15 +277,6 @@ export function Events() {
                                     />
                                 </div>
                             </div>
-                            <div className="form-group">
-                                <label htmlFor="preRegistered">Usuarios Pre-Confirmados (separados por comas)</label>
-                                <input
-                                    id="preRegistered"
-                                    placeholder="Ej: Juan, María, Pedro"
-                                    value={newEvent.preRegistered}
-                                    onChange={(e) => setNewEvent({ ...newEvent, preRegistered: e.target.value })}
-                                />
-                            </div>
                             <div className="dialog-footer">
                                 <button type="button" className="btn-secondary" onClick={() => setIsCreateEventOpen(false)}>Cancelar</button>
                                 <button type="submit" className="btn-primary submit-btn">Publicar Evento</button>
@@ -294,7 +298,7 @@ export function Events() {
                             <p className="details-host">Organizado por {selectedEvent.host?.first_name || 'Usuario'} {selectedEvent.host?.last_name || ''}</p>
 
                             <div className="details-info-row">
-                                <span>📅 {new Date(selectedEvent.start_time).toLocaleString('es-ES', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                                <span>🗓️ {new Date(selectedEvent.start_time).toLocaleString('es-ES', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} - {new Date(selectedEvent.end_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
                                 <span>📍 {selectedEvent.location}</span>
                             </div>
 
@@ -348,7 +352,9 @@ export function Events() {
                             })}
                             attendees={event.participants_count}
                             image={event.image_url || "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&q=80&w=400"}
+                            tags={event.tags}
                             isJoined={event.is_joined}
+                            isPast={activeTab === 'past'}
                             onJoin={handleJoinEvent}
                             onLeave={handleLeaveEvent}
                             onClick={() => handleOpenDetails(event)}
@@ -366,11 +372,15 @@ function CommunityEvent({
     date,
     attendees,
     image,
+    tags,
     isJoined,
+    isPast,
     onJoin,
     onLeave,
     onClick,
 }: any) {
+    const displayTag = tags ? tags.split(',')[0].trim() : "Social";
+
     return (
         <div className="event-card clickable-card" onClick={onClick}>
             <div className="event-image-container">
@@ -379,7 +389,7 @@ function CommunityEvent({
                     alt={title}
                     className="event-image"
                 />
-                <div className="event-badge">Social</div>
+                <div className="event-badge">{displayTag}</div>
             </div>
             <div className="event-content">
                 <h3 className="event-title">{title}</h3>
@@ -387,11 +397,16 @@ function CommunityEvent({
                 <div className="event-footer" onClick={(e) => e.stopPropagation()}>
                     <div className="event-attendees">
                         <span className="attendees-text">
-                            +{attendees} van
+                            +{attendees} {isPast ? 'fueron' : 'van'}
                         </span>
                     </div>
-                    {new Date(date.split(',')[0]) && false /* Past Check via Date could be done, or we assume disabled buttons */}
-                    {isJoined ? (
+                    {isPast ? (
+                        <div className="event-actions">
+                            <button className="btn-joined" disabled style={{ backgroundColor: '#f1f5f9', color: '#94a3b8', border: 'none' }}>
+                                Finalizado
+                            </button>
+                        </div>
+                    ) : isJoined ? (
                         <div className="event-actions">
                             <button
                                 className="btn-joined"

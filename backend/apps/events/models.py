@@ -9,6 +9,7 @@ class Event(models.Model):
     end_time = models.DateTimeField()
     location = models.CharField(max_length=255)
     image_url = models.URLField(max_length=500, null=True, blank=True)
+    tags = models.CharField(max_length=255, null=True, blank=True)
     max_participants = models.PositiveIntegerField(null=True, blank=True)
     residence = models.ForeignKey(Residence, on_delete=models.CASCADE, related_name='events')
     host = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='hosted_events')
