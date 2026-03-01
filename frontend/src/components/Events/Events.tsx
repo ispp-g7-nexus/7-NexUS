@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { fetchWithAuth, API_URL, devLogin } from "../../utils/api";
+import { fetchWithAuth, API_URL } from "../../utils/api";
 import "./Events.css";
 
 export function Events() {
     const [events, setEvents] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isUnauthorized, setIsUnauthorized] = useState(false);
     const [isCreateEventOpen, setIsCreateEventOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
     const [selectedEvent, setSelectedEvent] = useState<any>(null);
@@ -24,7 +25,6 @@ export function Events() {
 
     useEffect(() => {
         const init = async () => {
-            await devLogin(); // Ensure we have a session cookie
             fetchEvents();
         };
         init();
@@ -33,6 +33,10 @@ export function Events() {
     const fetchEvents = async () => {
         try {
             const response = await fetchWithAuth(API_URL);
+            if (response.status === 401 || response.status === 403) {
+                setIsUnauthorized(true);
+                return;
+            }
             if (response.ok) {
                 const data = await response.json();
                 setEvents(data);
@@ -51,6 +55,10 @@ export function Events() {
         setParticipants([]);
         try {
             const response = await fetchWithAuth(`${API_URL}${event.id}/participants/`);
+            if (response.status === 401 || response.status === 403) {
+                setIsUnauthorized(true);
+                return;
+            }
             if (response.ok) {
                 const data = await response.json();
                 setParticipants(data);
@@ -65,6 +73,11 @@ export function Events() {
             const response = await fetchWithAuth(`${API_URL}${eventId}/join/`, {
                 method: 'POST',
             });
+
+            if (response.status === 401 || response.status === 403) {
+                setIsUnauthorized(true);
+                return;
+            }
 
             if (response.ok) {
                 alert("¡Te has apuntado al evento!");
@@ -84,6 +97,11 @@ export function Events() {
             const response = await fetchWithAuth(`${API_URL}${eventId}/leave/`, {
                 method: 'POST',
             });
+
+            if (response.status === 401 || response.status === 403) {
+                setIsUnauthorized(true);
+                return;
+            }
 
             if (response.ok) {
                 alert("Te has desapuntado del evento.");
@@ -115,6 +133,11 @@ export function Events() {
                 })
             });
 
+            if (response.status === 401 || response.status === 403) {
+                setIsUnauthorized(true);
+                return;
+            }
+
             if (response.ok) {
                 alert("Evento creado con éxito.");
                 setIsCreateEventOpen(false);
@@ -136,6 +159,24 @@ export function Events() {
     const upcomingEvents = events.filter(e => new Date(e.end_time) >= now);
     const pastEvents = events.filter(e => new Date(e.end_time) < now);
     const displayedEvents = activeTab === 'upcoming' ? upcomingEvents : pastEvents;
+
+    if (isUnauthorized) {
+        return (
+            <div className="events-container" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '80vh', textAlign: 'center' }}>
+                <h2 style={{ fontSize: '1.5rem', marginBottom: '16px', color: 'var(--foreground)' }}>Acceso Denegado</h2>
+                <p style={{ color: 'var(--muted-foreground)', maxWidth: '400px', lineHeight: '1.5' }}>
+                    Debes iniciar sesión para ver y organizar las actividades de tu residencia.
+                </p>
+                <button
+                    className="btn-primary"
+                    style={{ marginTop: '24px' }}
+                    onClick={() => window.location.href = '/login'}
+                >
+                    Ir a Iniciar Sesión
+                </button>
+            </div>
+        );
+    }
 
     return (
         <div className="events-container">
