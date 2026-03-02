@@ -1,4 +1,4 @@
-import React from 'react';
+// no default React import needed (using new JSX transform)
 
 export function EventDetails({
     selectedEvent,
