@@ -14,11 +14,17 @@ export function PastEvents({
     handleLeaveEvent: (id: number) => Promise<void>;
     handleOpenDetails: (event: any) => void;
 }) {
-    if (loading) return <p>Cargando eventos...</p>;
-    if (events.length === 0) return <p>No hay eventos pasados.</p>;
+    if (loading) return <p className="text-center text-muted-foreground py-10">Cargando eventos...</p>;
+    if (events.length === 0) {
+        return (
+            <div className="bg-card text-card-foreground p-8 rounded-xl border border-border text-center shadow-sm">
+                <p className="text-muted-foreground">Todavía no hay eventos pasados.</p>
+            </div>
+        );
+    }
 
     return (
-        <div className="events-list">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 opacity-80 mix-blend-luminosity">
             {events.map((event: any) => (
                 <CommunityEvent
                     key={event.id}

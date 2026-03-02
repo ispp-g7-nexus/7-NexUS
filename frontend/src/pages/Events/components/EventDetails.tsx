@@ -71,7 +71,7 @@ export function EventDetails({
                             </button>
                             <button
                                 className="btn-secondary"
-                                style={{ flex: 1, color: 'var(--destructive)', borderColor: 'var(--destructive)' }}
+                                style={{ flex: 1, color: 'hsl(var(--destructive))', borderColor: 'hsl(var(--destructive))' }}
                                 onClick={async () => {
                                     await handleDeleteEvent(selectedEvent.id);
                                 }}

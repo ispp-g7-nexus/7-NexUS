@@ -198,14 +198,13 @@ export function Events() {
 
     if (isUnauthorized) {
         return (
-            <div className="events-container" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '80vh', textAlign: 'center' }}>
-                <h2 style={{ fontSize: '1.5rem', marginBottom: '16px', color: 'var(--foreground)' }}>Acceso Denegado</h2>
-                <p style={{ color: 'var(--muted-foreground)', maxWidth: '400px', lineHeight: '1.5' }}>
+            <div className="flex flex-col justify-center items-center min-h-[80vh] text-center w-full max-w-2xl mx-auto px-4">
+                <h2 className="text-2xl font-bold mb-4 text-foreground">Acceso Denegado</h2>
+                <p className="text-muted-foreground max-w-sm leading-relaxed mb-6">
                     Debes iniciar sesión para ver y organizar las actividades de tu residencia.
                 </p>
                 <button
-                    className="btn-primary"
-                    style={{ marginTop: '24px' }}
+                    className="bg-primary text-primary-foreground hover:bg-primary/90 px-6 py-2 rounded-lg font-medium transition-colors"
                     onClick={() => window.location.href = '/login'}
                 >
                     Ir a Iniciar Sesión
@@ -215,11 +214,11 @@ export function Events() {
     }
 
     return (
-        <div className="events-container">
-            <div className="events-header">
-                <h2 className="section-title">Actividades de la Residencia</h2>
+        <div className="w-full mx-auto flex flex-col gap-6 pb-20 px-4 sm:px-6 lg:px-8 pt-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <h2 className="text-2xl font-bold tracking-tight text-foreground">Actividades de la Residencia</h2>
                 <button
-                    className="btn-primary"
+                    className="bg-primary text-primary-foreground hover:bg-primary/90 px-5 py-2.5 rounded-lg font-medium transition-colors flex items-center gap-2 shadow-sm whitespace-nowrap"
                     onClick={() => {
                         setNewEvent({
                             name: "", description: "", photo: "", date: "", startTime: "", endTime: "", location: "", limit: "", labels: "",
@@ -229,23 +228,29 @@ export function Events() {
                         setIsCreateEventOpen(true);
                     }}
                 >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                     Crear Evento
                 </button>
             </div>
 
-            <div className="events-tabs">
+            <div className="flex gap-2 border-b border-border pb-1">
                 <button
-                    className={`tab-btn ${activeTab === 'upcoming' ? 'active' : ''}`}
+                    className={`px-4 py-2 font-medium text-sm transition-colors relative ${activeTab === 'upcoming' ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                     onClick={() => setActiveTab('upcoming')}
                 >
                     Próximas Actividades
+                    {activeTab === 'upcoming' && (
+                        <div className="absolute bottom-[-5px] left-0 right-0 h-[2px] bg-primary rounded-full" />
+                    )}
                 </button>
                 <button
-                    className={`tab-btn ${activeTab === 'past' ? 'active' : ''}`}
+                    className={`px-4 py-2 font-medium text-sm transition-colors relative ${activeTab === 'past' ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                     onClick={() => setActiveTab('past')}
                 >
                     Eventos Pasados
+                    {activeTab === 'past' && (
+                        <div className="absolute bottom-[-5px] left-0 right-0 h-[2px] bg-primary rounded-full" />
+                    )}
                 </button>
             </div>
 
