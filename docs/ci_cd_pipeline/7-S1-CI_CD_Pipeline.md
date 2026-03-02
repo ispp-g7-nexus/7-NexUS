@@ -33,6 +33,7 @@
 | Versión | Fecha      | Cambio principal |
 |---------|------------|------------------|
 | 1.0.0   | 01/03/2026 | Creación del documento |
+| 1.0.1   | 02/03/2026 | Documentación de SonarCLoud |
 
 ---
 

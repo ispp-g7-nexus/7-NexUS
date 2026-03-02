@@ -1,12 +1,19 @@
 # 7-DP Sonar Analysis Guide (Equipo)
 
 ## Objetivo
-Guia corta para que cualquier companero ejecute analisis Sonar sin instalar nada extra.
+Guia corta para que cualquier compañero ejecute analisis Sonar sin instalar nada extra.
 
 ## 1) Lo minimo que necesitas
 - Tener Docker funcionando.
 - Tener el repo actualizado.
-- Tener `SONAR_TOKEN` (te lo da el lider o cada persona usa su token).
+- Tener un `SONAR_TOKEN` personal (cada miembro crea el suyo).
+- La generacion del token personal esta explicada en `docs/setup/7-DP-SonarQube-Initial-Setup.md` (seccion "Primer login y seguridad basica").
+
+## 1.1) Politica de tokens (equipo)
+- Cada desarrollador usa su token personal para analisis local.
+- No compartir tokens por chat/correo ni subirlos al repositorio.
+- El token de CI es independiente y solo vive en GitHub Secrets (`SONAR_TOKEN`).
+- Si un token se expone, revocarlo y generar uno nuevo.
 
 ## 2) Analisis local en 3 pasos
 1. Levantar SonarQube local (si no esta levantado):
@@ -29,6 +36,17 @@ export SONAR_TOKEN=<tu_token>
 ```
 
 Con eso, el analisis usa `sonar-project.properties` y escanea backend (`backend/`) + frontend (`frontend/`).
+
+## 2.1) Configuracion minima para `run-sonar.sh`
+No necesitas configurar nada mas para el caso normal local, solo:
+1. SonarQube levantado en Docker (`docker-compose.sonarqube.yml`).
+2. `SONAR_TOKEN` exportado.
+3. Ejecutar desde la raiz del repo.
+
+Opcional:
+- `SONAR_HOST_URL` (si no usas el valor por defecto).
+- `SONAR_PROJECT_KEY` (si quieres sobreescribir temporalmente).
+- `SONAR_ORGANIZATION` (solo si aplica para SonarCloud/local multi-org).
 
 ## 3) Si quieres pasar opciones extra al scanner
 Puedes enviar argumentos al script:
@@ -62,36 +80,6 @@ No tienes que lanzar nada manual en CI:
 - Al abrir PR a `main`, GitHub ejecuta `.github/workflows/sonar.yml`.
 - SonarCloud publica resultado y Quality Gate en el PR.
 
-Si falla por configuracion, avisar al lider para revisar:
+Si falla por configuracion, avisar al equipo B para revisar:
 - Secret `SONAR_TOKEN`
 - Variables `SONAR_PROJECT_KEY` y `SONAR_ORGANIZATION`
-
-## 7) Errores comunes y solucion
-1. `docker: command not found`
-- Instalar/arrancar Docker y reintentar.
-
-2. `No se encontro sonar-project.properties`
-- Ejecutar comando desde la raiz del repo.
-
-3. `Not authorized. Please check the user token`
-- Regenerar token en Sonar y volver a exportarlo.
-
-4. `Project not found`
-- Revisar `sonar.projectKey` o exportar `SONAR_PROJECT_KEY` correcto.
-
-5. No aparece cobertura en dashboard
-- Generar reportes antes de correr Sonar:
-
-```bash
-# Backend (ejemplo)
-pytest backend --cov=backend --cov-report=xml:backend/coverage.xml
-
-# Frontend (ejemplo, segun scripts disponibles)
-npm --prefix frontend run test -- --coverage
-```
-
-## 8) Checklist rapido (copiar y pegar en PR)
-- [ ] He ejecutado `./run-sonar.sh` en mi rama.
-- [ ] No dejo bugs/vulnerabilidades nuevos.
-- [ ] Si toque logica, he actualizado tests.
-- [ ] La cobertura de nuevo codigo cumple el gate del equipo.
