@@ -7,7 +7,7 @@ class Object(models.Model):
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     location = models.CharField(max_length=255, blank=True)
-    residence = models.ForeignKey(Residence, on_delete=models.CASCADE, related_name='objects')
+    residence = models.ForeignKey('residences.Residence', on_delete=models.CASCADE, related_name='residence_objects')
     available = models.BooleanField(default=True)
     image_url = models.URLField(blank=True, null=True)
     tags = models.CharField(max_length=255, blank=True)
