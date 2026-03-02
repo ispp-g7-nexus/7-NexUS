@@ -228,23 +228,32 @@ class AdminCreateResidentView(APIView):
             names = (data.get("full_name") or "").strip().split(None, 1)
             first_name = names[0] if names else ""
             last_name = names[1] if len(names) > 1 else ""
-
             user = UserModel.objects.create(
                 username=username,
                 email=email,
-                password=data["password"],
                 first_name=first_name,
                 last_name=last_name,
                 is_active=True,
             )
             created = True
+            passwd = data.get("password")
+            if passwd:
+                user.set_password(passwd)
+                user.save()
 
         membership_exists = Membership.objects.filter(user=user, role=Membership.Role.RESIDENT, residence=residence).exists()
         if not membership_exists:
             Membership.objects.create(user=user, role=Membership.Role.RESIDENT, residence=residence, is_active=True)
 
         try:
-            process_password_reset_request(user.email, request)
+            if data.get("password"):
+                if not created:
+                    passwd = data.get("password")
+                    if passwd:
+                        user.set_password(passwd)
+                        user.save()
+            else:
+                process_password_reset_request(user.email, request)
         except Exception:
             pass
 

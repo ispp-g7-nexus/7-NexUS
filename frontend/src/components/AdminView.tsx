@@ -1,6 +1,7 @@
 import { AlertCircle, Bell, LayoutDashboard, LogOut, Menu, Users, Calendar } from "lucide-react";
 import { useState } from "react";
 import { Events } from "../pages/Events/Events";
+import { Residents } from "../pages/Residents/Residents";
 import logo from "../assets/logo.png";
 import { Button } from "./ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
@@ -81,6 +82,8 @@ export function AdminView({ onLogout }: AdminViewProps) {
             <div className="flex-1 overflow-y-auto p-4">
                 {activeTab === "events" ? (
                     <Events />
+                ) : activeTab === "students" ? (
+                    <Residents />
                 ) : (
                     <div className="bg-white p-6 rounded-xl text-center text-gray-500 shadow-sm">
                         Vista de {currentTab.label} en construcción
