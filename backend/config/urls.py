@@ -28,5 +28,6 @@ urlpatterns = [
         name="password-reset-request",
     ),
     path("api/auth/password-reset/confirm/", PasswordResetConfirmView.as_view(), name="password-reset-confirm"),
+    path("api/", include("apps.onboarding.urls")),
     path("api/", include("apps.events.urls")),
 ]
