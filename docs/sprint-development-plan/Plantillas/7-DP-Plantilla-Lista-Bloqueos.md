@@ -7,7 +7,7 @@
 <div align="center">
 
 <p>
-  <img src="https://img.shields.io/badge/Versión-1.0.0-blue?style=flat-square" alt="Versión">
+  <img src="https://img.shields.io/badge/Versión-2.0.0-blue?style=flat-square" alt="Versión">
   <img src="https://img.shields.io/badge/Estado-Plantilla-grey?style=flat-square" alt="Estado">
   <img src="https://img.shields.io/badge/Grupo-7--NexUS-green?style=flat-square" alt="Grupo">
   <img src="https://img.shields.io/badge/Asignatura-ISPP-red?style=flat-square" alt="Asignatura">
@@ -35,6 +35,7 @@
 | Versión | Fecha | Cambio principal |
 |---------|-------|------------------|
 | 1.0.0 | DD/MM/AAAA | Creación del documento |
+| 2.0.0 | DD/MM/AAAA | Añadida columna H. Impacto y resumen de horas bloqueadas |
 
 ---
 
@@ -64,19 +65,21 @@ Registro centralizado de todos los impedimentos que han bloqueado o ralentizado 
 
 ## 2. Tabla de Bloqueos
 
-| ID | Descripción | Estado | Responsable | Fecha Detección | Fecha Resolución | Impacto | Historia Afectada |
-|----|-------------|--------|-------------|-----------------|------------------|---------|-------------------|
-| BLQ-001 | [Descripción del bloqueo] | 🚫 Abierto | [Nombre] | DD/MM/AAAA | — | 🔴 Alto | S1-XX |
-| BLQ-002 | [Descripción del bloqueo] | 🔧 En progreso | [Nombre] | DD/MM/AAAA | — | 🟡 Medio | S1-XX |
-| BLQ-003 | [Descripción del bloqueo] | ✅ Resuelto | [Nombre] | DD/MM/AAAA | DD/MM/AAAA | 🟢 Bajo | S1-XX |
+| ID | Descripción | Estado | Responsable | Fecha Det. | Fecha Res. | Impacto | H. Estimado Impacto | Historia Afectada |
+|----|-------------|--------|-------------|------------|------------|---------|---------------------|-------------------|
+| BLQ-001 | [Descripción del bloqueo] | 🚫 Abierto | [Nombre] | DD/MM | — | 🔴 Alto | ~X h | SX-XX |
+| BLQ-002 | [Descripción del bloqueo] | 🔧 En progreso | [Nombre] | DD/MM | — | 🟡 Medio | ~X h | SX-XX |
+| BLQ-003 | [Descripción del bloqueo] | ✅ Resuelto | [Nombre] | DD/MM | DD/MM | 🟢 Bajo | ~X h | SX-XX |
+
+> **H. Estimado Impacto:** horas de trabajo estimadas perdidas o bloqueadas por este impedimento. Permite cuantificar el coste real de cada bloqueo sobre el sprint.
 
 ---
 
 ## 3. Resumen por Impacto
 
-| Impacto | Total | Resueltos | Pendientes |
-|---------|-------|-----------|------------|
-| 🔴 Alto | 0 | 0 | 0 |
-| 🟡 Medio | 0 | 0 | 0 |
-| 🟢 Bajo | 0 | 0 | 0 |
-| **Total** | **0** | **0** | **0** |
+| Impacto | Total | Resueltos | Pendientes | H. Impacto Total |
+|---------|-------|-----------|------------|------------------|
+| 🔴 Alto | 0 | 0 | 0 | ~0 h |
+| 🟡 Medio | 0 | 0 | 0 | ~0 h |
+| 🟢 Bajo | 0 | 0 | 0 | ~0 h |
+| **Total** | **0** | **0** | **0** | **~0 h** |

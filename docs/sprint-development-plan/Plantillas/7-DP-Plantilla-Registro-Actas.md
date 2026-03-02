@@ -7,7 +7,7 @@
 <div align="center">
 
 <p>
-  <img src="https://img.shields.io/badge/Versión-1.0.0-blue?style=flat-square" alt="Versión">
+  <img src="https://img.shields.io/badge/Versión-2.0.0-blue?style=flat-square" alt="Versión">
   <img src="https://img.shields.io/badge/Estado-Plantilla-grey?style=flat-square" alt="Estado">
   <img src="https://img.shields.io/badge/Grupo-7--NexUS-green?style=flat-square" alt="Grupo">
   <img src="https://img.shields.io/badge/Asignatura-ISPP-red?style=flat-square" alt="Asignatura">
@@ -35,6 +35,7 @@
 | Versión | Fecha | Cambio principal |
 |---------|-------|------------------|
 | 1.0.0 | DD/MM/AAAA | Creación del documento |
+| 2.0.0 | DD/MM/AAAA | Añadidas métricas del sprint (Clockify) en Sprint Review |
 
 ---
 
@@ -135,6 +136,16 @@
 2. Demo funcional de las historias entregadas
 3. Validación del Product Owner
 4. Historias diferidas al backlog
+
+### Métricas del Sprint
+
+| Métrica | Valor |
+|---------|-------|
+| SP planificados / completados | — / — SP (— %) |
+| H. estimadas Done | — h |
+| H. registradas Clockify | — h |
+| Rendimiento (h Done / h Clockify) | — % |
+| % Cobertura etiquetado | — % |
 
 ### Historias Completadas
 | Historia | Descripción | Equipo | SP | Estado |
