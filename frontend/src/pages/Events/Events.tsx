@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { fetchWithAuth, API_URL } from "../../utils/api";
+import { EventForm } from "./components/EventForm";
+import { EventDetails } from "./components/EventDetails";
+import { UpcomingEvents } from "./components/UpcomingEvents";
+import { PastEvents } from "./components/PastEvents";
 import "./Events.css";
 
 export function Events() {
@@ -26,10 +30,7 @@ export function Events() {
     });
 
     useEffect(() => {
-        const init = async () => {
-            fetchEvents();
-        };
-        init();
+        fetchEvents();
     }, []);
 
     const fetchEvents = async () => {
@@ -162,10 +163,38 @@ export function Events() {
         }
     };
 
+    const handleDeleteEvent = async (eventId: number) => {
+        if (!window.confirm("¿Estás seguro de que quieres eliminar este evento?")) {
+            return;
+        }
+
+        try {
+            const response = await fetchWithAuth(`${API_URL}${eventId}/`, {
+                method: 'DELETE',
+            });
+
+            if (response.status === 401 || response.status === 403) {
+                setIsUnauthorized(true);
+                return;
+            }
+
+            if (response.ok || response.status === 204) {
+                alert("Evento eliminado con éxito.");
+                fetchEvents();
+                setSelectedEvent(null);
+            } else {
+                const data = await response.json();
+                alert(`Error al eliminar: ${JSON.stringify(data.detail || data)}`);
+            }
+        } catch (error) {
+            console.error("Error deleting event:", error);
+            alert("Error de conexión al eliminar el evento");
+        }
+    };
+
     const now = new Date();
     const upcomingEvents = events.filter(e => new Date(e.end_time) >= now);
     const pastEvents = events.filter(e => new Date(e.end_time) < now);
-    const displayedEvents = activeTab === 'upcoming' ? upcomingEvents : pastEvents;
 
     if (isUnauthorized) {
         return (
@@ -221,297 +250,58 @@ export function Events() {
             </div>
 
             {isCreateEventOpen && (
-                <div className="dialog-overlay">
-                    <div className="dialog-content">
-                        <div className="dialog-header">
-                            <h3>{isEditingEvent ? "Editar Evento" : "Nuevo Evento"}</h3>
-                            <p>{isEditingEvent ? "Modifica los detalles del evento." : "Organiza una actividad para compartir con otros residentes."}</p>
-                        </div>
-                        <form onSubmit={handleSaveEvent} className="dialog-form">
-                            <div className="form-group">
-                                <label htmlFor="name">Nombre del evento</label>
-                                <input
-                                    id="name"
-                                    placeholder="Ej: Tarde de Juegos"
-                                    value={newEvent.name}
-                                    onChange={(e) => setNewEvent({ ...newEvent, name: e.target.value })}
-                                    required
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label htmlFor="description">Descripción</label>
-                                <textarea
-                                    id="description"
-                                    placeholder="Explica de qué trata el evento..."
-                                    value={newEvent.description}
-                                    onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
-                                    required
-                                />
-                            </div>
-                            <div className="form-row">
-                                <div className="form-group half">
-                                    <label htmlFor="date">Fecha del evento</label>
-                                    <input
-                                        id="date"
-                                        type="date"
-                                        value={newEvent.date}
-                                        min={new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0]}
-                                        onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                            </div>
-                            <div className="form-row">
-                                <div className="form-group half">
-                                    <label htmlFor="startTime">Hora de inicio</label>
-                                    <input
-                                        id="startTime"
-                                        type="time"
-                                        value={newEvent.startTime}
-                                        onChange={(e) => setNewEvent({ ...newEvent, startTime: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                                <div className="form-group half">
-                                    <label htmlFor="endTime">Hora de fin</label>
-                                    <input
-                                        id="endTime"
-                                        type="time"
-                                        value={newEvent.endTime}
-                                        onChange={(e) => setNewEvent({ ...newEvent, endTime: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                            </div>
-                            <div className="form-row">
-                                <div className="form-group half">
-                                    <label htmlFor="limit">Límite de personas</label>
-                                    <input
-                                        id="limit"
-                                        type="number"
-                                        placeholder="Sin límite"
-                                        value={newEvent.limit}
-                                        onChange={(e) => setNewEvent({ ...newEvent, limit: e.target.value })}
-                                    />
-                                </div>
-                            </div>
-                            <div className="form-group">
-                                <label htmlFor="location">Lugar</label>
-                                <div className="input-with-icon">
-                                    <span>📍</span>
-                                    <input
-                                        id="location"
-                                        placeholder="Ej: Sala Común"
-                                        value={newEvent.location}
-                                        onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                            </div>
-                            <div className="form-group">
-                                <label htmlFor="photo">URL de la foto</label>
-                                <div className="input-with-icon">
-                                    <span>🖼️</span>
-                                    <input
-                                        id="photo"
-                                        placeholder="https://..."
-                                        value={newEvent.photo}
-                                        onChange={(e) => setNewEvent({ ...newEvent, photo: e.target.value })}
-                                    />
-                                </div>
-                            </div>
-                            <div className="form-group">
-                                <label htmlFor="labels">Etiquetas (separadas por comas)</label>
-                                <div className="input-with-icon">
-                                    <span>🏷️</span>
-                                    <input
-                                        id="labels"
-                                        placeholder="Ej: Juegos, Relax, Social"
-                                        value={newEvent.labels}
-                                        onChange={(e) => setNewEvent({ ...newEvent, labels: e.target.value })}
-                                    />
-                                </div>
-                            </div>
-                            <div className="dialog-footer">
-                                <button type="button" className="btn-secondary" onClick={() => setIsCreateEventOpen(false)}>Cancelar</button>
-                                <button type="submit" className="btn-primary submit-btn">{isEditingEvent ? "Guardar Cambios" : "Publicar Evento"}</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {selectedEvent && (
-                <div className="dialog-overlay" onClick={() => setSelectedEvent(null)}>
-                    <div className="dialog-content event-details-modal" onClick={e => e.stopPropagation()}>
-                        <div className="details-header-image">
-                            <img src={selectedEvent.image_url || "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&q=80&w=400"} alt={selectedEvent.title} />
-                            <div className="close-btn" onClick={() => setSelectedEvent(null)}>✕</div>
-                        </div>
-                        <div className="details-body">
-                            <h2>{selectedEvent.title}</h2>
-                            <p className="details-host">Organizado por {selectedEvent.host?.first_name || 'Usuario'} {selectedEvent.host?.last_name || ''}</p>
-
-                            <div className="details-info-row">
-                                <span>🗓️ {new Date(selectedEvent.start_time).toLocaleString('es-ES', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} - {new Date(selectedEvent.end_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
-                                <span>📍 {selectedEvent.location}</span>
-                            </div>
-
-                            <div className="details-description">
-                                <h3>Acerca de este evento</h3>
-                                <p>{selectedEvent.description}</p>
-                            </div>
-
-                            <div className="details-participants">
-                                <h3>Asistentes ({selectedEvent.participants_count}{selectedEvent.max_participants ? `/${selectedEvent.max_participants}` : ''})</h3>
-                                {participants.length > 0 ? (
-                                    <ul className="participants-list">
-                                        {participants.map((p: any, idx) => (
-                                            <li key={idx} className="participant-item">
-                                                <div className="participant-avatar">{p.user?.first_name?.charAt(0) || 'U'}</div>
-                                                <span>{p.user?.first_name} {p.user?.last_name}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                ) : (
-                                    <p className="no-participants">Aún no hay asistentes o están cargando...</p>
-                                )}
-                            </div>
-                        </div>
-                        <div className="dialog-footer" style={{ padding: '0 24px 24px 24px', margin: 0, flexDirection: 'column', gap: '8px' }}>
-                            {selectedEvent.can_edit && (
-                                <button
-                                    className="btn-secondary"
-                                    style={{ width: '100%' }}
-                                    onClick={() => {
-                                        setNewEvent({
-                                            name: selectedEvent.title,
-                                            description: selectedEvent.description,
-                                            photo: selectedEvent.image_url || "",
-                                            date: selectedEvent.start_time.split('T')[0],
-                                            startTime: new Date(selectedEvent.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
-                                            endTime: new Date(selectedEvent.end_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
-                                            location: selectedEvent.location,
-                                            limit: selectedEvent.max_participants ? selectedEvent.max_participants.toString() : "",
-                                            labels: selectedEvent.tags || "",
-                                        });
-                                        setEditingEventId(selectedEvent.id);
-                                        setIsEditingEvent(true);
-                                        setIsCreateEventOpen(true);
-                                        setSelectedEvent(null);
-                                    }}
-                                >
-                                    Editar Evento
-                                </button>
-                            )}
-                            {new Date(selectedEvent.end_time) < now ? (
-                                <p className="no-participants" style={{ width: '100%', textAlign: 'center' }}>Este evento ya ha finalizado.</p>
-                            ) : selectedEvent.is_joined ? (
-                                <button className="btn-leave" style={{ width: '100%' }} onClick={async () => { await handleLeaveEvent(selectedEvent.id); setSelectedEvent(null); }}>Desapuntarme</button>
-                            ) : (
-                                <button className="btn-join" style={{ width: '100%', justifyContent: 'center' }} onClick={async () => { await handleJoinEvent(selectedEvent.id); setSelectedEvent(null); }}>Apuntarme al Evento</button>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            <div className="events-list">
-                {loading ? (
-                    <p>Cargando eventos...</p>
-                ) : displayedEvents.length === 0 ? (
-                    <p>{activeTab === 'upcoming' ? "No hay eventos próximos." : "No hay eventos pasados."}</p>
-                ) : (
-                    displayedEvents.map((event) => (
-                        <CommunityEvent
-                            key={event.id}
-                            id={event.id}
-                            title={event.title}
-                            date={new Date(event.start_time).toLocaleString('es-ES', {
-                                weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
-                            })}
-                            attendees={event.participants_count}
-                            image={event.image_url || "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&q=80&w=400"}
-                            tags={event.tags}
-                            isJoined={event.is_joined}
-                            isPast={activeTab === 'past'}
-                            onJoin={handleJoinEvent}
-                            onLeave={handleLeaveEvent}
-                            onClick={() => handleOpenDetails(event)}
-                        />
-                    ))
-                )}
-            </div>
-        </div>
-    );
-}
-
-function CommunityEvent({
-    id,
-    title,
-    date,
-    attendees,
-    image,
-    tags,
-    isJoined,
-    isPast,
-    onJoin,
-    onLeave,
-    onClick,
-}: any) {
-    const displayTag = tags ? tags.split(',')[0].trim() : null;
-
-    return (
-        <div className="event-card clickable-card" onClick={onClick}>
-            <div className="event-image-container">
-                <img
-                    src={image}
-                    alt={title}
-                    className="event-image"
+                <EventForm
+                    isEditingEvent={isEditingEvent}
+                    newEvent={newEvent}
+                    setNewEvent={setNewEvent}
+                    handleSaveEvent={handleSaveEvent}
+                    setIsCreateEventOpen={setIsCreateEventOpen}
                 />
-                {displayTag && <div className="event-badge">{displayTag}</div>}
-            </div>
-            <div className="event-content">
-                <h3 className="event-title">{title}</h3>
-                <p className="event-date">{date}</p>
-                <div className="event-footer" onClick={(e) => e.stopPropagation()}>
-                    <div className="event-attendees">
-                        <span className="attendees-text">
-                            +{attendees} {isPast ? 'fueron' : 'van'}
-                        </span>
-                    </div>
-                    {isPast ? (
-                        <div className="event-actions">
-                            <button className="btn-joined" disabled style={{ backgroundColor: '#f1f5f9', color: '#94a3b8', border: 'none' }}>
-                                Finalizado
-                            </button>
-                        </div>
-                    ) : isJoined ? (
-                        <div className="event-actions">
-                            <button
-                                className="btn-joined"
-                                disabled
-                            >
-                                ✓ Apuntado
-                            </button>
-                            <button
-                                className="btn-leave"
-                                onClick={() => onLeave(id)}
-                                title="Desapuntarme"
-                            >
-                                ✕
-                            </button>
-                        </div>
-                    ) : (
-                        <button
-                            className="btn-join"
-                            onClick={() => onJoin(id)}
-                        >
-                            Apuntarme
-                        </button>
-                    )}
-                </div>
-            </div>
+            )}
+
+            <EventDetails
+                selectedEvent={selectedEvent}
+                participants={participants}
+                setSelectedEvent={setSelectedEvent}
+                handleLeaveEvent={handleLeaveEvent}
+                handleJoinEvent={handleJoinEvent}
+                handleDeleteEvent={handleDeleteEvent}
+                onEditEvent={(event) => {
+                    setNewEvent({
+                        name: event.title,
+                        description: event.description,
+                        photo: event.image_url || "",
+                        date: event.start_time.split('T')[0],
+                        startTime: new Date(event.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+                        endTime: new Date(event.end_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+                        location: event.location,
+                        limit: event.max_participants ? event.max_participants.toString() : "",
+                        labels: event.tags || "",
+                    });
+                    setEditingEventId(event.id);
+                    setIsEditingEvent(true);
+                    setIsCreateEventOpen(true);
+                    setSelectedEvent(null);
+                }}
+            />
+
+            {activeTab === 'upcoming' ? (
+                <UpcomingEvents
+                    events={upcomingEvents}
+                    loading={loading}
+                    handleJoinEvent={handleJoinEvent}
+                    handleLeaveEvent={handleLeaveEvent}
+                    handleOpenDetails={handleOpenDetails}
+                />
+            ) : (
+                <PastEvents
+                    events={pastEvents}
+                    loading={loading}
+                    handleJoinEvent={handleJoinEvent}
+                    handleLeaveEvent={handleLeaveEvent}
+                    handleOpenDetails={handleOpenDetails}
+                />
+            )}
         </div>
     );
 }

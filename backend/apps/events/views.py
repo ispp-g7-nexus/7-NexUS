@@ -195,7 +195,7 @@ class EventDetailView(AuthenticatedView):
         if not can_edit:
             return JsonResponse({"detail": "Unauthorized"}, status=403)
         event.delete()
-        return JsonResponse({"detail": "Event deleted"}, status=204)
+        return JsonResponse({"detail": "Event deleted"}, status=200)
 
 class EventJoinView(AuthenticatedView):
     def post(self, request, event_id):
