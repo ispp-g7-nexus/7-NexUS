@@ -154,3 +154,42 @@ class ObjectRentalsView(AuthenticatedView):
                 }
             })
         return JsonResponse(data, safe=False)
+
+
+class UserReservationsView(AuthenticatedView):
+    def get(self, request):
+        if not hasattr(request, 'residence') or not request.residence:
+            return JsonResponse({"detail": "No residence context."}, status=400)
+            
+        # Get all reservations for the current user in this residence
+        rentals = ObjectRental.objects.filter(
+            user=request.user,
+            object__residence=request.residence
+        ).select_related('object')
+        
+        data = []
+        for rental in rentals:
+            data.append({
+                'rental': {
+                    'id': rental.id,
+                    'start_date': rental.start_date.isoformat(),
+                    'end_date': rental.end_date.isoformat(),
+                    'user': {
+                        'id': rental.user.id,
+                        'first_name': rental.user.first_name,
+                        'last_name': rental.user.last_name,
+                    }
+                },
+                'object': {
+                    'id': rental.object.id,
+                    'name': rental.object.name,
+                    'description': rental.object.description,
+                    'location': rental.object.location,
+                    'availability': rental.object.available,
+                    'image_url': rental.object.image_url,
+                    'tags': rental.object.tags,
+                    'rentals_count': rental.object.rentals.count(),
+                    'can_rent': rental.object.can_rent(),
+                }
+            })
+        return JsonResponse(data, safe=False)
