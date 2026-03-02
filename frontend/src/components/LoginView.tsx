@@ -1,8 +1,9 @@
 import { Shield, User } from "lucide-react";
-import { UserRole } from "../App";
 import logo from "../assets/logo.png";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
+
+type UserRole = "student" | "admin";
 
 interface LoginViewProps {
     onSelectRole: (role: UserRole) => void;
