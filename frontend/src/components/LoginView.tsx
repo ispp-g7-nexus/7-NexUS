@@ -1,5 +1,5 @@
 import { Shield, User } from "lucide-react";
-import { UserRole } from "../App";
+type UserRole = 'student' | 'admin' | null;
 import logo from "../assets/logo.png";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
