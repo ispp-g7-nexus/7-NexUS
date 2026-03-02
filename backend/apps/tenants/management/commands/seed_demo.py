@@ -203,7 +203,59 @@ class Command(BaseCommand):
                 defaults={"is_active": True},
             )
 
+            # Crear datos de ejemplo para Habitaciones, Residentes y Asignaciones
+            from apps.residences.models import Habitacion, Residente, AsignacionHabitacion
+
+            # Crear habitaciones de ejemplo
+            habitaciones_data = [
+                {"numero": "101", "piso": 1, "tipo": "IND", "capacidad_maxima": 1},
+                {"numero": "102", "piso": 1, "tipo": "COMP", "capacidad_maxima": 2},
+                {"numero": "103", "piso": 1, "tipo": "COMP", "capacidad_maxima": 2},
+                {"numero": "201", "piso": 2, "tipo": "IND", "capacidad_maxima": 1},
+                {"numero": "202", "piso": 2, "tipo": "COMP", "capacidad_maxima": 3},
+                {"numero": "203", "piso": 2, "tipo": "IND", "capacidad_maxima": 1},
+            ]
+
+            habitaciones = {}
+            for hab_data in habitaciones_data:
+                hab, _ = Habitacion.objects.update_or_create(
+                    residence=residence,
+                    numero=hab_data["numero"],
+                    defaults={
+                        "piso": hab_data["piso"],
+                        "tipo": hab_data["tipo"],
+                        "capacidad_maxima": hab_data["capacidad_maxima"],
+                        "is_active": True,
+                    },
+                )
+                habitaciones[hab_data["numero"]] = hab
+
+            # Crear perfil de residente para el estudiante demo
+            residente_demo, _ = Residente.objects.update_or_create(
+                user=student_user,
+                defaults={
+                    "residence": residence,
+                    "genero": "M",
+                    "fecha_nacimiento": timezone.now().date() - timedelta(days=365 * 20),  # 20 años
+                    "telefono": "+34 600 123 456",
+                    "fecha_ingreso": timezone.now().date() - timedelta(days=30),  # Ingresó hace 30 días
+                    "is_active": True,
+                },
+            )
+
+            # Asignar al residente demo a una habitación
+            AsignacionHabitacion.objects.update_or_create(
+                residente=residente_demo,
+                estado=AsignacionHabitacion.Estado.ACTIVA,
+                defaults={
+                    "habitacion": habitaciones["102"],
+                    "fecha_inicio": timezone.now().date() - timedelta(days=30),
+                },
+            )
+
         self.stdout.write(self.style.SUCCESS("Seed demo aplicado correctamente."))
         self.stdout.write(f"Tenant domain: {domain}")
         self.stdout.write(f"Admin demo: {admin_email} / {demo_password}")
         self.stdout.write(f"Estudiante demo: {student_email} / {demo_password}")
+        self.stdout.write(f"Habitaciones creadas: {len(habitaciones_data)}")
+        self.stdout.write(f"Residente asignado a habitación 102")
