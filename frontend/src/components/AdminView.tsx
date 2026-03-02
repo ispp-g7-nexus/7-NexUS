@@ -1,6 +1,8 @@
 import { AlertCircle, Bell, LayoutDashboard, LogOut, Menu, Users, Calendar } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Events } from "../pages/Events/Events";
+import { GestionResidencias } from "../pages/GestionResidencias";
 import logo from "../assets/logo.png";
 import { Button } from "./ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
@@ -11,26 +13,57 @@ interface AdminViewProps {
 }
 
 type AdminTab = "dashboard" | "rooms" | "students" | "incidences" | "reservations" | "kitchen" | "analytics" | "staff" | "announcements" | "visitors" | "events";
+type NavItemId = "dashboard" | "students" | "incidences" | "events";
+
+const NAV_ITEMS: Array<{ id: NavItemId; label: string; icon: JSX.Element }> = [
+    { id: "dashboard", label: "Panel de Control", icon: <LayoutDashboard className="w-5 h-5" /> },
+    { id: "students", label: "Residentes", icon: <Users className="w-5 h-5" /> },
+    { id: "incidences", label: "Incidencias", icon: <AlertCircle className="w-5 h-5" /> },
+    { id: "events", label: "Eventos & Comunidad", icon: <Calendar className="w-5 h-5" /> },
+];
 
 export function AdminView({ onLogout }: AdminViewProps) {
+    const navigate = useNavigate();
+    const location = useLocation();
     const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
-    const [notifications, setNotifications] = useState([{ id: 1, title: "Nueva reserva", message: "Sala reservada", time: "Hace 5 min", read: false }]);
+    const [notifications] = useState([{ id: 1, title: "Nueva reserva", message: "Sala reservada", time: "Hace 5 min", read: false }]);
 
-    const allNavItems = [
-        { id: "dashboard", label: "Panel de Control", icon: <LayoutDashboard className="w-5 h-5" /> },
-        { id: "students", label: "Residentes", icon: <Users className="w-5 h-5" /> },
-        { id: "incidences", label: "Incidencias", icon: <AlertCircle className="w-5 h-5" /> },
-        { id: "events", label: "Eventos & Comunidad", icon: <Calendar className="w-5 h-5" /> },
-    ];
+    const currentTab = NAV_ITEMS.find((item) => item.id === activeTab) || NAV_ITEMS[0];
 
-    const currentTab = allNavItems.find((item) => item.id === activeTab) || allNavItems[0];
+    useEffect(() => {
+        const requestedTab = new URLSearchParams(location.search).get("tab");
+        if (!requestedTab) return;
+
+        if (requestedTab === "dashboard" || requestedTab === "students" || requestedTab === "incidences" || requestedTab === "events") {
+            setActiveTab(requestedTab);
+        }
+    }, [location.search, navigate]);
+
+    const handleNavClick = (tabId: string) => {
+        if (tabId === "students") {
+            navigate("/dashboard?tab=students", { replace: true });
+            setActiveTab("students");
+            return;
+        }
+
+        if (tabId === "dashboard") {
+            navigate("/dashboard", { replace: true });
+            setActiveTab("dashboard");
+            return;
+        }
+
+        if (tabId === "incidences" || tabId === "events") {
+            navigate(`/dashboard?tab=${tabId}`, { replace: true });
+            setActiveTab(tabId);
+        }
+    };
 
     return (
         <div className="min-h-screen flex flex-col w-full bg-background relative">
             <header className="bg-card border-b border-border px-4 py-3 sticky top-0 z-10">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <button onClick={() => setActiveTab("dashboard")} className="w-9 h-9 flex items-center justify-center">
+                        <button onClick={() => handleNavClick("dashboard")} className="w-9 h-9 flex items-center justify-center">
                             <img src={logo} alt="NexUS Logo" className="w-full h-full object-contain" />
                         </button>
                         <div>
@@ -59,9 +92,9 @@ export function AdminView({ onLogout }: AdminViewProps) {
                             <SheetContent side="right" className="w-72 flex flex-col">
                                 <SheetHeader><SheetTitle>Menú</SheetTitle><SheetDescription className="sr-only">Navegación</SheetDescription></SheetHeader>
                                 <div className="mt-6 space-y-2 flex-1">
-                                    {allNavItems.map((item) => (
+                                    {NAV_ITEMS.map((item) => (
                                         <SheetTrigger key={item.id} asChild>
-                                            <button onClick={() => setActiveTab(item.id as AdminTab)} className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-600 hover:bg-gray-50 rounded-xl">
+                                            <button onClick={() => handleNavClick(item.id)} className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-600 hover:bg-gray-50 rounded-xl">
                                                 {item.icon} {item.label}
                                             </button>
                                         </SheetTrigger>
@@ -79,7 +112,9 @@ export function AdminView({ onLogout }: AdminViewProps) {
             </header>
 
             <div className="flex-1 overflow-y-auto p-4">
-                {activeTab === "events" ? (
+                {activeTab === "students" ? (
+                    <GestionResidencias embedded />
+                ) : activeTab === "events" ? (
                     <Events />
                 ) : (
                     <div className="bg-white p-6 rounded-xl text-center text-gray-500 shadow-sm">
