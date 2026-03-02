@@ -1,0 +1,99 @@
+name: SonarCloud
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  sonarcloud:
+    name: SonarCloud analysis
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    env:
+      DJANGO_SETTINGS_MODULE: config.settings.local
+      DJANGO_SECRET_KEY: ci-secret-key
+      DJANGO_DEBUG: "1"
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,backend,nginx,.nexus.local
+      DJANGO_CSRF_TRUSTED_ORIGINS: http://localhost,http://127.0.0.1
+      POSTGRES_DB: nexus
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      SONAR_HOST_URL: https://sonarcloud.io
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements/local.txt
+          pip install pytest pytest-cov coverage
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Generate backend coverage report (if tests exist)
+        shell: bash
+        run: |
+          if find backend -type f \( -name "test*.py" -o -name "*_test.py" \) | grep -q .; then
+            pytest backend --cov=backend --cov-report=xml:backend/coverage.xml
+          else
+            echo "No backend tests found. Skipping backend coverage report."
+          fi
+
+      - name: Generate frontend coverage report (if coverage script exists)
+        shell: bash
+        run: |
+          if node -e "const p=require('./frontend/package.json');process.exit(p.scripts && p.scripts['test:coverage'] ? 0 : 1)"; then
+            npm --prefix frontend run test:coverage
+          elif node -e "const p=require('./frontend/package.json');process.exit(p.scripts && p.scripts.test ? 0 : 1)"; then
+            npm --prefix frontend run test -- --coverage
+          else
+            echo "No frontend test script found. Skipping frontend coverage report."
+          fi
+
+      - name: SonarCloud scan
+        uses: SonarSource/sonarqube-scan-action@v5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: >
+            -Dsonar.projectKey=${{ vars.SONAR_PROJECT_KEY }}
+            -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
+
+      - name: SonarCloud Quality Gate
+        uses: SonarSource/sonarqube-quality-gate-action@v1.2.0
+        timeout-minutes: 5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
+        with:
+          scanMetadataReportFile: .scannerwork/report-task.txt
