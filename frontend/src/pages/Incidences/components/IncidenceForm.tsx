@@ -6,7 +6,7 @@ import { Button } from "../../../components/ui/button"
 import { Input } from "../../../components/ui/input"
 import { Label } from "../../../components/ui/label"
 import { Checkbox } from "../../../components/ui/checkbox"
-import { Select} from "../../../components/ui/select"
+import { Select, SelectContent, SelectTrigger, SelectItem, SelectValue} from "../../../components/ui/select2"
 import { DialogDescription } from "../../../components/ui/dialog"
 import { fetchWithAuth, API_URL_INCIDENCES } from "../../../utils/api"
 //import {API_URL_INCIDENCES } from "../../../utils/api"
@@ -88,17 +88,18 @@ export function IncidenceForm({ onSuccess, onClose }: IncidenceFormProps) {
           />
         </div>
 
-        <div className="space-y-1.5">
+                <div className="space-y-1.5">
           <Label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Área</Label>
-          <Select 
-            required
-            onChange={(e) => setLocationType(e.target.value)}
-          >
-            <option value="" disabled>Selecciona lugar</option>
-            <option value="habitacion">Mi Habitación</option>
-            <option value="baño">Baños Comunes</option>
-            <option value="cocina">Cocina</option>
-            <option value="zonas_comunes">Zonas Comunes</option>
+          <Select onValueChange={setLocationType} required>
+            <SelectTrigger className="bg-gray-50 border-none rounded-2xl h-14 px-4 text-gray-600 focus:ring-[#82D14C]">
+              <SelectValue placeholder="Selecciona el área" />
+            </SelectTrigger>
+            <SelectContent className="rounded-2xl shadow-xl">
+              <SelectItem value="habitacion">Mi Habitación</SelectItem>
+              <SelectItem value="baño">Baño Común</SelectItem>
+              <SelectItem value="cocina">Cocina</SelectItem>
+              <SelectItem value="zonas_comunes">Zonas Comunes</SelectItem>
+            </SelectContent>
           </Select>
           
           {locationType === "habitacion" && (
