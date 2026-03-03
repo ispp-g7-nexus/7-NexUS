@@ -56,7 +56,7 @@ export const AdminIncidences = () => {
         </div>
       </header>
 
-      {/* Inputs (UI de tu compañera, pero maquetado por ti) */}
+      {/* Inputs (UI de tu compañera) */}
       <div className="space-y-3 mb-6">
         <div className="relative">
           <Search className="absolute left-3 top-3 text-slate-400" size={18} />

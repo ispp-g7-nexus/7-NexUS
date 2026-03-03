@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { 
-  FileText, MapPin, Clock, CheckCircle2, Plus, Bell, Home, Calendar, Users, MessageSquare 
+ Clock, CheckCircle2, Plus, Bell, 
 } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent } from "../../../components/ui/card";
