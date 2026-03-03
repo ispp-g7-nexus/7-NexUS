@@ -13,7 +13,8 @@ from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
 from apps.common.utils.jwt_auth import resolve_user_from_request
-from apps.residences.models import Membership, Residence
+from apps.membership.models import Membership
+from apps.residences.models import Residence
 
 from .models import CommonSpace, SpaceReservation
 
