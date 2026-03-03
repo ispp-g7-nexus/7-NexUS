@@ -53,7 +53,7 @@ def residence_access_required(*allowed_roles: str):
     def _decorator(view_func: Callable):
         @functools.wraps(view_func)
         def _wrapped_view(request, *args, **kwargs):
-            from apps.residences.models import Membership
+            from apps.membership.models import Membership
 
             tenant = getattr(request, "tenant", None)
             if not tenant or getattr(tenant, "schema_name", "public") == "public":
