@@ -13,6 +13,9 @@ class IsStaffOrReadOnly(permissions.BasePermission):
         if not user_data:
             return False
 
+        if getattr(view, "action", None) in {"mark_as_viewed"}:
+            return True
+
         if request.method in permissions.SAFE_METHODS:
             return True
 

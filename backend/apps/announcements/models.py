@@ -92,3 +92,28 @@ class Announcement(models.Model):
             return self.announcement_date < today
         return False
 
+
+class AnnouncementView(models.Model):
+    """Registro de visualización de avisos por usuario."""
+
+    announcement = models.ForeignKey(
+        Announcement,
+        on_delete=models.CASCADE,
+        related_name='views',
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='announcement_views',
+    )
+    viewed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('announcement', 'user')
+        indexes = [
+            models.Index(fields=['user', 'viewed_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.user} viewed {self.announcement_id}"
+
