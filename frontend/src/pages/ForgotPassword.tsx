@@ -34,12 +34,12 @@ export function ForgotPassword() {
                             onChange={(e) => setEmail(e.target.value)}
                             required
                         />
-                        <Button type="submit" className="w-full bg-[#1B5E20] hover:bg-[#144a19] text-white">
+                        <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-white">
                             Enviar enlace
                         </Button>
                     </form>
                     <div className="text-center mt-4">
-                        <Link to="/" className="text-sm text-[#35C759] hover:underline">Volver al login</Link>
+                        <Link to="/" className="text-sm text-ring hover:underline">Volver al login</Link>
                     </div>
                 </CardContent>
             </Card>

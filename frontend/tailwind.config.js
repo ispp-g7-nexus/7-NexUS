@@ -45,6 +45,7 @@ export default {
           DEFAULT: "hsl(var(--primary-brand))",
           dark: "hsl(var(--primary-brand-dark))",
         },
+        "secondary-brand": "hsl(var(--secondary-brand))",
         "accent-brand": "hsl(var(--accent-brand))",
       },
       borderRadius: {

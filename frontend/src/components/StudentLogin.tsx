@@ -74,15 +74,15 @@ export function StudentLogin({ onLogin, onBack }: StudentLoginProps) {
 
                             <div className="flex items-center justify-between text-sm">
                                 <label className="flex items-center gap-2 cursor-pointer">
-                                    <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-[#509550] focus:ring-[#509550]" />
-                                    <span className="text-gray-600">Recordarme</span>
+                                    <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-primary-brand focus:ring-primary-brand" />
+                                    <span className="text-gray-600">Mantener sesión</span>
                                 </label>
-                                <Link to="/forgot-password" className="text-[#509550] hover:text-[#3d7a3d] font-medium">
+                                <Link to="/forgot-password" className="text-primary-brand hover:text-primary-brand-dark font-medium">
                                     ¿Olvidaste tu contraseña?
                                 </Link>
                             </div>
 
-                            <Button type="submit" disabled={isLoading} className="w-full h-14 text-lg bg-[#509550] hover:bg-[#3d7a3d] text-white shadow-md transition-all">
+                            <Button type="submit" disabled={isLoading} className="w-full h-14 text-lg bg-primary-brand hover:bg-primary-brand-dark text-white shadow-md transition-all">
                                 {isLoading ? "Iniciando sesión..." : <><User className="mr-3 w-5 h-5" /> Iniciar Sesión</>}
                             </Button>
                         </form>
