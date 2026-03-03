@@ -27,6 +27,9 @@ class Command(BaseCommand):
             "--student-email", default=None, help="Email del estudiante demo."
         )
         parser.add_argument(
+            "--student2-email", default=None, help="Email del segundo estudiante demo."
+        )
+        parser.add_argument(
             "--password", default=None, help="Contrasena para ambos usuarios demo."
         )
 
@@ -103,6 +106,12 @@ class Command(BaseCommand):
             "student_email",
             "DEMO_STUDENT_EMAIL",
             f"estudiante@{domain}",
+        ).lower()
+        student2_email = self._env_or_option(
+            options,
+            "student2_email",
+            "DEMO_STUDENT_2_EMAIL",
+            f"estudiante2@{domain}",
         ).lower()
         demo_password = self._env_or_option(
             options, "password", "DEMO_USERS_PASSWORD", "demo1234"
