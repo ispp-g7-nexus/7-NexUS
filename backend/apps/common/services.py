@@ -6,11 +6,15 @@ from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
+from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.encoding import force_bytes, force_str
+from django.utils.html import strip_tags
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+from rest_framework import authentication
+from rest_framework.exceptions import AuthenticationFailed
 
-from apps.residences.models import Membership
+from apps.membership.models import Membership
 
 UserModel = get_user_model()
 
@@ -40,27 +44,24 @@ def authenticate_user(request, identity: str, password: str):
 
 
 def has_access_for_portal(user, portal: str, residence):
+    """
+    Verifica si el usuario tiene acceso al portal solicitado basándose en el nuevo modelo dinámico de Roles.
+    """
     memberships = Membership.objects.filter(user=user, is_active=True)
 
     if portal == "student":
         if residence:
             return memberships.filter(
-                role=Membership.Role.RESIDENT, residence=residence
+                role__name__iexact="Student", residence=residence
             ).exists()
-        return memberships.filter(role=Membership.Role.RESIDENT).exists()
+        return memberships.filter(role__name__iexact="Student").exists()
 
     if portal == "admin":
-        if memberships.filter(role=Membership.Role.PORTFOLIO_ADMIN).exists():
-            return True
+        admin_memberships = memberships.exclude(role__name__iexact="Student")
+
         if residence:
-            # Incluimos STAFF como hicimos en la tarea anterior
-            return memberships.filter(
-                role__in=[Membership.Role.RESIDENCE_ADMIN, Membership.Role.STAFF],
-                residence=residence,
-            ).exists()
-        return memberships.filter(
-            role__in=[Membership.Role.RESIDENCE_ADMIN, Membership.Role.STAFF]
-        ).exists()
+            return admin_memberships.filter(residence=residence).exists()
+        return admin_memberships.exists()
 
     return False
 
@@ -72,7 +73,7 @@ def build_access_token(user, tenant, residence):
 
     roles = list(
         Membership.objects.filter(user=user, is_active=True)
-        .values_list("role", flat=True)
+        .values_list("role__name", flat=True)
         .distinct()
     )
 
@@ -114,10 +115,15 @@ def process_password_reset_request(email: str, request):
         scheme = request.scheme
         reset_link = f"{scheme}://{domain}/reset-password?uid={uid}&token={token}"
 
+        html_message = render_to_string(
+            "password_reset_email.html", {"reset_link": reset_link}
+        )
+        plain_message = strip_tags(html_message)
         try:
             send_mail(
                 subject="Recuperación de contraseña en NexUS",
-                message=f"Para restablecer tu contraseña, haz clic en el siguiente enlace:\n\n{reset_link}\n\nSi no has solicitado este cambio, puedes ignorar este correo de forma segura.",
+                message=plain_message,
+                html_message=html_message,
                 from_email=getattr(
                     settings, "DEFAULT_FROM_EMAIL", "nbynexus@gmail.com"
                 ),
@@ -143,3 +149,49 @@ def process_password_reset_confirm(uid: str, token: str, new_password: str):
         return True, "Tu contraseña se ha actualizado correctamente."
 
     return False, "El enlace de recuperación es inválido o ha expirado."
+
+
+class CustomJWTAuthentication(authentication.BaseAuthentication):
+    """
+    Clase para que DRF entienda los tokens generados por build_access_token.
+    """
+
+    def authenticate(self, request):
+        token = None
+        auth_header = request.headers.get("Authorization")
+
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ")[1]
+        else:
+            token = request.COOKIES.get(
+                getattr(settings, "JWT_ACCESS_COOKIE_NAME", "access_token")
+            )
+
+        if not token:
+            return None
+
+        try:
+            payload = jwt.decode(
+                token,
+                settings.JWT_SIGNING_KEY,
+                algorithms=[settings.JWT_ALGORITHM],
+                audience=getattr(settings, "JWT_AUDIENCE", None),
+            )
+        except Exception:
+            raise AuthenticationFailed("Token inválido o ha expirado.")
+
+        try:
+            user = UserModel.objects.get(pk=payload.get("user_id"))
+        except UserModel.DoesNotExist:
+            raise AuthenticationFailed("El usuario del token no existe.")
+
+        residence_id = payload.get("residence_id")
+        if residence_id and getattr(request, "residence", None) is None:
+            from apps.residences.models import Residence
+
+            try:
+                request.residence = Residence.objects.get(pk=residence_id)
+            except Residence.DoesNotExist:
+                pass
+
+        return (user, token)
