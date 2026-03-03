@@ -9,7 +9,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('residences', '0001_initial'),
+        ('membership', '0001_initial'),
     ]
 
     operations = [
@@ -24,7 +24,7 @@ class Migration(migrations.Migration):
                 ('is_completed', models.BooleanField(default=False, help_text='Whether the resident has completed their preference form')),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
-                ('membership', models.OneToOneField(limit_choices_to={'role': 'resident'}, on_delete=django.db.models.deletion.CASCADE, related_name='resident_preferences', to='residences.membership')),
+                ('membership', models.OneToOneField(limit_choices_to={'role': 'resident'}, on_delete=django.db.models.deletion.CASCADE, related_name='resident_preferences', to='membership.membership')),
             ],
             options={
                 'verbose_name': 'Resident Preference',

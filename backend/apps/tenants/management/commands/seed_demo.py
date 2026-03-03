@@ -23,9 +23,15 @@ class Command(BaseCommand):
             "--tenant-name", default=None, help="Nombre del tenant demo."
         )
         parser.add_argument("--admin-email", default=None, help="Email del admin demo.")
-        parser.add_argument("--student-email", default=None, help="Email del estudiante demo.")
-        parser.add_argument("--student2-email", default=None, help="Email del segundo estudiante demo.")
-        parser.add_argument("--password", default=None, help="Contrasena para ambos usuarios demo.")
+        parser.add_argument(
+            "--student-email", default=None, help="Email del estudiante demo."
+        )
+        parser.add_argument(
+            "--student2-email", default=None, help="Email del segundo estudiante demo."
+        )
+        parser.add_argument(
+            "--password", default=None, help="Contrasena para ambos usuarios demo."
+        )
 
     def _env_or_option(self, options, option_key, env_key, default):
         option_value = options.get(option_key)
@@ -107,7 +113,9 @@ class Command(BaseCommand):
             "DEMO_STUDENT_2_EMAIL",
             f"estudiante2@{domain}",
         ).lower()
-        demo_password = self._env_or_option(options, "password", "DEMO_USERS_PASSWORD", "demo1234")
+        demo_password = self._env_or_option(
+            options, "password", "DEMO_USERS_PASSWORD", "demo1234"
+        )
 
         plan, _ = Plan.objects.update_or_create(
             code="demo",
@@ -260,7 +268,7 @@ class Command(BaseCommand):
             )
             Membership.objects.update_or_create(
                 user=student2_user,
-                role=Membership.Role.RESIDENT,
+                role=student_role,
                 residence=residence,
                 defaults={"is_active": True},
             )

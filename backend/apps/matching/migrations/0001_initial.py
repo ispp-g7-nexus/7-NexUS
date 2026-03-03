@@ -44,7 +44,7 @@ class Migration(migrations.Migration):
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
                         related_name="compatibilities_as_source",
-                        to="residences.membership",
+                        to="membership.Membership",
                     ),
                 ),
                 (
@@ -52,7 +52,7 @@ class Migration(migrations.Migration):
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
                         related_name="compatibilities_as_target",
-                        to="residences.membership",
+                        to="membership.Membership",
                     ),
                 ),
             ],
