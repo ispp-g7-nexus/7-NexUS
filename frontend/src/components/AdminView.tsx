@@ -1,23 +1,23 @@
-import { AlertCircle, Bell, LayoutDashboard, LogOut, Menu, Users, Calendar, Home, Shield } from "lucide-react";
+import { AlertCircle, Bell, Calendar, Home, LayoutDashboard, LogOut, Menu, Shield, User, Users } from "lucide-react";
 import { useState } from "react";
 import logo from "../assets/logo.png";
+
 import { Events } from "../pages/Events/Events";
-import Rooms from "../pages/Rooms/Rooms";
 import { AdminIncidences } from "../pages/Incidences/components/AdminIncidences";
 import { Residents } from "../pages/Residents/Residents";
+import RolesPage from "../pages/RolesPage";
+import Rooms from "../pages/Rooms/Rooms";
+import { AdminAnnouncements } from "../pages/announcements/AdminAnnouncements";
+import { AdminProfile } from "./AdminProfile";
 import { Button } from "./ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet";
-
-// Importamos la página que acabamos de crear
-import RolesPage from "../pages/RolesPage";
-import { AdminAnnouncements } from "../pages/announcements/AdminAnnouncements";
 
 interface AdminViewProps {
     onLogout: () => void;
 }
 
-type AdminTab = "dashboard" | "rooms" | "students" | "incidences" | "reservations" | "kitchen" | "analytics" | "staff" | "announcements" | "visitors" | "events" | "roles";
+type AdminTab = "dashboard" | "rooms" | "students" | "incidences" | "reservations" | "kitchen" | "analytics" | "staff" | "announcements" | "visitors" | "events" | "roles" | "profile";
 
 export function AdminView({ onLogout }: AdminViewProps) {
     const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
@@ -25,6 +25,7 @@ export function AdminView({ onLogout }: AdminViewProps) {
 
     const allNavItems = [
         { id: "dashboard", label: "Panel de Control", icon: <LayoutDashboard className="w-5 h-5" /> },
+        { id: "profile", label: "Mi Perfil", icon: <User className="w-5 h-5" /> },
         { id: "rooms", label: "Habitaciones", icon: <Home className="w-5 h-5" /> },
         { id: "students", label: "Residentes", icon: <Users className="w-5 h-5" /> },
         { id: "incidences", label: "Incidencias", icon: <AlertCircle className="w-5 h-5" /> },
@@ -39,6 +40,9 @@ export function AdminView({ onLogout }: AdminViewProps) {
         switch (activeTab) {
             case "roles":
                 return <RolesPage />;
+
+            case "profile":
+                return <AdminProfile />;
 
             case "announcements":
                 return (
@@ -60,6 +64,7 @@ export function AdminView({ onLogout }: AdminViewProps) {
                         <Residents />
                     </div>
                 );
+
             case "rooms":
                 return (
                     <div className="p-4">
@@ -117,11 +122,20 @@ export function AdminView({ onLogout }: AdminViewProps) {
                                 </Button>
                             </SheetTrigger>
                             <SheetContent side="right" className="w-72 flex flex-col">
-                                <SheetHeader><SheetTitle>Menú</SheetTitle><SheetDescription className="sr-only">Navegación</SheetDescription></SheetHeader>
+                                <SheetHeader>
+                                    <SheetTitle>Menú</SheetTitle>
+                                    <SheetDescription className="sr-only">Navegación</SheetDescription>
+                                </SheetHeader>
                                 <div className="mt-6 space-y-2 flex-1">
                                     {allNavItems.map((item) => (
                                         <SheetTrigger key={item.id} asChild>
-                                            <button onClick={() => setActiveTab(item.id as AdminTab)} className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-600 hover:bg-gray-50 rounded-xl">
+                                            <button
+                                                onClick={() => setActiveTab(item.id as AdminTab)}
+                                                className={`w-full flex items-center gap-3 px-4 py-3 text-sm rounded-xl transition-colors ${activeTab === item.id
+                                                    ? 'bg-green-50 text-green-700 font-medium'
+                                                    : 'text-gray-600 hover:bg-gray-50'
+                                                    }`}
+                                            >
                                                 {item.icon} {item.label}
                                             </button>
                                         </SheetTrigger>
@@ -138,7 +152,7 @@ export function AdminView({ onLogout }: AdminViewProps) {
                 </div>
             </header>
 
-            <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex-1 overflow-y-auto">
                 {renderContent()}
             </div>
         </div>
