@@ -6,6 +6,7 @@ import logo from "../assets/logo.png";
 import { Button } from "./ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet";
+import { AdminAnnouncements } from "../pages/announcements/AdminAnnouncements";
 
 interface AdminViewProps {
     onLogout: () => void;
@@ -22,9 +23,27 @@ export function AdminView({ onLogout }: AdminViewProps) {
         { id: "students", label: "Residentes", icon: <Users className="w-5 h-5" /> },
         { id: "incidences", label: "Incidencias", icon: <AlertCircle className="w-5 h-5" /> },
         { id: "events", label: "Eventos & Comunidad", icon: <Calendar className="w-5 h-5" /> },
+        { id: "announcements", label: "Avisos", icon: <Bell className="w-5 h-5" /> },
     ];
 
     const currentTab = allNavItems.find((item) => item.id === activeTab) || allNavItems[0];
+
+    const renderContent = () => {
+        switch (activeTab) {
+            case "announcements":
+                return <AdminAnnouncements />;
+            case "events":
+                return <Events />;
+            case "students":
+                return <Residents />;
+            default:
+                return (
+                    <div className="bg-white p-6 rounded-xl text-center text-gray-500 shadow-sm">
+                        Vista de {currentTab.label} en construcción
+                    </div>
+                );
+        }
+    };
 
     return (
         <div className="min-h-screen flex flex-col w-full bg-background relative">
@@ -80,15 +99,7 @@ export function AdminView({ onLogout }: AdminViewProps) {
             </header>
 
             <div className="flex-1 overflow-y-auto p-4">
-                {activeTab === "events" ? (
-                    <Events />
-                ) : activeTab === "students" ? (
-                    <Residents />
-                ) : (
-                    <div className="bg-white p-6 rounded-xl text-center text-gray-500 shadow-sm">
-                        Vista de {currentTab.label} en construcción
-                    </div>
-                )}
+                {renderContent()}
             </div>
         </div>
     );
