@@ -34,7 +34,7 @@ class Migration(migrations.Migration):
                 ('is_completed', models.BooleanField(default=False, help_text='Whether the resident has completed their preference form')),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
-                ('membership', models.OneToOneField(limit_choices_to={'role__name__iexact': 'Student'}, on_delete=django.db.models.deletion.CASCADE, related_name='resident_preferences', to='membership.membership')),
+                ('membership', models.OneToOneField(limit_choices_to={'role': 'resident'}, on_delete=django.db.models.deletion.CASCADE, related_name='resident_preferences', to='membership.Membership')),
             ],
             options={
                 'verbose_name': 'Resident Preference',
