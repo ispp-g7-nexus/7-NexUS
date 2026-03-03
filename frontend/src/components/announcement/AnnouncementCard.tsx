@@ -44,15 +44,15 @@ export function AnnouncementCard({
   return (
     <div
       onClick={handleClick}
-      className={`rounded-2xl overflow-hidden shadow-sm border hover:shadow-md transition-all cursor-pointer ${
+      className={`h-full rounded-2xl overflow-hidden shadow-sm border hover:shadow-md transition-all cursor-pointer ${
         announcement.has_passed ? 'bg-slate-100 border-slate-300' : 'bg-card border-emerald-200'
       } ${
         announcement.has_passed ? 'opacity-60' : ''
       }`}
     >
-      <div className="p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
+      <div className="p-3 md:p-4 h-full">
+        <div className="flex items-start justify-between gap-3 h-full">
+          <div className="flex-1 min-w-0 flex flex-col h-full">
             <div className="flex items-center gap-2 mb-2">
               <Badge
                 variant={config.color}
@@ -67,13 +67,13 @@ export function AnnouncementCard({
                 </Badge>
               )}
             </div>
-            <h3 className="font-bold text-card-foreground text-lg mb-2 line-clamp-2">
+            <h3 className="font-bold text-card-foreground text-base md:text-lg mb-1.5 line-clamp-2">
               {announcement.title}
             </h3>
-            <p className="text-sm text-muted-foreground mb-3 line-clamp-3">
+            <p className="text-sm text-muted-foreground mb-2.5">
               {announcement.description}
             </p>
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <div className="flex items-center gap-3 text-xs text-muted-foreground mt-auto pt-2">
               <span className="flex items-center gap-1">
                 <Calendar className="w-3.5 h-3.5" />
                 {new Date(announcement.announcement_date).toLocaleDateString('es-ES', { 

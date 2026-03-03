@@ -238,7 +238,7 @@ export function AdminAnnouncements() {
       </div>
 
       {/* Lista de avisos */}
-      <div className="px-4 pb-6 space-y-3">
+      <div className="px-4 pb-6">
         {loading && (
           <div className="flex justify-center items-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -257,15 +257,19 @@ export function AdminAnnouncements() {
           </div>
         )}
 
-        {!loading && !error && announcements.map((announcement) => (
-          <AnnouncementCard
-            key={announcement.id}
-            announcement={announcement}
-            showControls={true}
-            onEdit={() => openEditDialog(announcement)}
-            onDelete={() => openDeleteDialog(announcement)}
-          />
-        ))}
+        {!loading && !error && announcements.length > 0 && (
+          <div className="grid items-stretch grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+            {announcements.map((announcement) => (
+              <AnnouncementCard
+                key={announcement.id}
+                announcement={announcement}
+                showControls={true}
+                onEdit={() => openEditDialog(announcement)}
+                onDelete={() => openDeleteDialog(announcement)}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Form Crear Aviso */}
