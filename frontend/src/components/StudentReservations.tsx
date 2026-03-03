@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { MapPin } from "lucide-react";
 import { Objects } from "../pages/Objects/Objects";
 import { MyReservations } from "../pages/Objects/components/MyReservations";
+import { Reservations } from "../pages/Reservations/Reservations";
 import { objectsService, UserObjectReservation } from "../services/objects";
 
 export function StudentReservations() {
@@ -72,11 +72,8 @@ export function StudentReservations() {
         {/* Tab Content */}
         <div className="min-h-[500px]">
           {activeTab === "espacios" && (
-            <div className="flex items-center justify-center h-64 px-4">
-              <div className="text-center">
-                <MapPin className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground">Reserva de espacios próximamente</p>
-              </div>
+            <div className="h-full">
+              <Reservations />
             </div>
           )}
           

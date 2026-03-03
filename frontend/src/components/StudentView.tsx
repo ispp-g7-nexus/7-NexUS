@@ -2,7 +2,6 @@ import { motion } from "framer-motion";
 import { AlertCircle, Calendar, HeartHandshake, Home, MessageSquare, User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Events } from "../pages/Events/Events";
-import { Reservations } from "../pages/Reservations/Reservations";
 import { StudentReservations } from "./StudentReservations";
 import { StudentAnnouncements } from "../pages/announcements/StudentAnnouncements";
 import announcementService from "../services/announcement.service";
@@ -100,7 +99,7 @@ export function StudentView({ onLogout }: StudentViewProps) {
         switch (activeTab) {
             case "home": return <StudentHome onNavigate={handleNavigation} onLogout={onLogout} />;
             case "incidences": return <StudentIncidences />;
-            case "reservations": return <Reservations />;
+            case "reservations": return <StudentReservations />;
             case "community": return <Events />;
             case "matches": return <MyMatchesPage />;
             case "announcements": return <StudentAnnouncements />;
