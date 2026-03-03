@@ -91,10 +91,6 @@ export function StudentView({ onLogout }: StudentViewProps) {
         };
     }, [activeTab]);
 
-    const handleNavigation = (view: StudentTab) => {
-        setActiveTab(view);
-    };
-
     const renderContent = () => {
         switch (activeTab) {
             case "home": return <StudentHome onLogout={onLogout} />;
