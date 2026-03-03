@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { AlertCircle, Calendar, Home, MessageSquare, User } from "lucide-react";
 import { useState } from "react";
 import { Events } from "../pages/Events/Events";
+import { StudentAnnouncements } from "../pages/announcements/StudentAnnouncements";
 
 interface StudentViewProps {
     onLogout: () => void;
@@ -22,6 +23,7 @@ export function StudentView({ onLogout }: StudentViewProps) {
             case "incidences": return <StudentIncidences />;
             case "reservations": return <StudentReservations />;
             case "community": return <Events />;
+            case "announcements": return <StudentAnnouncements />;
             default: return <div className="p-8 text-center text-gray-500">Módulo en construcción</div>;
         }
     };
@@ -58,7 +60,12 @@ function NavButton({ icon, label, active, onClick }: { icon: React.ReactNode, la
     );
 }
 
+interface StudentHomeProps {
+    onNavigate: (view: string) => void;
+    onLogout: () => void;
+}
+
 // Componentes Ficticios para evitar errores de compilación
-function StudentHome({ onLogout }: any) { return <div className="p-4 bg-white rounded-xl shadow-sm text-center"><h2>Inicio Estudiante</h2><button onClick={onLogout} className="mt-4 text-red-500">Cerrar Sesión</button></div>; }
+function StudentHome({ onLogout }: StudentHomeProps) { return <div className="p-4 bg-white rounded-xl shadow-sm text-center"><h2>Inicio Estudiante</h2><button onClick={onLogout} className="mt-4 text-red-500">Cerrar Sesión</button></div>; }
 function StudentIncidences() { return <div>Mis Incidencias</div>; }
 function StudentReservations() { return <div>Mis Reservas</div>; }

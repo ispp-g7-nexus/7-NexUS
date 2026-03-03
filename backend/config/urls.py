@@ -40,4 +40,10 @@ urlpatterns = [
     ),
     path("api/", include("apps.events.urls")),
     path("api/membership/", include("apps.membership.urls")),
+    path(
+        "api/auth/password-reset/confirm/",
+        PasswordResetConfirmView.as_view(),
+        name="password-reset-confirm",
+    ),
+    path('api/', include('apps.announcements.urls')),
 ]
