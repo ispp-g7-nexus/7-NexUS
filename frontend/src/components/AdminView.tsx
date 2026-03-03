@@ -1,6 +1,7 @@
 import { AlertCircle, Bell, LayoutDashboard, LogOut, Menu, Users, Calendar } from "lucide-react";
 import { useState } from "react";
 import { Events } from "../pages/Events/Events";
+import { Incidence } from "../pages/Incidences/Incidence";
 import logo from "../assets/logo.png";
 import { Button } from "./ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";

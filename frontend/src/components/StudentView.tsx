@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { AlertCircle, Calendar, Home, MessageSquare, User } from "lucide-react";
 import { useState } from "react";
 import { Events } from "../pages/Events/Events";
-
+import StudentIncidences from "../pages/Incidences/components/StudentIncidences";
 interface StudentViewProps {
     onLogout: () => void;
 }
@@ -60,5 +60,4 @@ function NavButton({ icon, label, active, onClick }: { icon: React.ReactNode, la
 
 // Componentes Ficticios para evitar errores de compilación
 function StudentHome({ onLogout }: any) { return <div className="p-4 bg-white rounded-xl shadow-sm text-center"><h2>Inicio Estudiante</h2><button onClick={onLogout} className="mt-4 text-red-500">Cerrar Sesión</button></div>; }
-function StudentIncidences() { return <div>Mis Incidencias</div>; }
 function StudentReservations() { return <div>Mis Reservas</div>; }

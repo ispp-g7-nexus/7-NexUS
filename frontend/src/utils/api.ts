@@ -1,5 +1,5 @@
 export const API_URL = "/api/events/";
-
+export const API_URL_INCIDENCES = "/api/incidences/";
 export function getCookie(name: string): string | null {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {

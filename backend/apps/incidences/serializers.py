@@ -1,11 +1,11 @@
 from rest_framework import serializers
-from .models import Incidence, Issue, IssueUpdate
+from .models import Incidence, IncidenceUpdate
 
 class IncidenceUpdateSerializer(serializers.ModelSerializer):
     author_name = serializers.ReadOnlyField(source='author.get_full_name')
 
     class Meta:
-        model = Incidence
+        model = IncidenceUpdate
         fields = ['id', 'text', 'author_name', 'created_at']
 
 class IncidenceSerializer(serializers.ModelSerializer):
@@ -13,8 +13,8 @@ class IncidenceSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Incidence
-        fields = ['id', 'title', 'description', 'location_type', 'specific_location', 'status', 'updates', 'created_at']
-        read_only_fields = ['id', 'status', 'created_at']
+        fields = ['id', 'title', 'description', 'location_type', 'room_number', 'status', 'updates', 'created_at']
+        read_only_fields = ['id', 'created_at']
 
 class AdminIncidenceSerializer(serializers.ModelSerializer):
     updates = IncidenceUpdateSerializer(many=True, read_only=True)
