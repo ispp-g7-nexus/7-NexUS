@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from validators import ResidentFieldValidatorMixin
+from apps.residents.validators import ResidentFieldValidatorMixin
 
 
 class ResidentReadSerializer(serializers.Serializer):

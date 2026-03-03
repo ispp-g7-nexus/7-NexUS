@@ -30,4 +30,3 @@ class Resident(models.Model):
 
     class Meta:
         managed = False
-        db_table = "residents_resident"
