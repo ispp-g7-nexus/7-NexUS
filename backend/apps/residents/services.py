@@ -56,6 +56,9 @@ def create_resident(data: dict, residence, request) -> dict:
             role=Membership.Role.RESIDENT,
             residence=residence,
             is_active=True,
+            room=data.get("room", ""),
+            building=data.get("building", ""),
+            check_in_date=data.get("checkin_date") or None,
         )
 
     passwd = data.get("password")
@@ -70,3 +73,98 @@ def create_resident(data: dict, residence, request) -> dict:
             pass
 
     return {"created": created, "email": user.email}
+
+
+def _membership_to_dict(membership) -> dict:
+    """Convierte User + Membership en un dict con los campos del residente."""
+    user = membership.user
+    full_name = f"{user.first_name} {user.last_name}".strip() or user.username
+    return {
+        "id": membership.id,
+        "full_name": full_name,
+        "email": user.email,
+        "is_active": membership.is_active,
+        "room": membership.room,
+        "building": membership.building,
+        "check_in_date": membership.check_in_date,
+        "created_at": membership.created_at,
+    }
+
+
+def list_residents(residence) -> list:
+    """Devuelve todos los residentes (User+Membership) de una residencia."""
+    memberships = (
+        Membership.objects.filter(role=Membership.Role.RESIDENT, residence=residence)
+        .select_related("user")
+        .order_by("created_at")
+    )
+    return [_membership_to_dict(m) for m in memberships]
+
+
+def get_resident(membership_id: int, residence):
+    """Devuelve un residente por el ID de su Membership, o None si no existe."""
+    try:
+        membership = Membership.objects.select_related("user").get(
+            id=membership_id, role=Membership.Role.RESIDENT, residence=residence
+        )
+    except Membership.DoesNotExist:
+        return None
+    return _membership_to_dict(membership)
+
+
+def update_resident(membership_id: int, data: dict, residence) -> dict | None:
+    """
+    Actualiza los datos de un residente (email, full_name, is_active).
+    Retorna el dict actualizado o None si no existe.
+    """
+    try:
+        membership = Membership.objects.select_related("user").get(
+            id=membership_id, role=Membership.Role.RESIDENT, residence=residence
+        )
+    except Membership.DoesNotExist:
+        return None
+
+    user = membership.user
+
+    if "email" in data:
+        user.email = data["email"].lower()
+
+    if "full_name" in data:
+        names = (data["full_name"] or "").strip().split(None, 1)
+        user.first_name = names[0] if names else ""
+        user.last_name = names[1] if len(names) > 1 else ""
+
+    user.save()
+
+    if "is_active" in data:
+        membership.is_active = data["is_active"]
+
+    if "room" in data:
+        membership.room = data["room"]
+
+    if "building" in data:
+        membership.building = data["building"]
+
+    if "check_in_date" in data:
+        membership.check_in_date = data["check_in_date"]
+
+    membership.save()
+
+    return _membership_to_dict(membership)
+
+
+def delete_resident(membership_id: int, residence) -> bool:
+    """
+    Soft-delete: desactiva la Membership del residente.
+    Retorna True si se desactivó, False si no existía.
+    """
+    try:
+        membership = Membership.objects.get(
+            id=membership_id, role=Membership.Role.RESIDENT, residence=residence
+        )
+    except Membership.DoesNotExist:
+        return False
+
+    membership.is_active = False
+    membership.save()
+    return True

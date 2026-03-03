@@ -27,3 +27,7 @@ class Resident(models.Model):
 
     def __str__(self):
         return self.fullname
+
+    class Meta:
+        managed = False
+        db_table = "residents_resident"
