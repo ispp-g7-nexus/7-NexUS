@@ -3,6 +3,29 @@ import { API_URL } from "./api";
 
 const AUTH_URL = `${API_URL}/auth`;
 
+export type PortalRole = "student" | "admin";
+
+interface AuthMeUser {
+    roles?: string[];
+}
+
+interface AuthMeResponse {
+    authenticated: boolean;
+    user: AuthMeUser | null;
+}
+
+export function resolvePortalRoleFromRoles(roles: string[] = []): PortalRole | null {
+    if (roles.includes("resident")) {
+        return "student";
+    }
+
+    if (roles.includes("portfolio_admin") || roles.includes("residence_admin") || roles.includes("staff")) {
+        return "admin";
+    }
+
+    return null;
+}
+
 export const authService = {
     login: async (data: any) => {
         const response = await fetch(`${AUTH_URL}/login/`, {
@@ -23,6 +46,19 @@ export const authService = {
             method: 'POST',
             credentials: 'include',
         });
+        return response.json();
+    },
+
+    me: async (): Promise<AuthMeResponse> => {
+        const response = await fetch(`${AUTH_URL}/me/`, {
+            method: "GET",
+            credentials: "include",
+        });
+
+        if (!response.ok) {
+            throw new Error("No se pudo validar la sesión");
+        }
+
         return response.json();
     },
 

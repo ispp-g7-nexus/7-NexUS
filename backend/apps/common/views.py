@@ -14,6 +14,7 @@ from .serializers import (
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
     PlanSerializer,
+    AdminCreateResidentSerializer,
 )
 from .services import (
     authenticate_user,
@@ -22,6 +23,10 @@ from .services import (
     process_password_reset_confirm,
     process_password_reset_request,
 )
+from django.contrib.auth import get_user_model
+from apps.residences.models import Membership
+
+UserModel = get_user_model()
 
 
 class TenantContextView(APIView):
@@ -179,3 +184,77 @@ class PasswordResetConfirmView(APIView):
             return Response({"ok": True, "detail": message}, status=status.HTTP_200_OK)
         else:
             return Response({"detail": message}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AdminCreateResidentView(APIView):
+    """Endpoint para que un administrador cree una cuenta de residente.
+
+    Crea el `User` si no existe, asocia una `Membership` con rol `resident`
+    y envía un correo de restablecimiento para que el residente configure su contraseña.
+    """
+
+    def post(self, request):
+        serializer = AdminCreateResidentSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        from apps.common.utils.jwt_auth import resolve_user_from_request
+
+        caller = resolve_user_from_request(request)
+        if not caller:
+            return Response({"detail": "No autenticado."}, status=status.HTTP_401_UNAUTHORIZED)
+
+        caller_roles = caller.get("roles", [])
+        allowed = any(r in ["residence_admin", "portfolio_admin"] for r in caller_roles)
+        if not allowed:
+            return Response({"detail": "No tienes permisos para crear residentes."}, status=status.HTTP_403_FORBIDDEN)
+
+        residence = getattr(request, "residence", None)
+        if not residence:
+            return Response({"detail": "No se ha determinado la residencia."}, status=status.HTTP_400_BAD_REQUEST)
+
+        email = data["email"].lower()
+
+        user = UserModel.objects.filter(email__iexact=email).first()
+        created = False
+        if not user:
+            base_username = email.split("@", 1)[0][:30]
+            username = base_username
+            counter = 1
+            while UserModel.objects.filter(username=username).exists():
+                username = f"{base_username}{counter}"
+                counter += 1
+
+            names = (data.get("full_name") or "").strip().split(None, 1)
+            first_name = names[0] if names else ""
+            last_name = names[1] if len(names) > 1 else ""
+            user = UserModel.objects.create(
+                username=username,
+                email=email,
+                first_name=first_name,
+                last_name=last_name,
+                is_active=True,
+            )
+            created = True
+            passwd = data.get("password")
+            if passwd:
+                user.set_password(passwd)
+                user.save()
+
+        membership_exists = Membership.objects.filter(user=user, role=Membership.Role.RESIDENT, residence=residence).exists()
+        if not membership_exists:
+            Membership.objects.create(user=user, role=Membership.Role.RESIDENT, residence=residence, is_active=True)
+
+        try:
+            if data.get("password"):
+                if not created:
+                    passwd = data.get("password")
+                    if passwd:
+                        user.set_password(passwd)
+                        user.save()
+            else:
+                process_password_reset_request(user.email, request)
+        except Exception:
+            pass
+
+        return Response({"ok": True, "created": created, "email": user.email}, status=status.HTTP_201_CREATED)

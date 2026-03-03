@@ -2,10 +2,12 @@ import { AlertCircle, Bell, LayoutDashboard, LogOut, Menu, Users, Calendar, Home
 import { useState } from "react";
 import { Events } from "../pages/Events/Events";
 import Rooms from "../pages/Rooms/Rooms";
+import { Residents } from "../pages/Residents/Residents";
 import logo from "../assets/logo.png";
 import { Button } from "./ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet";
+import { AdminAnnouncements } from "../pages/announcements/AdminAnnouncements";
 
 interface AdminViewProps {
     onLogout: () => void;
@@ -15,7 +17,7 @@ type AdminTab = "dashboard" | "rooms" | "students" | "incidences" | "reservation
 
 export function AdminView({ onLogout }: AdminViewProps) {
     const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
-    const [notifications, setNotifications] = useState([{ id: 1, title: "Nueva reserva", message: "Sala reservada", time: "Hace 5 min", read: false }]);
+    const [notifications] = useState([{ id: 1, title: "Nueva reserva", message: "Sala reservada", time: "Hace 5 min", read: false }]);
 
     const allNavItems = [
         { id: "dashboard", label: "Panel de Control", icon: <LayoutDashboard className="w-5 h-5" /> },
@@ -23,9 +25,27 @@ export function AdminView({ onLogout }: AdminViewProps) {
         { id: "students", label: "Residentes", icon: <Users className="w-5 h-5" /> },
         { id: "incidences", label: "Incidencias", icon: <AlertCircle className="w-5 h-5" /> },
         { id: "events", label: "Eventos & Comunidad", icon: <Calendar className="w-5 h-5" /> },
+        { id: "announcements", label: "Avisos", icon: <Bell className="w-5 h-5" /> },
     ];
 
     const currentTab = allNavItems.find((item) => item.id === activeTab) || allNavItems[0];
+
+    const renderContent = () => {
+        switch (activeTab) {
+            case "announcements":
+                return <AdminAnnouncements />;
+            case "events":
+                return <Events />;
+            case "students":
+                return <Residents />;
+            default:
+                return (
+                    <div className="bg-white p-6 rounded-xl text-center text-gray-500 shadow-sm">
+                        Vista de {currentTab.label} en construcción
+                    </div>
+                );
+        }
+    };
 
     return (
         <div className="min-h-screen flex flex-col w-full bg-background relative">
@@ -90,6 +110,7 @@ export function AdminView({ onLogout }: AdminViewProps) {
                         Vista de {currentTab.label} en construcción
                     </div>
                 )}
+                {renderContent()}
             </div>
         </div>
     );
