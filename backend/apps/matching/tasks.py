@@ -7,7 +7,7 @@ from django_tenants.utils import schema_context
 
 from apps.common.utils.celery_helpers import shared_retry_task
 from apps.onboarding.models import ResidentPreference
-from apps.residences.models import Membership, Residence
+from apps.residences.models import Residence
 
 from .models import ResidenceCompatibility
 
@@ -39,7 +39,7 @@ def recalculate_residence_compatibility_task(
                 is_completed=True,
                 membership__residence_id=residence_id,
                 membership__is_active=True,
-                membership__role=Membership.Role.RESIDENT,
+                membership__role__name__iexact="Student",
             )
             .order_by("membership_id")
         )

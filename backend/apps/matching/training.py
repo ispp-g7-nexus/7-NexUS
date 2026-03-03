@@ -15,8 +15,8 @@ from django_tenants.utils import get_public_schema_name, schema_context
 from torch import nn
 from torch.utils.data import DataLoader, Dataset, random_split
 
+from apps.membership.models import Membership
 from apps.onboarding.models import ResidentPreference
-from apps.residences.models import Membership
 from apps.tenants.models import Client
 
 from .ml_model import TwoTowerConfig, TwoTowerModel, save_checkpoint
@@ -289,7 +289,7 @@ def build_examples_from_all_tenants() -> tuple[list[TrainingExample], dict[str, 
                 .filter(
                     is_completed=True,
                     membership__is_active=True,
-                    membership__role=Membership.Role.RESIDENT,
+                    membership__role__name__iexact="Student",
                     membership__residence_id__isnull=False,
                     membership__residence__is_active=True,
                 )
