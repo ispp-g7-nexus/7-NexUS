@@ -9,7 +9,7 @@ from apps.common.views import (
     TenantContextView,
 )
 from django.http import JsonResponse
-from django.urls import path, include
+from django.urls import include, path
 
 
 def healthcheck(_request):
@@ -32,5 +32,25 @@ urlpatterns = [
     path("api/auth/password-reset/confirm/", PasswordResetConfirmView.as_view(), name="password-reset-confirm"),
     path("api/admin/residents/create/", AdminCreateResidentView.as_view(), name="admin-create-resident"),
     path("api/student/profile/", StudentProfileView.as_view(), name="student-profile"),
+    path(
+        "api/auth/password-reset/confirm/",
+        PasswordResetConfirmView.as_view(),
+        name="password-reset-confirm",
+    ),
+    path(
+        "api/admin/residents/create/",
+        AdminCreateResidentView.as_view(),
+        name="admin-create-resident",
+    ),
     path("api/", include("apps.events.urls")),
+    path("api/", include("apps.objects.urls")),
+    path("api/", include("apps.bedrooms.urls")),
+    path("api/incidences/", include("apps.incidences.urls")),
+    path("api/membership/", include("apps.membership.urls")),
+    path(
+        "api/auth/password-reset/confirm/",
+        PasswordResetConfirmView.as_view(),
+        name="password-reset-confirm",
+    ),
+    path('api/', include('apps.announcements.urls')),
 ]

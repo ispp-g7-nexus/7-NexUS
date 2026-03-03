@@ -24,7 +24,7 @@ from .services import (
     process_password_reset_request,
 )
 from django.contrib.auth import get_user_model
-from apps.residences.models import Membership
+from apps.membership.models import Membership
 
 UserModel = get_user_model()
 

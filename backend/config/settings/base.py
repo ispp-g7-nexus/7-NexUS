@@ -1,5 +1,5 @@
-from pathlib import Path
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -9,8 +9,18 @@ load_dotenv(BASE_DIR / ".env")
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "unsafe-dev-key")
 DEBUG = os.getenv("DJANGO_DEBUG", "0") == "1"
 
-ALLOWED_HOSTS = [host.strip() for host in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost").split(",") if host.strip()]
-CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "http://localhost").split(",") if origin.strip()]
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost").split(",")
+    if host.strip()
+]
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "http://localhost").split(
+        ","
+    )
+    if origin.strip()
+]
 
 SHARED_APPS = [
     "django_tenants",
@@ -20,6 +30,7 @@ SHARED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "rest_framework",
 ]
 
 TENANT_APPS = [
@@ -30,7 +41,12 @@ TENANT_APPS = [
     "django.contrib.staticfiles",
     "apps.common",
     "apps.residences",
+    "apps.objects",
     "apps.events",
+    "apps.bedrooms",
+    "apps.incidences",
+    "apps.membership",
+    "apps.announcements",
 ]
 
 INSTALLED_APPS = SHARED_APPS + [app for app in TENANT_APPS if app not in SHARED_APPS]
@@ -120,6 +136,13 @@ JWT_ACCESS_COOKIE_NAME = os.getenv("JWT_ACCESS_COOKIE_NAME", "access_token")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 JWT_SIGNING_KEY = os.getenv("JWT_SIGNING_KEY", SECRET_KEY)
 JWT_AUDIENCE = os.getenv("JWT_AUDIENCE") or None
-JWT_ACCESS_TOKEN_LIFETIME_SECONDS = int(os.getenv("JWT_ACCESS_TOKEN_LIFETIME_SECONDS", "3600"))
+JWT_ACCESS_TOKEN_LIFETIME_SECONDS = int(
+    os.getenv("JWT_ACCESS_TOKEN_LIFETIME_SECONDS", "3600")
+)
 JWT_COOKIE_SECURE = os.getenv("JWT_COOKIE_SECURE", "0") == "1"
 JWT_COOKIE_SAMESITE = os.getenv("JWT_COOKIE_SAMESITE", "Lax")
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": ("apps.common.services.CustomJWTAuthentication",),
+    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
+}

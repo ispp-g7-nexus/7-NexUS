@@ -1,17 +1,23 @@
-import { AlertCircle, Bell, LayoutDashboard, LogOut, Menu, Users, Calendar } from "lucide-react";
+import { AlertCircle, Bell, LayoutDashboard, LogOut, Menu, Users, Calendar, Home, Shield } from "lucide-react";
 import { useState } from "react";
 import { Events } from "../pages/Social/Events/Events";
 import { Residents } from "../pages/Residents/Residents";
 import logo from "../assets/logo.png";
+import Rooms from "../pages/Rooms/Rooms";
+import { AdminIncidences } from "../pages/Incidences/components/AdminIncidences";
 import { Button } from "./ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet";
+
+// Importamos la página que acabamos de crear
+import RolesPage from "../pages/RolesPage";
+import { AdminAnnouncements } from "../pages/announcements/AdminAnnouncements";
 
 interface AdminViewProps {
     onLogout: () => void;
 }
 
-type AdminTab = "dashboard" | "rooms" | "students" | "incidences" | "reservations" | "kitchen" | "analytics" | "staff" | "announcements" | "visitors" | "events";
+type AdminTab = "dashboard" | "rooms" | "students" | "incidences" | "reservations" | "kitchen" | "analytics" | "staff" | "announcements" | "visitors" | "events" | "roles";
 
 export function AdminView({ onLogout }: AdminViewProps) {
     const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
@@ -19,12 +25,65 @@ export function AdminView({ onLogout }: AdminViewProps) {
 
     const allNavItems = [
         { id: "dashboard", label: "Panel de Control", icon: <LayoutDashboard className="w-5 h-5" /> },
+        { id: "rooms", label: "Habitaciones", icon: <Home className="w-5 h-5" /> },
         { id: "students", label: "Residentes", icon: <Users className="w-5 h-5" /> },
         { id: "incidences", label: "Incidencias", icon: <AlertCircle className="w-5 h-5" /> },
         { id: "events", label: "Eventos & Comunidad", icon: <Calendar className="w-5 h-5" /> },
+        { id: "roles", label: "Roles", icon: <Shield className="w-5 h-5" /> },
+        { id: "announcements", label: "Avisos", icon: <Bell className="w-5 h-5" /> },
     ];
 
     const currentTab = allNavItems.find((item) => item.id === activeTab) || allNavItems[0];
+
+    const renderContent = () => {
+        switch (activeTab) {
+            case "roles":
+                return <RolesPage />;
+
+            case "announcements":
+                return (
+                    <div className="p-4">
+                        <AdminAnnouncements />
+                    </div>
+                );
+
+            case "events":
+                return (
+                    <div className="p-4">
+                        <Events />
+                    </div>
+                );
+
+            case "students":
+                return (
+                    <div className="p-4">
+                        <Residents />
+                    </div>
+                );
+            case "rooms":
+                return (
+                    <div className="p-4">
+                        <Rooms />
+                    </div>
+                );
+
+            case "incidences":
+                return (
+                    <div className="p-4">
+                        <AdminIncidences />
+                    </div>
+                );
+
+            default:
+                return (
+                    <div className="p-4">
+                        <div className="bg-white p-6 rounded-xl text-center text-gray-500 shadow-sm">
+                            Vista de {currentTab?.label} en construcción
+                        </div>
+                    </div>
+                );
+        }
+    };
 
     return (
         <div className="min-h-screen flex flex-col w-full bg-background relative">
@@ -80,15 +139,7 @@ export function AdminView({ onLogout }: AdminViewProps) {
             </header>
 
             <div className="flex-1 overflow-y-auto p-4">
-                {activeTab === "events" ? (
-                    <Events />
-                ) : activeTab === "students" ? (
-                    <Residents />
-                ) : (
-                    <div className="bg-white p-6 rounded-xl text-center text-gray-500 shadow-sm">
-                        Vista de {currentTab.label} en construcción
-                    </div>
-                )}
+                {renderContent()}
             </div>
         </div>
     );
