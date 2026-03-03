@@ -25,12 +25,12 @@ CSRF_TRUSTED_ORIGINS = [
 SHARED_APPS = [
     "django_tenants",
     "apps.tenants",
+    "rest_framework",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "rest_framework",
 ]
 
 TENANT_APPS = [
@@ -41,6 +41,7 @@ TENANT_APPS = [
     "django.contrib.staticfiles",
     "apps.common",
     "apps.residences",
+    "apps.onboarding",
     "apps.objects",
     "apps.events",
     "apps.bedrooms",
