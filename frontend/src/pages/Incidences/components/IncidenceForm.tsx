@@ -9,7 +9,6 @@ import { Checkbox } from "../../../components/ui/checkbox"
 import { Select} from "../../../components/ui/select"
 import { DialogDescription } from "../../../components/ui/dialog"
 import { fetchWithAuth, API_URL_INCIDENCES } from "../../../utils/api"
-import { SelectTrigger, SelectValue, SelectContent, SelectItem } from "@radix-ui/react-select"
 //import {API_URL_INCIDENCES } from "../../../utils/api"
 
 interface IncidenceFormProps {
@@ -91,16 +90,15 @@ export function IncidenceForm({ onSuccess, onClose }: IncidenceFormProps) {
 
         <div className="space-y-1.5">
           <Label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Área</Label>
-          <Select onChange={setLocationType} required>
-            <SelectTrigger className="bg-gray-50 border-none rounded-2xl h-14 px-4 text-gray-600 focus:ring-[#82D14C]">
-              <SelectValue placeholder="Selecciona el área" />
-            </SelectTrigger>
-            <SelectContent className="rounded-2xl shadow-xl">
-              <SelectItem value="habitacion">Mi Habitación</SelectItem>
-              <SelectItem value="baño">Baño Común</SelectItem>
-              <SelectItem value="cocina">Cocina</SelectItem>
-              <SelectItem value="zonas_comunes">Zonas Comunes</SelectItem>
-            </SelectContent>
+          <Select 
+            required
+            onChange={(e) => setLocationType(e.target.value)}
+          >
+            <option value="" disabled>Selecciona lugar</option>
+            <option value="habitacion">Mi Habitación</option>
+            <option value="bano">Baños Comunes</option>
+            <option value="cocina">Cocina</option>
+            <option value="zonas_comunes">Zonas Comunes</option>
           </Select>
           
           {locationType === "habitacion" && (

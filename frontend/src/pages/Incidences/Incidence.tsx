@@ -72,18 +72,15 @@ export function IncidenceForm({ onClose, onSuccess }: IncidenceFormProps) {
         <div>
           <label className="text-sm font-medium text-gray-700">Ubicación</label>
           <Select 
-            onChange={(val) => setFormData({...formData, location_type: val})}
             required
+            value={formData.location_type}
+            onChange={(e) => setFormData({...formData, location_type: e.target.value})}
           >
-            <SelectTrigger className="rounded-xl border-gray-200">
-              <SelectValue placeholder="Selecciona lugar" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="habitacion">Mi Habitación</SelectItem>
-              <SelectItem value="bano">Baños Comunes</SelectItem>
-              <SelectItem value="cocina">Cocina</SelectItem>
-              <SelectItem value="zonas_comunes">Zonas Comunes / Pasillo</SelectItem>
-            </SelectContent>
+            <option value="" disabled>Selecciona lugar</option>
+            <option value="habitacion">Mi Habitación</option>
+            <option value="bano">Baños Comunes</option>
+            <option value="cocina">Cocina</option>
+            <option value="zonas_comunes">Zonas Comunes</option>
           </Select>
         </div>
 
