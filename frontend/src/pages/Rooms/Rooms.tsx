@@ -6,7 +6,7 @@ import { Plus, Edit2, Trash2, Search as SearchIcon, Bed } from "lucide-react";
 
 import { Input } from "../../components/ui/input";
 import {
-  Select,
+  Select1,
   SelectContent,
   SelectItem,
   SelectTrigger,
@@ -224,7 +224,7 @@ export function Rooms() {
             />
           </div>
 
-          <Select value={filter} onValueChange={setFilter}>
+          <Select1 value={filter} onValueChange={setFilter}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Filtro" />
             </SelectTrigger>
@@ -233,7 +233,7 @@ export function Rooms() {
               <SelectItem value="ocupadas">Ocupadas</SelectItem>
               <SelectItem value="libres">Libres</SelectItem>
             </SelectContent>
-          </Select>
+          </Select1>
         </CardContent>
       </Card>
 
@@ -350,7 +350,7 @@ export function Rooms() {
 
             <div>
               <Label>Tipo</Label>
-              <Select
+              <Select1
                 value={form.tipo}
                 onValueChange={(v) => onChange("tipo", v)}
               >
@@ -362,7 +362,7 @@ export function Rooms() {
                   <SelectItem value="Doble">Doble</SelectItem>
                   <SelectItem value="Triple">Triple</SelectItem>
                 </SelectContent>
-              </Select>
+              </Select1>
             </div>
 
             {!isEditing && (
