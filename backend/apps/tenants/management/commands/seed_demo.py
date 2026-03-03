@@ -23,9 +23,15 @@ class Command(BaseCommand):
             "--tenant-name", default=None, help="Nombre del tenant demo."
         )
         parser.add_argument("--admin-email", default=None, help="Email del admin demo.")
-        parser.add_argument("--student-email", default=None, help="Email del estudiante demo.")
-        parser.add_argument("--student2-email", default=None, help="Email del segundo estudiante demo.")
-        parser.add_argument("--password", default=None, help="Contrasena para ambos usuarios demo.")
+        parser.add_argument(
+            "--student-email", default=None, help="Email del estudiante demo."
+        )
+        parser.add_argument(
+            "--student2-email", default=None, help="Email del segundo estudiante demo."
+        )
+        parser.add_argument(
+            "--password", default=None, help="Contrasena para ambos usuarios demo."
+        )
 
     def _env_or_option(self, options, option_key, env_key, default):
         option_value = options.get(option_key)
@@ -107,7 +113,9 @@ class Command(BaseCommand):
             "DEMO_STUDENT_2_EMAIL",
             f"estudiante2@{domain}",
         ).lower()
-        demo_password = self._env_or_option(options, "password", "DEMO_USERS_PASSWORD", "demo1234")
+        demo_password = self._env_or_option(
+            options, "password", "DEMO_USERS_PASSWORD", "demo1234"
+        )
 
         plan, _ = Plan.objects.update_or_create(
             code="demo",
@@ -219,13 +227,6 @@ class Command(BaseCommand):
                 last_name="Demo",
                 is_staff=False,
             )
-            student2_user = self._upsert_user(
-                email=student2_email,
-                password=demo_password,
-                first_name="Pablo",
-                last_name="Perez",
-                is_staff=False,
-            )
 
             admin_role, _ = Role.objects.get_or_create(
                 name="Admin",
@@ -258,15 +259,8 @@ class Command(BaseCommand):
                 residence=residence,
                 defaults={"is_active": True},
             )
-            Membership.objects.update_or_create(
-                user=student2_user,
-                role=Membership.Role.RESIDENT,
-                residence=residence,
-                defaults={"is_active": True},
-            )
 
         self.stdout.write(self.style.SUCCESS("Seed demo aplicado correctamente."))
         self.stdout.write(f"Tenant domain: {domain}")
         self.stdout.write(f"Admin demo: {admin_email} / {demo_password}")
         self.stdout.write(f"Estudiante demo: {student_email} / {demo_password}")
-        self.stdout.write(f"Estudiante 2 demo: {student2_email} / {demo_password}")
