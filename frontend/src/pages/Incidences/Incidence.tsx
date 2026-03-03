@@ -4,7 +4,6 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Select} from "../../components/ui/select";
 import { X } from "lucide-react";
-import { SelectTrigger, SelectValue, SelectContent, SelectItem } from "@radix-ui/react-select";
 
 interface IncidenceFormProps {
   onClose: () => void;
