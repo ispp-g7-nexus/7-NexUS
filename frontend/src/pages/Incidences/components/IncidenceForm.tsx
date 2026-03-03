@@ -25,6 +25,7 @@ interface IncidenceFormProps {
 export function IncidenceForm({ onSuccess, onClose }: IncidenceFormProps) {
   const [loading, setLoading] = useState(false)
   const [locationType, setLocationType] = useState<string>("")
+  const [urgent, setUrgent] = useState<boolean>(false)
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -36,7 +37,7 @@ export function IncidenceForm({ onSuccess, onClose }: IncidenceFormProps) {
       title: formData.get("title"),
       description: formData.get("description"),
       location_type: locationType,
-      priority: formData.get("urgent") === "on" ? "high" : "low",
+      priority: urgent ? "high" : "low",
     }
 
     try {
@@ -128,8 +129,13 @@ export function IncidenceForm({ onSuccess, onClose }: IncidenceFormProps) {
 
         {/* Urgencia */}
         <div className="flex items-center space-x-3 p-4 bg-orange-50/50 rounded-2xl border border-orange-100">
-          <Checkbox id="urgent" name="urgent" className="data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500" />
-          <div className="flex items-center gap-2">
+          <Checkbox
+          id="urgent"
+          name="urgent"
+          checked={urgent}
+          onCheckedChange={(val) => setUrgent(Boolean(val))}
+          className="data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
+        />          <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-orange-600" />
             <Label htmlFor="urgent" className="text-orange-800 text-sm font-bold cursor-pointer">Es una urgencia</Label>
           </div>

@@ -13,7 +13,7 @@ class IncidenceSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Incidence
-        fields = ['id', 'title', 'description', 'location_type', 'room_number', 'status', 'updates', 'created_at']
+        fields = ['id', 'title', 'description', 'location_type', 'room_number', 'status', 'priority', 'updates', 'created_at']
         read_only_fields = ['id', 'created_at']
 
 class AdminIncidenceSerializer(serializers.ModelSerializer):

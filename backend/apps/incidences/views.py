@@ -3,16 +3,18 @@ from rest_framework.permissions import IsAuthenticated
 from .models import Incidence, IncidenceUpdate # Corregido el import
 from .serializers import IncidenceSerializer
 from .permissions import IsAdminOrReadOnly
+from apps.common.authentication import CookieJWTAuthentication
 
 class IncidenceViewSet(viewsets.ModelViewSet):
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
     serializer_class = IncidenceSerializer
 
     def get_queryset(self):
         user = self.request.user
         if user.is_staff:
-            return Incidence.objects.filter(is_active=True)
-        return Incidence.objects.filter(student=user, is_active=True)
+            return Incidence.objects.all()
+        return Incidence.objects.filter(student=user)
 
     def perform_create(self, serializer):
         
@@ -58,5 +60,4 @@ class IncidenceViewSet(viewsets.ModelViewSet):
             )
 
     def perform_destroy(self, instance):
-        instance.is_active = False
-        instance.save()
+        instance.delete()

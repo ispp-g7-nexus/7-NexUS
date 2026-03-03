@@ -4,7 +4,7 @@ import {
 } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent } from "../../../components/ui/card";
-import { Dialog, DialogContent } from "../../../components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "../../../components/ui/dialog";
 import { fetchWithAuth, API_URL_INCIDENCES } from "../../../utils/api";
 //import { NavItem } from "../../../components/NavItem"; 
 import { IncidenceForm } from "./IncidenceForm";
@@ -97,6 +97,7 @@ export default function StudentIncidences() {
       {/* MODAL DEL FORMULARIO */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="max-w-[90vw] sm:max-w-[425px] rounded-[32px] p-0 border-none overflow-hidden">
+          <DialogTitle className="sr-only">Nueva Incidencia</DialogTitle>
           <IncidenceForm 
             onSuccess={() => {
               loadIncidences();

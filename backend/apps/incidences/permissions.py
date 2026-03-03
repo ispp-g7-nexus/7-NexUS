@@ -7,11 +7,7 @@ class IsAdminOrReadOnly(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         if request.user.is_staff:
             return True
-        if request.user.is_student:
-            if request.method == 'POST':
-                return True
-        
-        if request.method in permissions.SAFE_METHODS:
+        if getattr(request.user, 'is_student', False):
             return obj.student == request.user
 
-        return False
+        return request.method in permissions.SAFE_METHODS
