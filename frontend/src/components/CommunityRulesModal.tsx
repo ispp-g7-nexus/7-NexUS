@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle, Clock, FileText, Home, Shield, Users, Volume2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
 
@@ -11,7 +11,11 @@ interface CommunityRulesModalProps {
 
 export function CommunityRulesModal({ isOpen, onAccept }: CommunityRulesModalProps) {
   const [hasAccepted, setHasAccepted] = useState(false);
-  const [dontShowAgain, setDontShowAgain] = useState(false);
+  const LOCAL_STORAGE_KEY = "nexus.community_rules.accepted";
+  // The modal is fully controlled by the parent view via `isOpen` and `onAccept`.
+  // `dontShowAgain` is a transient checkbox state; the parent decides whether to
+  // read `LOCAL_STORAGE_KEY` and pass `isOpen` accordingly.
+  const [dontShowAgain, setDontShowAgain] = useState<boolean>(false);
 
   const rules = [
     {
@@ -48,6 +52,14 @@ export function CommunityRulesModal({ isOpen, onAccept }: CommunityRulesModalPro
 
   const handleAccept = () => {
     if (hasAccepted) {
+      try {
+        if (dontShowAgain) {
+          localStorage.setItem(LOCAL_STORAGE_KEY, "true");
+        } else {
+          localStorage.removeItem(LOCAL_STORAGE_KEY);
+        }
+      } catch {}
+
       onAccept(dontShowAgain);
     }
   };
@@ -128,7 +140,16 @@ export function CommunityRulesModal({ isOpen, onAccept }: CommunityRulesModalPro
               </div>
 
               {/* Footer con border-t y botones alineados a la derecha */}
-              <div className="flex items-center justify-end gap-3 p-6 border-t border-border shrink-0 bg-card">
+              <div className="flex items-center justify-between gap-3 p-6 border-t border-border shrink-0 bg-card">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <Checkbox
+                    checked={dontShowAgain}
+                    onCheckedChange={(checked) => setDontShowAgain(checked as boolean)}
+                    className="mt-0.5"
+                  />
+                  <span className="text-sm text-muted-foreground">No mostrar más</span>
+                </label>
+
                 <Button
                   onClick={handleAccept}
                   disabled={!hasAccepted}

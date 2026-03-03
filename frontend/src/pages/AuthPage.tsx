@@ -12,6 +12,7 @@ export function AuthPage() {
     const [showAdminLogin, setShowAdminLogin] = useState(false);
     const [showRulesModal, setShowRulesModal] = useState(false);
     const navigate = useNavigate();
+    const LOCAL_STORAGE_KEY = "nexus.community_rules.accepted";
 
     useEffect(() => {
         const savedRole = localStorage.getItem('userRole');
@@ -26,6 +27,15 @@ export function AuthPage() {
     };
 
     const handleStudentLogin = () => {
+        try {
+            const skip = typeof window !== 'undefined' && localStorage.getItem(LOCAL_STORAGE_KEY) === 'true';
+            if (skip) {
+                localStorage.setItem('userRole', 'student');
+                navigate('/dashboard');
+                return;
+            }
+        } catch {}
+
         setShowRulesModal(true);
         setShowStudentLogin(false);
     };
@@ -35,7 +45,12 @@ export function AuthPage() {
         navigate('/dashboard');
     };
 
-    const handleRulesAccepted = () => {
+    const handleRulesAccepted = (dontShowAgain: boolean) => {
+        try {
+            if (dontShowAgain) localStorage.setItem(LOCAL_STORAGE_KEY, 'true');
+            else localStorage.removeItem(LOCAL_STORAGE_KEY);
+        } catch {}
+
         setShowRulesModal(false);
         localStorage.setItem('userRole', 'student');
         navigate('/dashboard');
