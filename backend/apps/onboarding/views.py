@@ -3,7 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
-from apps.residences.models import Membership
+from apps.membership.models import Membership
 
 from .models import ResidentPreference
 from .serializers import ResidentPreferenceSerializer, ResidentPreferenceWithMembershipSerializer
@@ -29,7 +29,7 @@ class ResidentPreferenceViewSet(viewsets.ModelViewSet):
         user = self.request.user
         
         # Check if user is admin
-        if user.memberships.filter(role="portfolio_admin").exists():
+        if user.memberships.exclude(role__name__iexact="Student").exists():
             return ResidentPreference.objects.all()
         
         # Otherwise only return their own preferences
@@ -44,7 +44,7 @@ class ResidentPreferenceViewSet(viewsets.ModelViewSet):
         resident_membership = get_object_or_404(
             Membership,
             user=user,
-            role=Membership.Role.RESIDENT,
+            role__name__iexact="Student",
             is_active=True
         )
         
@@ -81,7 +81,7 @@ class ResidentPreferenceViewSet(viewsets.ModelViewSet):
         try:
             resident_membership = Membership.objects.get(
                 user=user,
-                role=Membership.Role.RESIDENT,
+                role__name__iexact="Student",
                 is_active=True
             )
             preference = ResidentPreference.objects.get(membership=resident_membership)
