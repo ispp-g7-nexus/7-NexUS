@@ -2,7 +2,7 @@ import { AlertCircle, Bell, BookOpen, Calendar, LayoutDashboard, LogOut, Menu, U
 import { useState } from "react";
 import logo from "../assets/logo.png";
 import { Events } from "../pages/Events/Events";
-import { AdminSpaces } from "../pages/Reservations/AdminSpaces";
+import { AdminReservations } from "./AdminReservations";
 import Rooms from "../pages/Rooms/Rooms";
 import { AdminIncidences } from "../pages/Incidences/components/AdminIncidences";
 import { Residents } from "../pages/Residents/Residents";
@@ -59,7 +59,7 @@ export function AdminView({ onLogout }: AdminViewProps) {
             case "reservations":
                 return (
                     <div className="p-4">
-                        <AdminSpaces />
+                        <AdminReservations />
                     </div>
                 );
 
