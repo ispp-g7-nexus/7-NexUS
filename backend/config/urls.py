@@ -39,6 +39,7 @@ urlpatterns = [
         name="admin-create-resident",
     ),
     path("api/", include("apps.events.urls")),
+    path("api/", include("apps.objects.urls")),
     path("api/", include("apps.bedrooms.urls")),
     path("api/membership/", include("apps.membership.urls")),
     path(

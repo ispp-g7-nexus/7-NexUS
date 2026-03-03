@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { AlertCircle, Calendar, Home, MessageSquare, User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Events } from "../pages/Events/Events";
+import { StudentReservations } from "./StudentReservations";
 import { StudentAnnouncements } from "../pages/announcements/StudentAnnouncements";
 import announcementService from "../services/announcement.service";
 import { toast } from "sonner";
@@ -137,4 +138,3 @@ interface StudentHomeProps {
 // Componentes Ficticios para evitar errores de compilación
 function StudentHome({ onLogout }: StudentHomeProps) { return <div className="p-4 bg-white rounded-xl shadow-sm text-center"><h2>Inicio Estudiante</h2><button onClick={onLogout} className="mt-4 text-red-500">Cerrar Sesión</button></div>; }
 function StudentIncidences() { return <div>Mis Incidencias</div>; }
-function StudentReservations() { return <div>Mis Reservas</div>; }

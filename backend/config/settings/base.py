@@ -41,6 +41,7 @@ TENANT_APPS = [
     "django.contrib.staticfiles",
     "apps.common",
     "apps.residences",
+    "apps.objects",
     "apps.events",
     "apps.bedrooms",
     "apps.membership",
