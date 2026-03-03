@@ -1,13 +1,11 @@
 import { motion } from "framer-motion";
-import { ArrowLeft, Heart, Music, Utensils, Dumbbell, BookOpen, Gamepad2, Camera, Palette, Zap } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import logo from "../assets/logo.png";
-import { preferencesService } from "../services/preferences";
-import { Button } from "./ui/button";
+import { preferencesService } from "../services/preferences";import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
 import { Label } from "./ui/label";
-import { Textarea } from "./ui/textarea";
 
 interface PreferencesFormProps {
     onComplete: () => void;
@@ -15,77 +13,173 @@ interface PreferencesFormProps {
 }
 
 interface Preferences {
-    interests: string[];
-    dietaryRestrictions: string[];
-    hobbies: string[];
-    additionalInfo: string;
+    sex: string;
+    age: number;
+    schedule: string;
+    studyLocation: string;
+    socialLevel: number;
+    weekendReturn: string;
+    outsidePlansImportance: string;
+    desiredActivities: string; 
+    orderImportance: number;
+    noiseTolerance: number;
+    smokingVaping: string;
+    visitorsPreference: string;
+    basicItemsPreference: string;
+    temperaturePreference: string;
 }
 
-const AVAILABLE_INTERESTS = [
-    { id: "sports", label: "Deportes", icon: Dumbbell },
-    { id: "music", label: "Música", icon: Music },
-    { id: "cooking", label: "Cocina", icon: Utensils },
-    { id: "reading", label: "Lectura", icon: BookOpen },
-    { id: "gaming", label: "Videojuegos", icon: Gamepad2 },
-    { id: "photography", label: "Fotografía", icon: Camera },
-    { id: "art", label: "Arte", icon: Palette },
-    { id: "technology", label: "Tecnología", icon: Zap },
+const SEX_OPTIONS = [
+    { id: "masculino", label: "Masculino" },
+    { id: "femenino", label: "Femenino" },
+    { id: "otro", label: "Otro" },
 ];
 
-const DIETARY_OPTIONS = [
-    "Vegetariano",
-    "Vegano",
-    "Sin gluten",
-    "Intolerancia a la lactosa",
-    "Halal",
-    "Kosher",
-    "Ninguna",
+const SCHEDULE_OPTIONS = [
+    { id: "madrugador", label: "Madrugador" },
+    { id: "nocturno", label: "Nocturno" },
+];
+
+const STUDY_LOCATIONS = [
+    { id: "habitacion_silencio", label: "En mi habitación en silencio total" },
+    { id: "sala_estudio", label: "En la sala de estudio de la residencia" },
+    { id: "biblioteca", label: "En bibliotecas públicas o facultad" },
+    { id: "con_musica", label: "Con música o ruido ambiente" },
+];
+
+const WEEKEND_OPTIONS = [
+    { id: "si_siempre", label: "Sí casi siempre" },
+    { id: "a_veces", label: "A veces" },
+    { id: "no_vuelvo", label: "No suelo volver a mi casa familiar" },
+];
+
+const PLANS_IMPORTANCE_OPTIONS = [
+    { id: "muy_importante", label: "Muy importante, no paro en casa" },
+    { id: "intermedio", label: "Intermedio" },
+    { id: "casero", label: "Soy muy casero y disfruto mi tiempo en la habitación" },
+];
+
+const ACTIVITIES_OPTIONS = [
+    { id: "esports", label: "Torneos de E-sports" },
+    { id: "cenas", label: "Cenas temáticas" },
+    { id: "maraton", label: "Maratón de series-películas" },
+    { id: "juegos_mesa", label: "Tardes de juegos de mesa" },
+    { id: "otro", label: "Otro" },
+];
+
+const SMOKING_OPTIONS = [
+    { id: "no_me_molesta", label: "No y me molesta que lo hagan" },
+    { id: "no_da_igual", label: "No pero me da igual si otro lo hace" },
+    { id: "fumo", label: "Sí fumo y vapeo" },
+];
+
+const VISITOR_OPTIONS = [
+    { id: "privado", label: "Prefiero que sea en un lugar privado solo para nosotros" },
+    { id: "aviso", label: "Está bien de vez en cuando avisando antes" },
+    { id: "siempre", label: "Me encanta que haya gente, mi cuarto está siempre abierto" },
+];
+
+const BASIC_ITEMS_OPTIONS = [
+    { id: "estricto", label: "Prefiero que cada uno tenga lo suyo estrictamente" },
+    { id: "compartir", label: "Me gusta comprar a medias y compartir" },
+    { id: "confianza", label: "No me importa invitar o que me cojan si hay confianza" },
+];
+
+const TEMPERATURE_OPTIONS = [
+    { id: "friolero", label: "Muy friolero - prefiero ventanas cerradas" },
+    { id: "neutro", label: "Neutro" },
+    { id: "caluroso", label: "Muy caluroso - necesito ventilar y dormir fresco" },
 ];
 
 export function PreferencesForm({ onComplete, onBack }: PreferencesFormProps) {
     const [preferences, setPreferences] = useState<Preferences>({
-        interests: [],
-        dietaryRestrictions: [],
-        hobbies: "",
-        additionalInfo: "",
+        sex: "",
+        age: 17,
+        schedule: "",
+        studyLocation: "",
+        socialLevel: 5,
+        weekendReturn: "",
+        outsidePlansImportance: "",
+        desiredActivities: "",
+        orderImportance: 5,
+        noiseTolerance: 5,
+        smokingVaping: "",
+        visitorsPreference: "",
+        basicItemsPreference: "",
+        temperaturePreference: "",
     });
     const [isLoading, setIsLoading] = useState(false);
 
-    const toggleInterest = (interestId: string) => {
-        setPreferences(prev => ({
-            ...prev,
-            interests: prev.interests.includes(interestId)
-                ? prev.interests.filter(id => id !== interestId)
-                : [...prev.interests, interestId]
-        }));
+
+    const setSingle = (key: keyof Preferences, value: string | number) => {
+        setPreferences(prev => ({ ...prev, [key]: value } as Preferences));
     };
 
-    const toggleDietary = (dietary: string) => {
-        setPreferences(prev => ({
-            ...prev,
-            dietaryRestrictions: prev.dietaryRestrictions.includes(dietary)
-                ? prev.dietaryRestrictions.filter(d => d !== dietary)
-                : [...prev.dietaryRestrictions, dietary]
-        }));
-    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
-        if (preferences.interests.length === 0) {
-            toast.error("Por favor selecciona al menos un interés");
+        if (!preferences.sex) {
+            toast.error("Por favor selecciona tu sexo");
+            return;
+        }
+        if (!preferences.schedule) {
+            toast.error("Por favor selecciona tu horario");
+            return;
+        }
+        if (!preferences.studyLocation) {
+            toast.error("Por favor selecciona dónde prefieres estudiar");
+            return;
+        }
+        if (!preferences.weekendReturn) {
+            toast.error("Por favor responde si te quedas los fines de semana");
+            return;
+        }
+        if (!preferences.outsidePlansImportance) {
+            toast.error("Por favor selecciona la importancia de planes fuera");
+            return;
+        }
+        if (!preferences.desiredActivities) {
+            toast.error("Por favor selecciona qué actividades te gustaría hacer");
+            return;
+        }
+        if (!preferences.smokingVaping) {
+            toast.error("Por favor responde sobre fumar o vapear");
+            return;
+        }
+        if (!preferences.visitorsPreference) {
+            toast.error("Por favor selecciona tu preferencia sobre visitantes");
+            return;
+        }
+        if (!preferences.basicItemsPreference) {
+            toast.error("Por favor selecciona tu preferencia sobre comprar básicos");
+            return;
+        }
+        if (!preferences.temperaturePreference) {
+            toast.error("Por favor selecciona tu preferencia térmica");
             return;
         }
 
         setIsLoading(true);
         try {
-            // TODO: Make API call to save preferences
-            // const response = await preferencesService.save(preferences);
-            
-            // For now, just simulate the save
-            console.log("Saving preferences:", preferences);
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
+            const payload = {
+                sex: preferences.sex,
+                age: preferences.age,
+                schedule: preferences.schedule,
+                study_location: preferences.studyLocation,
+                social_level: preferences.socialLevel,
+                weekend_return: preferences.weekendReturn,
+                outside_plans_importance: preferences.outsidePlansImportance,
+                desired_activity: preferences.desiredActivities,
+                order_importance: preferences.orderImportance,
+                noise_tolerance: preferences.noiseTolerance,
+                smoking_vaping: preferences.smokingVaping,
+                visitors_preference: preferences.visitorsPreference,
+                basic_items_preference: preferences.basicItemsPreference,
+                temperature_preference: preferences.temperaturePreference,
+            };
+
+            await preferencesService.saveMyPreferences(payload);
             toast.success("¡Preferencias guardadas exitosamente!");
             onComplete();
         } catch (error: any) {
@@ -116,103 +210,303 @@ export function PreferencesForm({ onComplete, onBack }: PreferencesFormProps) {
                     <div className="w-24 h-24 mb-4 flex items-center justify-center">
                         <img src={logo} alt="NexUS Logo" className="w-full h-full object-contain" />
                     </div>
-                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Conoceremos tus preferencias</h1>
+                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Cuentanos tus preferencias</h1>
                     <p className="text-gray-500 mt-2">Para personalizar tu experiencia en NexUS</p>
                 </div>
 
                 <Card className="border-gray-200 shadow-xl shadow-gray-200/50">
                     <CardContent className="p-8 space-y-8">
                         <form onSubmit={handleSubmit} className="space-y-8">
-                            {/* Interests Section */}
+                            {/* Sexo */}
                             <div className="space-y-4">
-                                <div className="flex items-center gap-2">
-                                    <Heart className="w-5 h-5 text-red-500" />
-                                    <Label className="text-lg font-semibold text-gray-900">
-                                        ¿Cuáles son tus intereses? (selecciona al menos uno)
-                                    </Label>
-                                </div>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                    {AVAILABLE_INTERESTS.map(interest => {
-                                        const Icon = interest.icon;
-                                        const isSelected = preferences.interests.includes(interest.id);
-                                        return (
-                                            <button
-                                                key={interest.id}
-                                                type="button"
-                                                onClick={() => toggleInterest(interest.id)}
-                                                className={`flex flex-col items-center justify-center gap-2 p-4 rounded-lg border-2 transition-all ${
-                                                    isSelected
-                                                        ? "border-[#509550] bg-emerald-50 text-[#509550]"
-                                                        : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
-                                                }`}
-                                            >
-                                                <Icon className="w-6 h-6" />
-                                                <span className="text-sm font-medium">{interest.label}</span>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
-                            {/* Dietary Restrictions Section */}
-                            <div className="space-y-4">
-                                <div className="flex items-center gap-2">
-                                    <Utensils className="w-5 h-5 text-orange-500" />
-                                    <Label className="text-lg font-semibold text-gray-900">
-                                        Restricciones dietéticas o alergias (opcional)
-                                    </Label>
-                                </div>
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                    {DIETARY_OPTIONS.map(option => (
+                                <Label className="text-lg font-semibold text-gray-900">Sexo</Label>
+                                <div className="flex flex-wrap gap-3">
+                                    {SEX_OPTIONS.map(opt => (
                                         <button
-                                            key={option}
+                                            key={opt.id}
                                             type="button"
-                                            onClick={() => toggleDietary(option)}
-                                            className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${
-                                                preferences.dietaryRestrictions.includes(option)
-                                                    ? "border-[#509550] bg-emerald-50 text-[#509550]"
-                                                    : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+                                            onClick={() => setSingle('sex', opt.id)}
+                                            className={`px-4 py-2 rounded-lg border-2 transition-all ${
+                                                preferences.sex === opt.id
+                                                    ? 'border-[#509550] bg-emerald-50 text-[#509550]'
+                                                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                                             }`}
                                         >
-                                            {option}
+                                            {opt.label}
                                         </button>
                                     ))}
                                 </div>
                             </div>
 
-                            {/* Additional Hobbies */}
-                            <div className="space-y-3">
-                                <Label htmlFor="hobbies" className="flex items-center gap-2 text-lg font-semibold text-gray-900">
-                                    <Gamepad2 className="w-5 h-5 text-blue-500" />
-                                    Otros hobbies o actividades (opcional)
+                            {/* Edad */}
+                            <div className="space-y-2">
+                                <Label className="text-lg font-semibold text-gray-900">
+                                    Edad: {preferences.age}
                                 </Label>
-                                <Textarea
-                                    id="hobbies"
-                                    placeholder="Cuéntanos sobre otras actividades que disfrutes..."
-                                    value={preferences.hobbies}
-                                    onChange={(e) => setPreferences(prev => ({ ...prev, hobbies: e.target.value }))}
-                                    className="min-h-24 resize-none"
+                                <input
+                                    type="range"
+                                    min={17}
+                                    max={35}
+                                    value={preferences.age}
+                                    onChange={(e) => setSingle('age', Number(e.target.value))}
+                                    className="w-full"
                                 />
                             </div>
 
-                            {/* Additional Info */}
-                            <div className="space-y-3">
-                                <Label htmlFor="additionalInfo" className="text-lg font-semibold text-gray-900">
-                                    Algo más que quieras que sepamos (opcional)
+                            {/* Horario */}
+                            <div className="space-y-4">
+                                <Label className="text-lg font-semibold text-gray-900">Horario</Label>
+                                <div className="flex gap-3">
+                                    {SCHEDULE_OPTIONS.map(opt => (
+                                        <button
+                                            key={opt.id}
+                                            type="button"
+                                            onClick={() => setSingle('schedule', opt.id)}
+                                            className={`px-4 py-2 rounded-lg border-2 transition-all ${
+                                                preferences.schedule === opt.id
+                                                    ? 'border-[#509550] bg-emerald-50 text-[#509550]'
+                                                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                                            }`}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Lugar de estudio */}
+                            <div className="space-y-4">
+                                <Label className="text-lg font-semibold text-gray-900">
+                                    ¿Dónde prefieres estudiar habitualmente?
                                 </Label>
-                                <Textarea
-                                    id="additionalInfo"
-                                    placeholder="Puedes escribir cualquier cosa que consideres relevante para mejorar tu experiencia en la residencia..."
-                                    value={preferences.additionalInfo}
-                                    onChange={(e) => setPreferences(prev => ({ ...prev, additionalInfo: e.target.value }))}
-                                    className="min-h-24 resize-none"
+                                <div className="flex flex-col gap-2">
+                                    {STUDY_LOCATIONS.map(opt => (
+                                        <button
+                                            key={opt.id}
+                                            type="button"
+                                            onClick={() => setSingle('studyLocation', opt.id)}
+                                            className={`text-left px-4 py-2 rounded-lg border-2 transition-all ${
+                                                preferences.studyLocation === opt.id
+                                                    ? 'border-[#509550] bg-emerald-50 text-[#509550]'
+                                                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                                            }`}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Nivel social */}
+                            <div className="space-y-2">
+                                <Label className="text-lg font-semibold text-gray-900">
+                                    ¿Cómo de social te consideras? {preferences.socialLevel}
+                                </Label>
+                                <input
+                                    type="range"
+                                    min={1}
+                                    max={10}
+                                    value={preferences.socialLevel}
+                                    onChange={(e) => setSingle('socialLevel', Number(e.target.value))}
+                                    className="w-full"
                                 />
+                            </div>
+
+                            {/* Fin de semana */}
+                            <div className="space-y-4">
+                                <Label className="text-lg font-semibold text-gray-900">
+                                    ¿Sueles quedarte los fines de semana?
+                                </Label>
+                                <div className="flex flex-wrap gap-3">
+                                    {WEEKEND_OPTIONS.map(opt => (
+                                        <button
+                                            key={opt.id}
+                                            type="button"
+                                            onClick={() => setSingle('weekendReturn', opt.id)}
+                                            className={`px-4 py-2 rounded-lg border-2 transition-all ${
+                                                preferences.weekendReturn === opt.id
+                                                    ? 'border-[#509550] bg-emerald-50 text-[#509550]'
+                                                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                                            }`}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Importancia planes */}
+                            <div className="space-y-4">
+                                <Label className="text-lg font-semibold text-gray-900">
+                                    ¿Cómo de importante es para ti hacer planes fuera de la residencia?
+                                </Label>
+                                <div className="flex flex-wrap gap-3">
+                                    {PLANS_IMPORTANCE_OPTIONS.map(opt => (
+                                        <button
+                                            key={opt.id}
+                                            type="button"
+                                            onClick={() => setSingle('outsidePlansImportance', opt.id)}
+                                            className={`px-4 py-2 rounded-lg border-2 transition-all ${
+                                                preferences.outsidePlansImportance === opt.id
+                                                    ? 'border-[#509550] bg-emerald-50 text-[#509550]'
+                                                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                                            }`}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Actividades deseadas */}
+                            <div className="space-y-4">
+                                <Label className="text-lg font-semibold text-gray-900">
+                                    ¿Qué tipo de actividades te gustaría hacer en la residencia?
+                                </Label>
+                                <div className="flex flex-wrap gap-3">
+                                    {ACTIVITIES_OPTIONS.map(opt => (
+                                        <button
+                                            key={opt.id}
+                                            type="button"
+                                            onClick={() => setSingle('desiredActivities', opt.id)}
+                                            className={`px-4 py-2 rounded-lg border-2 transition-all ${
+                                                preferences.desiredActivities === opt.id
+                                                    ? 'border-[#509550] bg-emerald-50 text-[#509550]'
+                                                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                                            }`}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Importancia orden/limpieza */}
+                            <div className="space-y-2">
+                                <Label className="text-lg font-semibold text-gray-900">
+                                    ¿Qué tan importante es para ti el orden y la limpieza? {preferences.orderImportance}
+                                </Label>
+                                <input
+                                    type="range"
+                                    min={1}
+                                    max={10}
+                                    value={preferences.orderImportance}
+                                    onChange={(e) => setSingle('orderImportance', Number(e.target.value))}
+                                    className="w-full"
+                                />
+                            </div>
+
+                            {/* Tolerancia ruido */}
+                            <div className="space-y-2">
+                                <Label className="text-lg font-semibold text-gray-900">
+                                    ¿Cuál es tu nivel de tolerancia al ruido cuando intentas descansar? {preferences.noiseTolerance}
+                                </Label>
+                                <input
+                                    type="range"
+                                    min={1}
+                                    max={10}
+                                    value={preferences.noiseTolerance}
+                                    onChange={(e) => setSingle('noiseTolerance', Number(e.target.value))}
+                                    className="w-full"
+                                />
+                            </div>
+
+                            {/* Fumas/vapeas */}
+                            <div className="space-y-4">
+                                <Label className="text-lg font-semibold text-gray-900">
+                                    ¿Fumas o vapeas?
+                                </Label>
+                                <div className="flex flex-wrap gap-3">
+                                    {SMOKING_OPTIONS.map(opt => (
+                                        <button
+                                            key={opt.id}
+                                            type="button"
+                                            onClick={() => setSingle('smokingVaping', opt.id)}
+                                            className={`px-4 py-2 rounded-lg border-2 transition-all ${
+                                                preferences.smokingVaping === opt.id
+                                                    ? 'border-[#509550] bg-emerald-50 text-[#509550]'
+                                                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                                            }`}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Amigos/pareja */}
+                            <div className="space-y-4">
+                                <Label className="text-lg font-semibold text-gray-900">
+                                    ¿Cómo te sientes respecto a traer amigos o a tu pareja a la habitación?
+                                </Label>
+                                <div className="flex flex-wrap gap-3">
+                                    {VISITOR_OPTIONS.map(opt => (
+                                        <button
+                                            key={opt.id}
+                                            type="button"
+                                            onClick={() => setSingle('visitorsPreference', opt.id)}
+                                            className={`px-4 py-2 rounded-lg border-2 transition-all ${
+                                                preferences.visitorsPreference === opt.id
+                                                    ? 'border-[#509550] bg-emerald-50 text-[#509550]'
+                                                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                                            }`}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Comprar básicos */}
+                            <div className="space-y-4">
+                                <Label className="text-lg font-semibold text-gray-900">
+                                    A la hora de comprar cosas básicas (papel higiénico, jabón...)...
+                                </Label>
+                                <div className="flex flex-wrap gap-3">
+                                    {BASIC_ITEMS_OPTIONS.map(opt => (
+                                        <button
+                                            key={opt.id}
+                                            type="button"
+                                            onClick={() => setSingle('basicItemsPreference', opt.id)}
+                                            className={`px-4 py-2 rounded-lg border-2 transition-all ${
+                                                preferences.basicItemsPreference === opt.id
+                                                    ? 'border-[#509550] bg-emerald-50 text-[#509550]'
+                                                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                                            }`}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Temperamento térmico */}
+                            <div className="space-y-4">
+                                <Label className="text-lg font-semibold text-gray-900">
+                                    ¿Eres más bien friolero o caluroso?
+                                </Label>
+                                <div className="flex flex-wrap gap-3">
+                                    {TEMPERATURE_OPTIONS.map(opt => (
+                                        <button
+                                            key={opt.id}
+                                            type="button"
+                                            onClick={() => setSingle('temperaturePreference', opt.id)}
+                                            className={`px-4 py-2 rounded-lg border-2 transition-all ${
+                                                preferences.temperaturePreference === opt.id
+                                                    ? 'border-[#509550] bg-emerald-50 text-[#509550]'
+                                                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                                            }`}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
 
                             {/* Submit Button */}
-                            <Button 
-                                type="submit" 
-                                disabled={isLoading} 
+                            <Button
+                                type="submit"
+                                disabled={isLoading}
                                 className="w-full h-14 text-lg bg-[#509550] hover:bg-[#3d7a3d] text-white shadow-md transition-all"
                             >
                                 {isLoading ? "Guardando preferencias..." : "Completar Perfil"}

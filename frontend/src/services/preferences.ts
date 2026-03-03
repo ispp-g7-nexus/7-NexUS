@@ -4,10 +4,20 @@ import { API_URL } from "./api";
 const PREFERENCES_URL = `${API_URL}/preferences`;
 
 export interface PreferencesData {
-    interests: string[];
-    dietary_restrictions: string[];
-    hobbies: string;
-    additional_info: string;
+    sex: string;
+    age: number;
+    schedule: string;
+    study_location: string;
+    social_level: number;
+    weekend_return: string;
+    outside_plans_importance: string;
+    desired_activity: string;
+    order_importance: number;
+    noise_tolerance: number;
+    smoking_vaping: string;
+    visitors_preference: string;
+    basic_items_preference: string;
+    temperature_preference: string;
 }
 
 export interface PreferencesResponse extends PreferencesData {
