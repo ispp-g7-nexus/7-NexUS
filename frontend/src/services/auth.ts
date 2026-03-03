@@ -3,6 +3,12 @@ import { API_URL } from "./api";
 
 const AUTH_URL = `${API_URL}/auth`;
 
+export interface LoginCredentials {
+    email: string;
+    password: string;
+    portal?: string;
+}
+
 export type PortalRole = "student" | "admin";
 
 interface AuthMeUser {
@@ -15,11 +21,13 @@ interface AuthMeResponse {
 }
 
 export function resolvePortalRoleFromRoles(roles: string[] = []): PortalRole | null {
-    if (roles.includes("resident")) {
+    const normalizedRoles = roles.map(r => r.toLowerCase());
+
+    if (normalizedRoles.includes("student")) {
         return "student";
     }
 
-    if (roles.includes("portfolio_admin") || roles.includes("residence_admin") || roles.includes("staff")) {
+    if (normalizedRoles.some(role => role !== "student")) {
         return "admin";
     }
 
@@ -27,7 +35,7 @@ export function resolvePortalRoleFromRoles(roles: string[] = []): PortalRole | n
 }
 
 export const authService = {
-    login: async (data: any) => {
+    login: async (data: LoginCredentials) => {
         const response = await fetch(`${AUTH_URL}/login/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

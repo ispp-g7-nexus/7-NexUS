@@ -1,18 +1,21 @@
-import { AlertCircle, Bell, LayoutDashboard, LogOut, Menu, Users, Calendar } from "lucide-react";
+import { AlertCircle, Bell, Calendar, LayoutDashboard, LogOut, Menu, Shield, Users } from "lucide-react";
 import { useState } from "react";
+import logo from "../assets/logo.png";
 import { Events } from "../pages/Events/Events";
 import { Residents } from "../pages/Residents/Residents";
-import logo from "../assets/logo.png";
 import { Button } from "./ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet";
+
+// Importamos la página que acabamos de crear
+import RolesPage from "../pages/RolesPage";
 import { AdminAnnouncements } from "../pages/announcements/AdminAnnouncements";
 
 interface AdminViewProps {
     onLogout: () => void;
 }
 
-type AdminTab = "dashboard" | "rooms" | "students" | "incidences" | "reservations" | "kitchen" | "analytics" | "staff" | "announcements" | "visitors" | "events";
+type AdminTab = "dashboard" | "rooms" | "students" | "incidences" | "reservations" | "kitchen" | "analytics" | "staff" | "announcements" | "visitors" | "events" | "roles";
 
 export function AdminView({ onLogout }: AdminViewProps) {
     const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
@@ -23,6 +26,7 @@ export function AdminView({ onLogout }: AdminViewProps) {
         { id: "students", label: "Residentes", icon: <Users className="w-5 h-5" /> },
         { id: "incidences", label: "Incidencias", icon: <AlertCircle className="w-5 h-5" /> },
         { id: "events", label: "Eventos & Comunidad", icon: <Calendar className="w-5 h-5" /> },
+        { id: "roles", label: "Roles", icon: <Shield className="w-5 h-5" /> },
         { id: "announcements", label: "Avisos", icon: <Bell className="w-5 h-5" /> },
     ];
 
@@ -30,16 +34,36 @@ export function AdminView({ onLogout }: AdminViewProps) {
 
     const renderContent = () => {
         switch (activeTab) {
+            case "roles":
+                return <RolesPage />;
+
             case "announcements":
-                return <AdminAnnouncements />;
+                return (
+                    <div className="p-4">
+                        <AdminAnnouncements />
+                    </div>
+                );
+
             case "events":
-                return <Events />;
+                return (
+                    <div className="p-4">
+                        <Events />
+                    </div>
+                );
+
             case "students":
-                return <Residents />;
+                return (
+                    <div className="p-4">
+                        <Residents />
+                    </div>
+                );
+
             default:
                 return (
-                    <div className="bg-white p-6 rounded-xl text-center text-gray-500 shadow-sm">
-                        Vista de {currentTab.label} en construcción
+                    <div className="p-4">
+                        <div className="bg-white p-6 rounded-xl text-center text-gray-500 shadow-sm">
+                            Vista de {currentTab?.label} en construcción
+                        </div>
                     </div>
                 );
         }
