@@ -7,7 +7,7 @@ from apps.common.views import (
     TenantContextView,
 )
 from django.http import JsonResponse
-from django.urls import path
+from django.urls import path, include
 
 
 def healthcheck(_request):
@@ -32,4 +32,5 @@ urlpatterns = [
         PasswordResetConfirmView.as_view(),
         name="password-reset-confirm",
     ),
+    path('api/membership/', include('apps.membership.urls')),
 ]

@@ -1,5 +1,3 @@
-from django.conf import settings
-from django.core.exceptions import ValidationError
 from django.db import models
 
 
@@ -49,60 +47,3 @@ class ResidenceDomain(models.Model):
 
     def __str__(self) -> str:
         return self.domain
-
-
-class Membership(models.Model):
-    class Role(models.TextChoices):
-        PORTFOLIO_ADMIN = "portfolio_admin", "Admin de grupo"
-        RESIDENCE_ADMIN = "residence_admin", "Admin de residencia"
-        RESIDENT = (
-            "resident",
-            "Residente",
-        )
-        STAFF = (
-            "staff",
-            "Personal",
-        )
-
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="memberships",
-    )
-    role = models.CharField(max_length=32, choices=Role.choices)
-    residence = models.ForeignKey(
-        Residence,
-        on_delete=models.CASCADE,
-        related_name="memberships",
-        null=True,
-        blank=True,
-    )
-    is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        ordering = ["user_id", "role"]
-        constraints = [
-            models.UniqueConstraint(
-                fields=["user", "role", "residence"],
-                name="uniq_membership_user_role_residence",
-            ),
-        ]
-
-    def clean(self) -> None:
-        if self.role == self.Role.PORTFOLIO_ADMIN and self.residence_id is not None:
-            raise ValidationError(
-                "El rol de admin de grupo no puede ligarse a una residencia concreta."
-            )
-        if (
-            self.role
-            in {self.Role.RESIDENCE_ADMIN, self.Role.RESIDENT, self.Role.STAFF}
-            and self.residence_id is None
-        ):
-            raise ValidationError("Este rol requiere una residencia asociada.")
-
-    def __str__(self) -> str:
-        if self.residence_id:
-            return f"{self.user} - {self.get_role_display()} ({self.residence})"
-        return f"{self.user} - {self.get_role_display()}"
