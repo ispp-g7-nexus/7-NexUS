@@ -28,8 +28,12 @@ export function AdminLogin({ onLogin, onBack }: AdminLoginProps) {
             await authService.login({ email, password, portal: "admin" });
             toast.success("Acceso concedido");
             onLogin();
-        } catch (error: any) {
-            toast.error(error.message || "Credenciales inválidas o sin permisos");
+        } catch (err) {
+            if (err instanceof Error) {
+                toast.error(err.message || "Credenciales inválidas o sin permisos");
+            } else {
+                toast.error("Ocurrió un error inesperado al iniciar sesión");
+            }
         } finally {
             setIsLoading(false);
         }
