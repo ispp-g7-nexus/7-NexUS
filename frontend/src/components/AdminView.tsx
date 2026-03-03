@@ -3,6 +3,7 @@ import { useState } from "react";
 import logo from "../assets/logo.png";
 import { Events } from "../pages/Events/Events";
 import Rooms from "../pages/Rooms/Rooms";
+import { AdminIncidences } from "../pages/Incidences/components/AdminIncidences";
 import { Residents } from "../pages/Residents/Residents";
 import { Button } from "./ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
@@ -63,6 +64,13 @@ export function AdminView({ onLogout }: AdminViewProps) {
                 return (
                     <div className="p-4">
                         <Rooms />
+                    </div>
+                );
+
+            case "incidences":
+                return (
+                    <div className="p-4">
+                        <AdminIncidences />
                     </div>
                 );
 

@@ -7,6 +7,7 @@ import { StudentAnnouncements } from "../pages/announcements/StudentAnnouncement
 import announcementService from "../services/announcement.service";
 import { toast } from "sonner";
 
+import StudentIncidences from "../pages/Incidences/components/StudentIncidences";
 interface StudentViewProps {
     onLogout: () => void;
 }
@@ -130,11 +131,6 @@ function NavButton({ icon, label, active, onClick, showIndicator = false }: { ic
     );
 }
 
-interface StudentHomeProps {
-    onNavigate: (view: string) => void;
-    onLogout: () => void;
-}
 
 // Componentes Ficticios para evitar errores de compilación
-function StudentHome({ onLogout }: StudentHomeProps) { return <div className="p-4 bg-white rounded-xl shadow-sm text-center"><h2>Inicio Estudiante</h2><button onClick={onLogout} className="mt-4 text-red-500">Cerrar Sesión</button></div>; }
-function StudentIncidences() { return <div>Mis Incidencias</div>; }
+function StudentHome({ onLogout }: any) { return <div className="p-4 bg-white rounded-xl shadow-sm text-center"><h2>Inicio Estudiante</h2><button onClick={onLogout} className="mt-4 text-red-500">Cerrar Sesión</button></div>; }
