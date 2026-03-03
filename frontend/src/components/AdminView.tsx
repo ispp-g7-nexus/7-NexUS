@@ -1,7 +1,8 @@
-import { AlertCircle, Bell, LayoutDashboard, LogOut, Menu, Users, Calendar } from "lucide-react";
+import { AlertCircle, Bell, BookOpen, Calendar, LayoutDashboard, LogOut, Menu, Users } from "lucide-react";
 import { useState } from "react";
-import { Events } from "../pages/Events/Events";
 import logo from "../assets/logo.png";
+import { Events } from "../pages/Events/Events";
+import { Recursos } from "../pages/Resources/Resources";
 import { Button } from "./ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet";
@@ -20,7 +21,9 @@ export function AdminView({ onLogout }: AdminViewProps) {
         { id: "dashboard", label: "Panel de Control", icon: <LayoutDashboard className="w-5 h-5" /> },
         { id: "students", label: "Residentes", icon: <Users className="w-5 h-5" /> },
         { id: "incidences", label: "Incidencias", icon: <AlertCircle className="w-5 h-5" /> },
-        { id: "events", label: "Eventos & Comunidad", icon: <Calendar className="w-5 h-5" /> },
+        { id: "events", label: "Eventos & Comunidad", icon: <Calendar className="w-5 h-5" /> }, 
+        { id: "reservations", label: "Recursos & Reservas", icon: <BookOpen  className="w-5 h-5" /> }, 
+
     ];
 
     const currentTab = allNavItems.find((item) => item.id === activeTab) || allNavItems[0];
@@ -81,6 +84,8 @@ export function AdminView({ onLogout }: AdminViewProps) {
             <div className="flex-1 overflow-y-auto p-4">
                 {activeTab === "events" ? (
                     <Events />
+                     ): activeTab === "reservations" ? (   
+                    <Recursos />
                 ) : (
                     <div className="bg-white p-6 rounded-xl text-center text-gray-500 shadow-sm">
                         Vista de {currentTab.label} en construcción
