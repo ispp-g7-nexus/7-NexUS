@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { objectsService, ObjectItem } from "../../services/objects.ts";
+import { objectsService, ObjectItem, UserObjectReservation } from "../../services/objects.ts";
 import { ObjectsList } from "./components/ObjectsList";
 import { ReservationModal } from "./components/ReservationModal";
+import { MyReservations } from "./components/MyReservations";
 import "./Objects.css";
 
 export type { ObjectItem, UserObjectReservation } from "../../services/objects.ts";
@@ -17,9 +18,14 @@ export function Objects({ onReservationSuccess }: ObjectsProps) {
   const [selectedObject, setSelectedObject] = useState<ObjectItem | null>(null);
   const [isReservationModalOpen, setIsReservationModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  
+  const [reservations, setReservations] = useState<UserObjectReservation[]>([]);
+  const [reservationsLoading, setReservationsLoading] = useState(true);
+  const [reservationsError, setReservationsError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchObjects();
+    fetchReservations();
   }, []);
 
   const fetchObjects = async () => {
@@ -35,6 +41,19 @@ export function Objects({ onReservationSuccess }: ObjectsProps) {
     }
   };
 
+  const fetchReservations = async () => {
+    try {
+      setReservationsLoading(true);
+      setReservationsError(null);
+      const data = await objectsService.getUserObjectReservations();
+      setReservations(data);
+    } catch (err) {
+      setReservationsError(err instanceof Error ? err.message : "Error al cargar reservas");
+    } finally {
+      setReservationsLoading(false);
+    }
+  };
+
 
 
   const handleReserveObject = (object: ObjectItem) => {
@@ -45,13 +64,23 @@ export function Objects({ onReservationSuccess }: ObjectsProps) {
   const handleReservationSuccess = () => {
     setIsReservationModalOpen(false);
     setSelectedObject(null);
-    fetchObjects(); // Refresh objects
+    fetchObjects();
+    fetchReservations();
     if (onReservationSuccess) {
-      onReservationSuccess(); // Notify parent to refresh reservations
+      onReservationSuccess();
     }
   };
 
-
+  const handleCancelReservation = async (objectId: number, rentalId: number) => {
+    try {
+      await objectsService.cancelReservation(objectId, { rental_id: rentalId });
+      await fetchReservations();
+      await fetchObjects();
+    } catch (err) {
+      console.error('Error canceling reservation:', err);
+      setReservationsError(err instanceof Error ? err.message : "Error al cancelar reserva");
+    }
+  };
 
   const filteredObjects = objects.filter(object =>
     object.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -72,15 +101,28 @@ export function Objects({ onReservationSuccess }: ObjectsProps) {
         />
       </div>
 
-      {/* Objects List */}
-      <div className="flex-1">
-        <ObjectsList
-          objects={filteredObjects}
-          loading={loading}
-          error={error}
-          onReserve={handleReserveObject}
-          onRetry={fetchObjects}
-        />
+      {/* Grid Layout: Objects List + My Reservations */}
+      <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+        <div className="flex-1">
+          <ObjectsList
+            objects={filteredObjects}
+            loading={loading}
+            error={error}
+            onReserve={handleReserveObject}
+            onRetry={fetchObjects}
+          />
+        </div>
+
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold px-4">Mis Reservas</h3>
+          <MyReservations
+            reservations={reservations}
+            loading={reservationsLoading}
+            error={reservationsError}
+            onCancel={handleCancelReservation}
+            onRetry={fetchReservations}
+          />
+        </div>
       </div>
 
       {/* Reservation Modal */}
