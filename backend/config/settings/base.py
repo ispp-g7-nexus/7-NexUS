@@ -43,6 +43,7 @@ TENANT_APPS = [
     "apps.residences",
     "apps.objects",
     "apps.events",
+    "apps.bedrooms",
     "apps.membership",
     "apps.announcements",
 ]

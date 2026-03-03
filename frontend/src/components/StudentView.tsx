@@ -1,9 +1,11 @@
 import { motion } from "framer-motion";
 import { AlertCircle, Calendar, Home, MessageSquare, User } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Events } from "../pages/Events/Events";
 import { StudentReservations } from "./StudentReservations";
 import { StudentAnnouncements } from "../pages/announcements/StudentAnnouncements";
+import announcementService from "../services/announcement.service";
+import { toast } from "sonner";
 
 interface StudentViewProps {
     onLogout: () => void;
@@ -13,6 +15,70 @@ type StudentTab = "home" | "incidences" | "reservations" | "community" | "menu" 
 
 export function StudentView({ onLogout }: StudentViewProps) {
     const [activeTab, setActiveTab] = useState<StudentTab>("home");
+    const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
+    const previousUnreadCount = useRef<number | null>(null);
+    const markAsViewedTimeoutRef = useRef<number | null>(null);
+
+    useEffect(() => {
+        const loadUnreadCount = async () => {
+            try {
+                const data = await announcementService.getUnviewedCount();
+                const nextCount = data.count;
+
+                if (
+                    previousUnreadCount.current !== null
+                    && nextCount > previousUnreadCount.current
+                    && activeTab !== "announcements"
+                ) {
+                    toast.info("Tienes un nuevo aviso disponible", {
+                        description: "Revisa la pestaña Avisos para verlo.",
+                    });
+                }
+
+                previousUnreadCount.current = nextCount;
+                setUnreadAnnouncements(data.count);
+            } catch {
+                setUnreadAnnouncements(0);
+            }
+        };
+
+        loadUnreadCount();
+
+        const intervalId = window.setInterval(loadUnreadCount, 15000);
+        return () => window.clearInterval(intervalId);
+    }, [activeTab]);
+
+    useEffect(() => {
+        if (activeTab !== "announcements") {
+            if (markAsViewedTimeoutRef.current) {
+                window.clearTimeout(markAsViewedTimeoutRef.current);
+                markAsViewedTimeoutRef.current = null;
+            }
+            return;
+        }
+
+        const markAsViewed = async () => {
+            try {
+                await announcementService.markAsViewed();
+                previousUnreadCount.current = 0;
+                setUnreadAnnouncements(0);
+            } catch {
+                // Ignorado: no bloquea la navegación
+            }
+        };
+
+        markAsViewedTimeoutRef.current = window.setTimeout(() => {
+            markAsViewed();
+            markAsViewedTimeoutRef.current = null;
+        }, 5000);
+
+        return () => {
+            if (markAsViewedTimeoutRef.current) {
+                window.clearTimeout(markAsViewedTimeoutRef.current);
+                markAsViewedTimeoutRef.current = null;
+            }
+        };
+    }, [activeTab]);
 
     const handleNavigation = (view: string) => {
         setActiveTab(view as StudentTab);
@@ -45,16 +111,19 @@ export function StudentView({ onLogout }: StudentViewProps) {
                         </motion.button>
                     </div>
                     <NavButton icon={<Calendar className="w-5 h-5" />} label="Reservas" active={activeTab === "reservations"} onClick={() => setActiveTab("reservations")} />
-                    <NavButton icon={<MessageSquare className="w-5 h-5" />} label="Avisos" active={activeTab === "announcements"} onClick={() => setActiveTab("announcements")} />
+                    <NavButton icon={<MessageSquare className="w-5 h-5" />} label="Avisos" active={activeTab === "announcements"} onClick={() => setActiveTab("announcements")} showIndicator={unreadAnnouncements > 0} />
                 </div>
             </nav>
         </div>
     );
 }
 
-function NavButton({ icon, label, active, onClick }: { icon: React.ReactNode, label: string, active: boolean, onClick: () => void }) {
+function NavButton({ icon, label, active, onClick, showIndicator = false }: { icon: React.ReactNode, label: string, active: boolean, onClick: () => void, showIndicator?: boolean }) {
     return (
-        <button onClick={onClick} className={`flex flex-col items-center justify-center p-2 rounded-xl transition-colors ${active ? "text-[#4A7C59]" : "text-slate-400 hover:text-slate-600"}`}>
+        <button onClick={onClick} className={`relative flex flex-col items-center justify-center p-2 rounded-xl transition-colors ${active ? "text-[#4A7C59]" : "text-slate-400 hover:text-slate-600"}`}>
+            {showIndicator && (
+                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500" />
+            )}
             {icon}
             <span className="text-[10px] font-medium mt-1">{label}</span>
         </button>

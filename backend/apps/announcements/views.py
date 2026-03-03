@@ -1,11 +1,12 @@
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework import status
 from django.contrib.auth import get_user_model
 from apps.tenants.models import Domain
 from apps.common.utils.jwt_auth import resolve_user_from_request
 
-from .models import Announcement
+from .models import Announcement, AnnouncementView
 from .serializers import AnnouncementSerializer, AnnouncementListSerializer
 from .permissions import IsStaffOrReadOnly
 
@@ -57,6 +58,13 @@ class AnnouncementViewSet(viewsets.ModelViewSet):
 
         return queryset
 
+    def _tenant_announcements_queryset(self):
+        tenant = self._resolve_tenant()
+        if not tenant:
+            return Announcement.objects.none()
+
+        return Announcement.objects.filter(residence=tenant)
+
     def get_serializer_class(self):
         return AnnouncementListSerializer if self.action == 'list' else AnnouncementSerializer
 
@@ -75,3 +83,54 @@ class AnnouncementViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(announcement)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def unviewed_count(self, request):
+        user = self._resolve_user()
+        if not user:
+            return Response({'detail': 'Usuario no autenticado.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        announcements_qs = self._tenant_announcements_queryset()
+        viewed_ids = AnnouncementView.objects.filter(
+            user=user,
+            announcement__in=announcements_qs,
+        ).values_list('announcement_id', flat=True)
+
+        count = announcements_qs.exclude(id__in=viewed_ids).count()
+        return Response({'count': count}, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['post'])
+    def mark_as_viewed(self, request):
+        user = self._resolve_user()
+        if not user:
+            return Response({'detail': 'Usuario no autenticado.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        announcements_qs = self._tenant_announcements_queryset()
+        announcement_ids = request.data.get('announcement_ids')
+
+        if announcement_ids:
+            announcements_qs = announcements_qs.filter(id__in=announcement_ids)
+
+        existing_ids = set(
+            AnnouncementView.objects.filter(
+                user=user,
+                announcement__in=announcements_qs,
+            ).values_list('announcement_id', flat=True)
+        )
+
+        to_create = [
+            AnnouncementView(user=user, announcement=announcement)
+            for announcement in announcements_qs
+            if announcement.id not in existing_ids
+        ]
+
+        if to_create:
+            AnnouncementView.objects.bulk_create(to_create, ignore_conflicts=True)
+
+        return Response(
+            {
+                'message': 'Avisos marcados como leídos.',
+                'viewed_count': len(to_create),
+            },
+            status=status.HTTP_200_OK,
+        )

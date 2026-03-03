@@ -40,6 +40,7 @@ urlpatterns = [
     ),
     path("api/", include("apps.events.urls")),
     path("api/", include("apps.objects.urls")),
+    path("api/", include("apps.bedrooms.urls")),
     path("api/membership/", include("apps.membership.urls")),
     path(
         "api/auth/password-reset/confirm/",
