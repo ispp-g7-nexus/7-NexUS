@@ -1,6 +1,6 @@
 from django.db import models
 from django.conf import settings
-from apps.residences.models import Membership
+from apps.membership.models import Membership
 
 
 class ResidentPreference(models.Model):
@@ -10,7 +10,7 @@ class ResidentPreference(models.Model):
         Membership,
         on_delete=models.CASCADE,
         related_name="resident_preferences",
-        limit_choices_to={"role": Membership.Role.RESIDENT}
+        limit_choices_to={"role__name__iexact": "Student"},
     )
     sex = models.CharField(max_length=20, blank=True)
     age = models.PositiveSmallIntegerField(null=True, blank=True)

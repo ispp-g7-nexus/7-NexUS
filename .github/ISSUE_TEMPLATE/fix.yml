@@ -1,7 +1,7 @@
 name: "🔧 Fix"
 description: "Reportar un error o bug para corregir"
-title: "[FIX] "
-labels: ["Fix"]
+title: "[NX-SZ.YY] "
+labels: ["Fix, Bug"]
 assignees: []
 body:
   - type: markdown

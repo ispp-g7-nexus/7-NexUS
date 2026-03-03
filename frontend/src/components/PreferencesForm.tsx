@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Plus, Minus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import logo from "../assets/logo.png";
@@ -90,6 +90,101 @@ const TEMPERATURE_OPTIONS = [
     { id: "neutro", label: "Neutro" },
     { id: "caluroso", label: "Muy caluroso - necesito ventilar y dormir fresco" },
 ];
+
+interface NumericInputProps {
+    value: number;
+    onChange: (value: number) => void;
+    min: number;
+    max: number;
+}
+
+const NumericInput = ({ value, onChange, min, max }: NumericInputProps) => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [inputValue, setInputValue] = useState(value.toString());
+
+    const handleDecrement = () => {
+        if (value > min) {
+            onChange(value - 1);
+        }
+    };
+
+    const handleIncrement = () => {
+        if (value < max) {
+            onChange(value + 1);
+        }
+    };
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newValue = e.target.value;
+        setInputValue(newValue);
+    };
+
+    const handleInputBlur = () => {
+        const numValue = parseInt(inputValue, 10);
+        if (!isNaN(numValue) && numValue >= min && numValue <= max) {
+            onChange(numValue);
+        } else {
+            setInputValue(value.toString());
+        }
+        setIsEditing(false);
+    };
+
+    const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            handleInputBlur();
+        } else if (e.key === 'Escape') {
+            setInputValue(value.toString());
+            setIsEditing(false);
+        }
+    };
+
+    return (
+        <div className="flex items-center gap-3">
+            <button
+                type="button"
+                onClick={handleDecrement}
+                disabled={value <= min}
+                className="p-2 rounded-lg border-2 border-gray-200 bg-white text-gray-700 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+                <Minus className="w-4 h-4" />
+            </button>
+            
+            {isEditing ? (
+                <input
+                    type="number"
+                    min={min}
+                    max={max}
+                    value={inputValue}
+                    onChange={handleInputChange}
+                    onBlur={handleInputBlur}
+                    onKeyDown={handleInputKeyDown}
+                    autoFocus
+                    className="w-16 text-center px-3 py-2 border-2 border-[#509550] rounded-lg"
+                />
+            ) : (
+                <button
+                    type="button"
+                    onClick={() => {
+                        setInputValue(value.toString());
+                        setIsEditing(true);
+                    }}
+                    className="w-16 text-center px-3 py-2 rounded-lg border-2 border-gray-200 bg-white text-gray-900 font-semibold hover:border-gray-300 transition-all cursor-pointer"
+                >
+                    {value}
+                </button>
+            )}
+            
+            <button
+                type="button"
+                onClick={handleIncrement}
+                disabled={value >= max}
+                className="p-2 rounded-lg border-2 border-gray-200 bg-white text-gray-700 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+                <Plus className="w-4 h-4" />
+            </button>
+        </div>
+    );
+};
 
 export function PreferencesForm({ onComplete, onBack }: PreferencesFormProps) {
     const [preferences, setPreferences] = useState<Preferences>({
@@ -239,17 +334,15 @@ export function PreferencesForm({ onComplete, onBack }: PreferencesFormProps) {
                             </div>
 
                             {/* Edad */}
-                            <div className="space-y-2">
+                            <div className="space-y-4">
                                 <Label className="text-lg font-semibold text-gray-900">
-                                    Edad: {preferences.age}
+                                    Edad <span className="text-sm font-normal text-gray-500">(17-35)</span>
                                 </Label>
-                                <input
-                                    type="range"
+                                <NumericInput
+                                    value={preferences.age}
+                                    onChange={(value) => setSingle('age', value)}
                                     min={17}
                                     max={35}
-                                    value={preferences.age}
-                                    onChange={(e) => setSingle('age', Number(e.target.value))}
-                                    className="w-full"
                                 />
                             </div>
 
@@ -298,17 +391,15 @@ export function PreferencesForm({ onComplete, onBack }: PreferencesFormProps) {
                             </div>
 
                             {/* Nivel social */}
-                            <div className="space-y-2">
+                            <div className="space-y-4">
                                 <Label className="text-lg font-semibold text-gray-900">
-                                    ¿Cómo de social te consideras? {preferences.socialLevel}
+                                    ¿Cómo de social te consideras? <span className="text-sm font-normal text-gray-500">(1-10)</span>
                                 </Label>
-                                <input
-                                    type="range"
+                                <NumericInput
+                                    value={preferences.socialLevel}
+                                    onChange={(value) => setSingle('socialLevel', value)}
                                     min={1}
                                     max={10}
-                                    value={preferences.socialLevel}
-                                    onChange={(e) => setSingle('socialLevel', Number(e.target.value))}
-                                    className="w-full"
                                 />
                             </div>
 
@@ -382,32 +473,28 @@ export function PreferencesForm({ onComplete, onBack }: PreferencesFormProps) {
                             </div>
 
                             {/* Importancia orden/limpieza */}
-                            <div className="space-y-2">
+                            <div className="space-y-4">
                                 <Label className="text-lg font-semibold text-gray-900">
-                                    ¿Qué tan importante es para ti el orden y la limpieza? {preferences.orderImportance}
+                                    ¿Qué tan importante es para ti el orden y la limpieza? <span className="text-sm font-normal text-gray-500">(1-10)</span>
                                 </Label>
-                                <input
-                                    type="range"
+                                <NumericInput
+                                    value={preferences.orderImportance}
+                                    onChange={(value) => setSingle('orderImportance', value)}
                                     min={1}
                                     max={10}
-                                    value={preferences.orderImportance}
-                                    onChange={(e) => setSingle('orderImportance', Number(e.target.value))}
-                                    className="w-full"
                                 />
                             </div>
 
                             {/* Tolerancia ruido */}
-                            <div className="space-y-2">
+                            <div className="space-y-4">
                                 <Label className="text-lg font-semibold text-gray-900">
-                                    ¿Cuál es tu nivel de tolerancia al ruido cuando intentas descansar? {preferences.noiseTolerance}
+                                    ¿Cuál es tu nivel de tolerancia al ruido cuando intentas descansar? <span className="text-sm font-normal text-gray-500">(1-10)</span>
                                 </Label>
-                                <input
-                                    type="range"
+                                <NumericInput
+                                    value={preferences.noiseTolerance}
+                                    onChange={(value) => setSingle('noiseTolerance', value)}
                                     min={1}
                                     max={10}
-                                    value={preferences.noiseTolerance}
-                                    onChange={(e) => setSingle('noiseTolerance', Number(e.target.value))}
-                                    className="w-full"
                                 />
                             </div>
 

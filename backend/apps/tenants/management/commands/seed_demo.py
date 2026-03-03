@@ -11,13 +11,17 @@ from apps.tenants.models import Client, Domain, Plan
 
 
 class Command(BaseCommand):
-    help = "Crea o actualiza datos demo para desarrollo (tenant, residencia y usuarios)."
+    help = (
+        "Crea o actualiza datos demo para desarrollo (tenant, residencia y usuarios)."
+    )
 
     def add_arguments(self, parser):
         parser.add_argument("--domain", default=None, help="Dominio del tenant demo.")
         parser.add_argument("--schema", default=None, help="Schema del tenant demo.")
         parser.add_argument("--tenant-slug", default=None, help="Slug del tenant demo.")
-        parser.add_argument("--tenant-name", default=None, help="Nombre del tenant demo.")
+        parser.add_argument(
+            "--tenant-name", default=None, help="Nombre del tenant demo."
+        )
         parser.add_argument("--admin-email", default=None, help="Email del admin demo.")
         parser.add_argument("--student-email", default=None, help="Email del estudiante demo.")
         parser.add_argument("--student2-email", default=None, help="Email del segundo estudiante demo.")
@@ -40,7 +44,15 @@ class Command(BaseCommand):
         normalized = slugify(value) or "demo"
         return normalized
 
-    def _upsert_user(self, *, email: str, password: str, first_name: str, last_name: str, is_staff: bool):
+    def _upsert_user(
+        self,
+        *,
+        email: str,
+        password: str,
+        first_name: str,
+        last_name: str,
+        is_staff: bool,
+    ):
         UserModel = get_user_model()
         normalized_email = email.strip().lower()
         username = normalized_email
@@ -63,12 +75,20 @@ class Command(BaseCommand):
         return user
 
     def handle(self, *args, **options):
-        domain = self._env_or_option(options, "domain", "DEMO_TENANT_DOMAIN", "demo.nexus.local").lower()
+        domain = self._env_or_option(
+            options, "domain", "DEMO_TENANT_DOMAIN", "demo.nexus.local"
+        ).lower()
         schema_name = self._safe_schema_name(
-            self._env_or_option(options, "schema", "DEMO_TENANT_SCHEMA", domain.split(".", 1)[0])
+            self._env_or_option(
+                options, "schema", "DEMO_TENANT_SCHEMA", domain.split(".", 1)[0]
+            )
         )
-        tenant_name = self._env_or_option(options, "tenant_name", "DEMO_TENANT_NAME", "Residencia Demo")
-        tenant_slug = self._safe_slug(self._env_or_option(options, "tenant_slug", "DEMO_TENANT_SLUG", schema_name))
+        tenant_name = self._env_or_option(
+            options, "tenant_name", "DEMO_TENANT_NAME", "Residencia Demo"
+        )
+        tenant_slug = self._safe_slug(
+            self._env_or_option(options, "tenant_slug", "DEMO_TENANT_SLUG", schema_name)
+        )
         admin_email = self._env_or_option(
             options,
             "admin_email",
@@ -142,10 +162,17 @@ class Command(BaseCommand):
                 "is_primary": True,
             },
         )
-        Domain.objects.filter(tenant=client).exclude(pk=primary_domain.pk).update(is_primary=False)
+        Domain.objects.filter(tenant=client).exclude(pk=primary_domain.pk).update(
+            is_primary=False
+        )
 
         with schema_context(client.schema_name):
-            from apps.residences.models import Membership, Residence, ResidenceBranding, ResidenceDomain
+            from apps.membership.models import Membership, Role
+            from apps.residences.models import (
+                Residence,
+                ResidenceBranding,
+                ResidenceDomain,
+            )
 
             residence, _ = Residence.objects.update_or_create(
                 code="DEMO-01",
@@ -165,7 +192,9 @@ class Command(BaseCommand):
                     "is_active": True,
                 },
             )
-            ResidenceDomain.objects.filter(residence=residence).exclude(domain=domain).update(is_primary=False)
+            ResidenceDomain.objects.filter(residence=residence).exclude(
+                domain=domain
+            ).update(is_primary=False)
 
             ResidenceBranding.objects.update_or_create(
                 residence=residence,
@@ -198,21 +227,34 @@ class Command(BaseCommand):
                 is_staff=False,
             )
 
-            Membership.objects.update_or_create(
-                user=admin_user,
-                role=Membership.Role.PORTFOLIO_ADMIN,
-                residence=None,
-                defaults={"is_active": True},
+            admin_role, _ = Role.objects.get_or_create(
+                name="Admin",
+                defaults={
+                    "description": "Administrador del sistema",
+                    "is_system_default": True,
+                    "residence": None,
+                },
             )
+
+            student_role, _ = Role.objects.get_or_create(
+                name="Student",
+                defaults={
+                    "description": "Estudiante / Residente",
+                    "is_system_default": True,
+                    "residence": None,
+                },
+            )
+
             Membership.objects.update_or_create(
                 user=admin_user,
-                role=Membership.Role.RESIDENCE_ADMIN,
+                role=admin_role,
                 residence=residence,
                 defaults={"is_active": True},
             )
+
             Membership.objects.update_or_create(
                 user=student_user,
-                role=Membership.Role.RESIDENT,
+                role=student_role,
                 residence=residence,
                 defaults={"is_active": True},
             )

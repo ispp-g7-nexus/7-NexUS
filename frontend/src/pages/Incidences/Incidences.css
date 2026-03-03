@@ -1,0 +1,139 @@
+.incidences-container {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  font-family: -apple-system, sans-serif;
+  color: hsl(var(--foreground));
+  padding-bottom: 100px;
+}
+
+.incidences-header {
+  background-color: #1B4D1C;
+  padding: 40px 24px 30px;
+  border-bottom-left-radius: 32px;
+  border-bottom-right-radius: 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  color: white;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.incidences-header h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.fab-button {
+  position: fixed;
+  bottom: 90px; 
+  right: 24px;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background-color: #82D14C;
+  color: white;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(130, 209, 76, 0.4);
+  cursor: pointer;
+  transition: transform 0.2s, background-color 0.2s;
+  z-index: 40;
+}
+
+.fab-button:active {
+  transform: scale(0.9);
+  background-color: #74bc44;
+}
+
+.incidence-card {
+  background: hsl(var(--card));
+  border-radius: 24px;
+  border: none;
+  margin: 0 16px 16px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  display: flex;
+  transition: transform 0.2s;
+}
+
+.status-indicator {
+  width: 6px;
+  height: auto;
+}
+
+.status-reviewing { background-color: #FFB457; }
+.status-resolved { background-color: #82D14C; }
+.status-pending { background-color: #94A3B8; }
+
+.incidence-content {
+  padding: 20px;
+  flex: 1;
+}
+
+.incidence-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #1A1C1E;
+  margin-bottom: 8px;
+}
+
+.incidence-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #74777F;
+  font-size: 0.875rem;
+  margin-bottom: 16px;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-view-notes {
+  width: 100%;
+  background-color: #F0F4FA;
+  color: #0061A7;
+  border: 1px solid #D1E4FF;
+  border-radius: 12px;
+  padding: 10px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background-color 0.2s;
+}
+
+.btn-view-notes:hover {
+  background-color: #E1E9F5;
+}
+
+.notes-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 100;
+}
+
+.notes-modal-content {
+  background-color: #D1E4FF;
+  border-radius: 28px;
+  padding: 24px;
+  max-width: 400px;
+  width: 100%;
+  color: #001D36;
+}
