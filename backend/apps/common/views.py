@@ -258,3 +258,51 @@ class AdminCreateResidentView(APIView):
             pass
 
         return Response({"ok": True, "created": created, "email": user.email}, status=status.HTTP_201_CREATED)
+
+
+class StudentProfileView(APIView):
+    """Get or update student profile"""
+    
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        user_data = resolve_user_from_request(request)
+        if not user_data:
+            return Response({"detail": "No autenticado."}, status=status.HTTP_401_UNAUTHORIZED)
+
+        from apps.residences.models import StudentProfile
+        
+        try:
+            user_pk = user_data.get("user_id") or user_data.get("id") or user_data.get("sub")
+            user = UserModel.objects.get(pk=user_pk)
+            profile = StudentProfile.objects.get(user=user)
+            from .serializers import StudentProfileSerializer
+            serializer = StudentProfileSerializer(profile)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except StudentProfile.DoesNotExist:
+            return Response({"detail": "Perfil no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+    def post(self, request):
+        """Create or update student profile"""
+        user_data = resolve_user_from_request(request)
+        if not user_data:
+            return Response({"detail": "No autenticado."}, status=status.HTTP_401_UNAUTHORIZED)
+
+        from apps.residences.models import StudentProfile
+        from .serializers import StudentProfileSerializer
+
+        user_pk = user_data.get("user_id") or user_data.get("id") or user_data.get("sub")
+        user = UserModel.objects.get(pk=user_pk)
+        
+        request.user = user
+
+        try:
+            profile = StudentProfile.objects.get(user=user)
+            serializer = StudentProfileSerializer(profile, data=request.data, partial=True, context={"request": request})
+        except StudentProfile.DoesNotExist:
+            serializer = StudentProfileSerializer(data=request.data, context={"request": request})
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
