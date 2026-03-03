@@ -1,6 +1,8 @@
-import { AlertCircle, Bell, LayoutDashboard, LogOut, Menu, Shield, Users } from "lucide-react";
+import { AlertCircle, Bell, Calendar, LayoutDashboard, LogOut, Menu, Shield, Users } from "lucide-react";
 import { useState } from "react";
 import logo from "../assets/logo.png";
+import { Events } from "../pages/Events/Events";
+import { Residents } from "../pages/Residents/Residents";
 import { Button } from "./ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet";
@@ -22,14 +24,15 @@ export function AdminView({ onLogout }: AdminViewProps) {
         { id: "dashboard", label: "Panel de Control", icon: <LayoutDashboard className="w-5 h-5" /> },
         { id: "students", label: "Residentes", icon: <Users className="w-5 h-5" /> },
         { id: "incidences", label: "Incidencias", icon: <AlertCircle className="w-5 h-5" /> },
+        { id: "events", label: "Eventos & Comunidad", icon: <Calendar className="w-5 h-5" /> },
         { id: "roles", label: "Roles", icon: <Shield className="w-5 h-5" /> },
     ];
 
     const currentTab = allNavItems.find((item) => item.id === activeTab) || allNavItems[0];
 
     return (
-        <div className="min-h-screen flex flex-col max-w-md mx-auto bg-[#F5F5F5]">
-            <header className="bg-white border-b border-slate-100 px-4 py-3 sticky top-0 z-10">
+        <div className="min-h-screen flex flex-col w-full bg-background relative">
+            <header className="bg-card border-b border-border px-4 py-3 sticky top-0 z-10">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <button onClick={() => setActiveTab("dashboard")} className="w-9 h-9 flex items-center justify-center">
@@ -85,9 +88,15 @@ export function AdminView({ onLogout }: AdminViewProps) {
                     <RolesPage />
                 ) : (
                     <div className="p-4">
-                        <div className="bg-white p-6 rounded-xl text-center text-gray-500 shadow-sm">
-                            Vista de {currentTab.label} en construcción
-                        </div>
+                        {activeTab === "events" ? (
+                            <Events />
+                        ) : activeTab === "students" ? (
+                            <Residents />
+                        ) : (
+                            <div className="bg-white p-6 rounded-xl text-center text-gray-500 shadow-sm">
+                                Vista de {currentTab.label} en construcción
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
