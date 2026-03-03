@@ -79,7 +79,7 @@ def _is_admin_for_residence(user, residence: Residence) -> bool:
         is_active=True,
     ).filter(
         Q(role=Membership.Role.RESIDENCE_ADMIN, residence=residence)
-        | Q(role=Membership.Role.PORTFOLIO_ADMIN, residence__isnull=True)
+        | Q(role=Membership.Role.PORTFOLIO_ADMIN)
     ).exists()
 
 
@@ -140,8 +140,13 @@ class AuthenticatedView(View):
                     {"detail": "Authentication credentials were not provided."},
                     status=401,
                 )
+        permission_error = self.check_permissions(request)
+        if permission_error:
+            return permission_error
         return super().dispatch(request, *args, **kwargs)
 
+    def check_permissions(self, request):
+        return None
 
 class SpaceListView(AuthenticatedView):
     def get(self, request):
@@ -346,3 +351,157 @@ class SpaceReservationCancelView(AuthenticatedView):
                 "reservation": _serialize_reservation(reservation),
             }
         )
+
+class AdminRequiredMixin:
+    """Mixin que verifica que el usuario es admin de la residencia."""
+    def check_permissions(self, request):
+        residence = _validate_residence(request)
+        if not residence or not _is_admin_for_residence(request.user, residence):
+            return JsonResponse({"detail": "No tienes permisos de administrador."}, status=403)
+        return None
+
+
+class AdminSpaceListCreateView(AdminRequiredMixin, AuthenticatedView):
+    def get(self, request):
+        """Lista TODOS los espacios (activos e inactivos) para el admin."""
+        residence = _validate_residence(request)
+        spaces = CommonSpace.objects.filter(residence=residence)
+        return JsonResponse([_serialize_space(s) for s in spaces], safe=False)
+
+    def post(self, request):
+        """Crea un nuevo espacio."""
+        residence = _validate_residence(request)
+        try:
+            payload = json.loads(request.body or "{}")
+        except json.JSONDecodeError:
+            return JsonResponse({"detail": "JSON inválido."}, status=400)
+
+        name = str(payload.get("name", "")).strip()
+        description = str(payload.get("description", "")).strip()
+        capacity = payload.get("capacity", 1)
+        open_time = str(payload.get("open_time", "")).strip()
+        close_time = str(payload.get("close_time", "")).strip()
+        is_active = payload.get("is_active", True)
+
+        if not name or not open_time or not close_time:
+            return JsonResponse({"detail": "name, open_time y close_time son obligatorios."}, status=400)
+
+        try:
+            capacity = int(capacity)
+            if capacity < 1:
+                raise ValueError
+        except (ValueError, TypeError):
+            return JsonResponse({"detail": "capacity debe ser un entero positivo."}, status=400)
+
+        from django.core.exceptions import ValidationError
+        from datetime import time as dt_time
+        try:
+            ot = dt_time.fromisoformat(open_time)
+            ct = dt_time.fromisoformat(close_time)
+        except ValueError:
+            return JsonResponse({"detail": "Formato de hora inválido. Usa HH:MM o HH:MM:SS."}, status=400)
+
+        if ct <= ot:
+            return JsonResponse({"detail": "close_time debe ser posterior a open_time."}, status=400)
+
+        if CommonSpace.objects.filter(residence=residence, name=name).exists():
+            return JsonResponse({"detail": "Ya existe un espacio con ese nombre en esta residencia."}, status=400)
+
+        space = CommonSpace.objects.create(
+            residence=residence,
+            name=name,
+            description=description,
+            capacity=capacity,
+            open_time=ot,
+            close_time=ct,
+            is_active=is_active,
+        )
+        return JsonResponse(_serialize_space(space), status=201)
+
+
+class AdminSpaceDetailView(AdminRequiredMixin, AuthenticatedView):
+    def patch(self, request, space_id: int):
+        """Edita parcialmente un espacio."""
+        residence = _validate_residence(request)
+        space = get_object_or_404(CommonSpace, id=space_id, residence=residence)
+
+        try:
+            payload = json.loads(request.body or "{}")
+        except json.JSONDecodeError:
+            return JsonResponse({"detail": "JSON inválido."}, status=400)
+
+        from datetime import time as dt_time
+
+        if "name" in payload:
+            name = str(payload["name"]).strip()
+            if not name:
+                return JsonResponse({"detail": "El nombre no puede estar vacío."}, status=400)
+            if CommonSpace.objects.filter(residence=residence, name=name).exclude(id=space_id).exists():
+                return JsonResponse({"detail": "Ya existe un espacio con ese nombre."}, status=400)
+            space.name = name
+
+        if "description" in payload:
+            space.description = str(payload["description"]).strip()
+
+        if "capacity" in payload:
+            try:
+                cap = int(payload["capacity"])
+                if cap < 1:
+                    raise ValueError
+                space.capacity = cap
+            except (ValueError, TypeError):
+                return JsonResponse({"detail": "capacity debe ser un entero positivo."}, status=400)
+
+        if "open_time" in payload:
+            try:
+                space.open_time = dt_time.fromisoformat(str(payload["open_time"]))
+            except ValueError:
+                return JsonResponse({"detail": "Formato de open_time inválido."}, status=400)
+
+        if "close_time" in payload:
+            try:
+                space.close_time = dt_time.fromisoformat(str(payload["close_time"]))
+            except ValueError:
+                return JsonResponse({"detail": "Formato de close_time inválido."}, status=400)
+
+        if "is_active" in payload:
+            space.is_active = bool(payload["is_active"])
+
+        if space.close_time <= space.open_time:
+            return JsonResponse({"detail": "close_time debe ser posterior a open_time."}, status=400)
+
+        space.save()
+        return JsonResponse(_serialize_space(space))
+
+    def delete(self, request, space_id: int):
+        """Desactiva un espacio (soft delete) y cancela sus reservas activas."""
+        residence = _validate_residence(request)
+        space = get_object_or_404(CommonSpace, id=space_id, residence=residence)
+
+        with transaction.atomic():
+            SpaceReservation.objects.filter(
+                space=space,
+                status=SpaceReservation.Status.ACTIVE,
+            ).update(status=SpaceReservation.Status.CANCELLED)
+            space.is_active = False
+            space.save(update_fields=["is_active", "updated_at"])
+
+        return JsonResponse({"detail": "Espacio desactivado y reservas canceladas."})
+
+
+class AdminSpaceReservationsView(AdminRequiredMixin, AuthenticatedView):
+    def get(self, request, space_id: int):
+        """Lista todas las reservas de un espacio (para el admin)."""
+        residence = _validate_residence(request)
+        space = get_object_or_404(CommonSpace, id=space_id, residence=residence)
+
+        status_filter = request.GET.get("status", "").strip()
+        qs = SpaceReservation.objects.filter(
+            residence=residence,
+            space=space,
+        ).select_related("user", "space").order_by("-start_time")
+
+        if status_filter in (SpaceReservation.Status.ACTIVE, SpaceReservation.Status.CANCELLED):
+            qs = qs.filter(status=status_filter)
+
+        return JsonResponse([_serialize_reservation(r) for r in qs], safe=False)

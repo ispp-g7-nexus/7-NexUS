@@ -53,13 +53,13 @@ def has_access_for_portal(user, portal: str, residence):
         if memberships.filter(role=Membership.Role.PORTFOLIO_ADMIN).exists():
             return True
         if residence:
-            # Incluimos STAFF como hicimos en la tarea anterior
+            # Incluimos STAFF como hicimos en la tarea anterior lo voy a cambiar a RESIDENCE_ADMIN que STAFF da fallo
             return memberships.filter(
-                role__in=[Membership.Role.RESIDENCE_ADMIN, Membership.Role.STAFF],
+                role__in=[Membership.Role.RESIDENCE_ADMIN, Membership.Role.RESIDENCE_ADMIN],
                 residence=residence,
             ).exists()
         return memberships.filter(
-            role__in=[Membership.Role.RESIDENCE_ADMIN, Membership.Role.STAFF]
+            role__in=[Membership.Role.RESIDENCE_ADMIN, Membership.Role.RESIDENCE_ADMIN]
         ).exists()
 
     return False

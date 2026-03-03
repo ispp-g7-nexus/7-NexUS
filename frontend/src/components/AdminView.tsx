@@ -1,8 +1,8 @@
-import { AlertCircle, Bell, LayoutDashboard, LogOut, Menu, Users, Calendar } from "lucide-react";
+import { AlertCircle, Bell, BookOpen, Calendar, LayoutDashboard, LogOut, Menu, Users } from "lucide-react";
 import { useState } from "react";
-import { Events } from "../pages/Events/Events";
-import { Residents } from "../pages/Residents/Residents";
 import logo from "../assets/logo.png";
+import { Events } from "../pages/Events/Events";
+import { AdminSpaces } from "../pages/Reservations/AdminSpaces";
 import { Button } from "./ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet";
@@ -15,13 +15,15 @@ type AdminTab = "dashboard" | "rooms" | "students" | "incidences" | "reservation
 
 export function AdminView({ onLogout }: AdminViewProps) {
     const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
-    const [notifications] = useState([{ id: 1, title: "Nueva reserva", message: "Sala reservada", time: "Hace 5 min", read: false }]);
+    const [notifications, setNotifications] = useState([{ id: 1, title: "Nueva reserva", message: "Sala reservada", time: "Hace 5 min", read: false }]);
 
     const allNavItems = [
         { id: "dashboard", label: "Panel de Control", icon: <LayoutDashboard className="w-5 h-5" /> },
         { id: "students", label: "Residentes", icon: <Users className="w-5 h-5" /> },
         { id: "incidences", label: "Incidencias", icon: <AlertCircle className="w-5 h-5" /> },
-        { id: "events", label: "Eventos & Comunidad", icon: <Calendar className="w-5 h-5" /> },
+        { id: "events", label: "Eventos & Comunidad", icon: <Calendar className="w-5 h-5" /> }, 
+        { id: "reservations", label: "Recursos & Reservas", icon: <BookOpen  className="w-5 h-5" /> }, 
+
     ];
 
     const currentTab = allNavItems.find((item) => item.id === activeTab) || allNavItems[0];
@@ -82,8 +84,8 @@ export function AdminView({ onLogout }: AdminViewProps) {
             <div className="flex-1 overflow-y-auto p-4">
                 {activeTab === "events" ? (
                     <Events />
-                ) : activeTab === "students" ? (
-                    <Residents />
+                     ): activeTab === "reservations" ? (   
+                    <AdminSpaces />
                 ) : (
                     <div className="bg-white p-6 rounded-xl text-center text-gray-500 shadow-sm">
                         Vista de {currentTab.label} en construcción
