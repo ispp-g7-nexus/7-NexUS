@@ -1,7 +1,8 @@
-import { AlertCircle, Bell, Calendar, LayoutDashboard, LogOut, Menu, Shield, Users } from "lucide-react";
+import { AlertCircle, Bell, LayoutDashboard, LogOut, Menu, Users, Calendar, Home, Shield } from "lucide-react";
 import { useState } from "react";
 import logo from "../assets/logo.png";
 import { Events } from "../pages/Events/Events";
+import Rooms from "../pages/Rooms/Rooms";
 import { AdminIncidences } from "../pages/Incidences/components/AdminIncidences";
 import { Residents } from "../pages/Residents/Residents";
 import { Button } from "./ui/button";
@@ -24,6 +25,7 @@ export function AdminView({ onLogout }: AdminViewProps) {
 
     const allNavItems = [
         { id: "dashboard", label: "Panel de Control", icon: <LayoutDashboard className="w-5 h-5" /> },
+        { id: "rooms", label: "Habitaciones", icon: <Home className="w-5 h-5" /> },
         { id: "students", label: "Residentes", icon: <Users className="w-5 h-5" /> },
         { id: "incidences", label: "Incidencias", icon: <AlertCircle className="w-5 h-5" /> },
         { id: "events", label: "Eventos & Comunidad", icon: <Calendar className="w-5 h-5" /> },
@@ -56,6 +58,12 @@ export function AdminView({ onLogout }: AdminViewProps) {
                 return (
                     <div className="p-4">
                         <Residents />
+                    </div>
+                );
+            case "rooms":
+                return (
+                    <div className="p-4">
+                        <Rooms />
                     </div>
                 );
 
