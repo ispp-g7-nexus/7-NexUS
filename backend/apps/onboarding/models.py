@@ -12,18 +12,21 @@ class ResidentPreference(models.Model):
         related_name="resident_preferences",
         limit_choices_to={"role": Membership.Role.RESIDENT}
     )
-    interests = models.JSONField(
-        default=list,
-        blank=True,
-        help_text="JSON array of interest IDs (e.g., ['sports', 'music', 'reading'])"
-    )
-    dietary_restrictions = models.JSONField(
-        default=list,
-        blank=True,
-        help_text="JSON array of dietary restrictions"
-    )
-    hobbies = models.TextField(blank=True)
-    additional_info = models.TextField(blank=True)
+    sex = models.CharField(max_length=20, blank=True)
+    age = models.PositiveSmallIntegerField(null=True, blank=True)
+    schedule = models.CharField(max_length=20, blank=True)
+    study_location = models.CharField(max_length=100, blank=True)
+    social_level = models.PositiveSmallIntegerField(null=True, blank=True)
+    weekend_return = models.CharField(max_length=50, blank=True)
+    outside_plans_importance = models.CharField(max_length=50, blank=True)
+    desired_activity = models.CharField(max_length=50, blank=True)
+    order_importance = models.PositiveSmallIntegerField(null=True, blank=True)
+    noise_tolerance = models.PositiveSmallIntegerField(null=True, blank=True)
+    smoking_vaping = models.CharField(max_length=50, blank=True)
+    visitors_preference = models.CharField(max_length=100, blank=True)
+    basic_items_preference = models.CharField(max_length=100, blank=True)
+    temperature_preference = models.CharField(max_length=50, blank=True)
+
     is_completed = models.BooleanField(
         default=False,
         help_text="Whether the resident has completed their preference form"
