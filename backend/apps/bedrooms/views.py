@@ -117,7 +117,11 @@ class BedroomResidentsView(AdminRequiredView):
 	def get(self, request):
 		if not hasattr(request, 'residence') or not request.residence:
 			return JsonResponse({"detail": "No residence context."}, status=400)
-		qs = Membership.objects.filter(role=Membership.Role.RESIDENT, is_active=True, residence=request.residence).select_related('user')
+		qs = Membership.objects.filter(
+			role__name__iexact="Student",
+			is_active=True,
+			residence=request.residence,
+		).select_related('user')
 		data = []
 		for m in qs:
 			user = m.user

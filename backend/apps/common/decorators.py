@@ -71,10 +71,10 @@ def residence_access_required(*allowed_roles: str):
 
             memberships = Membership.objects.filter(user=request.user, is_active=True)
             if allowed_roles:
-                memberships = memberships.filter(role__in=allowed_roles)
+                memberships = memberships.filter(role__name__in=allowed_roles)
 
             has_access = memberships.filter(residence_id=residence_id).exists() or memberships.filter(
-                role=Membership.Role.PORTFOLIO_ADMIN
+                role__name__iexact="portfolio_admin"
             ).exists()
             if not has_access:
                 raise PermissionDenied("Permisos insuficientes para la residencia.")
