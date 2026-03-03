@@ -1,7 +1,7 @@
 name: "📋 Nueva tarea"
 description: "Crear una nueva tarea"
-title: "[TAREA] "
-labels: ["Issue"]
+title: "[NX-SZ.YY]"
+labels: ["Feature"]
 assignees: []
 body:
   - type: markdown

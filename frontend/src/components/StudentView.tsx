@@ -3,6 +3,7 @@ import { AlertCircle, Calendar, Home, MessageSquare, User } from "lucide-react";
 import { useState } from "react";
 import { Events } from "../pages/Events/Events";
 import { StudentReservations } from "./StudentReservations";
+import { StudentAnnouncements } from "../pages/announcements/StudentAnnouncements";
 
 interface StudentViewProps {
     onLogout: () => void;
@@ -23,6 +24,7 @@ export function StudentView({ onLogout }: StudentViewProps) {
             case "incidences": return <StudentIncidences />;
             case "reservations": return <StudentReservations />;
             case "community": return <Events />;
+            case "announcements": return <StudentAnnouncements />;
             default: return <div className="p-8 text-center text-gray-500">Módulo en construcción</div>;
         }
     };
@@ -57,6 +59,11 @@ function NavButton({ icon, label, active, onClick }: { icon: React.ReactNode, la
             <span className="text-[10px] font-medium mt-1">{label}</span>
         </button>
     );
+}
+
+interface StudentHomeProps {
+    onNavigate: (view: string) => void;
+    onLogout: () => void;
 }
 
 // Componentes Ficticios para evitar errores de compilación
