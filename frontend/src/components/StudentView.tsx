@@ -1,7 +1,7 @@
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { AlertCircle, Calendar, Home, MessageSquare, User } from "lucide-react";
-import { useState } from "react";
-import { Events } from "../pages/Events/Events";
+import { SocialHub } from "../pages/Social/SocialHub.tsx";
 
 interface StudentViewProps {
     onLogout: () => void;
@@ -21,7 +21,7 @@ export function StudentView({ onLogout }: StudentViewProps) {
             case "home": return <StudentHome onNavigate={handleNavigation} onLogout={onLogout} />;
             case "incidences": return <StudentIncidences />;
             case "reservations": return <StudentReservations />;
-            case "community": return <Events />;
+            case "community": return <SocialHub />;
             default: return <div className="p-8 text-center text-gray-500">Módulo en construcción</div>;
         }
     };

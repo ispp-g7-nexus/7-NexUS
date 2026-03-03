@@ -1,6 +1,6 @@
 import { AlertCircle, Bell, LayoutDashboard, LogOut, Menu, Users, Calendar } from "lucide-react";
 import { useState } from "react";
-import { Events } from "../pages/Events/Events";
+import { Events } from "../pages/Social/Events/Events";
 import { Residents } from "../pages/Residents/Residents";
 import logo from "../assets/logo.png";
 import { Button } from "./ui/button";
