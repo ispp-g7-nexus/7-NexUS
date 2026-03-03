@@ -4,6 +4,7 @@ import { AdminLogin } from '../components/AdminLogin';
 import { CommunityRulesModal } from '../components/CommunityRulesModal';
 import { LoginView } from '../components/LoginView';
 import { StudentLogin } from '../components/StudentLogin';
+import { authService, resolvePortalRoleFromRoles } from '../services/auth';
 
 type UserRole = 'student' | 'admin' | null;
 
@@ -14,10 +15,28 @@ export function AuthPage() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        const savedRole = localStorage.getItem('userRole');
-        if (savedRole) {
-            navigate('/dashboard');
-        }
+        const restoreSession = async () => {
+            try {
+                const session = await authService.me();
+                if (!session.authenticated || !session.user) {
+                    localStorage.removeItem('userRole');
+                    return;
+                }
+
+                const role = resolvePortalRoleFromRoles(session.user.roles || []);
+                if (!role) {
+                    localStorage.removeItem('userRole');
+                    return;
+                }
+
+                localStorage.setItem('userRole', role);
+                navigate('/dashboard');
+            } catch {
+                localStorage.removeItem('userRole');
+            }
+        };
+
+        restoreSession();
     }, [navigate]);
 
     const handleRoleSelection = (role: UserRole) => {
@@ -30,15 +49,37 @@ export function AuthPage() {
         setShowStudentLogin(false);
     };
 
-    const handleAdminLogin = () => {
-        localStorage.setItem('userRole', 'admin');
-        navigate('/dashboard');
+    const handleAdminLogin = async () => {
+        try {
+            const session = await authService.me();
+            const role = resolvePortalRoleFromRoles(session.user?.roles || []);
+            if (role !== 'admin') {
+                localStorage.removeItem('userRole');
+                return;
+            }
+
+            localStorage.setItem('userRole', role);
+            navigate('/dashboard');
+        } catch {
+            localStorage.removeItem('userRole');
+        }
     };
 
-    const handleRulesAccepted = () => {
+    const handleRulesAccepted = async () => {
         setShowRulesModal(false);
-        localStorage.setItem('userRole', 'student');
-        navigate('/dashboard');
+        try {
+            const session = await authService.me();
+            const role = resolvePortalRoleFromRoles(session.user?.roles || []);
+            if (role !== 'student') {
+                localStorage.removeItem('userRole');
+                return;
+            }
+
+            localStorage.setItem('userRole', role);
+            navigate('/dashboard');
+        } catch {
+            localStorage.removeItem('userRole');
+        }
     };
 
     const handleBackToRoleSelection = () => {

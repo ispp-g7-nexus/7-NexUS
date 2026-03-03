@@ -33,6 +33,7 @@
 | Versión | Fecha      | Cambio principal |
 |---------|------------|------------------|
 | 1.0.0   | 01/03/2026 | Creación del documento |
+| 1.0.1   | 02/03/2026 | Documentación de SonarCLoud |
 
 ---
 
@@ -155,16 +156,33 @@ Este workflow da una interfaz controlada para promocionar un commit o rama a un 
 
 ### SonarQube en Pull Requests
 
-SonarQube está configurado como una integración directa con GitHub (por ejemplo, mediante la app de SonarQube/SonarCloud o configuración server-side). En este repositorio no hay un workflow separado para ejecutar sonar-scanner: el análisis se realiza automáticamente y se muestra como un check en los Pull Requests.
+La calidad de código se valida con SonarCloud mediante un workflow dedicado:
 
-**Funcionamiento:**
-- Analiza el código buscando bugs comunes, vulnerabilidades y deuda técnica.
-- Calcula métricas de calidad (duplicación, cobertura, complejidad) y aplica las reglas definidas en el servidor de SonarQube.
-- Decora el Pull Request con comentarios/estado para que los autores vean qué archivos o líneas están afectados.
+- Archivo: `.github/workflows/sonar.yml`
+- Trigger: `pull_request` hacia `main`
+- Job principal: `SonarCloud analysis`
 
-**Por qué lo usamos:**
-- Centraliza la calidad: nos da una única fuente de verdad sobre el estado del código sin que cada desarrollador tenga que ejecutar localmente herramientas distintas.
-- Prevención temprana: detectar problemas en la fase de revisión reduce tiempo de corrección y mejora la seguridad y mantenibilidad.
+**Funcionamiento actual del workflow:**
+1. Checkout con historial completo (`fetch-depth: 0`).
+2. Setup de Python (`3.12`) y Node (`22`).
+3. Instalación de dependencias backend/frontend.
+4. Generación de cobertura backend si existen tests Python (`backend/coverage.xml`).
+5. Generación de cobertura frontend si existe script de tests/cobertura (`frontend/coverage/lcov.info`).
+6. Ejecución del escaneo SonarCloud y comprobación de Quality Gate.
+
+**Archivos de soporte:**
+- `sonar-project.properties`: rutas de fuentes, exclusiones y reportes de cobertura.
+- `run-sonar.sh`: ejecución local del scanner en Docker (zero-install).
+- `docker-compose.sonarqube.yml`: SonarQube Community + PostgreSQL para validación local.
+
+**Configuración requerida en GitHub (Settings -> Secrets and variables -> Actions):**
+- Secret: `SONAR_TOKEN`
+- Variables: `SONAR_PROJECT_KEY`, `SONAR_ORGANIZATION`
+
+**Notas operativas:**
+- En plan gratuito de SonarCloud se usa normalmente el gate por defecto (`Sonar way`) para el proyecto.
+- Si no hay tests para un módulo, el workflow no fuerza generación de cobertura para ese módulo y continúa el análisis estático.
+- El estado final del gate aparece como check en el Pull Request y se usa para decidir el merge.
 
 ---
 
