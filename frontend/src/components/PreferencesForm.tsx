@@ -96,10 +96,9 @@ interface NumericInputProps {
     onChange: (value: number) => void;
     min: number;
     max: number;
-    label?: string;
 }
 
-const NumericInput = ({ value, onChange, min, max, label }: NumericInputProps) => {
+const NumericInput = ({ value, onChange, min, max }: NumericInputProps) => {
     const [isEditing, setIsEditing] = useState(false);
     const [inputValue, setInputValue] = useState(value.toString());
 

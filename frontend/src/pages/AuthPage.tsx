@@ -15,7 +15,6 @@ export function AuthPage() {
     const [showAdminLogin, setShowAdminLogin] = useState(false);
     const [showRulesModal, setShowRulesModal] = useState(false);
     const [showPreferencesForm, setShowPreferencesForm] = useState(false);
-    const [isCheckingPreferences, setIsCheckingPreferences] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -50,7 +49,6 @@ export function AuthPage() {
 
     const handleStudentLogin = async () => {
         // Check if user has completed preferences
-        setIsCheckingPreferences(true);
         try {
             const { is_completed } = await preferencesService.checkCompletion();
             
@@ -63,12 +61,10 @@ export function AuthPage() {
                 setShowRulesModal(true);
                 setShowStudentLogin(false);
             }
-        } catch (error) {
+        } catch {
             // If there's an error checking preferences, show the form to be safe
             setShowStudentLogin(false);
             setShowPreferencesForm(true);
-        } finally {
-            setIsCheckingPreferences(false);
         }
     };
 
