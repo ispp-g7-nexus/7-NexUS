@@ -45,9 +45,39 @@ export const AdminIncidences = () => {
     high: 'ALTA',
   };
 
+  const priorityColors = {
+    high: "text-red-500 border-red-100 bg-red-100",
+    medium: "text-orange-500 border-orange-100 bg-orange-100",
+    low: "text-blue-500 border-blue-100 bg-blue-100",
+  };
+
+  const statusStyles: Record<string, { label: string; bg: string; text: string; border: string; icon: any }> = {
+    pending: {
+      label: 'Pendiente',
+      bg: 'bg-slate-50', text: 'text-slate-600', border: 'border-slate-100',
+      icon: <Clock size={14} />
+    },
+    reviewing: {
+      label: 'En revisión',
+      bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-100',
+      icon: <Clock size={14} />
+    },
+    in_progress: {
+      label: 'En proceso',
+      bg: 'bg-orange-50', text: 'text-orange-600', border: 'border-orange-100',
+      icon: <Wrench size={14} />
+    },
+    resolved: {
+      label: 'Resuelto',
+      bg: 'bg-green-50', text: 'text-green-600', border: 'border-green-100',
+      icon: <CheckCircle2 size={14} />
+    },
+  };
+
   useEffect(() => {
     loadData();
   }, []);
+
 
   return (
     <div className="bg-slate-100 min-h-screen flex flex-col">
@@ -146,7 +176,7 @@ export const AdminIncidences = () => {
                   </span>
                 </div>
 
-                <h2 className="text-lg font-extrabold text-slate-900 mb-2">{inc.title}</h2>
+                <h2 className="font-bold text-lg text-[#1A1C1E] text-slate-900 mb-2">{inc.title}</h2>
                 <div className="flex items-center gap-1 text-orange-500 mb-3">
                   <MapPin size={14} />
                   <span className="text-xs font-semibold">
@@ -161,44 +191,34 @@ export const AdminIncidences = () => {
                   </p>
                 </div>
 
-                <div className="flex justify-between items-center">
-                  <div className="flex flex-wrap gap-2">
-                    <span className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 border ${
-                      inc.status === 'resolved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-blue-50 text-blue-600 border-blue-100'
-                    }`}>
-                      <Clock size={14} />
-                      {statusLabels[inc.status] || inc.status}
-                    </span>
-                    {inc.assigned_technician && (
-                      <span className="bg-slate-100 text-slate-600 px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5">
-                        <Wrench size={14} />
-                        {inc.assigned_technician}
-                      </span>
-                    )}
-                  </div>
-                  <button className="text-emerald-600 font-bold text-sm flex items-center gap-1 hover:underline">
-                    Gestionar <ChevronRight size={16} />
-                  </button>
-                </div>
-              </div>
-            ))
-        )}
+            {/* Bottom: Estado y Gestión */}
+            <div className="flex justify-between items-center">
+              <div className="flex gap-2">
+                <span className={`
+                    ${statusStyles[inc.status]?.bg || statusStyles.pending.bg} 
+                    ${statusStyles[inc.status]?.text || statusStyles.pending.text} 
+                    ${statusStyles[inc.status]?.border || statusStyles.pending.border} 
+                    px-4 py-2 rounded-full text-xs font-black flex items-center gap-2 border shadow-sm
+                `}>
+                  {statusStyles[inc.status]?.icon || statusStyles.pending.icon}
 
-        {!loading && incidences.length > 0 && 
-          incidences.filter((inc: any) => {
-            const q = search.toLowerCase();
-            const matchesSearch = !q || inc.title?.toLowerCase().includes(q) || inc.student_name?.toLowerCase().includes(q);
-            const matchesLoc = filterLocation === 'all' || inc.location_type === filterLocation;
-            const matchesStatus = filterStatus === 'all' || inc.status === filterStatus;
-            const matchesPri = filterPriority === 'all' || inc.priority === filterPriority;
-            return matchesSearch && matchesLoc && matchesStatus && matchesPri;
-          }).length === 0 && (
-          <div className="text-center py-20 text-gray-400">
-            <CheckCircle2 className="w-12 h-12 mx-auto mb-2 opacity-20" />
-            <p className="text-sm">No se encontraron incidencias con esos filtros</p>
+                  {(statusStyles[inc.status]?.label || 'Pendiente')}
+                </span>
+                {inc.technician && (
+                  <span className="bg-slate-100 text-slate-600 px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5">
+                    <Wrench size={14} />
+                    {inc.technician}
+                  </span>
+                )}
+              </div>
+              <button className="text-emerald-600 font-bold text-sm flex items-center gap-1">
+                Gestionar <ChevronRight size={16} />
+              </button>
+            </div>
           </div>
-        )}
+        )))}
       </main>
     </div>
   );
 };
+   

@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
-import { 
- Clock, CheckCircle2, Plus, Bell, 
-} from "lucide-react";
+import {  Clock, CheckCircle2, Plus, Bell,  MapPin,} from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent } from "../../../components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "../../../components/ui/dialog";
@@ -17,6 +15,12 @@ export default function StudentIncidences() {
   const [filterLocation, setFilterLocation] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterPriority, setFilterPriority] = useState('all');
+  const locationLabels: Record<string, string> = {
+    habitacion: 'Habitación',
+    baño: 'Baño Común',
+    cocina: 'Cocina',
+    zonas_comunes: 'Zonas Comunes',
+  };
 
   const loadIncidences = async () => {
     try {
@@ -33,6 +37,29 @@ export default function StudentIncidences() {
   };
 
   useEffect(() => { loadIncidences(); }, []);
+
+  const statusMap: Record<string, { label: string; colorClass: string; barClass: string }> = {
+    pending: {
+      label: "Pendiente",
+      colorClass: "bg-[#FFF4E5] text-[#FFB457]",
+      barClass: "bg-[#FFB457]"
+    },
+    reviewing: {
+      label: "En revisión",
+      colorClass: "bg-[#E5F1FF] text-[#0061A7]",
+      barClass: "bg-[#0061A7]"
+    },
+    in_progress: {
+      label: "En proceso",
+      colorClass: "bg-[#E0F7FA] text-[#00ACC1]",
+      barClass: "bg-[#00ACC1]"
+    },
+    resolved: {
+      label: "Resuelto",
+      colorClass: "bg-[#F0F9EB] text-[#82D14C]",
+      barClass: "bg-[#82D14C]"
+    },
+  };
 
   return (
     <div className="flex flex-col h-screen bg-[#F6F7F9] relative">
@@ -103,38 +130,52 @@ export default function StudentIncidences() {
               if (filterPriority !== 'all' && inc.priority !== filterPriority) return false;
               return true;
             })
-            .map((inc: any) => (
-            <Card key={inc.id} className="border-none shadow-sm rounded-[24px] overflow-hidden bg-white">
-              <CardContent className="p-0 flex">
-                <div className={`w-1.5 ${inc.status === 'resolved' ? 'bg-[#82D14C]' : 'bg-[#FFB457]'}`} />
-                <div className="p-5 flex-1">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-bold text-lg text-[#1A1C1E]">{inc.title}</h3>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
-                      inc.status === 'resolved' ? 'bg-[#F0F9EB] text-[#82D14C]' : 'bg-[#FFF4E5] text-[#FFB457]'
-                    }`}>
-                      {inc.status_label || "Pendiente"}
-                    </span>
-                  </div>
-                  <div className="space-y-1 text-[#74777F] mb-4 text-xs">
-                    <div className="flex items-center gap-2 opacity-60"><Clock className="w-3.5 h-3.5" />{new Date(inc.created_at).toLocaleDateString()}</div>
-                  </div>
-                  <div className="flex justify-end">
-                    <Button 
-                      variant="outline" 
-                      className="rounded-xl border-[#D1E4FF] text-[#0061A7] hover:bg-[#D1E4FF]/20 h-8 px-4 text-xs font-bold"
-                    >
-                      Ver notas
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+            .map((inc: any) => {
+              
+              const currentStatus = statusMap[inc.status as keyof typeof statusMap] || statusMap.pending;
+
+              return (
+                <Card key={inc.id} className="border-none shadow-sm rounded-[24px] overflow-hidden bg-white">
+                  <CardContent className="p-0 flex">
+                    <div className={`w-1.5 ${currentStatus.barClass}`} />
+
+                    <div className="p-5 flex-1">
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="font-bold text-lg text-[#1A1C1E]">{inc.title}</h3>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${currentStatus.colorClass}`}>
+                          {currentStatus.label}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 text-slate-500 mb-4">
+                        <MapPin size={14} strokeWidth={2.5} className="text-slate-400" />
+                        <span className="text-sm font-medium">
+                          {locationLabels[inc.location_type] || inc.location_type}
+                          {inc.location_type === 'habitacion' && inc.room_number ? ` • Planta ${inc.room_number.charAt(0)}` : ''}
+                        </span>
+                      </div>
+
+                      <div className="space-y-1 text-[#74777F] mb-4 text-xs">
+                        <div className="flex items-center gap-2 opacity-60"><Clock className="w-3.5 h-3.5" />{new Date(inc.created_at).toLocaleDateString()}</div>
+                      </div>
+                      <div className="flex justify-end">
+                        <Button
+                          variant="outline"
+                          className="rounded-xl border-[#D1E4FF] text-[#0061A7] hover:bg-[#D1E4FF]/20 h-8 px-4 text-xs font-bold"
+                        >
+                          Ver notas
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })
         )}
+
       </main>
 
-      <button 
+      <button
         onClick={() => setIsFormOpen(true)}
         className="fixed bottom-24 right-6 w-14 h-14 bg-[#82D14C] hover:bg-[#74bc44] text-white rounded-full shadow-2xl flex items-center justify-center z-50 transition-transform active:scale-90"
       >
@@ -144,11 +185,11 @@ export default function StudentIncidences() {
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="max-w-[90vw] sm:max-w-[425px] rounded-[32px] p-0 border-none overflow-hidden">
           <DialogTitle className="sr-only">Nueva Incidencia</DialogTitle>
-          <IncidenceForm 
+          <IncidenceForm
             onSuccess={() => {
               loadIncidences();
               setIsFormOpen(false);
-            }} 
+            }}
             onClose={() => setIsFormOpen(false)}
           />
         </DialogContent>
