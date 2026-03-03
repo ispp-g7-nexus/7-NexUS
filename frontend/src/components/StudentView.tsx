@@ -60,10 +60,6 @@ function NavButton({ icon, label, active, onClick }: { icon: React.ReactNode, la
     );
 }
 
-interface StudentHomeProps {
-    onNavigate: (view: string) => void;
-    onLogout: () => void;
-}
 
 // Componentes Ficticios para evitar errores de compilación
 function StudentHome({ onLogout }: any) { return <div className="p-4 bg-white rounded-xl shadow-sm text-center"><h2>Inicio Estudiante</h2><button onClick={onLogout} className="mt-4 text-red-500">Cerrar Sesión</button></div>; }
