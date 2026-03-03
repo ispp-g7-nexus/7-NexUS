@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { fetchWithAuth, API_URL } from "../../utils/api";
 import { EventForm } from "./components/EventForm";
 import { EventDetails } from "./components/EventDetails";
