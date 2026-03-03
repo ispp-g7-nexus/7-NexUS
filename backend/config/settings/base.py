@@ -55,8 +55,6 @@ TENANT_APPS = [
 if MATCHING_ENABLED:
     TENANT_APPS.append("apps.matching")
 
-TENANT_APPS.append("apps.events")
-
 INSTALLED_APPS = SHARED_APPS + [app for app in TENANT_APPS if app not in SHARED_APPS]
 
 MIDDLEWARE = [

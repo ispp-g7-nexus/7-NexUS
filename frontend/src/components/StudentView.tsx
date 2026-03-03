@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { AlertCircle, Calendar, Home, MessageSquare, User } from "lucide-react";
+import { AlertCircle, Calendar, HeartHandshake, Home, MessageSquare, User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Events } from "../pages/Events/Events";
 import { StudentReservations } from "./StudentReservations";
@@ -13,7 +13,16 @@ interface StudentViewProps {
     onLogout: () => void;
 }
 
-type StudentTab = "home" | "incidences" | "reservations" | "community" | "matches" | "menu" | "deliveries" | "visitors";
+type StudentTab =
+    | "home"
+    | "incidences"
+    | "reservations"
+    | "community"
+    | "matches"
+    | "announcements"
+    | "menu"
+    | "deliveries"
+    | "visitors";
 
 export function StudentView({ onLogout }: StudentViewProps) {
     const [activeTab, setActiveTab] = useState<StudentTab>("home");
@@ -82,8 +91,8 @@ export function StudentView({ onLogout }: StudentViewProps) {
         };
     }, [activeTab]);
 
-    const handleNavigation = (view: string) => {
-        setActiveTab(view as StudentTab);
+    const handleNavigation = (view: StudentTab) => {
+        setActiveTab(view);
     };
 
     const renderContent = () => {
@@ -135,7 +144,11 @@ function NavButton({ icon, label, active, onClick, showIndicator = false }: { ic
 }
 
 
-// Componentes Ficticios para evitar errores de compilación
-function StudentHome({ onLogout }: any) { return <div className="p-4 bg-white rounded-xl shadow-sm text-center"><h2>Inicio Estudiante</h2><button onClick={onLogout} className="mt-4 text-red-500">Cerrar Sesión</button></div>; }
-function StudentIncidences() { return <div>Mis Incidencias</div>; }
-function StudentReservations() { return <div>Mis Reservas</div>; }
+function StudentHome({ onLogout }: { onNavigate?: (view: StudentTab) => void; onLogout: () => void }) {
+    return (
+        <div className="p-4 bg-white rounded-xl shadow-sm text-center">
+            <h2>Inicio Estudiante</h2>
+            <button onClick={onLogout} className="mt-4 text-red-500">Cerrar Sesión</button>
+        </div>
+    );
+}
