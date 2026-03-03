@@ -6,8 +6,10 @@ from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
+from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.encoding import force_bytes, force_str
+from django.utils.html import strip_tags
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from rest_framework import authentication
 from rest_framework.exceptions import AuthenticationFailed
@@ -113,10 +115,15 @@ def process_password_reset_request(email: str, request):
         scheme = request.scheme
         reset_link = f"{scheme}://{domain}/reset-password?uid={uid}&token={token}"
 
+        html_message = render_to_string(
+            "password_reset_email.html", {"reset_link": reset_link}
+        )
+        plain_message = strip_tags(html_message)
         try:
             send_mail(
                 subject="Recuperación de contraseña en NexUS",
-                message=f"Para restablecer tu contraseña, haz clic en el siguiente enlace:\n\n{reset_link}\n\nSi no has solicitado este cambio, puedes ignorar este correo de forma segura.",
+                message=plain_message,
+                html_message=html_message,
                 from_email=getattr(
                     settings, "DEFAULT_FROM_EMAIL", "nbynexus@gmail.com"
                 ),
@@ -150,12 +157,18 @@ class CustomJWTAuthentication(authentication.BaseAuthentication):
     """
 
     def authenticate(self, request):
+        token = None
         auth_header = request.headers.get("Authorization")
 
-        if not auth_header or not auth_header.startswith("Bearer "):
-            return None
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ")[1]
+        else:
+            token = request.COOKIES.get(
+                getattr(settings, "JWT_ACCESS_COOKIE_NAME", "access_token")
+            )
 
-        token = auth_header.split(" ")[1]
+        if not token:
+            return None
 
         try:
             payload = jwt.decode(

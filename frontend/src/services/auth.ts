@@ -3,8 +3,14 @@ import { API_URL } from "./api";
 
 const AUTH_URL = `${API_URL}/auth`;
 
+export interface LoginCredentials {
+    email: string;
+    password: string;
+    portal?: string;
+}
+
 export const authService = {
-    login: async (data: any) => {
+    login: async (data: LoginCredentials) => {
         const response = await fetch(`${AUTH_URL}/login/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
