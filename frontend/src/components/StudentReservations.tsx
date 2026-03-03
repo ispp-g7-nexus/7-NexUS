@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { MapPin, Calendar } from "lucide-react";
+import { useState, useEffect } from "react";
+import { MapPin } from "lucide-react";
 import { Objects } from "../pages/Objects/Objects";
 import { MyReservations } from "../pages/Objects/components/MyReservations";
 import { objectsService, UserObjectReservation } from "../services/objects";
