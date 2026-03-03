@@ -144,7 +144,7 @@ function NavButton({ icon, label, active, onClick, showIndicator = false }: { ic
 }
 
 
-function StudentHome({ onNavigate, onLogout }: { onNavigate?: (view: StudentTab) => void; onLogout: () => void }) {
+function StudentHome({ onLogout }: { onLogout: () => void }) {
     return (
         <div className="p-4 bg-white rounded-xl shadow-sm text-center">
             <h2>Inicio Estudiante</h2>

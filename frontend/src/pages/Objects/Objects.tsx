@@ -5,8 +5,6 @@ import { objectsService, ObjectItem, UserObjectReservation } from "../../service
 import { ObjectsList } from "./components/ObjectsList";
 import { ReservationModal } from "./components/ReservationModal";
 import { MyReservations } from "./components/MyReservations";
-import { Card, CardContent } from "../../components/ui/card";
-import { Button } from "../../components/ui/button";
 
 export type { ObjectItem, UserObjectReservation } from "../../services/objects.ts";
 
