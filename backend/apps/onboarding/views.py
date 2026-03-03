@@ -67,15 +67,14 @@ class ResidentPreferenceViewSet(viewsets.ModelViewSet):
                 partial=False
             )
             if serializer.is_valid():
-                # Mark as completed if interests are provided
-                if request.data.get("interests"):
+                if request.data.get("sex"):
                     serializer.save(is_completed=True)
                 else:
                     serializer.save()
                 return Response(serializer.data, status=status.HTTP_200_OK)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-    @action(detail=False, methods=["get"])
+    @action(detail=False, methods=["get"], url_path="check-completion")
     def check_completion(self, request):
         """Check if current user has completed their preference form"""
         user = request.user
