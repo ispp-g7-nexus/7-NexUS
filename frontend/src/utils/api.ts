@@ -1,5 +1,6 @@
 export const BASE_URL = "/api";           
 export const API_URL = `${BASE_URL}/events/`;
+export const API_URL_INCIDENCES = "/api/incidences/";
 
 export function getCookie(name: string): string | null {
     let cookieValue = null;

@@ -7,8 +7,9 @@ from apps.common.views import (
     PasswordResetRequestView,
     TenantContextView,
 )
+from django.conf import settings
 from django.http import JsonResponse
-from django.urls import path, include
+from django.urls import include, path
 
 
 def healthcheck(_request):
@@ -29,7 +30,25 @@ urlpatterns = [
         name="password-reset-request",
     ),
     path("api/auth/password-reset/confirm/", PasswordResetConfirmView.as_view(), name="password-reset-confirm"),
-    path("api/admin/residents/create/", AdminCreateResidentView.as_view(), name="admin-create-resident"),
+    path("api/", include("apps.onboarding.urls")),
+    path(
+        "api/auth/password-reset/confirm/",
+        PasswordResetConfirmView.as_view(),
+        name="password-reset-confirm",
+    ),
+    path(
+        "api/admin/residents/create/",
+        AdminCreateResidentView.as_view(),
+        name="admin-create-resident",
+    ),
     path("api/", include("apps.events.urls")),
+    path("api/", include("apps.objects.urls")),
+    path("api/", include("apps.bedrooms.urls")),
+    path("api/incidences/", include("apps.incidences.urls")),
+    path("api/membership/", include("apps.membership.urls")),
+    path('api/', include('apps.announcements.urls')),
     path("api/", include("apps.spaces.urls")),
 ]
+
+if settings.MATCHING_ENABLED:
+    urlpatterns.append(path("api/", include("apps.matching.urls")))

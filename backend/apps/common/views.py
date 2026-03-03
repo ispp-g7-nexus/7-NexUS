@@ -24,7 +24,7 @@ from .services import (
     process_password_reset_request,
 )
 from django.contrib.auth import get_user_model
-from apps.residences.models import Membership
+from apps.membership.models import Membership, Role
 
 UserModel = get_user_model()
 
@@ -241,9 +241,27 @@ class AdminCreateResidentView(APIView):
                 user.set_password(passwd)
                 user.save()
 
-        membership_exists = Membership.objects.filter(user=user, role=Membership.Role.RESIDENT, residence=residence).exists()
+        student_role, _ = Role.objects.get_or_create(
+            name="Student",
+            residence=None,
+            defaults={
+                "description": "Estudiante / Residente",
+                "is_system_default": True,
+            },
+        )
+
+        membership_exists = Membership.objects.filter(
+            user=user,
+            role=student_role,
+            residence=residence,
+        ).exists()
         if not membership_exists:
-            Membership.objects.create(user=user, role=Membership.Role.RESIDENT, residence=residence, is_active=True)
+            Membership.objects.create(
+                user=user,
+                role=student_role,
+                residence=residence,
+                is_active=True,
+            )
 
         try:
             if data.get("password"):
