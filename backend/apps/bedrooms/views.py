@@ -6,7 +6,7 @@ from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import get_user_model
 from apps.common.utils.jwt_auth import resolve_user_from_request
-from apps.residences.models import Membership
+from apps.membership.models import Membership
 from .models import Bedroom
 from .serializers import BedroomSerializer
 
