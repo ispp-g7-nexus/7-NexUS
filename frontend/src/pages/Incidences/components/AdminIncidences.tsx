@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Search, Filter, MapPin, Clock, Wrench, ChevronRight } from 'lucide-react';
 import { fetchWithAuth } from '../../../utils/api';
 export const AdminIncidences = () => {

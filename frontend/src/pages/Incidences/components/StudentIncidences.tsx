@@ -13,7 +13,7 @@ import "../Incidences.css";
 
 export default function StudentIncidences() {
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [selectedNotes, setSelectedNotes] = useState<string | null>(null);
+  //const [selectedNotes, setSelectedNotes] = useState<string | null>(null);
   const [incidences, setIncidences] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -73,7 +73,7 @@ export default function StudentIncidences() {
                   <div className="flex justify-end">
                     <Button 
                       variant="outline" 
-                      onClick={() => setSelectedNotes(inc.admin_notes)}
+                      //onClick={() => setSelectedNotes(inc.admin_notes)}
                       className="rounded-xl border-[#D1E4FF] text-[#0061A7] hover:bg-[#D1E4FF]/20 h-8 px-4 text-xs font-bold"
                     >
                       Ver notas

@@ -91,7 +91,7 @@ export function IncidenceForm({ onSuccess, onClose }: IncidenceFormProps) {
 
         <div className="space-y-1.5">
           <Label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Área</Label>
-          <Select onValueChange={setLocationType} required>
+          <Select onChange={setLocationType} required>
             <SelectTrigger className="bg-gray-50 border-none rounded-2xl h-14 px-4 text-gray-600 focus:ring-[#82D14C]">
               <SelectValue placeholder="Selecciona el área" />
             </SelectTrigger>

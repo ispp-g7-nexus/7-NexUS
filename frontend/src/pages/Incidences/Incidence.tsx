@@ -72,7 +72,7 @@ export function IncidenceForm({ onClose, onSuccess }: IncidenceFormProps) {
         <div>
           <label className="text-sm font-medium text-gray-700">Ubicación</label>
           <Select 
-            onValueChange={(val) => setFormData({...formData, location_type: val})}
+            onChange={(val) => setFormData({...formData, location_type: val})}
             required
           >
             <SelectTrigger className="rounded-xl border-gray-200">
