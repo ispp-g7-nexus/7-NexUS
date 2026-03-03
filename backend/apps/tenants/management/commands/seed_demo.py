@@ -260,7 +260,7 @@ class Command(BaseCommand):
             )
             Membership.objects.update_or_create(
                 user=student2_user,
-                role=Membership.Role.RESIDENT,
+                role=Membership.role.RESIDENT,
                 residence=residence,
                 defaults={"is_active": True},
             )
