@@ -6,6 +6,7 @@ from apps.common.views import (
     PasswordResetRequestView,
     TenantContextView,
 )
+from django.conf import settings
 from django.http import JsonResponse
 from django.urls import path, include
 
@@ -29,5 +30,9 @@ urlpatterns = [
     ),
     path("api/auth/password-reset/confirm/", PasswordResetConfirmView.as_view(), name="password-reset-confirm"),
     path("api/", include("apps.onboarding.urls")),
-    path("api/", include("apps.events.urls")),
 ]
+
+if settings.MATCHING_ENABLED:
+    urlpatterns.append(path("api/", include("apps.matching.urls")))
+
+urlpatterns.append(path("api/", include("apps.events.urls")))

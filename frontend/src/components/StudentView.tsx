@@ -1,13 +1,14 @@
 import { motion } from "framer-motion";
-import { AlertCircle, Calendar, Home, MessageSquare, User } from "lucide-react";
+import { AlertCircle, Calendar, HeartHandshake, Home, User } from "lucide-react";
 import { useState } from "react";
 import { Events } from "../pages/Events/Events";
+import { MyMatchesPage } from "../pages/Matching/MyMatchesPage";
 
 interface StudentViewProps {
     onLogout: () => void;
 }
 
-type StudentTab = "home" | "incidences" | "reservations" | "community" | "menu" | "deliveries" | "announcements" | "visitors";
+type StudentTab = "home" | "incidences" | "reservations" | "community" | "matches" | "menu" | "deliveries" | "visitors";
 
 export function StudentView({ onLogout }: StudentViewProps) {
     const [activeTab, setActiveTab] = useState<StudentTab>("home");
@@ -22,6 +23,7 @@ export function StudentView({ onLogout }: StudentViewProps) {
             case "incidences": return <StudentIncidences />;
             case "reservations": return <StudentReservations />;
             case "community": return <Events />;
+            case "matches": return <MyMatchesPage />;
             default: return <div className="p-8 text-center text-gray-500">Módulo en construcción</div>;
         }
     };
@@ -42,7 +44,7 @@ export function StudentView({ onLogout }: StudentViewProps) {
                         </motion.button>
                     </div>
                     <NavButton icon={<Calendar className="w-5 h-5" />} label="Reservas" active={activeTab === "reservations"} onClick={() => setActiveTab("reservations")} />
-                    <NavButton icon={<MessageSquare className="w-5 h-5" />} label="Avisos" active={activeTab === "announcements"} onClick={() => setActiveTab("announcements")} />
+                    <NavButton icon={<HeartHandshake className="w-5 h-5" />} label="Matches" active={activeTab === "matches"} onClick={() => setActiveTab("matches")} />
                 </div>
             </nav>
         </div>

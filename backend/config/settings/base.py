@@ -23,6 +23,8 @@ SHARED_APPS = [
     "django.contrib.staticfiles",
 ]
 
+MATCHING_ENABLED = os.getenv("MATCHING_ENABLED", "0") == "1"
+
 TENANT_APPS = [
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -32,8 +34,12 @@ TENANT_APPS = [
     "apps.common",
     "apps.residences",
     "apps.onboarding",
-    "apps.events",
 ]
+
+if MATCHING_ENABLED:
+    TENANT_APPS.append("apps.matching")
+
+TENANT_APPS.append("apps.events")
 
 INSTALLED_APPS = SHARED_APPS + [app for app in TENANT_APPS if app not in SHARED_APPS]
 
@@ -117,6 +123,12 @@ CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_ALWAYS_EAGER = os.getenv("CELERY_TASK_ALWAYS_EAGER", "0") == "1"
+
+MATCHING_ROOM_CHANGE_MODEL = os.getenv("MATCHING_ROOM_CHANGE_MODEL", "")
+MATCHING_ROOM_CHANGE_MEMBERSHIP_FIELD = os.getenv(
+    "MATCHING_ROOM_CHANGE_MEMBERSHIP_FIELD",
+    "membership_id",
+)
 
 JWT_ACCESS_COOKIE_NAME = os.getenv("JWT_ACCESS_COOKIE_NAME", "access_token")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
