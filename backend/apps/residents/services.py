@@ -56,9 +56,6 @@ def create_resident(data: dict, residence, request) -> dict:
             role=Membership.Role.RESIDENT,
             residence=residence,
             is_active=True,
-            room=data.get("room", ""),
-            building=data.get("building", ""),
-            check_in_date=data.get("checkin_date") or None,
         )
 
     passwd = data.get("password")
@@ -76,7 +73,12 @@ def create_resident(data: dict, residence, request) -> dict:
 
 
 def _membership_to_dict(membership) -> dict:
-    """Convierte User + Membership en un dict con los campos del residente."""
+    """Convierte User + Membership en un dict con los campos del residente.
+
+    Los campos room, building y check_in_date se reservan para cuando el
+    modelo Membership los incorpore; por ahora se devuelven como vacíos
+    para que el serializer de lectura no falle.
+    """
     user = membership.user
     full_name = f"{user.first_name} {user.last_name}".strip() or user.username
     return {
@@ -84,9 +86,11 @@ def _membership_to_dict(membership) -> dict:
         "full_name": full_name,
         "email": user.email,
         "is_active": membership.is_active,
-        "room": membership.room,
-        "building": membership.building,
-        "check_in_date": membership.check_in_date,
+        # Estos campos no existen todavía en el modelo; se devuelven vacíos
+        # para que ResidentReadSerializer no genere errores de tipo.
+        "room": getattr(membership, "room", "") or "",
+        "building": getattr(membership, "building", "") or "",
+        "check_in_date": getattr(membership, "check_in_date", None),
         "created_at": membership.created_at,
     }
 
@@ -138,17 +142,7 @@ def update_resident(membership_id: int, data: dict, residence) -> dict | None:
 
     if "is_active" in data:
         membership.is_active = data["is_active"]
-
-    if "room" in data:
-        membership.room = data["room"]
-
-    if "building" in data:
-        membership.building = data["building"]
-
-    if "check_in_date" in data:
-        membership.check_in_date = data["check_in_date"]
-
-    membership.save()
+        membership.save()
 
     return _membership_to_dict(membership)
 

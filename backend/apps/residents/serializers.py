@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from validators import ResidentFieldValidatorMixin
 
 
 class ResidentReadSerializer(serializers.Serializer):
@@ -16,7 +17,7 @@ class ResidentReadSerializer(serializers.Serializer):
     created_at = serializers.DateTimeField()
 
 
-class AdminCreateResidentSerializer(serializers.Serializer):
+class AdminCreateResidentSerializer(ResidentFieldValidatorMixin, serializers.Serializer):
     """Serializador de entrada (POST) para que un admin dé de alta a un residente."""
 
     full_name = serializers.CharField(
@@ -39,15 +40,6 @@ class AdminCreateResidentSerializer(serializers.Serializer):
     checkin_date = serializers.DateField(required=False, allow_null=True)
     is_active = serializers.BooleanField(default=True)
 
-    def validate_full_name(self, value: str) -> str:
-        value = value.strip()
-        if not value:
-            raise serializers.ValidationError("El nombre no puede estar vacío.")
-        return value
-
-    def validate_email(self, value: str) -> str:
-        return value.lower().strip()
-
     def validate_password(self, value: str) -> str:
         if value and len(value.strip()) < 8:
             raise serializers.ValidationError(
@@ -56,7 +48,7 @@ class AdminCreateResidentSerializer(serializers.Serializer):
         return value
 
 
-class ResidentUpdateSerializer(serializers.Serializer):
+class ResidentUpdateSerializer(ResidentFieldValidatorMixin, serializers.Serializer):
     """Serializador de entrada (PUT/PATCH) para actualizar un residente."""
 
     full_name = serializers.CharField(
@@ -73,12 +65,3 @@ class ResidentUpdateSerializer(serializers.Serializer):
     building = serializers.CharField(max_length=100, required=False, allow_blank=True)
     check_in_date = serializers.DateField(required=False, allow_null=True)
     is_active = serializers.BooleanField(required=False)
-
-    def validate_full_name(self, value: str) -> str:
-        value = value.strip()
-        if not value:
-            raise serializers.ValidationError("El nombre no puede estar vacío.")
-        return value
-
-    def validate_email(self, value: str) -> str:
-        return value.lower().strip()
