@@ -96,7 +96,7 @@ export function IncidenceForm({ onSuccess, onClose }: IncidenceFormProps) {
           >
             <option value="" disabled>Selecciona lugar</option>
             <option value="habitacion">Mi Habitación</option>
-            <option value="bano">Baños Comunes</option>
+            <option value="baño">Baños Comunes</option>
             <option value="cocina">Cocina</option>
             <option value="zonas_comunes">Zonas Comunes</option>
           </Select>
