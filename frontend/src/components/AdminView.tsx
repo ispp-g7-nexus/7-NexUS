@@ -1,7 +1,8 @@
-import { AlertCircle, Bell, LayoutDashboard, LogOut, Menu, Users, Calendar } from "lucide-react";
+import { AlertCircle, Bell, Briefcase, LayoutDashboard, LogOut, Menu, Users, Calendar } from "lucide-react";
 import { useState } from "react";
 import { Events } from "../pages/Events/Events";
 import { Residents } from "../pages/Residents/Residents";
+import { Staff } from "../pages/Staff/Staff";
 import logo from "../assets/logo.png";
 import { Button } from "./ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
@@ -20,6 +21,7 @@ export function AdminView({ onLogout }: AdminViewProps) {
     const allNavItems = [
         { id: "dashboard", label: "Panel de Control", icon: <LayoutDashboard className="w-5 h-5" /> },
         { id: "students", label: "Residentes", icon: <Users className="w-5 h-5" /> },
+        { id: "staff", label: "Personal", icon: <Briefcase className="w-5 h-5" /> },
         { id: "incidences", label: "Incidencias", icon: <AlertCircle className="w-5 h-5" /> },
         { id: "events", label: "Eventos & Comunidad", icon: <Calendar className="w-5 h-5" /> },
     ];
@@ -84,6 +86,8 @@ export function AdminView({ onLogout }: AdminViewProps) {
                     <Events />
                 ) : activeTab === "students" ? (
                     <Residents />
+                ) : activeTab === "staff" ? (
+                    <Staff />
                 ) : (
                     <div className="bg-white p-6 rounded-xl text-center text-gray-500 shadow-sm">
                         Vista de {currentTab.label} en construcción
