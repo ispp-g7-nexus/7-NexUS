@@ -93,7 +93,6 @@ export function AuthPage() {
         setShowRulesModal(true);
     };
 
-    const handleRulesAccepted = () => {
     const handleRulesAccepted = async () => {
         setShowRulesModal(false);
         try {
