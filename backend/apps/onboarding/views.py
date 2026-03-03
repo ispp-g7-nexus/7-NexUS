@@ -2,6 +2,8 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from django.conf import settings
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 from apps.membership.models import Membership
 
@@ -67,11 +69,31 @@ class ResidentPreferenceViewSet(viewsets.ModelViewSet):
                 partial=False
             )
             if serializer.is_valid():
+                saved_preference = None
                 if request.data.get("sex"):
-                    serializer.save(is_completed=True)
+                    saved_preference = serializer.save(is_completed=True)
                 else:
-                    serializer.save()
-                return Response(serializer.data, status=status.HTTP_200_OK)
+                    saved_preference = serializer.save()
+
+                tenant = getattr(request, "tenant", None)
+                schema_name = getattr(tenant, "schema_name", None)
+                residence_id = getattr(saved_preference.membership, "residence_id", None)
+
+                if saved_preference.is_completed and schema_name and residence_id and settings.MATCHING_ENABLED:
+                    from apps.matching.tasks import recalculate_residence_compatibility_task
+
+                    membership_id = saved_preference.membership_id
+                    transaction.on_commit(
+                        lambda schema_name=schema_name, residence_id=residence_id, membership_id=membership_id: (
+                            recalculate_residence_compatibility_task.delay(
+                                schema_name=schema_name,
+                                residence_id=residence_id,
+                                trigger_membership_id=membership_id,
+                            )
+                        )
+                    )
+
+                return Response(ResidentPreferenceSerializer(saved_preference).data, status=status.HTTP_200_OK)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     @action(detail=False, methods=["get"], url_path="check-completion")

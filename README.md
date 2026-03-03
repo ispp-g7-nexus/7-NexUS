@@ -70,6 +70,15 @@ docker compose up -d
    - si `TENANT_CONTEXT_HOST` no existe, se usa `DEMO_TENANT_DOMAIN`
 3. Primera vez recomendable: `docker compose up -d --build`.
 
+Opcional (matching IA):
+- Si no vas a trabajar en matching, deja:
+  - `INSTALL_MATCHING=0`
+  - `MATCHING_ENABLED=0`
+- Si vas a trabajar en matching, activa:
+  - `INSTALL_MATCHING=1`
+  - `MATCHING_ENABLED=1`
+  - y reconstruye backend/celery: `docker compose up -d --build backend celery_worker celery_beat`
+
 Comando recomendado:
 
 ```bash
@@ -169,7 +178,7 @@ docker compose -f docker-compose.prod.yml up -d --build
 Variables recomendadas para prod:
 
 ```bash
-cp .env.prod.example .env
+cp .env.prod.example .env.prod
 ```
 
 Detalles de produccion:

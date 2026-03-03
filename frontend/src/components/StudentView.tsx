@@ -1,18 +1,28 @@
 import { motion } from "framer-motion";
-import { AlertCircle, Calendar, Home, MessageSquare, User } from "lucide-react";
+import { AlertCircle, Calendar, HeartHandshake, Home, MessageSquare, User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Events } from "../pages/Events/Events";
 import { StudentReservations } from "./StudentReservations";
 import { StudentAnnouncements } from "../pages/announcements/StudentAnnouncements";
 import announcementService from "../services/announcement.service";
 import { toast } from "sonner";
+import { MyMatchesPage } from "../pages/Matching/MyMatchesPage";
 
 import StudentIncidences from "../pages/Incidences/components/StudentIncidences";
 interface StudentViewProps {
     onLogout: () => void;
 }
 
-type StudentTab = "home" | "incidences" | "reservations" | "community" | "menu" | "deliveries" | "announcements" | "visitors";
+type StudentTab =
+    | "home"
+    | "incidences"
+    | "reservations"
+    | "community"
+    | "matches"
+    | "announcements"
+    | "menu"
+    | "deliveries"
+    | "visitors";
 
 export function StudentView({ onLogout }: StudentViewProps) {
     const [activeTab, setActiveTab] = useState<StudentTab>("home");
@@ -81,8 +91,8 @@ export function StudentView({ onLogout }: StudentViewProps) {
         };
     }, [activeTab]);
 
-    const handleNavigation = (view: string) => {
-        setActiveTab(view as StudentTab);
+    const handleNavigation = (view: StudentTab) => {
+        setActiveTab(view);
     };
 
     const renderContent = () => {
@@ -91,6 +101,7 @@ export function StudentView({ onLogout }: StudentViewProps) {
             case "incidences": return <StudentIncidences />;
             case "reservations": return <StudentReservations />;
             case "community": return <Events />;
+            case "matches": return <MyMatchesPage />;
             case "announcements": return <StudentAnnouncements />;
             default: return <div className="p-8 text-center text-gray-500">Módulo en construcción</div>;
         }
@@ -112,6 +123,7 @@ export function StudentView({ onLogout }: StudentViewProps) {
                         </motion.button>
                     </div>
                     <NavButton icon={<Calendar className="w-5 h-5" />} label="Reservas" active={activeTab === "reservations"} onClick={() => setActiveTab("reservations")} />
+                    <NavButton icon={<HeartHandshake className="w-5 h-5" />} label="Matches" active={activeTab === "matches"} onClick={() => setActiveTab("matches")} />
                     <NavButton icon={<MessageSquare className="w-5 h-5" />} label="Avisos" active={activeTab === "announcements"} onClick={() => setActiveTab("announcements")} showIndicator={unreadAnnouncements > 0} />
                 </div>
             </nav>
@@ -132,5 +144,11 @@ function NavButton({ icon, label, active, onClick, showIndicator = false }: { ic
 }
 
 
-// Componentes Ficticios para evitar errores de compilación
-function StudentHome({ onLogout }: any) { return <div className="p-4 bg-white rounded-xl shadow-sm text-center"><h2>Inicio Estudiante</h2><button onClick={onLogout} className="mt-4 text-red-500">Cerrar Sesión</button></div>; }
+function StudentHome({ onLogout }: { onNavigate?: (view: StudentTab) => void; onLogout: () => void }) {
+    return (
+        <div className="p-4 bg-white rounded-xl shadow-sm text-center">
+            <h2>Inicio Estudiante</h2>
+            <button onClick={onLogout} className="mt-4 text-red-500">Cerrar Sesión</button>
+        </div>
+    );
+}
