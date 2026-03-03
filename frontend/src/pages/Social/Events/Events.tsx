@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchWithAuth, API_URL } from "../../utils/api";
+import { fetchWithAuth, API_URL } from "../../../utils/api";
 import { EventForm } from "./components/EventForm";
 import { EventDetails } from "./components/EventDetails";
 import { UpcomingEvents } from "./components/UpcomingEvents";
