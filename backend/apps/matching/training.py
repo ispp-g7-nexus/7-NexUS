@@ -16,7 +16,7 @@ from torch import nn
 from torch.utils.data import DataLoader, Dataset, random_split
 
 from apps.onboarding.models import ResidentPreference
-from apps.residences.models import Membership
+from apps.membership.models import Membership
 from apps.tenants.models import Client
 
 from .ml_model import TwoTowerConfig, TwoTowerModel, save_checkpoint

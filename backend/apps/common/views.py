@@ -14,7 +14,6 @@ from .serializers import (
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
     PlanSerializer,
-    AdminCreateResidentSerializer,
 )
 from .services import (
     authenticate_user,
@@ -24,7 +23,6 @@ from .services import (
     process_password_reset_request,
 )
 from django.contrib.auth import get_user_model
-from apps.membership.models import Membership, Role
 
 UserModel = get_user_model()
 

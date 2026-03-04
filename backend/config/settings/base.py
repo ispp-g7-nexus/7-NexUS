@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -41,15 +40,19 @@ TENANT_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "rest_framework",
     "apps.common",
     "apps.residences",
-    "apps.onboarding",
-    "apps.objects",
+    "apps.staff",
     "apps.events",
     "apps.bedrooms",
     "apps.incidences",
     "apps.membership",
     "apps.announcements",
+    "apps.spaces",
+    "apps.residents",
+    "apps.onboarding",
+    "apps.objects",
 ]
 
 if MATCHING_ENABLED:
