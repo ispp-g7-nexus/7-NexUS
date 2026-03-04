@@ -29,7 +29,7 @@ export function LoginView({ onSelectRole }: LoginViewProps) {
 
                         <div className="space-y-4">
                             <Button
-                                className="w-full h-14 text-lg bg-[#509550] hover:bg-[#3d7a3d] text-white shadow-md transition-all"
+                                className="w-full h-14 text-lg bg-primary-brand hover:bg-primary-brand-dark text-white shadow-md transition-all"
                                 onClick={() => onSelectRole("student")}
                             >
                                 <User className="mr-3 w-5 h-5" /> Soy Residente
