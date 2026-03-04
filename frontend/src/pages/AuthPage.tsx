@@ -17,6 +17,8 @@ export function AuthPage() {
     const [showPreferencesForm, setShowPreferencesForm] = useState(false);
     const navigate = useNavigate();
 
+    const RULES_KEY = "nexus.community_rules.accepted";
+
     useEffect(() => {
         const restoreSession = async () => {
             try {
@@ -42,68 +44,69 @@ export function AuthPage() {
         restoreSession();
     }, [navigate]);
 
+    const finalizeLogin = async (expectedRole: UserRole) => {
+        try {
+            const session = await authService.me();
+            const role = resolvePortalRoleFromRoles(session.user?.roles || []);
+            if (role !== expectedRole) {
+                localStorage.removeItem('userRole');
+                return;
+            }
+            localStorage.setItem('userRole', role);
+            navigate('/dashboard');
+        } catch {
+            localStorage.removeItem('userRole');
+        }
+    };
+
+    const checkPreferencesAndFinalize = async () => {
+        try {
+            const { is_completed } = await preferencesService.checkCompletion();
+            if (!is_completed) {
+                setShowPreferencesForm(true);
+            } else {
+                await finalizeLogin('student');
+            }
+        } catch {
+            setShowPreferencesForm(true);
+        }
+    };
+
     const handleRoleSelection = (role: UserRole) => {
         if (role === 'student') setShowStudentLogin(true);
         else if (role === 'admin') setShowAdminLogin(true);
     };
 
     const handleStudentLogin = async () => {
-        // Check if user has completed preferences
-        try {
-            const { is_completed } = await preferencesService.checkCompletion();
-            
-            if (!is_completed) {
-                // Show preferences form instead of rules modal
-                setShowStudentLogin(false);
-                setShowPreferencesForm(true);
-            } else {
-                // Preferences already completed, proceed to rules modal
-                setShowRulesModal(true);
-                setShowStudentLogin(false);
-            }
-        } catch {
-            // If there's an error checking preferences, show the form to be safe
-            setShowStudentLogin(false);
-            setShowPreferencesForm(true);
+        const skipRules = localStorage.getItem(RULES_KEY) === 'true';
+        setShowStudentLogin(false);
+
+        if (!skipRules) {
+            setShowRulesModal(true);
+        } else {
+            await checkPreferencesAndFinalize();
         }
     };
 
     const handleAdminLogin = async () => {
+        await finalizeLogin('admin');
+    };
+
+    const handleRulesAccepted = async (dontShowAgain: boolean) => {
         try {
-            const session = await authService.me();
-            const role = resolvePortalRoleFromRoles(session.user?.roles || []);
-            if (role !== 'admin') {
-                localStorage.removeItem('userRole');
-                return;
+            if (dontShowAgain) {
+                localStorage.setItem(RULES_KEY, 'true');
             }
-
-            localStorage.setItem('userRole', role);
-            navigate('/dashboard');
-        } catch {
-            localStorage.removeItem('userRole');
+        } catch (e) {
+            console.error("Error saving rules preference", e);
         }
-    };
-
-    const handlePreferencesComplete = () => {
-        setShowPreferencesForm(false);
-        setShowRulesModal(true);
-    };
-
-    const handleRulesAccepted = async () => {
         setShowRulesModal(false);
-        try {
-            const session = await authService.me();
-            const role = resolvePortalRoleFromRoles(session.user?.roles || []);
-            if (role !== 'student') {
-                localStorage.removeItem('userRole');
-                return;
-            }
+        await checkPreferencesAndFinalize();
+    };
 
-            localStorage.setItem('userRole', role);
-            navigate('/dashboard');
-        } catch {
-            localStorage.removeItem('userRole');
-        }
+    const handlePreferencesComplete = async () => {
+        setShowPreferencesForm(false);
+        await finalizeLogin('student');
     };
 
     const handleBackToRoleSelection = () => {

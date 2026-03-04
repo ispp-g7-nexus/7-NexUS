@@ -13,7 +13,7 @@ class IncidenceSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Incidence
-        fields = ['id', 'title', 'description', 'location_type', 'room_number', 'status', 'priority', 'updates', 'created_at']
+        fields = ['id', 'title', 'description', 'location_type', 'room_number', 'status', 'priority', 'updates', 'admin_notes', 'created_at']
         read_only_fields = ['id', 'created_at']
 
 class AdminIncidenceSerializer(serializers.ModelSerializer):
@@ -23,3 +23,6 @@ class AdminIncidenceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Incidence
         fields = '__all__'
+    
+    def get_student_name(self, obj):
+        return obj.student.get_full_name() or obj.student.username

@@ -56,7 +56,7 @@ export function ResidentForm({ open, onOpenChange }: Props) {
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch("/api/admin/residents/create/", {
+      const res = await fetch("/api/residents/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

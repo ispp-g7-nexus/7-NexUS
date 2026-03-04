@@ -1,15 +1,21 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
-from .models import Incidence, IncidenceUpdate # Corregido el import
-from .serializers import IncidenceSerializer
+from .models import Incidence, IncidenceUpdate
+from .serializers import IncidenceSerializer, AdminIncidenceSerializer
 from .permissions import IsAdminOrReadOnly
 from apps.common.authentication import CookieJWTAuthentication
+
 
 class IncidenceViewSet(viewsets.ModelViewSet):
     authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
     serializer_class = IncidenceSerializer
 
+    def get_serializer_class(self):
+        if self.request.user.is_staff:
+            return AdminIncidenceSerializer
+        return IncidenceSerializer
+    
     def get_queryset(self):
         user = self.request.user
         if user.is_staff:
@@ -17,19 +23,15 @@ class IncidenceViewSet(viewsets.ModelViewSet):
         return Incidence.objects.filter(student=user)
 
     def perform_create(self, serializer):
-        
         user = self.request.user
         location_type = self.request.data.get('location_type')
+        room_number = self.request.data.get('room_number')
         
-        room = None
-        if location_type == 'habitacion':
-            # Si elige Mi Habitación, añadimos el número de habitación del estudiante
-            #room = user.profile.room_number  # Asumiendo que el número de habitación sea así
-            room = "3º A " #Ejemplo para admin
-        # ------------------------------------
-        else:
-            room = None
-        serializer.save(student=user, room_number=room)
+        # Si elige "habitacion" y no hay room_number del frontend, usar valor por defecto
+        if location_type == 'habitacion' and not room_number:
+            room_number = "3º A"
+        
+        serializer.save(student=user, room_number=room_number)
         
 
     def perform_update(self, serializer):

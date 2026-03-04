@@ -47,7 +47,7 @@ export function ResetPassword() {
                             required
                             minLength={6}
                         />
-                        <Button type="submit" className="w-full bg-[#1B5E20] hover:bg-[#144a19] text-white">
+                        <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-white">
                             Actualizar Contraseña
                         </Button>
                     </form>
