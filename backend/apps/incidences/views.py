@@ -1,15 +1,21 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
-from .models import Incidence, IncidenceUpdate # Corregido el import
-from .serializers import IncidenceSerializer
+from .models import Incidence, IncidenceUpdate
+from .serializers import IncidenceSerializer, AdminIncidenceSerializer
 from .permissions import IsAdminOrReadOnly
 from apps.common.authentication import CookieJWTAuthentication
+
 
 class IncidenceViewSet(viewsets.ModelViewSet):
     authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
     serializer_class = IncidenceSerializer
 
+    def get_serializer_class(self):
+        if self.request.user.is_staff:
+            return AdminIncidenceSerializer
+        return IncidenceSerializer
+    
     def get_queryset(self):
         user = self.request.user
         if user.is_staff:
