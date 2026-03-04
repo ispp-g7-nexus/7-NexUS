@@ -1,9 +1,22 @@
 from django.contrib.auth import get_user_model
 
-from apps.residences.models import Membership
+from apps.membership.models import Membership, Role
 from apps.common.services import process_password_reset_request
 
 UserModel = get_user_model()
+
+
+def _get_student_role() -> Role:
+    """Devuelve (o crea) el rol de sistema 'Student'."""
+    role, _ = Role.objects.get_or_create(
+        name="Student",
+        residence=None,
+        defaults={
+            "description": "Estudiante / Residente",
+            "is_system_default": True,
+        },
+    )
+    return role
 
 
 def create_resident(data: dict, residence, request) -> dict:
@@ -14,7 +27,7 @@ def create_resident(data: dict, residence, request) -> dict:
     2. Si no existe, crea el User con un username único derivado del email.
     3. Si se proporcionó contraseña, la establece; si no, envía un correo de
        restablecimiento para que el residente configure la suya.
-    4. Crea la Membership con rol RESIDENT en la residencia, si no existe ya.
+    4. Crea la Membership con rol Student en la residencia, si no existe ya.
 
     Retorna un dict con { 'created': bool, 'email': str }.
     """
@@ -48,12 +61,14 @@ def create_resident(data: dict, residence, request) -> dict:
             user.set_password(passwd)
             user.save()
 
+    student_role = _get_student_role()
+
     if not Membership.objects.filter(
-        user=user, role=Membership.Role.RESIDENT, residence=residence
+        user=user, role=student_role, residence=residence
     ).exists():
         Membership.objects.create(
             user=user,
-            role=Membership.Role.RESIDENT,
+            role=student_role,
             residence=residence,
             is_active=True,
         )
@@ -98,8 +113,8 @@ def _membership_to_dict(membership) -> dict:
 def list_residents(residence) -> list:
     """Devuelve todos los residentes (User+Membership) de una residencia."""
     memberships = (
-        Membership.objects.filter(role=Membership.Role.RESIDENT, residence=residence)
-        .select_related("user")
+        Membership.objects.filter(role__name="Student", residence=residence)
+        .select_related("user", "role")
         .order_by("created_at")
     )
     return [_membership_to_dict(m) for m in memberships]
@@ -108,8 +123,8 @@ def list_residents(residence) -> list:
 def get_resident(membership_id: int, residence):
     """Devuelve un residente por el ID de su Membership, o None si no existe."""
     try:
-        membership = Membership.objects.select_related("user").get(
-            id=membership_id, role=Membership.Role.RESIDENT, residence=residence
+        membership = Membership.objects.select_related("user", "role").get(
+            id=membership_id, role__name="Student", residence=residence
         )
     except Membership.DoesNotExist:
         return None
@@ -122,8 +137,8 @@ def update_resident(membership_id: int, data: dict, residence) -> dict | None:
     Retorna el dict actualizado o None si no existe.
     """
     try:
-        membership = Membership.objects.select_related("user").get(
-            id=membership_id, role=Membership.Role.RESIDENT, residence=residence
+        membership = Membership.objects.select_related("user", "role").get(
+            id=membership_id, role__name="Student", residence=residence
         )
     except Membership.DoesNotExist:
         return None
@@ -154,7 +169,7 @@ def delete_resident(membership_id: int, residence) -> bool:
     """
     try:
         membership = Membership.objects.get(
-            id=membership_id, role=Membership.Role.RESIDENT, residence=residence
+            id=membership_id, role__name="Student", residence=residence
         )
     except Membership.DoesNotExist:
         return False

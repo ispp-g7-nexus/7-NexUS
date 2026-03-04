@@ -1,4 +1,4 @@
-import { AlertCircle, Bell, Briefcase, LayoutDashboard, LogOut, Menu, Users, Calendar } from "lucide-react";
+import { AlertCircle, Bell, Briefcase, Home, LayoutDashboard, LogOut, Menu, Users, Calendar } from "lucide-react";
 import { useState } from "react";
 import logo from "../assets/logo.png";
 import { Shield } from "lucide-react";

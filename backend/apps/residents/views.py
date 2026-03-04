@@ -85,5 +85,3 @@ class ResidentViewSet(viewsets.ViewSet):
         if not deleted:
             raise NotFound("Residente no encontrado.")
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-

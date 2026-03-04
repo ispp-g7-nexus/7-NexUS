@@ -7,7 +7,8 @@ from django_tenants.utils import schema_context
 
 from apps.common.utils.celery_helpers import shared_retry_task
 from apps.onboarding.models import ResidentPreference
-from apps.residences.models import Membership, Residence
+from apps.membership.models import Membership
+from apps.residences.models import Residence
 
 from .models import ResidenceCompatibility
 

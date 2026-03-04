@@ -3,7 +3,6 @@ from django.db import models
 
 
 class Staff(models.Model):
-    # No seria un nuevo modelo sino que seria un User con un perfil concreto, este si que lo sería
     class StatusChoices(models.TextChoices):
         ACTIVO = 'active', 'Activo'
         INACTIVO = 'inactive', 'Inactivo'

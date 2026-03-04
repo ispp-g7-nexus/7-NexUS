@@ -30,7 +30,6 @@ SHARED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "rest_framework",
 ]
 
 MATCHING_ENABLED = os.getenv("MATCHING_ENABLED", "0") == "1"
@@ -44,11 +43,15 @@ TENANT_APPS = [
     "rest_framework",
     "apps.common",
     "apps.residences",
+    "apps.staff",
     "apps.events",
     "apps.bedrooms",
     "apps.incidences",
     "apps.membership",
     "apps.announcements",
+    "apps.residents",
+    "apps.onboarding",
+    "apps.objects",
 ]
 
 if MATCHING_ENABLED:
