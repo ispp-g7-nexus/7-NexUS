@@ -1,9 +1,9 @@
 import { AlertCircle, BarChart3, BedDouble, Bell, BookOpen, Briefcase, Calendar, Home, Layout, LayoutDashboard, LogOut, Menu, Shield, User, UserCheck, Users, Utensils } from "lucide-react";
 import { useState } from "react";
-import logo from "../assets/logo.png";
-import { Events } from "../pages/Events/Events";
-import { AdminIncidences } from "../pages/Incidences/components/AdminIncidences";
+import { Events } from "../pages/Social/Events/Events";
 import { Residents } from "../pages/Residents/Residents";
+import logo from "../assets/logo.png";
+import { AdminIncidences } from "../pages/Incidences/components/AdminIncidences";
 import RolesPage from "../pages/RolesPage";
 import Rooms from "../pages/Rooms/Rooms";
 import { Staff } from "../pages/Staff/Staff";

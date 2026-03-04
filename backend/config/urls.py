@@ -1,9 +1,11 @@
 from apps.common.views import (
+    AdminCreateResidentView,
     AuthLoginView,
     AuthLogoutView,
     AuthMeView,
     PasswordResetConfirmView,
     PasswordResetRequestView,
+    StudentProfileView,
     TenantContextView,
 )
 from django.conf import settings
@@ -29,6 +31,8 @@ urlpatterns = [
         name="password-reset-request",
     ),
     path("api/auth/password-reset/confirm/", PasswordResetConfirmView.as_view(), name="password-reset-confirm"),
+    path("api/admin/residents/create/", AdminCreateResidentView.as_view(), name="admin-create-resident"),
+    path("api/student/profile/", StudentProfileView.as_view(), name="student-profile"),
     path("api/", include("apps.residents.urls")),
     path("api/", include("apps.events.urls")),
     path("api/", include("apps.staff.urls")),
