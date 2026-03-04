@@ -5,9 +5,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.membership.models import Membership
 from apps.onboarding.models import ResidentPreference
-from apps.membership.models import Membership, Role
-from django.contrib.auth import get_user_model
 
 from .models import ResidenceCompatibility
 
@@ -30,20 +29,11 @@ def _masked_display_name(first_name: str, last_name: str, email: str) -> str:
 class MyMatchesView(APIView):
     permission_classes = [IsAuthenticated]
 
-    
     def get(self, request):
-        student_role, _ = Role.objects.get_or_create(
-                name="Student",
-                residence=None,
-                defaults={
-                    "description": "Estudiante / Residente",
-                    "is_system_default": True,
-                },
-            )
         residence = getattr(request, "residence", None)
         memberships = Membership.objects.filter(
             user=request.user,
-            role=student_role,
+            role__name__iexact="Student",
             is_active=True,
         ).select_related("residence")
 
@@ -71,7 +61,7 @@ class MyMatchesView(APIView):
             is_completed=True,
             membership__residence_id=membership.residence_id,
             membership__is_active=True,
-            membership__role=Membership.Role.RESIDENT,
+            membership__role__name__iexact="Student",
         ).count()
 
         if completed_residents < 2:

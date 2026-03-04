@@ -140,6 +140,13 @@ CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_ALWAYS_EAGER = os.getenv("CELERY_TASK_ALWAYS_EAGER", "0") == "1"
+CELERY_IMPORTS = tuple(
+    module
+    for module in (
+        "apps.matching.tasks" if MATCHING_ENABLED else None,
+    )
+    if module
+)
 
 MATCHING_ROOM_CHANGE_MODEL = os.getenv("MATCHING_ROOM_CHANGE_MODEL", "")
 MATCHING_ROOM_CHANGE_MEMBERSHIP_FIELD = os.getenv(

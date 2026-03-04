@@ -37,6 +37,7 @@ services:
       - .env.prod
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.production
+      MATCHING_ENABLED: "1"
       SEED_DEMO_ON_STARTUP: 0
     depends_on:
       postgres:
@@ -61,6 +62,7 @@ services:
       - .env.prod
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.production
+      MATCHING_ENABLED: "1"
     depends_on:
       postgres:
         condition: service_healthy
@@ -80,6 +82,7 @@ services:
       - .env.prod
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.production
+      MATCHING_ENABLED: "1"
     depends_on:
       postgres:
         condition: service_healthy
@@ -101,7 +104,7 @@ services:
       - backend
     command: >
       sh -c "npm run build &&
-             npm run preview -- --host"
+             npm run preview -- --host --port 5173"
     restart: unless-stopped
 
   tenant_gateway:
@@ -113,6 +116,8 @@ services:
       - .env.prod
     environment:
       PORT: 3000
+      FRONTEND_UPSTREAM_URL: http://frontend:5173
+      BACKEND_UPSTREAM_URL: http://backend:8000
     depends_on:
       - frontend
       - backend
