@@ -1,28 +1,22 @@
 import { motion } from "framer-motion";
-import { AlertCircle, Calendar, HeartHandshake, Home, MessageSquare, User } from "lucide-react";
+import { AlertCircle, Calendar, Home, MessageSquare, User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Events } from "../pages/Events/Events";
-import { StudentReservations } from "./StudentReservations";
-import { StudentAnnouncements } from "../pages/announcements/StudentAnnouncements";
-import announcementService from "../services/announcement.service";
 import { toast } from "sonner";
-import { MyMatchesPage } from "../pages/Matching/MyMatchesPage";
 
+// Importamos la página de inicio y el tipo de las pestañas
+import { StudentHome, StudentTab } from "./StudentHome";
+
+// Páginas / Servicios
+import { StudentAnnouncements } from "../pages/announcements/StudentAnnouncements";
+import { Events } from "../pages/Events/Events";
 import StudentIncidences from "../pages/Incidences/components/StudentIncidences";
+import { MyMatchesPage } from "../pages/Matching/MyMatchesPage";
+import announcementService from "../services/announcement.service";
+import { StudentReservations } from "./StudentReservations";
+
 interface StudentViewProps {
     onLogout: () => void;
 }
-
-type StudentTab =
-    | "home"
-    | "incidences"
-    | "reservations"
-    | "community"
-    | "matches"
-    | "announcements"
-    | "menu"
-    | "deliveries"
-    | "visitors";
 
 export function StudentView({ onLogout }: StudentViewProps) {
     const [activeTab, setActiveTab] = useState<StudentTab>("home");
@@ -92,20 +86,45 @@ export function StudentView({ onLogout }: StudentViewProps) {
     }, [activeTab]);
 
     const renderContent = () => {
-        switch (activeTab) {
-            case "home": return <StudentHome onLogout={onLogout} />;
-            case "incidences": return <StudentIncidences />;
-            case "reservations": return <StudentReservations />;
-            case "community": return <Events />;
-            case "matches": return <MyMatchesPage />;
-            case "announcements": return <StudentAnnouncements />;
-            default: return <div className="p-8 text-center text-gray-500">Módulo en construcción</div>;
+        // 1. El Home maneja sus propios márgenes (diseño de borde a borde)
+        if (activeTab === "home") {
+            return <StudentHome onLogout={onLogout} />;
         }
+
+        // 2. Evaluamos el resto de pestañas
+        let tabContent;
+        switch (activeTab) {
+            case "incidences":
+                tabContent = <StudentIncidences />;
+                break;
+            case "reservations":
+                tabContent = <StudentReservations />;
+                break;
+            case "community":
+                tabContent = <Events />;
+                break;
+            case "matches":
+                tabContent = <MyMatchesPage />;
+                break;
+            case "announcements":
+                tabContent = <StudentAnnouncements />;
+                break;
+            default:
+                tabContent = <div className="p-8 text-center text-gray-500">Módulo en construcción</div>;
+                break;
+        }
+
+        // 3. Devolvemos el contenido envuelto en el div con "p-4"
+        return (
+            <div className="p-4 h-full">
+                {tabContent}
+            </div>
+        );
     };
 
     return (
         <div className="min-h-screen flex flex-col w-full bg-background relative">
-            <div className="flex-1 overflow-y-auto pb-20 p-4">
+            <div className="flex-1 overflow-y-auto pb-20">
                 {renderContent()}
             </div>
 
@@ -119,7 +138,6 @@ export function StudentView({ onLogout }: StudentViewProps) {
                         </motion.button>
                     </div>
                     <NavButton icon={<Calendar className="w-5 h-5" />} label="Reservas" active={activeTab === "reservations"} onClick={() => setActiveTab("reservations")} />
-                    <NavButton icon={<HeartHandshake className="w-5 h-5" />} label="Matches" active={activeTab === "matches"} onClick={() => setActiveTab("matches")} />
                     <NavButton icon={<MessageSquare className="w-5 h-5" />} label="Avisos" active={activeTab === "announcements"} onClick={() => setActiveTab("announcements")} showIndicator={unreadAnnouncements > 0} />
                 </div>
             </nav>
@@ -136,15 +154,5 @@ function NavButton({ icon, label, active, onClick, showIndicator = false }: { ic
             {icon}
             <span className="text-[10px] font-medium mt-1">{label}</span>
         </button>
-    );
-}
-
-
-function StudentHome({ onLogout }: { onLogout: () => void }) {
-    return (
-        <div className="p-4 bg-white rounded-xl shadow-sm text-center">
-            <h2>Inicio Estudiante</h2>
-            <button onClick={onLogout} className="mt-4 text-red-500">Cerrar Sesión</button>
-        </div>
     );
 }

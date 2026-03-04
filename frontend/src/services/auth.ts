@@ -12,6 +12,8 @@ export interface LoginCredentials {
 export type PortalRole = "student" | "admin";
 
 interface AuthMeUser {
+    username?: string;
+    email?: string;
     roles?: string[];
 }
 
