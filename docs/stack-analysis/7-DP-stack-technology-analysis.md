@@ -491,6 +491,26 @@ Esta fase se ejecuta automáticamente en cada Push y Pull Request. Su objetivo e
 
 * **Reporte de cobertura:** Se calcula y reporta la cobertura de tests, con integración a Codecov para tracking histórico.
 
+* **Quality Gate en PR:** Se ejecuta análisis de calidad en SonarCloud para Pull Requests contra `main`, bloqueando merges cuando no se cumplan las condiciones del Quality Gate en código nuevo (cobertura, duplicación, seguridad, fiabilidad y mantenibilidad).
+
+#### **Implementación actual de Sonar en NexUS**
+
+La integración se apoya en los siguientes artefactos del repositorio:
+
+* `sonar-project.properties`: definición de fuentes (`backend`, `frontend`), exclusiones y rutas de cobertura (`backend/coverage.xml`, `frontend/coverage/lcov.info`).
+* `.github/workflows/sonar.yml`: workflow de GitHub Actions para análisis en SonarCloud en cada PR a `main`.
+* `run-sonar.sh`: ejecución local "zero-install" del scanner mediante Docker.
+* `docker-compose.sonarqube.yml`: stack local de SonarQube Community + PostgreSQL dedicado para pruebas/ajuste del gate.
+
+#### **Configuración requerida en GitHub**
+
+En `Settings -> Secrets and variables -> Actions`:
+
+* **Secret:** `SONAR_TOKEN`
+* **Variables:** `SONAR_PROJECT_KEY`, `SONAR_ORGANIZATION`
+
+Sin esta configuración, el job de SonarCloud no podrá autenticar ni resolver proyecto/organización.
+
 ### **Fase 2: Construcción de artefactos**
 
 Esta fase se dispara únicamente cuando se crea un tag de versión (dev-v*, stg-v*, pre-v*, v*):

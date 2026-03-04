@@ -1,34 +1,134 @@
 import { motion } from "framer-motion";
 import { AlertCircle, Calendar, Home, MessageSquare, User } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+
+// Importamos la página de inicio y el tipo de las pestañas
+import { StudentHome, StudentTab } from "./StudentHome";
+
+// Páginas / Servicios
+import { StudentAnnouncements } from "../pages/announcements/StudentAnnouncements";
 import { Events } from "../pages/Events/Events";
+import StudentIncidences from "../pages/Incidences/components/StudentIncidences";
+import { MyMatchesPage } from "../pages/Matching/MyMatchesPage";
+import announcementService from "../services/announcement.service";
+import { StudentReservations } from "./StudentReservations";
 
 interface StudentViewProps {
     onLogout: () => void;
 }
 
-type StudentTab = "home" | "incidences" | "reservations" | "community" | "menu" | "deliveries" | "announcements" | "visitors";
-
 export function StudentView({ onLogout }: StudentViewProps) {
     const [activeTab, setActiveTab] = useState<StudentTab>("home");
+    const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
+    const previousUnreadCount = useRef<number | null>(null);
+    const markAsViewedTimeoutRef = useRef<number | null>(null);
 
-    const handleNavigation = (view: string) => {
-        setActiveTab(view as StudentTab);
+    useEffect(() => {
+        const loadUnreadCount = async () => {
+            try {
+                const data = await announcementService.getUnviewedCount();
+                const nextCount = data.count;
+
+                if (
+                    previousUnreadCount.current !== null
+                    && nextCount > previousUnreadCount.current
+                    && activeTab !== "announcements"
+                ) {
+                    toast.info("Tienes un nuevo aviso disponible", {
+                        description: "Revisa la pestaña Avisos para verlo.",
+                    });
+                }
+
+                previousUnreadCount.current = nextCount;
+                setUnreadAnnouncements(data.count);
+            } catch {
+                setUnreadAnnouncements(0);
+            }
+        };
+
+        loadUnreadCount();
+
+        const intervalId = window.setInterval(loadUnreadCount, 15000);
+        return () => window.clearInterval(intervalId);
+    }, [activeTab]);
+
+    useEffect(() => {
+        if (activeTab !== "announcements") {
+            if (markAsViewedTimeoutRef.current) {
+                window.clearTimeout(markAsViewedTimeoutRef.current);
+                markAsViewedTimeoutRef.current = null;
+            }
+            return;
+        }
+
+        const markAsViewed = async () => {
+            try {
+                await announcementService.markAsViewed();
+                previousUnreadCount.current = 0;
+                setUnreadAnnouncements(0);
+            } catch {
+                // Ignorado: no bloquea la navegación
+            }
+        };
+
+        markAsViewedTimeoutRef.current = window.setTimeout(() => {
+            markAsViewed();
+            markAsViewedTimeoutRef.current = null;
+        }, 5000);
+
+        return () => {
+            if (markAsViewedTimeoutRef.current) {
+                window.clearTimeout(markAsViewedTimeoutRef.current);
+                markAsViewedTimeoutRef.current = null;
+            }
+        };
+    }, [activeTab]);
+
+    const handleNavigation = (tab: StudentTab) => {
+        setActiveTab(tab);
     };
 
     const renderContent = () => {
-        switch (activeTab) {
-            case "home": return <StudentHome onNavigate={handleNavigation} onLogout={onLogout} />;
-            case "incidences": return <StudentIncidences />;
-            case "reservations": return <StudentReservations />;
-            case "community": return <Events />;
-            default: return <div className="p-8 text-center text-gray-500">Módulo en construcción</div>;
+        // 1. El Home maneja sus propios márgenes (diseño de borde a borde)
+        if (activeTab === "home") {
+            return <StudentHome onNavigate={handleNavigation} onLogout={onLogout} />;
         }
+
+        // 2. Evaluamos el resto de pestañas
+        let tabContent;
+        switch (activeTab) {
+            case "incidences":
+                tabContent = <StudentIncidences />;
+                break;
+            case "reservations":
+                tabContent = <StudentReservations />;
+                break;
+            case "community":
+                tabContent = <Events />;
+                break;
+            case "matches":
+                tabContent = <MyMatchesPage />;
+                break;
+            case "announcements":
+                tabContent = <StudentAnnouncements />;
+                break;
+            default:
+                tabContent = <div className="p-8 text-center text-gray-500">Módulo en construcción</div>;
+                break;
+        }
+
+        // 3. Devolvemos el contenido envuelto en el div con "p-4"
+        return (
+            <div className="p-4 h-full">
+                {tabContent}
+            </div>
+        );
     };
 
     return (
         <div className="min-h-screen flex flex-col w-full bg-background relative">
-            <div className="flex-1 overflow-y-auto pb-20 p-4">
+            <div className="flex-1 overflow-y-auto pb-20">
                 {renderContent()}
             </div>
 
@@ -42,23 +142,21 @@ export function StudentView({ onLogout }: StudentViewProps) {
                         </motion.button>
                     </div>
                     <NavButton icon={<Calendar className="w-5 h-5" />} label="Reservas" active={activeTab === "reservations"} onClick={() => setActiveTab("reservations")} />
-                    <NavButton icon={<MessageSquare className="w-5 h-5" />} label="Avisos" active={activeTab === "announcements"} onClick={() => setActiveTab("announcements")} />
+                    <NavButton icon={<MessageSquare className="w-5 h-5" />} label="Avisos" active={activeTab === "announcements"} onClick={() => setActiveTab("announcements")} showIndicator={unreadAnnouncements > 0} />
                 </div>
             </nav>
         </div>
     );
 }
 
-function NavButton({ icon, label, active, onClick }: { icon: React.ReactNode, label: string, active: boolean, onClick: () => void }) {
+function NavButton({ icon, label, active, onClick, showIndicator = false }: { icon: React.ReactNode, label: string, active: boolean, onClick: () => void, showIndicator?: boolean }) {
     return (
-        <button onClick={onClick} className={`flex flex-col items-center justify-center p-2 rounded-xl transition-colors ${active ? "text-[#4A7C59]" : "text-slate-400 hover:text-slate-600"}`}>
+        <button onClick={onClick} className={`relative flex flex-col items-center justify-center p-2 rounded-xl transition-colors ${active ? "text-[#4A7C59]" : "text-slate-400 hover:text-slate-600"}`}>
+            {showIndicator && (
+                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500" />
+            )}
             {icon}
             <span className="text-[10px] font-medium mt-1">{label}</span>
         </button>
     );
 }
-
-// Componentes Ficticios para evitar errores de compilación
-function StudentHome({ onLogout }: any) { return <div className="p-4 bg-white rounded-xl shadow-sm text-center"><h2>Inicio Estudiante</h2><button onClick={onLogout} className="mt-4 text-red-500">Cerrar Sesión</button></div>; }
-function StudentIncidences() { return <div>Mis Incidencias</div>; }
-function StudentReservations() { return <div>Mis Reservas</div>; }

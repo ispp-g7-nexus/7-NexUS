@@ -24,7 +24,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Prepare CI env file
+      - name: Prepare CI env files
         shell: bash
         run: |
           if [ -f .env.local.example ]; then
@@ -33,6 +33,15 @@ jobs:
             cp .env.example .env
           else
             echo "No se encontro plantilla de entorno (.env.local.example o .env.example)."
+            exit 1
+          fi
+
+          if [ -f .env.prod.example ]; then
+            cp .env.prod.example .env.prod
+          elif [ -f .env.example ]; then
+            cp .env.example .env.prod
+          else
+            echo "No se encontro plantilla de entorno para produccion (.env.prod.example o .env.example)."
             exit 1
           fi
 

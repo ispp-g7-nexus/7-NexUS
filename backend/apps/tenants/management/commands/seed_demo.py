@@ -11,16 +11,27 @@ from apps.tenants.models import Client, Domain, Plan
 
 
 class Command(BaseCommand):
-    help = "Crea o actualiza datos demo para desarrollo (tenant, residencia y usuarios)."
+    help = (
+        "Crea o actualiza datos demo para desarrollo (tenant, residencia y usuarios)."
+    )
 
     def add_arguments(self, parser):
         parser.add_argument("--domain", default=None, help="Dominio del tenant demo.")
         parser.add_argument("--schema", default=None, help="Schema del tenant demo.")
         parser.add_argument("--tenant-slug", default=None, help="Slug del tenant demo.")
-        parser.add_argument("--tenant-name", default=None, help="Nombre del tenant demo.")
+        parser.add_argument(
+            "--tenant-name", default=None, help="Nombre del tenant demo."
+        )
         parser.add_argument("--admin-email", default=None, help="Email del admin demo.")
-        parser.add_argument("--student-email", default=None, help="Email del estudiante demo.")
-        parser.add_argument("--password", default=None, help="Contrasena para ambos usuarios demo.")
+        parser.add_argument(
+            "--student-email", default=None, help="Email del estudiante demo."
+        )
+        parser.add_argument(
+            "--student2-email", default=None, help="Email del segundo estudiante demo."
+        )
+        parser.add_argument(
+            "--password", default=None, help="Contrasena para ambos usuarios demo."
+        )
 
     def _env_or_option(self, options, option_key, env_key, default):
         option_value = options.get(option_key)
@@ -39,7 +50,15 @@ class Command(BaseCommand):
         normalized = slugify(value) or "demo"
         return normalized
 
-    def _upsert_user(self, *, email: str, password: str, first_name: str, last_name: str, is_staff: bool):
+    def _upsert_user(
+        self,
+        *,
+        email: str,
+        password: str,
+        first_name: str,
+        last_name: str,
+        is_staff: bool,
+    ):
         UserModel = get_user_model()
         normalized_email = email.strip().lower()
         username = normalized_email
@@ -62,12 +81,20 @@ class Command(BaseCommand):
         return user
 
     def handle(self, *args, **options):
-        domain = self._env_or_option(options, "domain", "DEMO_TENANT_DOMAIN", "demo.nexus.local").lower()
+        domain = self._env_or_option(
+            options, "domain", "DEMO_TENANT_DOMAIN", "demo.nexus.local"
+        ).lower()
         schema_name = self._safe_schema_name(
-            self._env_or_option(options, "schema", "DEMO_TENANT_SCHEMA", domain.split(".", 1)[0])
+            self._env_or_option(
+                options, "schema", "DEMO_TENANT_SCHEMA", domain.split(".", 1)[0]
+            )
         )
-        tenant_name = self._env_or_option(options, "tenant_name", "DEMO_TENANT_NAME", "Residencia Demo")
-        tenant_slug = self._safe_slug(self._env_or_option(options, "tenant_slug", "DEMO_TENANT_SLUG", schema_name))
+        tenant_name = self._env_or_option(
+            options, "tenant_name", "DEMO_TENANT_NAME", "Residencia Demo"
+        )
+        tenant_slug = self._safe_slug(
+            self._env_or_option(options, "tenant_slug", "DEMO_TENANT_SLUG", schema_name)
+        )
         admin_email = self._env_or_option(
             options,
             "admin_email",
@@ -80,7 +107,15 @@ class Command(BaseCommand):
             "DEMO_STUDENT_EMAIL",
             f"estudiante@{domain}",
         ).lower()
-        demo_password = self._env_or_option(options, "password", "DEMO_USERS_PASSWORD", "demo1234")
+        student2_email = self._env_or_option(
+            options,
+            "student2_email",
+            "DEMO_STUDENT_2_EMAIL",
+            f"estudiante2@{domain}",
+        ).lower()
+        demo_password = self._env_or_option(
+            options, "password", "DEMO_USERS_PASSWORD", "demo1234"
+        )
 
         plan, _ = Plan.objects.update_or_create(
             code="demo",
@@ -135,10 +170,18 @@ class Command(BaseCommand):
                 "is_primary": True,
             },
         )
-        Domain.objects.filter(tenant=client).exclude(pk=primary_domain.pk).update(is_primary=False)
+        Domain.objects.filter(tenant=client).exclude(pk=primary_domain.pk).update(
+            is_primary=False
+        )
 
         with schema_context(client.schema_name):
-            from apps.residences.models import Membership, Residence, ResidenceBranding, ResidenceDomain
+            from apps.membership.models import Membership, Role
+            from apps.residences.models import (
+                Residence,
+                ResidenceBranding,
+                ResidenceDomain,
+            )
+            from apps.spaces.models import CommonSpace
 
             residence, _ = Residence.objects.update_or_create(
                 code="DEMO-01",
@@ -158,7 +201,9 @@ class Command(BaseCommand):
                     "is_active": True,
                 },
             )
-            ResidenceDomain.objects.filter(residence=residence).exclude(domain=domain).update(is_primary=False)
+            ResidenceDomain.objects.filter(residence=residence).exclude(
+                domain=domain
+            ).update(is_primary=False)
 
             ResidenceBranding.objects.update_or_create(
                 residence=residence,
@@ -168,6 +213,42 @@ class Command(BaseCommand):
                     "accent_color": "#35C759",
                 },
             )
+
+            demo_spaces = [
+                {
+                    "name": "Sala de Estudio",
+                    "description": "Espacio silencioso para estudio individual o en grupo reducido.",
+                    "capacity": 12,
+                    "open_time": "08:00",
+                    "close_time": "22:00",
+                },
+                {
+                    "name": "Sala Multimedia",
+                    "description": "Sala equipada con proyector para presentaciones y cinefórum.",
+                    "capacity": 20,
+                    "open_time": "10:00",
+                    "close_time": "23:00",
+                },
+                {
+                    "name": "Gimnasio",
+                    "description": "Zona deportiva con aforo limitado por seguridad.",
+                    "capacity": 8,
+                    "open_time": "07:00",
+                    "close_time": "21:30",
+                },
+            ]
+            for item in demo_spaces:
+                CommonSpace.objects.update_or_create(
+                    residence=residence,
+                    name=item["name"],
+                    defaults={
+                        "description": item["description"],
+                        "capacity": item["capacity"],
+                        "is_active": True,
+                        "open_time": item["open_time"],
+                        "close_time": item["close_time"],
+                    },
+                )
 
             admin_user = self._upsert_user(
                 email=admin_email,
@@ -184,21 +265,34 @@ class Command(BaseCommand):
                 is_staff=False,
             )
 
-            Membership.objects.update_or_create(
-                user=admin_user,
-                role=Membership.Role.PORTFOLIO_ADMIN,
-                residence=None,
-                defaults={"is_active": True},
+            admin_role, _ = Role.objects.get_or_create(
+                name="Admin",
+                defaults={
+                    "description": "Administrador del sistema",
+                    "is_system_default": True,
+                    "residence": None,
+                },
             )
+
+            student_role, _ = Role.objects.get_or_create(
+                name="Student",
+                defaults={
+                    "description": "Estudiante / Residente",
+                    "is_system_default": True,
+                    "residence": None,
+                },
+            )
+
             Membership.objects.update_or_create(
                 user=admin_user,
-                role=Membership.Role.RESIDENCE_ADMIN,
+                role=admin_role,
                 residence=residence,
                 defaults={"is_active": True},
             )
+
             Membership.objects.update_or_create(
                 user=student_user,
-                role=Membership.Role.RESIDENT,
+                role=student_role,
                 residence=residence,
                 defaults={"is_active": True},
             )
