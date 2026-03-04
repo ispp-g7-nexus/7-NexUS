@@ -6,7 +6,7 @@ import { Button } from "../../../components/ui/button"
 import { Input } from "../../../components/ui/input"
 import { Label } from "../../../components/ui/label"
 import { Checkbox } from "../../../components/ui/checkbox"
-import { Select} from "../../../components/ui/select"
+import { Select, SelectContent, SelectTrigger, SelectItem, SelectValue} from "../../../components/ui/select2"
 import { DialogDescription } from "../../../components/ui/dialog"
 import { fetchWithAuth, API_URL_INCIDENCES } from "../../../utils/api"
 //import {API_URL_INCIDENCES } from "../../../utils/api"
@@ -61,7 +61,6 @@ export function IncidenceForm({ onSuccess, onClose }: IncidenceFormProps) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col h-full max-h-[90vh] bg-white overflow-hidden">
       
-      {/* Cabecera */}
       <div className="p-6 text-center border-b border-gray-50 shrink-0 relative">
         <button 
           onClick={onClose} 
@@ -88,17 +87,18 @@ export function IncidenceForm({ onSuccess, onClose }: IncidenceFormProps) {
           />
         </div>
 
-        <div className="space-y-1.5">
+                <div className="space-y-1.5">
           <Label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Área</Label>
-          <Select 
-            required
-            onChange={(e) => setLocationType(e.target.value)}
-          >
-            <option value="" disabled>Selecciona lugar</option>
-            <option value="habitacion">Mi Habitación</option>
-            <option value="baño">Baños Comunes</option>
-            <option value="cocina">Cocina</option>
-            <option value="zonas_comunes">Zonas Comunes</option>
+          <Select onValueChange={setLocationType} required>
+            <SelectTrigger className="bg-gray-50 border-none rounded-2xl h-14 px-4 text-gray-600 focus:ring-[#82D14C]">
+              <SelectValue placeholder="Selecciona el área" />
+            </SelectTrigger>
+            <SelectContent className="rounded-2xl shadow-xl">
+              <SelectItem value="habitacion">Mi Habitación</SelectItem>
+              <SelectItem value="baño">Baño Común</SelectItem>
+              <SelectItem value="cocina">Cocina</SelectItem>
+              <SelectItem value="zonas_comunes">Zonas Comunes</SelectItem>
+            </SelectContent>
           </Select>
           
           {locationType === "habitacion" && (
@@ -119,8 +119,7 @@ export function IncidenceForm({ onSuccess, onClose }: IncidenceFormProps) {
             className="w-full bg-gray-50 border-none rounded-2xl min-h-[100px] p-4 focus-visible:ring-[#82D14C] resize-none text-sm" 
           />
         </div>
-
-        {/* Urgencia */}
+        
         <div className="flex items-center space-x-3 p-4 bg-orange-50/50 rounded-2xl border border-orange-100">
           <Checkbox
           id="urgent"
