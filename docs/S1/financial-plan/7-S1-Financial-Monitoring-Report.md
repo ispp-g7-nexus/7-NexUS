@@ -39,7 +39,7 @@
 
 | Versión | Fecha       | Cambio principal                                      |
 |---------|-------------|-------------------------------------------------------|
-| 1.0.0   | 03/03/2026  | Creación del documento base                           |
+| 1.0.0   | 04/03/2026  | Creación del documento base                           |
 
 
 ---
