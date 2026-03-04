@@ -1,5 +1,58 @@
 # Changelog
 
+## [0.3.0](https://github.com/ispp-g7-nexus/7-NexUS/compare/v0.2.0...v0.3.0) (2026-03-04)
+
+
+### Features
+
+* add admin objects management interface ([8ae4386](https://github.com/ispp-g7-nexus/7-NexUS/commit/8ae43864f30416c753479ccd23390d659092a2ed))
+* Add events seeders ([#230](https://github.com/ispp-g7-nexus/7-NexUS/issues/230)) ([bf23e33](https://github.com/ispp-g7-nexus/7-NexUS/commit/bf23e335eb2064f4846021fc69920084f1a4e05a))
+* add reservation validation and cancellation improvements ([d88bb4e](https://github.com/ispp-g7-nexus/7-NexUS/commit/d88bb4e43b9bd33f4903b1277dc87341085e55df))
+* change incident status ([4231be1](https://github.com/ispp-g7-nexus/7-NexUS/commit/4231be152dcf81cb62606be953936c5e1a499cfa))
+* completed incidences filter ([c0d6811](https://github.com/ispp-g7-nexus/7-NexUS/commit/c0d68114b9f9f2a6c600406d7e583bfbb2a6feb4))
+* incidences historial completed ([5546800](https://github.com/ispp-g7-nexus/7-NexUS/commit/55468005c1004f3ed4c7b3e0eb1cbb39c34c4f72))
+* incident management implemented ([52371a1](https://github.com/ispp-g7-nexus/7-NexUS/commit/52371a153fdb41d597695c160ce094f0ade21748))
+* Interfaz de perfil del administrador y home de student ([94f11a3](https://github.com/ispp-g7-nexus/7-NexUS/commit/94f11a3c090249f306c03d29a1380a1484c914a3))
+* Interfaz de perfil del administrador y home de student ([#238](https://github.com/ispp-g7-nexus/7-NexUS/issues/238)) ([84f0e6c](https://github.com/ispp-g7-nexus/7-NexUS/commit/84f0e6c60a0dadf51d6c03af426fbe27d2b26634))
+* nx s1.13 ([#211](https://github.com/ispp-g7-nexus/7-NexUS/issues/211)) ([43ef355](https://github.com/ispp-g7-nexus/7-NexUS/commit/43ef355874102752f3fc246e5a2301aed1d90aab))
+* nx s1.27 ([#217](https://github.com/ispp-g7-nexus/7-NexUS/issues/217)) ([df2fe50](https://github.com/ispp-g7-nexus/7-NexUS/commit/df2fe50356d9f60d2f884322a9fc294db645eab3))
+* nx s1.37 ([#224](https://github.com/ispp-g7-nexus/7-NexUS/issues/224)) ([7ec61ae](https://github.com/ispp-g7-nexus/7-NexUS/commit/7ec61aeb99ca63e2f9ce953d15d8bec07c01be3c))
+* NX-S1.19 ([#239](https://github.com/ispp-g7-nexus/7-NexUS/issues/239)) ([6e458ac](https://github.com/ispp-g7-nexus/7-NexUS/commit/6e458ac86009cc0e924c8dd11d31c06adf60a020))
+* NX-S1.20 ([#240](https://github.com/ispp-g7-nexus/7-NexUS/issues/240)) ([fbaf864](https://github.com/ispp-g7-nexus/7-NexUS/commit/fbaf86485716bbcf85ae0ff584f0b89434ac9a3f))
+* NX-S1.21 ([#244](https://github.com/ispp-g7-nexus/7-NexUS/issues/244)) ([7fe2b73](https://github.com/ispp-g7-nexus/7-NexUS/commit/7fe2b73730e187045e3468f0d51c7cf5facbefdd))
+* NX-S1.22 ([#245](https://github.com/ispp-g7-nexus/7-NexUS/issues/245)) ([9e07534](https://github.com/ispp-g7-nexus/7-NexUS/commit/9e07534e7d26989800529aa2ed201e79df933239))
+* nx-s1.33 ([#246](https://github.com/ispp-g7-nexus/7-NexUS/issues/246)) ([5b34ecb](https://github.com/ispp-g7-nexus/7-NexUS/commit/5b34ecb1cb414f9c7c6155c6a5a69a251c31d85b))
+* Resident and Staff modules ([#241](https://github.com/ispp-g7-nexus/7-NexUS/issues/241)) ([233a539](https://github.com/ispp-g7-nexus/7-NexUS/commit/233a53978a9aae8852b225c29723e220d2ea57f8))
+* **ResidentRole:** Added new role module to resident ([dd25c7b](https://github.com/ispp-g7-nexus/7-NexUS/commit/dd25c7ba0ba50cea0b6a2955cddf886f3803fc0a))
+* Se añaden los archivos de Scrum importantes ([26068d7](https://github.com/ispp-g7-nexus/7-NexUS/commit/26068d79a7d370f711dded01e76cc64709912855))
+* Se añaden los documentos de Scrum básicos ([#242](https://github.com/ispp-g7-nexus/7-NexUS/issues/242)) ([9504a2a](https://github.com/ispp-g7-nexus/7-NexUS/commit/9504a2a41a15b2493a7bc91c4d300a44ad886e50))
+* Se sube nuevo template de dedicación ([a089055](https://github.com/ispp-g7-nexus/7-NexUS/commit/a08905554e0ef02defa2915e986b03f2f99787d7))
+* Se sube nuevo template de dedicación ([#243](https://github.com/ispp-g7-nexus/7-NexUS/issues/243)) ([94b38e0](https://github.com/ispp-g7-nexus/7-NexUS/commit/94b38e07739bb3f6c6618353d483b0b2993fb122))
+* **StaffRole:** Added Role module logic to Staff ([ab823ea](https://github.com/ispp-g7-nexus/7-NexUS/commit/ab823eaea359471ecbb58674dae27b967ed49f3e))
+* Visualización de notas añadidas por el staff ([0f0d785](https://github.com/ispp-g7-nexus/7-NexUS/commit/0f0d7853a3b10a4e65172b46842a6fa93cecabb7))
+
+
+### Bug Fixes
+
+* add handleNavigation function to StudentView for tab navigation ([58b4287](https://github.com/ispp-g7-nexus/7-NexUS/commit/58b428726107f3e7ec2013fb3ef842fc623be6ae))
+* add support for production images in Docker Compose ([#252](https://github.com/ispp-g7-nexus/7-NexUS/issues/252)) ([e73507d](https://github.com/ispp-g7-nexus/7-NexUS/commit/e73507d7a1028833a6b20ca12d3d20fd0d77bcde))
+* add support for production images in Docker Compose and update README ([5b008ef](https://github.com/ispp-g7-nexus/7-NexUS/commit/5b008efe6092c067b87c3ba867ba91859372b764))
+* arreglo migraciones 2.0 ([f1a1f1f](https://github.com/ispp-g7-nexus/7-NexUS/commit/f1a1f1f3ce4fae034f53fd0bf4979307f287d8ec))
+* arreglo migraciones 2.0 ([#237](https://github.com/ispp-g7-nexus/7-NexUS/issues/237)) ([3ca4a7c](https://github.com/ispp-g7-nexus/7-NexUS/commit/3ca4a7c66c54eb5301bf0657d0c092240656d1f5))
+* arreglos de migraciones de develop ([#233](https://github.com/ispp-g7-nexus/7-NexUS/issues/233)) ([f1e2f5f](https://github.com/ispp-g7-nexus/7-NexUS/commit/f1e2f5f85685cc7a937d3b017b32bea94bab9d69))
+* ci frontend fixed ([92488e8](https://github.com/ispp-g7-nexus/7-NexUS/commit/92488e88719581b1d9c5c2ba49c3fd0995796c56))
+* enable matching feature in production settings and docker-compose ([deabe86](https://github.com/ispp-g7-nexus/7-NexUS/commit/deabe86b17f4fa9bc1c543ac65aa8054dece5e7c))
+* fix membership imports ([7bf381b](https://github.com/ispp-g7-nexus/7-NexUS/commit/7bf381b8fc59d5167099426e8158d6d4c55398c2))
+* fixed CI frontend ([38cf679](https://github.com/ispp-g7-nexus/7-NexUS/commit/38cf6794e0c04af15ef85306e9b5285cf2493e8b))
+* integrate full StudentReservations component (spaces + objects) in student view ([d95f49c](https://github.com/ispp-g7-nexus/7-NexUS/commit/d95f49c0884c314640031085a3b24b3f2d65d318))
+* matching engine membership error ([#251](https://github.com/ispp-g7-nexus/7-NexUS/issues/251)) ([86ef61d](https://github.com/ispp-g7-nexus/7-NexUS/commit/86ef61d08e23d187ff74180821d62bd3e48d8d72))
+* **migrations:** fixed migrations problems ([9f95fd0](https://github.com/ispp-g7-nexus/7-NexUS/commit/9f95fd04910d82198491271740c7a1fb1d3028e6))
+* remove onNavigate prop from StudentHome component call ([34c1596](https://github.com/ispp-g7-nexus/7-NexUS/commit/34c1596d9fe2ac679addca67e58a45baae6e4184))
+* remove unused handleNavigation function ([ac3199a](https://github.com/ispp-g7-nexus/7-NexUS/commit/ac3199af829d777913498659808afcb64b9b2797))
+* remove unused imports and variables to fix TypeScript CI errors ([a51cf81](https://github.com/ispp-g7-nexus/7-NexUS/commit/a51cf812bb39c86c55242e09f28466f98cc7fd56))
+* update Membership import in spaces views to use apps.membership ([899dcf5](https://github.com/ispp-g7-nexus/7-NexUS/commit/899dcf527e3062c6b50194832a2384267b9c1f70))
+* update membership role references to use name-based filtering for Student ([24e9a04](https://github.com/ispp-g7-nexus/7-NexUS/commit/24e9a04bffd6c3a80eea7cc62db0be5713fa4d49))
+
 ## [0.2.0](https://github.com/ispp-g7-nexus/7-NexUS/compare/v0.1.0...v0.2.0) (2026-03-03)
 
 
