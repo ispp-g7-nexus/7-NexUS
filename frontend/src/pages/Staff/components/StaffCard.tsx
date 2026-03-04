@@ -33,7 +33,7 @@ const STATUS_VARIANT: Record<StaffStatus, "success" | "muted" | "warning"> = {
 };
 
 export function StaffCard({ member, onEdit, onDelete }: StaffCardProps) {
-  const { full_name, job_title, department, email, location, schedule, status, role } = member;
+  const { full_name, job_title, department, email, location, schedule, status, role_name } = member;
 
   return (
     <Card className="hover:shadow-md transition-shadow border-gray-200">
@@ -56,9 +56,9 @@ export function StaffCard({ member, onEdit, onDelete }: StaffCardProps) {
                 <Badge variant={STATUS_VARIANT[status]} className="shrink-0">
                   {STATUS_LABEL[status]}
                 </Badge>
-                {role && (
+                {role_name && (
                   <Badge variant="outline" className="text-xs shrink-0 text-[#509550] border-[#509550]/40">
-                    {role}
+                    {role_name}
                   </Badge>
                 )}
               </div>

@@ -2,10 +2,31 @@ from django.contrib.auth import get_user_model
 from rest_framework import status, viewsets
 from rest_framework.response import Response
 
+from apps.membership.models import Membership, Role
 from .models import Staff
 from .serializers import StaffCreateSerializer, StaffReadSerializer, StaffUpdateSerializer
 
 UserModel = get_user_model()
+
+
+def _assign_role_membership(user, role_id, residence):
+    """Crea o actualiza la Membership de staff (rol no-Student) para el usuario."""
+    if not role_id or not residence:
+        return
+    try:
+        role = Role.objects.get(pk=role_id)
+    except Role.DoesNotExist:
+        return
+    # Elimina memberships admin anteriores para este usuario en esta residencia
+    Membership.objects.filter(
+        user=user, residence=residence
+    ).exclude(role__name__iexact="Student").delete()
+    Membership.objects.create(
+        user=user,
+        role=role,
+        residence=residence,
+        is_active=True,
+    )
 
 
 class StaffViewSet(viewsets.ModelViewSet):
@@ -70,6 +91,11 @@ class StaffViewSet(viewsets.ModelViewSet):
             status=data.get("status", Staff.StatusChoices.ACTIVO),
         )
 
+        role_id = data.get("role_id")
+        residence = getattr(request, "residence", None)
+        if role_id:
+            _assign_role_membership(user, role_id, residence)
+
         out = StaffReadSerializer(staff)
         return Response(out.data, status=status.HTTP_201_CREATED)
 
@@ -100,6 +126,11 @@ class StaffViewSet(viewsets.ModelViewSet):
             if field in data:
                 setattr(staff, field, data[field])
         staff.save()
+
+        role_id = data.get("role_id")
+        residence = getattr(request, "residence", None)
+        if role_id:
+            _assign_role_membership(staff.user, role_id, residence)
 
         out = StaffReadSerializer(staff)
         return Response(out.data)

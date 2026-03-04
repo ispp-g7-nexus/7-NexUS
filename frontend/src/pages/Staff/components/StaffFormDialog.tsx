@@ -14,8 +14,9 @@ import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { NativeSelect } from "../../../components/ui/native-select";
 import type { StaffMember, StaffPayload, StaffStatus } from "../../../services/staff";
+import { roleService, type Role } from "../../../services/roles";
 
-type FormState = Omit<StaffPayload, 'password'> & { password: string };
+type FormState = Omit<StaffPayload, 'password'> & { password: string; role_id: number | null };
 type FieldErrors = Partial<Record<keyof FormState, string>>;
 
 const EMPTY_FORM: FormState = {
@@ -27,7 +28,7 @@ const EMPTY_FORM: FormState = {
   location: "",
   schedule: "",
   status: "active",
-  role: "",
+  role_id: null,
 };
 
 function toFormState(m: StaffMember): FormState {
@@ -40,7 +41,7 @@ function toFormState(m: StaffMember): FormState {
     location: m.location,
     schedule: m.schedule,
     status: m.status,
-    role: m.role ?? "",
+    role_id: m.role_id ?? null,
   };
 }
 
@@ -89,6 +90,7 @@ export function StaffFormDialog({
   onUpdate,
 }: StaffFormDialogProps) {
   const isEdit = member !== null;
+  const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [submitting, setSubmitting] = useState(false);
@@ -97,6 +99,9 @@ export function StaffFormDialog({
     if (open) {
       setForm(isEdit ? toFormState(member!) : EMPTY_FORM);
       setErrors({});
+      roleService.getRoles()
+        .then((roles) => setAvailableRoles(roles.filter((r) => r.name.toLowerCase() !== "student")))
+        .catch(() => setAvailableRoles([]));
     }
   }, [open, member, isEdit]);
 
@@ -245,12 +250,16 @@ export function StaffFormDialog({
 
           <div className="space-y-1.5">
             <Label htmlFor="sf-role">Rol</Label>
-            <Input
+            <NativeSelect
               id="sf-role"
-              placeholder="p.ej. residence_admin"
-              value={form.role}
-              onChange={(e) => set("role", e.target.value)}
-            />
+              value={form.role_id ?? ""}
+              onChange={(e) => set("role_id", e.target.value ? Number(e.target.value) : null)}
+            >
+              <option value="">Sin rol asignado</option>
+              {availableRoles.map((r) => (
+                <option key={r.id} value={r.id}>{r.name}</option>
+              ))}
+            </NativeSelect>
           </div>
         </div>
 

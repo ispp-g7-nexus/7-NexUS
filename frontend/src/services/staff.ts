@@ -14,7 +14,8 @@ export interface StaffMember {
   location: string;
   schedule: string;
   status: StaffStatus;
-  role: string;
+  role_id: number | null;
+  role_name: string;
 }
 
 export interface StaffPayload {
@@ -26,7 +27,7 @@ export interface StaffPayload {
   location: string;
   schedule: string;
   status: StaffStatus;
-  role: string;
+  role_id?: number | null;
 }
 
 async function handleResponse<T>(res: Response): Promise<T> {

@@ -8,12 +8,13 @@ class StaffReadSerializer(serializers.ModelSerializer):
     """
     Serializa un Staff para operaciones de lectura.
     Expone datos del perfil (Staff) + datos del usuario asociado (User).
-    El campo `role` se devuelve como string libre (sin validar contra Membership).
+    El campo `role` devuelve {id, name} de la entidad Role via Membership.
     """
 
     full_name = serializers.SerializerMethodField()
     email = serializers.EmailField(source="user.email", read_only=True)
-    role = serializers.SerializerMethodField()
+    role_id = serializers.SerializerMethodField()
+    role_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Staff
@@ -21,7 +22,8 @@ class StaffReadSerializer(serializers.ModelSerializer):
             "id",
             "full_name",
             "email",
-            "role",
+            "role_id",
+            "role_name",
             "job_title",
             "department",
             "location",
@@ -32,15 +34,23 @@ class StaffReadSerializer(serializers.ModelSerializer):
     def get_full_name(self, obj: Staff) -> str:
         return obj.user.get_full_name() or obj.user.username
 
-    def get_role(self, obj: Staff) -> str:
-        """Devuelve el primer rol activo del usuario en la residencia, si existe."""
-        membership = (
+    def _get_membership(self, obj: Staff):
+        """Devuelve la Membership activa del staff excluyendo el rol Student."""
+        return (
             obj.user.memberships
             .filter(is_active=True)
-            .values_list("role", flat=True)
+            .exclude(role__name__iexact="Student")
+            .select_related("role")
             .first()
         )
-        return membership or ""
+
+    def get_role_id(self, obj: Staff):
+        membership = self._get_membership(obj)
+        return membership.role.id if membership else None
+
+    def get_role_name(self, obj: Staff) -> str:
+        membership = self._get_membership(obj)
+        return membership.role.name if membership else ""
 
 class StaffCreateSerializer(StaffFieldValidatorMixin, serializers.Serializer):
     """
@@ -62,7 +72,11 @@ class StaffCreateSerializer(StaffFieldValidatorMixin, serializers.Serializer):
         allow_blank=True,
         error_messages={"min_length": "La contraseña debe tener al menos 8 caracteres."},
     )
-    role = serializers.CharField(max_length=50, required=False, allow_blank=True, default="")
+    role_id = serializers.IntegerField(
+        required=False,
+        allow_null=True,
+        help_text="ID del Role (entidad) a asignar como Membership. Debe ser un rol no-Student.",
+    )
     job_title = serializers.CharField(
         max_length=100,
         allow_blank=False,
@@ -102,7 +116,11 @@ class StaffUpdateSerializer(StaffFieldValidatorMixin, serializers.Serializer):
         allow_blank=True,
         error_messages={"min_length": "La contraseña debe tener al menos 8 caracteres."},
     )
-    role = serializers.CharField(max_length=50, required=False, allow_blank=True)
+    role_id = serializers.IntegerField(
+        required=False,
+        allow_null=True,
+        help_text="ID del Role a reasignar en la Membership.",
+    )
     job_title = serializers.CharField(max_length=100, required=False, allow_blank=False)
     department = serializers.CharField(max_length=100, required=False, allow_blank=False)
     location = serializers.CharField(max_length=255, required=False, allow_blank=True)
