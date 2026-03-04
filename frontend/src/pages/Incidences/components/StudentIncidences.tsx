@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import {  Clock, CheckCircle2, Plus, Bell,  MapPin,} from "lucide-react";
+import { Clock, CheckCircle2, Plus, Bell, MapPin, } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent } from "../../../components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "../../../components/ui/dialog";
@@ -11,10 +11,6 @@ export default function StudentIncidences() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [incidences, setIncidences] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [filterLocation, setFilterLocation] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [filterPriority, setFilterPriority] = useState('all');
   const locationLabels: Record<string, string> = {
     habitacion: 'Habitación',
     baño: 'Baño Común',
@@ -75,39 +71,11 @@ export default function StudentIncidences() {
 
         <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="relative col-span-1 sm:col-span-2">
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por título, persona o lugar..."
-              className="w-full pl-3 pr-3 py-2 rounded-xl border border-slate-200 shadow-sm"
-            />
+
           </div>
-          <div>
-            <select value={filterLocation} onChange={(e) => setFilterLocation(e.target.value)} className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-200 bg-white">
-              <option value="all">Todas las áreas</option>
-              <option value="habitacion">Habitación</option>
-              <option value="baño">Baño Común</option>
-              <option value="cocina">Cocina</option>
-              <option value="zonas_comunes">Zonas Comunes</option>
-            </select>
-          </div>
-          <div>
-            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-200 bg-white">
-              <option value="all">Todos los estados</option>
-              <option value="pending">Pendiente</option>
-              <option value="reviewing">En revisión</option>
-              <option value="in_progress">En proceso</option>
-              <option value="resolved">Resuelto</option>
-            </select>
-          </div>
-          <div>
-            <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)} className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-200 bg-white">
-              <option value="all">Todas las prioridades</option>
-              <option value="low">BAJA</option>
-              <option value="medium">MEDIA</option>
-              <option value="high">ALTA</option>
-            </select>
-          </div>
+
+
+
         </div>
         {loading ? (
           <p className="text-center text-gray-400 mt-10 text-sm">Cargando reportes...</p>
@@ -118,20 +86,8 @@ export default function StudentIncidences() {
           </div>
         ) : (
           incidences
-            .filter((inc: any) => {
-              const q = search.trim().toLowerCase();
-              if (q) {
-                const inTitle = inc.title?.toLowerCase().includes(q);
-                const inRoom = inc.room_number?.toLowerCase().includes(q);
-                if (!inTitle && !inRoom) return false;
-              }
-              if (filterLocation !== 'all' && inc.location_type !== filterLocation) return false;
-              if (filterStatus !== 'all' && inc.status !== filterStatus) return false;
-              if (filterPriority !== 'all' && inc.priority !== filterPriority) return false;
-              return true;
-            })
             .map((inc: any) => {
-              
+
               const currentStatus = statusMap[inc.status as keyof typeof statusMap] || statusMap.pending;
 
               return (

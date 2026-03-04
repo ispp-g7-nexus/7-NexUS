@@ -61,7 +61,6 @@ export function IncidenceForm({ onSuccess, onClose }: IncidenceFormProps) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col h-full max-h-[90vh] bg-white overflow-hidden">
       
-      {/* Cabecera */}
       <div className="p-6 text-center border-b border-gray-50 shrink-0 relative">
         <button 
           onClick={onClose} 
@@ -120,8 +119,7 @@ export function IncidenceForm({ onSuccess, onClose }: IncidenceFormProps) {
             className="w-full bg-gray-50 border-none rounded-2xl min-h-[100px] p-4 focus-visible:ring-[#82D14C] resize-none text-sm" 
           />
         </div>
-
-        {/* Urgencia */}
+        
         <div className="flex items-center space-x-3 p-4 bg-orange-50/50 rounded-2xl border border-orange-100">
           <Checkbox
           id="urgent"
