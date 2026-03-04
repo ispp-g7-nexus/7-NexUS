@@ -15,108 +15,90 @@
 
 <p>
   <strong>Plataforma integral de gestión y convivencia para residencias universitarias</strong>
-</p>
 
-</div>
 
----
-
-**Proyecto:** NexUS  
-**Grupo:** 7 - NexUS  
-**Asignatura:** Ingeniería del Software y Práctica Profesional (ISPP)  
-**Institución:** ETSII – Universidad de Sevilla  
-**Curso académico:** 2025/2026  
-**Fecha:** 04/03/2026  
-
-<p align="center">
-  <img src="../../images/logo-etsii.jpe" alt="Logo ETSII" width="400">
-</p>
+### Propósito
+Documento de referencia para la gestión del ciclo de vida del desarrollo (ALM): estructura de ramas, gestión del código, esquema general de CI/CD y reglas de Project Management.
 
 ---
 
+**Estructura de ramas (branching)**
 
-## Historial de Versiones
+- `main`: rama de producción. Cada commit en `main` debe ser desplegable.
+- `develop`: rama de integración para la siguiente entrega. Todas las funcionalidades listas se integran aquí.
+- `feature/<NX>-<S(numero del sprint al que corresponda)>.<numero de task>`: ramas de desarrollo para nuevas funcionalidades o mejoras. Se crean desde `develop` y se mergean mediante Pull Request a `develop`.
+- `release/<version>`: rama temporal para preparar una release (tests finales, correcciones menores). Se crea desde `develop`; al finalizar se hace merge a `main` y a `develop`.
+- `hotfix/<descripcion>`: corrección urgente creada desde `main`, al terminar se mergea a `main` y `develop`.
+- `sprint(numero del sprint)`: codigo final del sprint que corresponda
 
-| Versión | Fecha       | Cambio principal                                      |
-|---------|-------------|-------------------------------------------------------|
-| 1.0.0   | 04/03/2026  | Creación del documento base                           |
-
+Buenas prácticas:
+- Usar PRs para integrar cambios, incluir descripción, issue/ticket relacionado y reviewers asignados.
+- Ramas protegidas: `main` y `develop` con requisitos de revisión, checks de CI aprobados y reglas de push (no FF).
+- Commits atómicos y mensajes claros (tipo: `feat(auth): añadir login SSO` o `fix(api): corregir null pointer`).
 
 ---
 
-## Índice
-- [Instalación con wsl](#instalación-con-wsl)
-- [Cambios en backend](#cambios-en-backend)
-- [Cambios en frontend](#cambios-en-frontend)
+**Gestión del código y revisiones**
+
+- Pull Requests: deben incluir descripción del cambio, pruebas realizadas y referencias a la tarjeta del tablero.
+- Revisiones: al menos 1 reviewer del equipo y, cuando afecte áreas críticas, 2 reviewers incluyendo un responsable de arquitectura.
+- Merge strategy: Squash merge en `develop` y `main` para mantener historial legible; conservar referencias a issues en el mensaje final.
+- Código debe pasar linters y tests automatizados antes de permitir merge.
 
 ---
 
-## Instalación con wsl
-- Abrir cmd como administrador y ejecutar el siguiente comando: wsl --install 
-- Esperar a que se instale y reiniciar cuando pida.
-- Instalar Docker Desktop, esperar a que se instale y reiniciar sesión en el 
-ordenador cuando pida.
-- Instalar extensión WSL en VSCode 
-- Ctrl + Shift + P: WSL: Connect to WSL 
-- Una vez dentro, activar extensiones de VSCode en el WSL. En la pestaña de 
-extensiones aparecen todas las que están instaladas en local, y con un click se 
-instalan en WSL (necesario mínimo la de Python).
-- Para poder clonar el proyecto y hacer cambios es necesario crear una clave ssh 
-para el WSL y añadirla a la cuenta de GitHub personal.
+**CI / CD (visión general)**
 
-#### Configurar SSH y clonar
-Con el WSL funcionando, realizar los siguientes comandos:  
-- sudo apt install git 
-- git config --global user.name "<tu nombre y apellidos entrecomillados>"  
-- git config --global user.email <tu email> 
-- ssh-keygen -t rsa -b 4096 (enter a todo)  
-Para obtener la clave:  
-- cd ~/.ssh 
-- cat id_rsa.pub (copiar el contenido) 
+Pipeline típico (por cada push / PR):
 
-#### Activar clave
-GitHub -> Settings -> SSH and GPG keys -> New SSH key -> Pegar clave pública copiada previamente en el paso anterior (id_rsa.pub).
+- Lint: comprobación de estilo (ESLint, flake8, etc.).
+- Build: construcción de artefactos (imagen docker frontend/backend, bundles JS).
+- Test: ejecución de tests unitarios y test básicos de integración.
+- Security scan: análisis estático/dep-check.
+- Deploy (CD): despliegue automático desde `main` a entornos de producción o manual desde `release/*` con gating.
 
-#### Clonar
-- git clone git@github.com:ispp-g7-nexus/7-NexUS.git (en caso de que aparezca 
-un aviso con una pregunta, escribir yes y pulsar enter)
+Reglas de activación:
+- PRs a `develop`: ejecutan Lint, Build y Test; resultado debe ser OK para permitir merge.
+- Push a `main`: pipeline completo y despliegue automático a staging/producción según configuración de infra.
+- Releases: tags semánticos y registros de versión; el pipeline de release puede generar imágenes etiquetadas y artefactos almacenados en registry.
 
-#### Arrancar proyecto
--Ir a la raíz del proyecto, copiar el .env.example al .env (cp .env.example .env):
-  - Añadir variables secretas no compartidas en github como correo de ecuperación de contraseña. 
-- Borrar volúmenes, contenedores e imágenes posibles que puedan existir de versiones anteriores del proyecto. Si no deja por falta de permisos, ejecutar el 
-siguiente comando desde la raíz del proyecto: “sudo chown -R $USER:$USER .” 
-(si aun asi no os deja por permisos, desde docker desktop: docker system prune -a --volumes) 
-- docker compose up -–build 
-- Despliegue en http://localhost  
-- Para acceder a la base de datos, se sugiere el uso de DBeaver. Al abrirlo, crear nueva conexión con PostgreSQL. Rellenar campos: 
-  - host:localhost 
-  - database:nexus 
-  - puerto:5432 
-  - username y contraseñas: las del .env 
-- Para parar: docker compose down (-v para eliminar los volumenes) 
-**Nota:** para comandos de docker, siempre con docker desktop en funcionamiento. 
+---
 
+**Project Management — Tablero KANBAN**
 
-## Cambios en backend
-Por uniformidad, trabajaremos con comandos de Docker. 
-Recomendación: crear un entorno virtual de Python y hacer pip install -r requirements.txt (en el caso de que lo creeis desde la carpeta del backend), así no se peta de fallos el visual por no tener los paquetes necesarios. 
-- Si se empieza un nuevo módulo, docker compose exec backend python manage.py startapp nombremodulo. Recordad que tiene que estar dentro de la carpeta apps, lo podéis mover después o crearla ahí directamente, ajustando la ruta del comando si hace falta. 
-- Dentro del módulo, trabajas con los models y las views, definiendo las urls en el archivo urls.py. Lo único que varía del flujo normal de Django es la necesidad de los decorators por el multi-tenants, el uso de helpers ya definidos y otros detalles. 
-- Multi-tenant: No hay una base de datos por cliente, hay un único PostgreSQL con un esquema por tenant. El middleware resuelve automáticamente el tenant (y la residencia) a partir del dominio HTTP del request, así que las vistas leen request.tenant y request.residence. Hay que usar migrate_schemas en vez de migrate para aplicar migraciones en los esquemas tenant. 
-- Auth por cookie JWT, no hay sesiones Django. En apps/common/decorators.py hay dos decoradores listos: @tenant_required (exige tenant activo, úsalo en casi todo) y @residence_access_required (valida además el rol del usuario en esa residencia). Para leer el usuario actual desde una vista usar resolve_user_from_request(request) de apps/common/utils/jwt_auth.py. Hay otros utils en ese archivo que conviene mirar. 
-- Crear y aplicar migraciones si es necesario, especialmente en el contenedor que es donde está lanzada.
+Trabajamos con un tablero KANBAN que sigue este flujo y reglas:
+
+- Columnas (orden):
+  - `Backlog`: ideas y tareas futuras sin preparar.
+  - `Ready`: tareas priorizadas y con criterios de aceptación definidos; listas para comenzar.
+  - `In Progress`: tareas en desarrollo activas.
+  - `Under Review`: tareas que esperan revisión de código, QA o validación funcional.
+  - `Done`: tareas completadas y desplegadas/localmente verificadas.
+
+- Cada tarjeta/tarea contiene:
+  - Asignado(s).
+  - Talla (estimación): `XS`, `S`, `M`, `L`, `XL`.
+    - XS: cambios triviales (< 1h).
+    - S: pequeñas tareas (1–4h).
+    - M: tarea estándar (1–3 días).
+    - L: trabajo grande (varios días / coordinación entre equipos).
+    - XL: iniciativas épicas (se deberían dividir en varias tarjetas).
+  - Tags del/los equipos responsables.
+  - Tags de funcionalidad o dominio (p.ej. `auth`, `matching`, `documentación`...)
+  - Milestone: asociado a `S1`, `S2` o `S3` según la iteración/entrega planificada.
+
+Reglas de uso del tablero:
+- Sólo pasar a `In Progress` si la tarjeta está en `Ready` y tiene definición de terminado (DoD) y criterios de aceptación claros.
+- Revisiones: mover a `Under Review` cuando exista un PR abierto y se haya solicitado revisión.
+- Definición de hecho: pruebas unitarias si aplica, documentación mínima (si aplica), PR aprobado, build verde y despliegue/validación en entorno de integración si procede.
+- Prioridad y milestones: el Product Owner prioriza el `Backlog` y asigna milestones `S1`/`S2`/`S3` para agrupar entregas.
+
+---
+
+**Trazabilidad y vinculación**
+
+- Todas las PRs deben referenciar la tarjeta del tablero y el milestone correspondiente (`S1`/`S2`/`S3`).
+
+---
 
 
-## Cambios en frontend
-Recomendación, desde la carpeta frontend: npm install 
-- App.tsx: Donde se mete el react router y demás, igual que react normal  
-- src/assets: Imágenes que se vayan a meter en la app  
-- src/components: Componentes reutilizables en varias pantallas (Navbar por 
-ejemplo)  
-- src/pages: Las pantallas principales, aquí hay que meter el groso de 
-funcionalidad  
-- src/services: Comunicación con el backend, los típicos fetchs pero ahora se 
-definen aquí para separar la lógica y reutilizar (se puede quitar perfectamente y 
-trabajar con fetchs directamente desde las páginas)  
-- src/styles: Archivos css. 
