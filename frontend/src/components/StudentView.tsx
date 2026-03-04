@@ -1,14 +1,14 @@
+import React, { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { AlertCircle, Calendar, Home, MessageSquare, User } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 // Importamos la página de inicio y el tipo de las pestañas
 import { StudentHome, StudentTab } from "./StudentHome";
 
 // Páginas / Servicios
+import { SocialHub } from "../pages/Social/SocialHub.tsx";
 import { StudentAnnouncements } from "../pages/announcements/StudentAnnouncements";
-import { Events } from "../pages/Events/Events";
 import StudentIncidences from "../pages/Incidences/components/StudentIncidences";
 import { MyMatchesPage } from "../pages/Matching/MyMatchesPage";
 import announcementService from "../services/announcement.service";
@@ -105,7 +105,7 @@ export function StudentView({ onLogout }: StudentViewProps) {
                 tabContent = <StudentReservations />;
                 break;
             case "community":
-                tabContent = <Events />;
+                tabContent = <SocialHub />;
                 break;
             case "matches":
                 tabContent = <MyMatchesPage />;

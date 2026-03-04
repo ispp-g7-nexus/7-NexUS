@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from apps.residences.models import StudentProfile
 
 
 class LoginInputSerializer(serializers.Serializer):
@@ -48,3 +49,51 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
             "min_length": "La contraseña debe tener al menos 6 caracteres."
         },
     )
+
+class AdminCreateResidentSerializer(serializers.Serializer):
+    full_name = serializers.CharField(allow_blank=True)
+    email = serializers.EmailField(
+        error_messages={"invalid": "Por favor, introduce un correo electrónico válido."}
+    )
+    password = serializers.CharField(write_only=True, min_length=6)
+    room = serializers.CharField(allow_blank=True)
+    building = serializers.CharField(allow_blank=True)
+    checkin_date = serializers.DateField(required=False, allow_null=True)
+    state = serializers.ChoiceField(choices=["Activo", "Inactivo"])
+
+
+class StudentProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StudentProfile
+        fields = [
+            "id",
+            "nickname",
+            "bio",
+            "birth_year",
+            "birthplace",
+            "room_number",
+            "profile_image",
+            "chronotype",
+            "study_level",
+            "noise_sensitivity",
+            "temperature_preference",
+            "order_level",
+            "interests",
+            "custom_interests",
+            "lifestyle",
+            "music_genres",
+            "dealbreakers",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"]
+
+    def create(self, validated_data):
+        validated_data['user'] = self.context['request'].user
+        return StudentProfile.objects.create(**validated_data)
+
+    def update(self, instance, validated_data):
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
