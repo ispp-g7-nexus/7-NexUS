@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.onboarding.models import ResidentPreference
-from apps.residences.models import Membership, Role
+from apps.membership.models import Membership, Role
 from django.contrib.auth import get_user_model
 
 from .models import ResidenceCompatibility

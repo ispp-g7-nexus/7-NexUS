@@ -48,14 +48,3 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
             "min_length": "La contraseña debe tener al menos 6 caracteres."
         },
     )
-
-class AdminCreateResidentSerializer(serializers.Serializer):
-    full_name = serializers.CharField(allow_blank=True)
-    email = serializers.EmailField(
-        error_messages={"invalid": "Por favor, introduce un correo electrónico válido."}
-    )
-    password = serializers.CharField(write_only=True, min_length=6)
-    room = serializers.CharField(allow_blank=True)
-    building = serializers.CharField(allow_blank=True)
-    checkin_date = serializers.DateField(required=False, allow_null=True)
-    state = serializers.ChoiceField(choices=["Activo", "Inactivo"])

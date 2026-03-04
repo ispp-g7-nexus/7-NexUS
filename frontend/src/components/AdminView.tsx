@@ -1,12 +1,12 @@
-import { AlertCircle, Bell, Calendar, Home, LayoutDashboard, LogOut, Menu, Shield, User, Users } from "lucide-react";
+import { AlertCircle, Bell, Briefcase, Calendar, Home, LayoutDashboard, LogOut, Menu, Shield, User, Users } from "lucide-react";
 import { useState } from "react";
 import logo from "../assets/logo.png";
-
 import { Events } from "../pages/Events/Events";
 import { AdminIncidences } from "../pages/Incidences/components/AdminIncidences";
 import { Residents } from "../pages/Residents/Residents";
 import RolesPage from "../pages/RolesPage";
 import Rooms from "../pages/Rooms/Rooms";
+import { Staff } from "../pages/Staff/Staff";
 import { AdminAnnouncements } from "../pages/announcements/AdminAnnouncements";
 import { AdminProfile } from "./AdminProfile";
 import { Button } from "./ui/button";
@@ -28,6 +28,7 @@ export function AdminView({ onLogout }: AdminViewProps) {
         { id: "profile", label: "Mi Perfil", icon: <User className="w-5 h-5" /> },
         { id: "rooms", label: "Habitaciones", icon: <Home className="w-5 h-5" /> },
         { id: "students", label: "Residentes", icon: <Users className="w-5 h-5" /> },
+        { id: "staff", label: "Personal", icon: <Briefcase className="w-5 h-5" /> },
         { id: "incidences", label: "Incidencias", icon: <AlertCircle className="w-5 h-5" /> },
         { id: "events", label: "Eventos & Comunidad", icon: <Calendar className="w-5 h-5" /> },
         { id: "roles", label: "Roles", icon: <Shield className="w-5 h-5" /> },
@@ -71,7 +72,12 @@ export function AdminView({ onLogout }: AdminViewProps) {
                         <Rooms />
                     </div>
                 );
-
+            case "staff":
+                return (
+                    <div className="p-4">
+                        <Staff />
+                    </div>
+                );
             case "incidences":
                 return (
                     <div className="p-4">

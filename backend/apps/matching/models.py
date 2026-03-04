@@ -1,7 +1,8 @@
 from django.db import models
 from django.db.models import F, Q
 
-from apps.residences.models import Membership, Residence
+from apps.membership.models import Membership
+from apps.residences.models import Residence
 
 
 class ResidenceCompatibility(models.Model):
