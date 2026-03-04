@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.1](https://github.com/ispp-g7-nexus/7-NexUS/compare/v0.3.0...v0.3.1) (2026-03-04)
+
+
+### Bug Fixes
+
+* clean up imports and improve tab rendering in SocialHub component ([99457c0](https://github.com/ispp-g7-nexus/7-NexUS/commit/99457c03a463836127f31ff36ea2929d0ee0551e))
+* clean up imports and improve tab rendering in SocialHub component ([#254](https://github.com/ispp-g7-nexus/7-NexUS/issues/254)) ([4be7b62](https://github.com/ispp-g7-nexus/7-NexUS/commit/4be7b625dba736e155b39926bf5690987376d26b))
+
 ## [0.3.0](https://github.com/ispp-g7-nexus/7-NexUS/compare/v0.2.0...v0.3.0) (2026-03-04)
 
 

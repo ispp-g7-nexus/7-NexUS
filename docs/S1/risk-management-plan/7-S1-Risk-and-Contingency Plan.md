@@ -1,4 +1,4 @@
-## Problemas y Plan de Contingencias – NexUS
+<h1>Problemas y Plan de Contingencias - NexUS</h1>
 
 <p align="center">
   <img src="../../images/logo-app.png" alt="Logo NexUS" width="500">
