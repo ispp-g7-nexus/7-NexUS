@@ -85,8 +85,8 @@ export function StudentView({ onLogout }: StudentViewProps) {
         };
     }, [activeTab]);
 
-    const handleNavigation = (view: StudentTab) => {
-        setActiveTab(view);
+    const handleNavigation = (tab: StudentTab) => {
+        setActiveTab(tab);
     };
 
     const renderContent = () => {

@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
-import { objectsService, ObjectItem } from "../../services/objects.ts";
+import { Search } from "lucide-react";
+import { toast } from "sonner";
+import { objectsService, ObjectItem, UserObjectReservation } from "../../services/objects.ts";
 import { ObjectsList } from "./components/ObjectsList";
 import { ReservationModal } from "./components/ReservationModal";
-import "./Objects.css";
+import { MyReservations } from "./components/MyReservations";
 
 export type { ObjectItem, UserObjectReservation } from "../../services/objects.ts";
 
@@ -17,9 +19,15 @@ export function Objects({ onReservationSuccess }: ObjectsProps) {
   const [selectedObject, setSelectedObject] = useState<ObjectItem | null>(null);
   const [isReservationModalOpen, setIsReservationModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  
+  const [reservations, setReservations] = useState<UserObjectReservation[]>([]);
+  const [reservationsLoading, setReservationsLoading] = useState(true);
+  const [reservationsError, setReservationsError] = useState<string | null>(null);
+  const [cancellingRentalId, setCancellingRentalId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchObjects();
+    fetchReservations();
   }, []);
 
   const fetchObjects = async () => {
@@ -35,6 +43,19 @@ export function Objects({ onReservationSuccess }: ObjectsProps) {
     }
   };
 
+  const fetchReservations = async () => {
+    try {
+      setReservationsLoading(true);
+      setReservationsError(null);
+      const data = await objectsService.getUserObjectReservations();
+      setReservations(data);
+    } catch (err) {
+      setReservationsError(err instanceof Error ? err.message : "Error al cargar reservas");
+    } finally {
+      setReservationsLoading(false);
+    }
+  };
+
 
 
   const handleReserveObject = (object: ObjectItem) => {
@@ -45,13 +66,28 @@ export function Objects({ onReservationSuccess }: ObjectsProps) {
   const handleReservationSuccess = () => {
     setIsReservationModalOpen(false);
     setSelectedObject(null);
-    fetchObjects(); // Refresh objects
+    fetchObjects();
+    fetchReservations();
     if (onReservationSuccess) {
-      onReservationSuccess(); // Notify parent to refresh reservations
+      onReservationSuccess();
     }
   };
 
-
+  const handleCancelReservation = async (objectId: number, rentalId: number) => {
+    setCancellingRentalId(rentalId);
+    try {
+      await objectsService.cancelReservation(objectId, { rental_id: rentalId });
+      toast.success("Reserva cancelada correctamente.");
+      await fetchReservations();
+      await fetchObjects();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Error al cancelar reserva";
+      toast.error(errorMessage);
+      console.error('Error canceling reservation:', err);
+    } finally {
+      setCancellingRentalId(null);
+    }
+  };
 
   const filteredObjects = objects.filter(object =>
     object.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -60,27 +96,55 @@ export function Objects({ onReservationSuccess }: ObjectsProps) {
   );
 
   return (
-    <div className="objects-container">
-      {/* Header with search */}
-      <div className="objects-header">
-        <input
-          type="text"
-          placeholder="Buscar objetos..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="objects-search"
-        />
-      </div>
+    <section className="mx-auto flex w-full max-w-5xl flex-col gap-6 pb-24">
+      <header className="rounded-xl border border-border/80 bg-card p-4 shadow-sm sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">Objetos disponibles</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Reserva objetos compartidos de tu residencia como bicicletas, libros y más.
+            </p>
+          </div>
 
-      {/* Objects List */}
-      <div className="flex-1">
-        <ObjectsList
-          objects={filteredObjects}
-          loading={loading}
-          error={error}
-          onReserve={handleReserveObject}
-          onRetry={fetchObjects}
-        />
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <label htmlFor="objects-search" className="inline-flex items-center gap-2 text-sm font-medium">
+              <Search className="h-4 w-4" /> Buscar
+            </label>
+            <input
+              id="objects-search"
+              type="text"
+              placeholder="Buscar objetos..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            />
+          </div>
+        </div>
+      </header>
+
+      {/* Grid Layout: Objects List + My Reservations */}
+      <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Objetos disponibles</h3>
+          <ObjectsList
+            objects={filteredObjects}
+            loading={loading}
+            error={error}
+            onReserve={handleReserveObject}
+            onRetry={fetchObjects}
+          />
+        </div>
+
+        <div>
+          <MyReservations
+            reservations={reservations}
+            loading={reservationsLoading}
+            error={reservationsError}
+            cancellingRentalId={cancellingRentalId}
+            onCancel={handleCancelReservation}
+            onRetry={fetchReservations}
+          />
+        </div>
       </div>
 
       {/* Reservation Modal */}
@@ -95,6 +159,6 @@ export function Objects({ onReservationSuccess }: ObjectsProps) {
           onSuccess={handleReservationSuccess}
         />
       )}
-    </div>
+    </section>
   );
 }

@@ -1,4 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { toast } from "sonner";
+import { Button } from "../../../components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
+import { Input } from "../../../components/ui/input";
+import { Label } from "../../../components/ui/label";
 import { objectsService, ObjectItem, ReservationRequest } from "../../../services/objects.ts";
 
 interface ReservationModalProps {
@@ -22,14 +27,27 @@ export function ReservationModal({ object, isOpen, onClose, onSuccess }: Reserva
       const now = new Date();
       const today = now.toISOString().split('T')[0];
       const currentHour = now.getHours();
-      const nextHour = currentHour + 1;
+      const nextHour = (currentHour + 1) % 24;
       
       setStartDate(today);
       setStartTime(`${currentHour.toString().padStart(2, '0')}:00`);
       setEndDate(today);
       setEndTime(`${nextHour.toString().padStart(2, '0')}:00`);
+      setError(null);
     }
   }, [isOpen]);
+
+  // Calcular tiempo mínimo de fin cuando las fechas son iguales
+  const minEndTime = useMemo(() => {
+    if (startDate && endDate && startDate === endDate && startTime) {
+      const [hours, minutes] = startTime.split(':').map(Number);
+      const totalMinutes = hours * 60 + minutes + 1; // Al menos 1 minuto después
+      const minHours = Math.floor(totalMinutes / 60) % 24;
+      const minMinutes = totalMinutes % 60;
+      return `${minHours.toString().padStart(2, '0')}:${minMinutes.toString().padStart(2, '0')}`;
+    }
+    return undefined;
+  }, [startDate, endDate, startTime]);
 
   const handleReservation = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,110 +60,128 @@ export function ReservationModal({ object, isOpen, onClose, onSuccess }: Reserva
         throw new Error("Por favor completa todos los campos");
       }
 
-      const startDateTime = `${startDate}T${startTime}:00`;
-      const endDateTime = `${endDate}T${endTime}:00`;
+      const startDateTime = new Date(`${startDate}T${startTime}:00`);
+      const endDateTime = new Date(`${endDate}T${endTime}:00`);
+
+      // Validar que las fechas sean válidas
+      if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
+        throw new Error("Formato de fecha u hora inválido");
+      }
+
+      // Validar que la fecha/hora de fin sea posterior a la de inicio
+      if (endDateTime <= startDateTime) {
+        throw new Error("La fecha y hora de fin deben ser posteriores a las de inicio");
+      }
+
+      // Validar que no se reserve en el pasado
+      const now = new Date();
+      if (startDateTime < now) {
+        throw new Error("No puedes reservar en el pasado");
+      }
 
       const reservationData: ReservationRequest = {
-        start_date: startDateTime,
-        end_date: endDateTime
+        start_date: startDateTime.toISOString(),
+        end_date: endDateTime.toISOString()
       };
 
       await objectsService.reserveObject(object.id, reservationData);
+      toast.success("Reserva creada correctamente.");
       onSuccess();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al realizar la reserva");
+      const errorMessage = err instanceof Error ? err.message : "Error al realizar la reserva";
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-xl p-6 max-w-sm w-full border border-border shadow-lg">
-        <h3 className="text-lg font-semibold mb-4 text-foreground">Reservar "{object.name}"</h3>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Reservar "{object.name}"</DialogTitle>
+          <DialogDescription>
+            Completa los datos para reservar este objeto.
+          </DialogDescription>
+        </DialogHeader>
         
         <form onSubmit={handleReservation} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              Fecha de inicio
-            </label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              min={new Date().toISOString().split('T')[0]}
-              className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
-              required
-            />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="start-date">Fecha de inicio</Label>
+              <Input
+                id="start-date"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                min={new Date().toISOString().split('T')[0]}
+                required
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="start-time">Hora de inicio</Label>
+              <Input
+                id="start-time"
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                required
+              />
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              Hora de inicio
-            </label>
-            <input
-              type="time"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-              className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
-              required
-            />
-          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="end-date">Fecha de fin</Label>
+              <Input
+                id="end-date"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                min={startDate || new Date().toISOString().split('T')[0]}
+                required
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              Fecha de fin
-            </label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              min={startDate || new Date().toISOString().split('T')[0]}
-              className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              Hora de fin
-            </label>
-            <input
-              type="time"
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-              className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
-              required
-            />
+            <div>
+              <Label htmlFor="end-time">Hora de fin</Label>
+              <Input
+                id="end-time"
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                min={minEndTime}
+                required
+              />
+            </div>
           </div>
 
           {error && (
-            <div className="text-destructive text-sm bg-destructive/10 p-3 rounded-lg border border-destructive/20">
+            <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
               {error}
-            </div>
+            </p>
           )}
 
-          <div className="flex gap-3 mt-6">
-            <button
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
               type="button"
+              variant="outline"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-border text-foreground rounded-lg hover:bg-muted transition-colors"
               disabled={loading}
             >
               Cancelar
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              className="flex-1 reserve-button"
               disabled={loading}
             >
               {loading ? "Reservando..." : "Confirmar"}
-            </button>
-          </div>
+            </Button>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
