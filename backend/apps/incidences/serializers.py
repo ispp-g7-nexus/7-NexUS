@@ -23,3 +23,6 @@ class AdminIncidenceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Incidence
         fields = '__all__'
+    
+    def get_student_name(self, obj):
+        return obj.student.get_full_name() or obj.student.username
