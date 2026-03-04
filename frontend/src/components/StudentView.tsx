@@ -85,10 +85,14 @@ export function StudentView({ onLogout }: StudentViewProps) {
         };
     }, [activeTab]);
 
+    const handleNavigation = (tab: StudentTab) => {
+        setActiveTab(tab);
+    };
+
     const renderContent = () => {
         // 1. El Home maneja sus propios márgenes (diseño de borde a borde)
         if (activeTab === "home") {
-            return <StudentHome onLogout={onLogout} />;
+            return <StudentHome onNavigate={handleNavigation} onLogout={onLogout} />;
         }
 
         // 2. Evaluamos el resto de pestañas
