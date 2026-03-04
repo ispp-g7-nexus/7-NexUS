@@ -71,6 +71,8 @@ jobs:
         with:
           context: ./backend
           file: ./backend/Dockerfile
+          build-args: |
+            INSTALL_MATCHING=1
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/nexus-backend:${{ steps.meta.outputs.tag_name }}
@@ -82,6 +84,8 @@ jobs:
         with:
           context: ./backend
           file: ./backend/Dockerfile
+          build-args: |
+            INSTALL_MATCHING=1
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/nexus-worker:${{ steps.meta.outputs.tag_name }}
@@ -98,6 +102,17 @@ jobs:
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/nexus-frontend:${{ steps.meta.outputs.tag_name }}
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/nexus-frontend:${{ steps.meta.outputs.environment }}
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/nexus-frontend:sha-${{ github.sha }}
+
+      - name: Build and push tenant-gateway image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./tenant-gateway
+          file: ./tenant-gateway/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/nexus-tenant-gateway:${{ steps.meta.outputs.tag_name }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/nexus-tenant-gateway:${{ steps.meta.outputs.environment }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/nexus-tenant-gateway:sha-${{ github.sha }}
 
       - name: Summary
         run: |
