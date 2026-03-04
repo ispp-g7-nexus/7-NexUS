@@ -2,6 +2,9 @@ from typing import Any
 
 import jwt
 from django.conf import settings
+from django.contrib.auth.models import User
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.exceptions import AuthenticationFailed
 
 
 def _first_string(data: dict[str, Any], keys: list[str]) -> str:
@@ -84,3 +87,50 @@ def resolve_user_from_request(request) -> dict[str, Any] | None:
         return None
 
     return _serialize_user_claims(claims)
+
+
+class CustomJWTAuthentication(TokenAuthentication):
+    """Custom JWT authentication that reads tokens from cookies or Authorization header"""
+    
+    def authenticate(self, request):
+        token = _get_token_from_request(request)
+        if not token:
+            return None
+        
+        key = getattr(settings, 'JWT_SIGNING_KEY', settings.SECRET_KEY)
+        algorithm = getattr(settings, 'JWT_ALGORITHM', 'HS256')
+        audience = getattr(settings, 'JWT_AUDIENCE', None)
+        
+        decode_kwargs = {
+            'key': key,
+            'algorithms': [algorithm],
+            'options': {'verify_aud': bool(audience)},
+        }
+        if audience:
+            decode_kwargs['audience'] = audience
+        
+        try:
+            claims = jwt.decode(token, **decode_kwargs)
+        except jwt.PyJWTError as e:
+            raise AuthenticationFailed(f'Invalid token: {str(e)}')
+        
+        if not isinstance(claims, dict):
+            raise AuthenticationFailed('Invalid token claims')
+        
+        user_claims = _serialize_user_claims(claims)
+        
+        
+        try:
+            user_id = user_claims.get('id')
+            if user_id and user_id != 'anon':
+                user = User.objects.get(id=user_id)
+            else:
+                email = user_claims.get('email')
+                if email:
+                    user = User.objects.get(email=email)
+                else:
+                    raise User.DoesNotExist
+        except User.DoesNotExist:
+            raise AuthenticationFailed('User not found')
+        
+        return (user, token)

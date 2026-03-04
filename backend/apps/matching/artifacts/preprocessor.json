@@ -1,0 +1,117 @@
+{
+  "numeric_features": [
+    "edad",
+    "socializacion",
+    "orden_limpieza",
+    "ruido_tolerancia"
+  ],
+  "categorical_features": [
+    "sexo",
+    "filtro_mixto",
+    "horario",
+    "lugar_estudio",
+    "fines_semana",
+    "actividades_extra",
+    "ocio_interno",
+    "ocio_interno_otro",
+    "tabaco_vapeo",
+    "visitas",
+    "compartir_gastos",
+    "temperatura"
+  ],
+  "numeric_mean": {
+    "edad": 25.902,
+    "socializacion": 5.519,
+    "orden_limpieza": 5.5873333333333335,
+    "ruido_tolerancia": 5.524
+  },
+  "numeric_std": {
+    "edad": 5.464558170611784,
+    "socializacion": 2.8560997298180375,
+    "orden_limpieza": 2.8895858219167363,
+    "ruido_tolerancia": 2.868348653842486
+  },
+  "categorical_vocab": {
+    "sexo": {
+      "1": 1,
+      "2": 2,
+      "3": 3
+    },
+    "filtro_mixto": {
+      "1": 1,
+      "2": 2,
+      "3": 3
+    },
+    "horario": {
+      "1": 1,
+      "2": 2
+    },
+    "lugar_estudio": {
+      "1": 1,
+      "2": 2,
+      "3": 3,
+      "4": 4
+    },
+    "fines_semana": {
+      "1": 1,
+      "2": 2,
+      "3": 3
+    },
+    "actividades_extra": {
+      "1": 1,
+      "2": 2,
+      "3": 3
+    },
+    "ocio_interno": {
+      "1": 1,
+      "2": 2,
+      "3": 3,
+      "4": 4,
+      "5": 5
+    },
+    "ocio_interno_otro": {
+      "Ajedrez": 1,
+      "Aprender idiomas": 2,
+      "Bricolaje": 3,
+      "Cocinar recetas nuevas": 4,
+      "Cuidado de plantas": 5,
+      "Escuchar vinilos": 6,
+      "Fotograf\u00eda": 7,
+      "Gimnasio": 8,
+      "Idiomas": 9,
+      "Jardiner\u00eda": 10,
+      "Lectura": 11,
+      "Lectura de novelas": 12,
+      "Meditaci\u00f3n": 13,
+      "Pintura": 14,
+      "Pintura y dibujo": 15,
+      "Podcast": 16,
+      "Podcast de true crime": 17,
+      "Teatro": 18,
+      "Tejer": 19,
+      "Tocar la guitarra": 20,
+      "Yoga": 21,
+      "Yoga en el sal\u00f3n": 22
+    },
+    "tabaco_vapeo": {
+      "1": 1,
+      "2": 2,
+      "3": 3
+    },
+    "visitas": {
+      "1": 1,
+      "2": 2,
+      "3": 3
+    },
+    "compartir_gastos": {
+      "1": 1,
+      "2": 2,
+      "3": 3
+    },
+    "temperatura": {
+      "1": 1,
+      "2": 2,
+      "3": 3
+    }
+  }
+}
