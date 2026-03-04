@@ -70,6 +70,15 @@ docker compose up -d
    - si `TENANT_CONTEXT_HOST` no existe, se usa `DEMO_TENANT_DOMAIN`
 3. Primera vez recomendable: `docker compose up -d --build`.
 
+Opcional (matching IA):
+- Si no vas a trabajar en matching, deja:
+  - `INSTALL_MATCHING=0`
+  - `MATCHING_ENABLED=0`
+- Si vas a trabajar en matching, activa:
+  - `INSTALL_MATCHING=1`
+  - `MATCHING_ENABLED=1`
+  - y reconstruye backend/celery: `docker compose up -d --build backend celery_worker celery_beat`
+
 Comando recomendado:
 
 ```bash
@@ -169,7 +178,7 @@ docker compose -f docker-compose.prod.yml up -d --build
 Variables recomendadas para prod:
 
 ```bash
-cp .env.prod.example .env
+cp .env.prod.example .env.prod
 ```
 
 Detalles de produccion:
@@ -184,12 +193,15 @@ Detalles de produccion:
 Toda la documentacion del proyecto se mantiene en `docs/`.
 - Setup base y arquitectura local: `docs/setup/7-DP-Base-Setup-Docker-Compose.md`.
 - Guia de desarrollo (backend, frontend, tenants y auth): `docs/setup/7-DP-Developer-Guide.md`.
+- Setup inicial de SonarQube/SonarCloud: `docs/setup/7-DP-SonarQube-Initial-Setup.md`.
+- Guia de analisis Sonar para el equipo: `docs/setup/7-DP-Sonar-Analysis-Guide.md`.
 
 ## Golden Flow (Git + CI/CD)
 
 Se implementaron workflows base en `.github/workflows/`:
 
 - `ci.yml`: checks de backend, frontend y validacion de compose.
+- `sonar.yml`: analisis de calidad en SonarCloud y Quality Gate en PR hacia `main`.
 - `pr-title.yml`: obliga Conventional Commits en titulo de PR.
 - `release-please.yml`: prepara release PR sobre `develop`.
 - `promote-tag.yml`: workflow manual para crear tags de promocion.

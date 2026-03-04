@@ -22,6 +22,9 @@ from .services import (
     process_password_reset_confirm,
     process_password_reset_request,
 )
+from django.contrib.auth import get_user_model
+
+UserModel = get_user_model()
 
 
 class TenantContextView(APIView):

@@ -28,8 +28,12 @@ export function StudentLogin({ onLogin, onBack }: StudentLoginProps) {
             await authService.login({ email, password, portal: "student" });
             toast.success("¡Bienvenido a NexUS!");
             onLogin();
-        } catch (error: any) {
-            toast.error(error.message || "Credenciales inválidas");
+        } catch (err) {
+            if (err instanceof Error) {
+                toast.error(err.message || "Credenciales inválidas");
+            } else {
+                toast.error("Ocurrió un error inesperado al iniciar sesión");
+            }
         } finally {
             setIsLoading(false);
         }
