@@ -50,3 +50,6 @@ jobs:
 
       - name: Validate prod compose
         run: docker compose -f docker-compose.prod.yml config
+
+      - name: Validate prod images compose
+        run: docker compose -f docker-compose.prod.images.yml config
