@@ -1,7 +1,7 @@
 <h1>Plan de Usuarios Piloto – NexUS</h1>
 
 <p align="center">
-  <img src="../images/logo-app.png" alt="Logo NexUS" width="500">
+  <img src="../../images/logo-app.png" alt="Logo NexUS" width="500">
 </p>
 
 <div align="center">
@@ -29,7 +29,7 @@
 **Fecha:** 09/02/2026  
 
 <p align="center">
-  <img src="../images/logo-etsii.jpe" alt="Logo ETSII" width="400">
+  <img src="../../images/logo-etsii.jpe" alt="Logo ETSII" width="400">
 </p>
 
 ---

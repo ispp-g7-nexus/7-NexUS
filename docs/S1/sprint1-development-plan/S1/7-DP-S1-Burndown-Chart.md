@@ -1,6 +1,6 @@
 ## 4. Seguimiento de Horas Clockify
 
-> Datos exportados de NexUS Backlog — 4/3/2026.
+> Datos exportados de NexUS Backlog — 04/03/2026.
 
 ### Resumen de horas
 

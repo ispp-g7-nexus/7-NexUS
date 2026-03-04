@@ -1,7 +1,7 @@
 <h1>Plan de Desarrollo de Sprints – NexUS</h1>
 
 <p align="center">
-  <img src="../images/logo-app.png" alt="Logo NexUS" width="500">
+  <img src="../../images/logo-app.png" alt="Logo NexUS" width="500">
 </p>
 
 <div align="center">
@@ -29,7 +29,7 @@
 **Fecha:** 09/02/2026  
 
 <p align="center">
-  <img src="../images/logo-etsii.jpe" alt="Logo ETSII" width="400">
+  <img src="../../images/logo-etsii.jpe" alt="Logo ETSII" width="400">
 </p>
 
 ---
@@ -254,7 +254,7 @@ El objetivo es garantizar que:
 
 ### 4.4 Diagrama de Gantt simplificado del Sprint 1
 
-![Diagrama de Gantt Sprint 1](../images/sprint_plan/gantt_s1.png)
+![Diagrama de Gantt Sprint 1](../../images/sprint_plan/gantt_s1.png)
 
 ---
 
@@ -375,7 +375,7 @@ El objetivo es garantizar que:
 
 ### 5.4 Diagrama de Gantt simplificado del Sprint 2
 
-![Diagrama de Gantt Sprint 2](../images/sprint_plan/gantt_s2.png)
+![Diagrama de Gantt Sprint 2](../../images/sprint_plan/gantt_s2.png)
 
 ---
 
@@ -471,7 +471,7 @@ El objetivo es garantizar que:
 
 ### 6.4 Diagrama de Gantt simplificado del Sprint 2
 
-![Diagrama de Gantt Sprint 3](../images/sprint_plan/gantt_s3.png)
+![Diagrama de Gantt Sprint 3](../../images/sprint_plan/gantt_s3.png)
 
 ---
 

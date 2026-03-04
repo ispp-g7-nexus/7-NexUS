@@ -7,7 +7,7 @@
 <div align="center">
 
 <p>
-  <img src="https://img.shields.io/badge/Versión-1.3.0-blue?style=flat-square" alt="Versión">
+  <img src="https://img.shields.io/badge/Versión-1.0.0-blue?style=flat-square" alt="Versión">
   <img src="https://img.shields.io/badge/Estado-Finalizado-green?style=flat-square" alt="Estado">
   <img src="https://img.shields.io/badge/Grupo-7--NexUS-green?style=flat-square" alt="Grupo">
   <img src="https://img.shields.io/badge/Asignatura-ISPP-red?style=flat-square" alt="Asignatura">
@@ -22,7 +22,7 @@
 **Asignatura:** Ingeniería del Software y Práctica Profesional (ISPP)  
 **Institución:** ETSII – Universidad de Sevilla  
 **Curso académico:** 2025/2026  
-**Sprint:** S1 — 19/02/2026 al 05/03/2026  
+**Sprint:** S1 — 19/02/2026 al 04/03/2026  
 
 <p align="center">
   <img src="../../images/logo-etsii.jpe" alt="Logo ETSII" width="400">
@@ -63,7 +63,7 @@
 
 ### **Equipo C — Desarrollo e incidencias**
 * **Rendimiento:** ~105% (Media).
-* **Estado:** Es el equipo con mayor ratio de horas reales consumidas frente a la estimación. Máxima dedicación, logrando el 100% de completitud en perfiles como Celia Suárez.
+* **Estado:** Es el equipo con mayor ratio de horas reales consumidas frente a la estimación. Máxima dedicación.
 
 ### **Equipo D — Backend e IA**
 * **Rendimiento:** ~150% (Media).
@@ -107,4 +107,4 @@
 4.  **Optimización del equipo C:** Dado que es el equipo que más cerca está de su límite de horas estimadas, se debe vigilar su carga para evitar el agotamiento temprano (*burnout*).
 
 ---
-*Este informe ha sido generado automáticamente integrando datos de Clockify y el estado del Backlog en GitHub al cierre del 05/03/2026.*
+*Este informe ha sido generado automáticamente integrando datos de Clockify y el estado del Backlog en GitHub al cierre del 04/03/2026.*

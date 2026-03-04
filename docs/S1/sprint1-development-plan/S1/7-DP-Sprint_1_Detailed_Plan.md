@@ -1,13 +1,13 @@
 <h1>Plan de Desarrollo del Sprint 1 – NexUS</h1>
 
 <p align="center">
-  <img src="../images/logo-app.png" alt="Logo NexUS" width="500">
+  <img src="../../images/logo-app.png" alt="Logo NexUS" width="500">
 </p>
 
 <div align="center">
 
 <p>
-  <img src="https://img.shields.io/badge/Versión-1.0.0-blue?style=flat-square" alt="Versión">
+  <img src="https://img.shields.io/badge/Versión-1.1.0-blue?style=flat-square" alt="Versión">
   <img src="https://img.shields.io/badge/Estado-Completado-yellow?style=flat-square" alt="Estado">
   <img src="https://img.shields.io/badge/Grupo-7--NexUS-green?style=flat-square" alt="Grupo">
   <img src="https://img.shields.io/badge/Asignatura-ISPP-red?style=flat-square" alt="Asignatura">
@@ -26,10 +26,10 @@
 **Asignatura:** Ingeniería del Software y Práctica Profesional (ISPP)  
 **Institución:** ETSII – Universidad de Sevilla  
 **Curso académico:** 2025/2026  
-**Fecha:** 09/02/2026  
+**Fecha:** 04/03/2026  
 
 <p align="center">
-  <img src="../images/logo-etsii.jpe" alt="Logo ETSII" width="400">
+  <img src="../../images/logo-etsii.jpe" alt="Logo ETSII" width="400">
 </p>
 
 ---
@@ -38,8 +38,8 @@
 
 | Versión | Fecha | Cambio principal |
 |---------|-------|------------------|
-| 1.0.0 | 15/02/2026 | Creación del documento base |
-| 1.1.0 | 17/02/2026 | Revisión del documento |
+| 1.0.0 | 04/03/2026 | Creación del documento base |
+| 1.1.0 | 04/03/2026 | Revisión del documento |
 
 
 ---
@@ -759,7 +759,7 @@ La segunda semana estará plenamente enfocada en implementar las funcionalidades
 
 #### Cronograma
 
-![Diagrama de Gantt Sprint 1](../images/sprint_plan/gantt_s1.png)
+![Diagrama de Gantt Sprint 1](../../images/sprint_plan/gantt_s1.png)
 
 **Nota**: El testing de cada módulo funcional formará parte del desarrollo de cada uno. No se programará como una actividad independiente.
 
