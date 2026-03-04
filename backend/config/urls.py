@@ -1,7 +1,16 @@
+from apps.common.views import (
+    AdminCreateResidentView,
+    AuthLoginView,
+    AuthLogoutView,
+    AuthMeView,
+    PasswordResetConfirmView,
+    PasswordResetRequestView,
+    StudentProfileView,
+    TenantContextView,
+)
+from django.conf import settings
 from django.http import JsonResponse
-from django.urls import path
-
-from apps.common.views import auth_login, auth_logout, auth_me, tenant_context
+from django.urls import include, path
 
 
 def healthcheck(_request):
@@ -10,8 +19,36 @@ def healthcheck(_request):
 
 urlpatterns = [
     path("health/", healthcheck, name="healthcheck"),
-    path("api/public/tenant-context/", tenant_context, name="tenant-context"),
-    path("api/auth/login/", auth_login, name="auth-login"),
-    path("api/auth/logout/", auth_logout, name="auth-logout"),
-    path("api/auth/me/", auth_me, name="auth-me"),
+    path(
+        "api/public/tenant-context/", TenantContextView.as_view(), name="tenant-context"
+    ),
+    path("api/auth/login/", AuthLoginView.as_view(), name="auth-login"),
+    path("api/auth/logout/", AuthLogoutView.as_view(), name="auth-logout"),
+    path("api/auth/me/", AuthMeView.as_view(), name="auth-me"),
+    path(
+        "api/auth/password-reset/request/",
+        PasswordResetRequestView.as_view(),
+        name="password-reset-request",
+    ),
+    path("api/auth/password-reset/confirm/", PasswordResetConfirmView.as_view(), name="password-reset-confirm"),
+    path("api/admin/residents/create/", AdminCreateResidentView.as_view(), name="admin-create-resident"),
+    path("api/student/profile/", StudentProfileView.as_view(), name="student-profile"),
+    path("api/", include("apps.residents.urls")),
+    path("api/", include("apps.events.urls")),
+    path("api/", include("apps.staff.urls")),
+    path("api/", include("apps.onboarding.urls")),
+    path(
+        "api/auth/password-reset/confirm/",
+        PasswordResetConfirmView.as_view(),
+        name="password-reset-confirm",
+    ),
+    path("api/", include("apps.objects.urls")),
+    path("api/", include("apps.bedrooms.urls")),
+    path("api/incidences/", include("apps.incidences.urls")),
+    path("api/membership/", include("apps.membership.urls")),
+    path('api/', include('apps.announcements.urls')),
+    path("api/", include("apps.spaces.urls")),
 ]
+
+if settings.MATCHING_ENABLED:
+    urlpatterns.append(path("api/", include("apps.matching.urls")))

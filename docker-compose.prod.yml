@@ -2,14 +2,12 @@ services:
   postgres:
     image: pgvector/pgvector:pg16
     container_name: nexus_postgres_prod
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-nexus}
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    env_file:
+      - .env.prod
     volumes:
       - nexus_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -32,11 +30,14 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      args:
+        INSTALL_MATCHING: "1"
     container_name: nexus_backend_prod
     env_file:
-      - .env
+      - .env.prod
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.production
+      MATCHING_ENABLED: "1"
       SEED_DEMO_ON_STARTUP: 0
     depends_on:
       postgres:
@@ -45,19 +46,23 @@ services:
         condition: service_healthy
     command: >
       sh -c "python manage.py migrate_schemas --shared --noinput &&
+             python manage.py migrate_schemas --tenant --noinput &&
              python manage.py collectstatic --noinput &&
-             gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers ${GUNICORN_WORKERS:-3} --timeout ${GUNICORN_TIMEOUT:-120}"
+             gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers $${GUNICORN_WORKERS:-3} --timeout $${GUNICORN_TIMEOUT:-120}"
     restart: unless-stopped
 
   celery_worker:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      args:
+        INSTALL_MATCHING: "1"
     container_name: nexus_celery_worker_prod
     env_file:
-      - .env
+      - .env.prod
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.production
+      MATCHING_ENABLED: "1"
     depends_on:
       postgres:
         condition: service_healthy
@@ -70,11 +75,14 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      args:
+        INSTALL_MATCHING: "1"
     container_name: nexus_celery_beat_prod
     env_file:
-      - .env
+      - .env.prod
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.production
+      MATCHING_ENABLED: "1"
     depends_on:
       postgres:
         condition: service_healthy
@@ -89,18 +97,14 @@ services:
       dockerfile: Dockerfile
     container_name: nexus_frontend_prod
     env_file:
-      - .env
+      - .env.prod
     environment:
       NODE_ENV: production
-      PORT: ${FRONTEND_PORT:-5173}
-      INTERNAL_API_BASE_URL: ${INTERNAL_API_BASE_URL:-http://backend:8000}
-      JWT_ACCESS_COOKIE_NAME: ${JWT_ACCESS_COOKIE_NAME:-access_token}
-      VITE_JWT_ACCESS_COOKIE_NAME: ${VITE_JWT_ACCESS_COOKIE_NAME:-access_token}
     depends_on:
       - backend
     command: >
       sh -c "npm run build &&
-             npm run preview -- --host"
+             npm run preview -- --host --port 5173"
     restart: unless-stopped
 
   tenant_gateway:
@@ -109,15 +113,11 @@ services:
       dockerfile: Dockerfile
     container_name: nexus_tenant_gateway_prod
     env_file:
-      - .env
+      - .env.prod
     environment:
       PORT: 3000
-      FRONTEND_UPSTREAM_URL: ${FRONTEND_UPSTREAM_URL:-http://frontend:5173}
-      BACKEND_UPSTREAM_URL: ${BACKEND_UPSTREAM_URL:-http://backend:8000}
-      TENANT_CONTEXT_HOST: ${TENANT_CONTEXT_HOST:-${DEMO_TENANT_DOMAIN:-demo.nexus.local}}
-      TENANT_CONTEXT_PATH: ${TENANT_CONTEXT_PATH:-/api/public/tenant-context/}
-      TENANT_BOOTSTRAP_GLOBAL: ${TENANT_BOOTSTRAP_GLOBAL:-__NEXUS_DATA__}
-      REQUEST_TIMEOUT_MS: ${TENANT_GATEWAY_TIMEOUT_MS:-5000}
+      FRONTEND_UPSTREAM_URL: http://frontend:5173
+      BACKEND_UPSTREAM_URL: http://backend:8000
     depends_on:
       - frontend
       - backend
