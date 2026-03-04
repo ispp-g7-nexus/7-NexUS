@@ -205,6 +205,7 @@ Detalles de produccion:
 Toda la documentacion del proyecto se mantiene en `docs/`.
 - Setup base y arquitectura local: `docs/setup/7-DP-Base-Setup-Docker-Compose.md`.
 - Guia de desarrollo (backend, frontend, tenants y auth): `docs/setup/7-DP-Developer-Guide.md`.
+- Guia de despliegue cloud en AWS + Cloudflare: `docs/deploy/7-SI-Deploy-on-cloud.md`.
 - Setup inicial de SonarQube/SonarCloud: `docs/setup/7-DP-SonarQube-Initial-Setup.md`.
 - Guia de analisis Sonar para el equipo: `docs/setup/7-DP-Sonar-Analysis-Guide.md`.
 
