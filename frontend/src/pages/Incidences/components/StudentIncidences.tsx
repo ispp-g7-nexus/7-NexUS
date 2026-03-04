@@ -10,6 +10,8 @@ import "../Incidences.css";
 export default function StudentIncidences() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [incidences, setIncidences] = useState([]);
+  const [selectedIncidenceDetails, setSelectedIncidenceDetails] = useState<any>(null);
+  const [isNotesOpen, setIsNotesOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterLocation, setFilterLocation] = useState('all');
@@ -36,7 +38,44 @@ export default function StudentIncidences() {
     }
   };
 
+  const openNotes = async (inc: any) => {
+    try {
+      const response = await fetchWithAuth(`${API_URL_INCIDENCES}${inc.id}/`);
+      if (response.ok) {
+        const data = await response.json();
+        setSelectedIncidenceDetails(data);
+        setIsNotesOpen(true);
+      }
+    } catch (error) {
+      console.error('Error cargando notas de la incidencia:', error);
+    }
+  };
+
   useEffect(() => { loadIncidences(); }, []);
+
+  // Formatea el texto de una actualización: elimina el prefijo "Nota:" y
+  // traduce claves de estado a etiquetas en español.
+  const formatUpdateText = (text: string) => {
+    if (!text) return '';
+    // Eliminar 'Nota:' (mayúsc/minúsc)
+    let out = text.replace(/Nota:\s*/i, '');
+
+    const statusMap: Record<string, string> = {
+      pending: 'Pendiente',
+      reviewing: 'En revisión',
+      in_progress: 'En proceso',
+      resolved: 'Resuelto',
+    };
+
+    Object.keys(statusMap).forEach((key) => {
+      const re = new RegExp(`\\b${key}\\b`, 'g');
+      out = out.replace(re, statusMap[key]);
+    });
+
+    // Normalizar espacios y puntos
+    out = out.replace(/\s+\./g, '.');
+    return out.trim();
+  };
 
   const statusMap: Record<string, { label: string; colorClass: string; barClass: string }> = {
     pending: {
@@ -104,7 +143,6 @@ export default function StudentIncidences() {
             <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)} className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-200 bg-white">
               <option value="all">Todas las prioridades</option>
               <option value="low">BAJA</option>
-              <option value="medium">MEDIA</option>
               <option value="high">ALTA</option>
             </select>
           </div>
@@ -161,6 +199,7 @@ export default function StudentIncidences() {
                       <div className="flex justify-end">
                         <Button
                           variant="outline"
+                          onClick={() => openNotes(inc)}
                           className="rounded-xl border-[#D1E4FF] text-[#0061A7] hover:bg-[#D1E4FF]/20 h-8 px-4 text-xs font-bold"
                         >
                           Ver notas
@@ -192,6 +231,45 @@ export default function StudentIncidences() {
             }}
             onClose={() => setIsFormOpen(false)}
           />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isNotesOpen} onOpenChange={(open) => { if (!open) { setIsNotesOpen(false); setSelectedIncidenceDetails(null);} }}>
+        <DialogContent className="max-w-[90vw] sm:max-w-[640px] rounded-[24px] p-0 border-none overflow-hidden">
+          <DialogTitle className="p-6 bg-white border-b">Notas de la incidencia</DialogTitle>
+          <div className="p-6 bg-white">
+            {selectedIncidenceDetails ? (
+              <div>
+                <h3 className="font-bold text-lg mb-2">{selectedIncidenceDetails.title}</h3>
+                <p className="text-sm text-slate-500 italic mb-4">{selectedIncidenceDetails.description}</p>
+
+                {selectedIncidenceDetails.admin_notes && (
+                  <div className="mb-4 p-4 bg-emerald-50 rounded">
+                    <div className="text-[10px] font-black uppercase text-emerald-600 mb-1">Nota del admin</div>
+                    <div className="text-emerald-700">{selectedIncidenceDetails.admin_notes}</div>
+                  </div>
+                )}
+
+                <div className="mt-4">
+                  <div className="text-[10px] font-black uppercase text-slate-400 mb-3">Historial de actualizaciones</div>
+                  {selectedIncidenceDetails.updates && selectedIncidenceDetails.updates.length > 0 ? (
+                    <ul className="space-y-3">
+                      {selectedIncidenceDetails.updates.map((u: any) => (
+                        <li key={u.id} className="p-3 border rounded bg-slate-50">
+                          <div className="text-xs text-slate-500 mb-1">{u.author_name || 'Sistema'} • {new Date(u.created_at).toLocaleString()}</div>
+                          <div className="text-sm text-slate-700">{formatUpdateText(u.text)}</div>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-slate-400">No hay actualizaciones aún.</p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-slate-400">Cargando...</p>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 
