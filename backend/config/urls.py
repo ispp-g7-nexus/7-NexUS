@@ -43,9 +43,8 @@ urlpatterns = [
     path("api/incidences/", include("apps.incidences.urls")),
     path("api/membership/", include("apps.membership.urls")),
     path('api/', include('apps.announcements.urls')),
+    path("api/", include("apps.spaces.urls")),
 ]
 
 if settings.MATCHING_ENABLED:
     urlpatterns.append(path("api/", include("apps.matching.urls")))
-
-urlpatterns.append(path("api/", include("apps.events.urls")))
