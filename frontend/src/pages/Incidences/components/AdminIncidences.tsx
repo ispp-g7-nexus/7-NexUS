@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import {  MapPin, Clock, Wrench, ChevronRight, Bell, CheckCircle2 } from 'lucide-react';
+import {  MapPin, Clock, Wrench, ChevronRight, CheckCircle2 } from 'lucide-react';
 import { fetchWithAuth } from '../../../utils/api';
 
 export const AdminIncidences = () => {
@@ -26,13 +26,6 @@ export const AdminIncidences = () => {
     baño: 'Baño Común',
     cocina: 'Cocina',
     zonas_comunes: 'Zonas Comunes',
-  };
-
-  const statusLabels: Record<string, string> = {
-    pending: 'Pendiente',
-    reviewing: 'En revisión',
-    in_progress: 'En proceso',
-    resolved: 'Resuelto',
   };
 
   const priorityLabels: Record<string, string> = {
