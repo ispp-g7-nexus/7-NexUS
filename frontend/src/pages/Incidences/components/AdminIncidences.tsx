@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Search, MapPin, Clock, Wrench, ChevronRight, Bell, CheckCircle2 } from 'lucide-react';
+import { MapPin, Clock, Wrench, ChevronRight, CheckCircle2 } from 'lucide-react';
 import { fetchWithAuth } from '../../../utils/api';
 
 export const AdminIncidences = () => {
@@ -32,23 +32,10 @@ export const AdminIncidences = () => {
     zonas_comunes: 'Zonas Comunes',
   };
 
-  const statusLabels: Record<string, string> = {
-    pending: 'Pendiente',
-    reviewing: 'En revisión',
-    in_progress: 'En proceso',
-    resolved: 'Resuelto',
-  };
-
   const priorityLabels: Record<string, string> = {
     low: 'BAJA',
     medium: 'MEDIA',
     high: 'ALTA',
-  };
-
-  const priorityColors = {
-    high: "text-red-500 border-red-100 bg-red-100",
-    medium: "text-orange-500 border-orange-100 bg-orange-100",
-    low: "text-blue-500 border-blue-100 bg-blue-100",
   };
 
   const statusStyles: Record<string, { label: string; bg: string; text: string; border: string; icon: any }> = {
