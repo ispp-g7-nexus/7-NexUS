@@ -17,19 +17,15 @@ class IncidenceViewSet(viewsets.ModelViewSet):
         return Incidence.objects.filter(student=user)
 
     def perform_create(self, serializer):
-        
         user = self.request.user
         location_type = self.request.data.get('location_type')
+        room_number = self.request.data.get('room_number')
         
-        room = None
-        if location_type == 'habitacion':
-            # Si elige Mi Habitación, añadimos el número de habitación del estudiante
-            #room = user.profile.room_number  # Asumiendo que el número de habitación sea así
-            room = "3º A " #Ejemplo para admin
-        # ------------------------------------
-        else:
-            room = None
-        serializer.save(student=user, room_number=room)
+        # Si elige "habitacion" y no hay room_number del frontend, usar valor por defecto
+        if location_type == 'habitacion' and not room_number:
+            room_number = "3º A"
+        
+        serializer.save(student=user, room_number=room_number)
         
 
     def perform_update(self, serializer):

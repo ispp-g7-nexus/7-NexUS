@@ -1,14 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Search, MapPin, Clock, Wrench, ChevronRight, Bell, CheckCircle2 } from 'lucide-react';
+import {  MapPin, Clock, Wrench, ChevronRight, CheckCircle2 } from 'lucide-react';
 import { fetchWithAuth } from '../../../utils/api';
 
 export const AdminIncidences = () => {
   const [incidences, setIncidences] = useState([]);
-  const [loading, setLoading] = useState(true); 
-  const [search, setSearch] = useState('');
-  const [filterLocation, setFilterLocation] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [filterPriority, setFilterPriority] = useState('all');
+  const [loading, setLoading] = useState(true);
 
   const loadData = async () => {
     try {
@@ -32,96 +28,54 @@ export const AdminIncidences = () => {
     zonas_comunes: 'Zonas Comunes',
   };
 
-  const statusLabels: Record<string, string> = {
-    pending: 'Pendiente',
-    reviewing: 'En revisión',
-    in_progress: 'En proceso',
-    resolved: 'Resuelto',
-  };
-
   const priorityLabels: Record<string, string> = {
     low: 'BAJA',
     medium: 'MEDIA',
     high: 'ALTA',
   };
 
+
+  const statusStyles: Record<string, { label: string; bg: string; text: string; border: string; icon: any }> = {
+    pending: {
+      label: 'Pendiente',
+      bg: 'bg-slate-50', text: 'text-slate-600', border: 'border-slate-100',
+      icon: <Clock size={14} />
+    },
+    reviewing: {
+      label: 'En revisión',
+      bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-100',
+      icon: <Clock size={14} />
+    },
+    in_progress: {
+      label: 'En proceso',
+      bg: 'bg-orange-50', text: 'text-orange-600', border: 'border-orange-100',
+      icon: <Wrench size={14} />
+    },
+    resolved: {
+      label: 'Resuelto',
+      bg: 'bg-green-50', text: 'text-green-600', border: 'border-green-100',
+      icon: <CheckCircle2 size={14} />
+    },
+  };
+
   useEffect(() => {
     loadData();
   }, []);
 
-  return (
-    <div className="bg-slate-100 min-h-screen flex flex-col">
 
-      <main className="flex-1 overflow-y-auto p-4 space-y-4 pb-32">
-        
+  return (
+    
+      <div className="bg-slate-100 min-h-screen flex flex-col">
         <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="relative col-span-1 sm:col-span-2">
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por título, estudiante o lugar..."
-              className="w-full pl-3 pr-3 py-2.5 rounded-xl border border-slate-200 shadow-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
-            />
-          </div>
-          <div>
-            <select 
-              value={filterLocation} 
-              onChange={(e) => setFilterLocation(e.target.value)} 
-              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white shadow-sm outline-none"
-            >
-              <option value="all">Todas las áreas</option>
-              <option value="habitacion">Habitación</option>
-              <option value="baño">Baño Común</option>
-              <option value="cocina">Cocina</option>
-              <option value="zonas_comunes">Zonas Comunes</option>
-            </select>
-          </div>
-          <div>
-            <select 
-              value={filterStatus} 
-              onChange={(e) => setFilterStatus(e.target.value)} 
-              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white shadow-sm outline-none"
-            >
-              <option value="all">Todos los estados</option>
-              <option value="pending">Pendiente</option>
-              <option value="reviewing">En revisión</option>
-              <option value="in_progress">En proceso</option>
-              <option value="resolved">Resuelto</option>
-            </select>
-          </div>
-          <div className="sm:col-span-1">
-            <select 
-              value={filterPriority} 
-              onChange={(e) => setFilterPriority(e.target.value)} 
-              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white shadow-sm outline-none"
-            >
-              <option value="all">Todas las prioridades</option>
-              <option value="low">BAJA</option>
-              <option value="medium">MEDIA</option>
-              <option value="high">ALTA</option>
-            </select>
-          </div>
+            </div>
         </div>
 
         {loading ? (
           <p className="text-center text-gray-400 mt-10 text-sm">Cargando incidencias...</p>
         ) : (
           incidences
-            .filter((inc: any) => {
-              const q = search.trim().toLowerCase();
-              if (q) {
-                const inTitle = inc.title?.toLowerCase().includes(q);
-                const inStudent = inc.student_name?.toLowerCase().includes(q);
-                const inRoom = inc.room_number?.toLowerCase().includes(q);
-                if (!inTitle && !inStudent && !inRoom) return false;
-              }
-              if (filterLocation !== 'all' && inc.location_type !== filterLocation) return false;
-              if (filterStatus !== 'all' && inc.status !== filterStatus) return false;
-              if (filterPriority !== 'all' && inc.priority !== filterPriority) return false;
-              
-              return true;
-            })
-            .map((inc: any) => (
+              .map((inc: any) => (
               <div key={inc.id} className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 transition-all hover:shadow-md">
 
                 <div className="flex justify-between items-start mb-4">
@@ -146,7 +100,7 @@ export const AdminIncidences = () => {
                   </span>
                 </div>
 
-                <h2 className="text-lg font-extrabold text-slate-900 mb-2">{inc.title}</h2>
+                <h2 className="font-bold text-lg text-[#1A1C1E] text-slate-900 mb-2">{inc.title}</h2>
                 <div className="flex items-center gap-1 text-orange-500 mb-3">
                   <MapPin size={14} />
                   <span className="text-xs font-semibold">
@@ -161,44 +115,33 @@ export const AdminIncidences = () => {
                   </p>
                 </div>
 
-                <div className="flex justify-between items-center">
-                  <div className="flex flex-wrap gap-2">
-                    <span className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 border ${
-                      inc.status === 'resolved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-blue-50 text-blue-600 border-blue-100'
-                    }`}>
-                      <Clock size={14} />
-                      {statusLabels[inc.status] || inc.status}
-                    </span>
-                    {inc.assigned_technician && (
-                      <span className="bg-slate-100 text-slate-600 px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5">
-                        <Wrench size={14} />
-                        {inc.assigned_technician}
-                      </span>
-                    )}
-                  </div>
-                  <button className="text-emerald-600 font-bold text-sm flex items-center gap-1 hover:underline">
-                    Gestionar <ChevronRight size={16} />
-                  </button>
-                </div>
-              </div>
-            ))
-        )}
+            {/* Bottom: Estado y Gestión */}
+            <div className="flex justify-between items-center">
+              <div className="flex gap-2">
+                <span className={`
+                    ${statusStyles[inc.status]?.bg || statusStyles.pending.bg} 
+                    ${statusStyles[inc.status]?.text || statusStyles.pending.text} 
+                    ${statusStyles[inc.status]?.border || statusStyles.pending.border} 
+                    px-4 py-2 rounded-full text-xs font-black flex items-center gap-2 border shadow-sm
+                `}>
+                  {statusStyles[inc.status]?.icon || statusStyles.pending.icon}
 
-        {!loading && incidences.length > 0 && 
-          incidences.filter((inc: any) => {
-            const q = search.toLowerCase();
-            const matchesSearch = !q || inc.title?.toLowerCase().includes(q) || inc.student_name?.toLowerCase().includes(q);
-            const matchesLoc = filterLocation === 'all' || inc.location_type === filterLocation;
-            const matchesStatus = filterStatus === 'all' || inc.status === filterStatus;
-            const matchesPri = filterPriority === 'all' || inc.priority === filterPriority;
-            return matchesSearch && matchesLoc && matchesStatus && matchesPri;
-          }).length === 0 && (
-          <div className="text-center py-20 text-gray-400">
-            <CheckCircle2 className="w-12 h-12 mx-auto mb-2 opacity-20" />
-            <p className="text-sm">No se encontraron incidencias con esos filtros</p>
+                  {(statusStyles[inc.status]?.label || 'Pendiente')}
+                </span>
+                {inc.technician && (
+                  <span className="bg-slate-100 text-slate-600 px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5">
+                    <Wrench size={14} />
+                    {inc.technician}
+                  </span>
+                )}
+              </div>
+              <button className="text-emerald-600 font-bold text-sm flex items-center gap-1">
+                Gestionar <ChevronRight size={16} />
+              </button>
+            </div>
           </div>
-        )}
-      </main>
+        )))}
     </div>
   );
 };
+   
