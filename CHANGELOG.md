@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.4.0](https://github.com/ispp-g7-nexus/7-NexUS/compare/v0.3.1...v0.4.0) (2026-03-04)
+
+
+### Features
+
+* documentación ([#256](https://github.com/ispp-g7-nexus/7-NexUS/issues/256)) ([208f4a4](https://github.com/ispp-g7-nexus/7-NexUS/commit/208f4a454d3c1227799c8deb879e01d717b2c91e))
+* Nuevos docs de scrum actualizados ([eb0072b](https://github.com/ispp-g7-nexus/7-NexUS/commit/eb0072b06e75f92d6a98fbe87c3332e366045c22))
+* Nuevos docs de scrum actualizados ([#261](https://github.com/ispp-g7-nexus/7-NexUS/issues/261)) ([5ebf5c5](https://github.com/ispp-g7-nexus/7-NexUS/commit/5ebf5c5b24a42c51559b0d9be33ab8a79c2e5ae8))
+* Últimos cambios de documentos de scrum ([#262](https://github.com/ispp-g7-nexus/7-NexUS/issues/262)) ([f5f2ce6](https://github.com/ispp-g7-nexus/7-NexUS/commit/f5f2ce6d7a0d583b6aaeeea02000bceece2c54c9))
+* Update and finalize Scrum documentation ([#263](https://github.com/ispp-g7-nexus/7-NexUS/issues/263)) ([185493d](https://github.com/ispp-g7-nexus/7-NexUS/commit/185493d2b6b195ed0034ee504c53d113dce80d19))
+
+
+### Bug Fixes
+
+* arreglo ruta de imagen ([039b7a4](https://github.com/ispp-g7-nexus/7-NexUS/commit/039b7a4b651b67306d52be75166244fcebea5ec5))
+* correcion de documentos ([464ba92](https://github.com/ispp-g7-nexus/7-NexUS/commit/464ba92edad870c4313a3a154a46ece7fb0277cb))
+
 ## [0.3.1](https://github.com/ispp-g7-nexus/7-NexUS/compare/v0.3.0...v0.3.1) (2026-03-04)
 
 
