@@ -1,4 +1,4 @@
-<h1>Lista de Usuarios Pilotos – NexUS</h1>
+## Lista de Usuarios Pilotos – NexUS
 
 <p align="center">
   <img src="../../images/logo-app.png" alt="Logo NexUS" width="500">
@@ -7,7 +7,7 @@
 <div align="center">
 
 <p>
-  <img src="https://img.shields.io/badge/Versión-1.0.2-blue?style=flat-square" alt="Versión">
+  <img src="https://img.shields.io/badge/Versión-1.2.0-blue?style=flat-square" alt="Versión">
   <img src="https://img.shields.io/badge/Estado-Completado-yellow?style=flat-square" alt="Estado">
   <img src="https://img.shields.io/badge/Grupo-7--NexUS-green?style=flat-square" alt="Grupo">
   <img src="https://img.shields.io/badge/Asignatura-ISPP-red?style=flat-square" alt="Asignatura">

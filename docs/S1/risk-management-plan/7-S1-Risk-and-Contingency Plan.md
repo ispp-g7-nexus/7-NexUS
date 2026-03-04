@@ -1,4 +1,4 @@
-<h1>Problemas y Plan de Contingencias – NexUS</h1>
+## Problemas y Plan de Contingencias – NexUS
 
 <p align="center">
   <img src="../../images/logo-app.png" alt="Logo NexUS" width="500">
@@ -26,7 +26,7 @@
 **Asignatura:** Ingeniería del Software y Práctica Profesional (ISPP)  
 **Institución:** ETSII – Universidad de Sevilla  
 **Curso académico:** 2025/2026  
-**Fecha:** 18/02/2026  
+**Fecha:** 03/03/2026  
 
 <p align="center">
   <img src="../../images/logo-etsii.jpe" alt="Logo ETSII" width="400">
@@ -40,10 +40,6 @@
 | Versión | Fecha       | Cambio principal                                      |
 |---------|-------------|-------------------------------------------------------|
 | 1.0.0   | 03/03/2026  | Creación del documento base                           |
-
-
-
-
 
 ---
 

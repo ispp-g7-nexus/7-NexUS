@@ -38,6 +38,13 @@
 
 ---
 
+## Índice
+- [1. Análisis por células de trabajo](#1-análisis-por-células-de-trabajo)
+- [2. Registro detallado de rendimiento (21 Integrantes)](#2-registro-detallado-de-rendimiento-21-integrantes)
+- [3. Conclusiones y Plan de Acción para el Sprint 2](#3-conclusiones-y-plan-de-acción-para-el-sprint-2)
+
+---
+
 | Métrica Global | Valor | Interpretación |
 | :--- | :---: | :--- |
 | **Media completitud tareas** | **74.6%** | Progreso sólido (0 tareas sin avance) |

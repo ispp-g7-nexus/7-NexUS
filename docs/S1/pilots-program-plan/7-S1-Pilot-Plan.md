@@ -26,7 +26,7 @@
 **Asignatura:** Ingeniería del Software y Práctica Profesional (ISPP)  
 **Institución:** ETSII – Universidad de Sevilla  
 **Curso académico:** 2025/2026  
-**Fecha:** 18/02/2026  
+**Fecha:** 03/03/2026  
 
 <p align="center">
   <img src="../../images/logo-etsii.jpe" alt="Logo ETSII" width="400">

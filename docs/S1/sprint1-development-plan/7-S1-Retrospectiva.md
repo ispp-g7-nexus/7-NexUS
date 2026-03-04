@@ -1,4 +1,4 @@
-<h1>Informe de Retrospectiva del Sprint 1 - NexUS</h1>
+## Informe de Retrospectiva del Sprint 1 - NexUS
 
 <p align="center">
   <img src="../images/logo-app.png" alt="Logo NexUS" width="500">
@@ -40,6 +40,19 @@
 | Versión | Fecha | Cambio principal |
 |---------|-------|------------------|
 | 1.0.0 | 04/03/2026 | Creación del documento base |
+
+---
+
+## Índice
+- [1. Resumen del Sprint](#1-resumen-del-sprint)
+  - [1.1 Objetivo del Sprint](#11-objetivo-del-sprint)
+  - [Tareas](#tareas)
+  - [1.2 Principales logros](#12-principales-logros)
+  - [1.3 Desafíos encontrados](#13-desafíos-encontrados)
+- [2. Análisis de la Retrospectiva](#2-análisis-de-la-retrospectiva)
+  - [2.1 Lo que salió bien](#21-lo-que-salió-bien)
+  - [2.2 Lo que salió mal](#22-lo-que-salió-mal)
+  - [2.3 Sugerencias de mejora](#23-sugerencias-de-mejora)
 
 ---
 

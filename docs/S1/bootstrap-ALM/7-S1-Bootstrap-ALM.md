@@ -1,4 +1,4 @@
-<h1>Bootstrap ALM  – NexUS</h1>
+## Bootstrap ALM  – NexUS
 
 <p align="center">
   <img src="../../images/logo-app.png" alt="Logo NexUS" width="500">
@@ -39,7 +39,7 @@
 
 | Versión | Fecha       | Cambio principal                                      |
 |---------|-------------|-------------------------------------------------------|
-| 1.0.0   | 04/04/2026  | Creación del documento base                           |
+| 1.0.0   | 04/03/2026  | Creación del documento base                           |
 
 
 ---

@@ -7,7 +7,7 @@
 <div align="center">
 
 <p>
-  <img src="https://img.shields.io/badge/Versión-1.3.0-blue?style=flat-square" alt="Versión">
+  <img src="https://img.shields.io/badge/Versión-1.1.0-blue?style=flat-square" alt="Versión">
   <img src="https://img.shields.io/badge/Estado-Finalizado-green?style=flat-square" alt="Estado">
   <img src="https://img.shields.io/badge/Grupo-7--NexUS-green?style=flat-square" alt="Grupo">
   <img src="https://img.shields.io/badge/Asignatura-ISPP-red?style=flat-square" alt="Asignatura">

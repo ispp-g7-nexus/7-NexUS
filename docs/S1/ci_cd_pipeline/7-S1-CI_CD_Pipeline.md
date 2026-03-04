@@ -1,13 +1,13 @@
-<h1>CI/CD – NexUS</h1>
+## CI/CD – NexUS
 
 <p align="center">
-  <img src="../images/logo-app.png" alt="Logo NexUS" width="500">
+  <img src="../../images/logo-app.png" alt="Logo NexUS" width="500">
 </p>
 
 <div align="center">
 
 <p>
-  <img src="https://img.shields.io/badge/Versión-1.0.0-blue?style=flat-square" alt="Versión">
+  <img src="https://img.shields.io/badge/Versión-1.0.1-blue?style=flat-square" alt="Versión">
   <img src="https://img.shields.io/badge/Estado-Completado-yellow?style=flat-square" alt="Estado">
   <img src="https://img.shields.io/badge/Grupo-7--NexUS-green?style=flat-square" alt="Grupo">
   <img src="https://img.shields.io/badge/Asignatura-ISPP-red?style=flat-square" alt="Asignatura">
@@ -23,8 +23,14 @@
 
 **Proyecto:** NexUS  
 **Grupo:** 7 - NexUS  
-**Asignatura:** Ingeniería del Software y Práctica Profesional (ISPP)  
-**Fecha:** 01/03/2026
+**Asignatura:** Ingeniería del Software y Práctica Profesional (ISPP)
+**Institución:** ETSII – Universidad de Sevilla  
+**Curso académico:** 2025/2026  
+**Fecha:** 02/03/2026
+
+<p align="center">
+  <img src="../../images/logo-etsii.jpe" alt="Logo ETSII" width="400">
+</p>
 
 ---
 
