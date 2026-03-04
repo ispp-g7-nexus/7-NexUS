@@ -1,6 +1,5 @@
-from pathlib import Path
 import os
-
+from pathlib import Path
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -9,18 +8,31 @@ load_dotenv(BASE_DIR / ".env")
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "unsafe-dev-key")
 DEBUG = os.getenv("DJANGO_DEBUG", "0") == "1"
 
-ALLOWED_HOSTS = [host.strip() for host in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost").split(",") if host.strip()]
-CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "http://localhost").split(",") if origin.strip()]
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost").split(",")
+    if host.strip()
+]
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "http://localhost").split(
+        ","
+    )
+    if origin.strip()
+]
 
 SHARED_APPS = [
     "django_tenants",
     "apps.tenants",
+    "rest_framework",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
 ]
+
+MATCHING_ENABLED = os.getenv("MATCHING_ENABLED", "0") == "1"
 
 TENANT_APPS = [
     "django.contrib.auth",
@@ -28,9 +40,22 @@ TENANT_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "rest_framework",
     "apps.common",
     "apps.residences",
+    "apps.staff",
+    "apps.events",
+    "apps.bedrooms",
+    "apps.incidences",
+    "apps.membership",
+    "apps.announcements",
+    "apps.residents",
+    "apps.onboarding",
+    "apps.objects",
 ]
+
+if MATCHING_ENABLED:
+    TENANT_APPS.append("apps.matching")
 
 INSTALLED_APPS = SHARED_APPS + [app for app in TENANT_APPS if app not in SHARED_APPS]
 
@@ -115,10 +140,23 @@ CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_ALWAYS_EAGER = os.getenv("CELERY_TASK_ALWAYS_EAGER", "0") == "1"
 
+MATCHING_ROOM_CHANGE_MODEL = os.getenv("MATCHING_ROOM_CHANGE_MODEL", "")
+MATCHING_ROOM_CHANGE_MEMBERSHIP_FIELD = os.getenv(
+    "MATCHING_ROOM_CHANGE_MEMBERSHIP_FIELD",
+    "membership_id",
+)
+
 JWT_ACCESS_COOKIE_NAME = os.getenv("JWT_ACCESS_COOKIE_NAME", "access_token")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 JWT_SIGNING_KEY = os.getenv("JWT_SIGNING_KEY", SECRET_KEY)
 JWT_AUDIENCE = os.getenv("JWT_AUDIENCE") or None
-JWT_ACCESS_TOKEN_LIFETIME_SECONDS = int(os.getenv("JWT_ACCESS_TOKEN_LIFETIME_SECONDS", "3600"))
+JWT_ACCESS_TOKEN_LIFETIME_SECONDS = int(
+    os.getenv("JWT_ACCESS_TOKEN_LIFETIME_SECONDS", "3600")
+)
 JWT_COOKIE_SECURE = os.getenv("JWT_COOKIE_SECURE", "0") == "1"
 JWT_COOKIE_SAMESITE = os.getenv("JWT_COOKIE_SAMESITE", "Lax")
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": ("apps.common.services.CustomJWTAuthentication",),
+    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
+}
