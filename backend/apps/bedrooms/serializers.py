@@ -5,6 +5,7 @@ from .models import Bedroom
 
 
 class BedroomSerializer(serializers.ModelSerializer):
+    ocupantes_actuales = serializers.SerializerMethodField()
 
     class Meta:
         model = Bedroom
@@ -19,8 +20,12 @@ class BedroomSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "edificio",
+            "ocupantes_actuales",
         ]
-        read_only_fields = ["id", "created_at", "updated_at", "residence"]
+        read_only_fields = ["id", "created_at", "updated_at", "residence", "ocupantes_actuales"]
+
+    def get_ocupantes_actuales(self, obj: Bedroom) -> int:
+        return obj.residents.filter(is_active=True, role__name="Student").count()
 
     def validate_numero(self, value):
         if not value:
