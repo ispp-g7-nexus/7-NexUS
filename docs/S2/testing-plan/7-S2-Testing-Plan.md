@@ -76,7 +76,7 @@ El plan abarca todas las funcionalidades del sistema: autenticación, gestión d
 ### 2.2 Objetivos Específicos
 
 - Alcanzar al menos un **80% de cobertura de código** en cada módulo funcional
-- Reducir al mínimo la aparición de **errores críticos en producción**
+- Reducir a 0 los **errores críticos en producción**
 - Garantizar **compatibilidad** con navegadores modernos y dispositivos móviles
 - Verificar que el sistema pueda soportar **múltiples residencias y usuarios concurrentes**
 
@@ -181,7 +181,7 @@ Los siguientes elementos **NO requieren testing exhaustivo**:
 
 #### 4.1.1 Pruebas Unitarias
 
-**Backend (pytest)**
+**Backend (pytest y pytest-django)**
 - **Modelos**: Validación de datos, relaciones entre entidades y métodos personalizados
 - **Vistas**: Lógica asociada a cada endpoint, permisos y códigos de respuesta
 - **Servicios**: Lógica de negocio y operaciones del dominio
@@ -195,7 +195,7 @@ Los siguientes elementos **NO requieren testing exhaustivo**:
 
 #### 4.1.2 Pruebas de Integración
 
-**Backend (Django Test Framework)**
+**Backend (pytest y pytest-django)**
 
 Se verificarán flujos completos de interacción con la API:
 
@@ -276,7 +276,7 @@ Se evaluarán principalmente:
 | Métrica | Objetivo | Herramienta |
 |---------|---------|-------------|
 | **Cobertura de código** | 80% promedio | pytest-cov, Jest |
-| **Errores críticos detectados en producción** | Mantener el número al mínimo posible | Feedback de usuarios piloto |
+| **Errores críticos detectados en producción** | Ausencia de errores críticos | Feedback de usuarios piloto |
 
 ---
 
