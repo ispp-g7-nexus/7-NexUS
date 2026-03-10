@@ -2,6 +2,19 @@ import { fetchWithAuth } from '../utils/api';
 
 const BASE = '/api/bedrooms/';
 
+export interface Bedroom {
+    id: number;
+    numero: string;
+    edificio: string;
+    planta: number | null;
+    capacidad_maxima: number;
+    tipo: string;
+    is_active: boolean;
+    ocupantes_actuales: number;
+    created_at: string;
+    updated_at: string;
+}
+
 export interface AvailableBedroom {
     id: number;
     numero: string;
@@ -11,8 +24,10 @@ export interface AvailableBedroom {
     ocupantes_actuales: number;
 }
 
-export async function listBedrooms() {
-    return fetchWithAuth(BASE);
+export async function listBedrooms(): Promise<Bedroom[]> {
+    const res = await fetchWithAuth(BASE);
+    if (!res.ok) throw new Error(`Error ${res.status}`);
+    return res.json();
 }
 
 /**

@@ -1,4 +1,5 @@
 import json
+from django.db import IntegrityError
 from django.http import JsonResponse
 from django.views import View
 from django.utils.decorators import method_decorator
@@ -38,20 +39,8 @@ class BedroomListView(AdminRequiredView):
 			return JsonResponse({"detail": "No residence context."}, status=400)
 
 		bedrooms = Bedroom.objects.filter(residence=request.residence)
-		data = []
-		for b in bedrooms:
-			data.append({
-				"id": b.id,
-				"numero": b.numero,
-				"edificio": b.edificio,
-				"planta": b.planta,
-				"capacidad_maxima": b.capacidad_maxima,
-				"tipo": b.tipo,
-				"is_active": b.is_active,
-				"created_at": b.created_at.isoformat(),
-				"updated_at": b.updated_at.isoformat(),
-			})
-		return JsonResponse(data, safe=False)
+		serializer = BedroomSerializer(bedrooms, many=True)
+		return JsonResponse(serializer.data, safe=False)
 
 
 class BedroomCreateView(AdminRequiredView):
@@ -69,6 +58,11 @@ class BedroomCreateView(AdminRequiredView):
 				return JsonResponse({"detail": serializer.errors}, status=400)
 			bedroom = serializer.save(residence=request.residence)
 			return JsonResponse({"id": bedroom.id, "detail": "Bedroom created successfully"}, status=201)
+		except IntegrityError:
+			return JsonResponse(
+				{"detail": "Ya existe una habitación con ese número y edificio en esta residencia."},
+				status=409,
+			)
 		except Exception as e:
 			return JsonResponse({"detail": str(e)}, status=400)
 
@@ -76,16 +70,8 @@ class BedroomCreateView(AdminRequiredView):
 class BedroomRetrieveView(AdminRequiredView):
 	def get(self, request, bedroom_id):
 		bedroom = get_object_or_404(Bedroom, id=bedroom_id, residence=request.residence)
-		return JsonResponse({
-			"id": bedroom.id,
-			"numero": bedroom.numero,
-			"planta": bedroom.planta,
-			"capacidad_maxima": bedroom.capacidad_maxima,
-			"tipo": bedroom.tipo,
-			"is_active": bedroom.is_active,
-			"created_at": bedroom.created_at.isoformat(),
-			"updated_at": bedroom.updated_at.isoformat(),
-		})
+		serializer = BedroomSerializer(bedroom)
+		return JsonResponse(serializer.data)
 
 
 class BedroomUpdateView(AdminRequiredView):
@@ -101,6 +87,11 @@ class BedroomUpdateView(AdminRequiredView):
 				return JsonResponse({"detail": serializer.errors}, status=400)
 			bedroom = serializer.save()
 			return JsonResponse({"id": bedroom.id, "detail": "Bedroom updated successfully"}, status=200)
+		except IntegrityError:
+			return JsonResponse(
+				{"detail": "Ya existe una habitación con ese número y edificio en esta residencia."},
+				status=409,
+			)
 		except Exception as e:
 			return JsonResponse({"detail": str(e)}, status=400)
 
