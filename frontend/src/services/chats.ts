@@ -21,6 +21,7 @@ export interface ChatGroup {
   can_members_leave: boolean;
   members: number;
   members_list: ChatMember[];
+  created_by_email?: string;
 }
 
 export interface UpsertChatGroupPayload {
