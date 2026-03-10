@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "../../components/ui/button";
 import { MyMatchesPage } from "../Matching/MyMatchesPage";
 import { Events } from "./Events/Events";
+import { StudentChats } from "./Chats/StudentChats";
 import { Profile } from "./Profile/Profile";
 
 type Tab = "eventos" | "chat" | "matches" | "perfil";
@@ -16,9 +17,8 @@ export function SocialHub() {
           <Button
             key={tab}
             variant={activeTab === tab ? "default" : "ghost"}
-            className={`rounded-full px-6 capitalize ${
-              activeTab === tab ? "bg-white text-green-700 shadow-sm hover:bg-white" : "text-gray-500"
-            }`}
+            className={`rounded-full px-6 capitalize ${activeTab === tab ? "bg-white text-green-700 shadow-sm hover:bg-white" : "text-gray-500"
+              }`}
             onClick={() => setActiveTab(tab)}
           >
             {tab}
@@ -29,7 +29,7 @@ export function SocialHub() {
       <div className="mt-2">
         {activeTab === "eventos" && <Events />}
         {activeTab === "perfil" && <Profile />}
-        {activeTab === "chat" && <div className="text-center py-10">Chat proximamente</div>}
+        {activeTab === "chat" && <StudentChats />}
         {activeTab === "matches" && <MyMatchesPage />}
       </div>
     </div>

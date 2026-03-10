@@ -23,3 +23,23 @@ class IsResidenceAdmin(permissions.BasePermission):
             return qs.filter(residence=residence).exists()
 
         return qs.exists()
+
+
+class IsAuthenticatedResident(permissions.BasePermission):
+    """Permite acceso a cualquier usuario autenticado con membresía activa en la residencia."""
+
+    message = "Debes ser residente de esta residencia."
+
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+
+        residence = getattr(request, "residence", None)
+        if not residence:
+            return False
+
+        return Membership.objects.filter(
+            user=request.user,
+            residence=residence,
+            is_active=True,
+        ).exists()

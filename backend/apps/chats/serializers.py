@@ -92,3 +92,131 @@ class AddChatMemberSerializer(serializers.Serializer):
 
 class UpdateChatMemberSerializer(serializers.Serializer):
     is_admin = serializers.BooleanField()
+
+
+# ── Serializers para chats privados ──────────────────────────
+
+
+class PrivateMessageSerializer(serializers.ModelSerializer):
+    sender_name = serializers.SerializerMethodField()
+    sender_membership_id = serializers.IntegerField(source="sender_id", read_only=True)
+
+    class Meta:
+        from .models import PrivateMessage
+
+        model = PrivateMessage
+        fields = [
+            "id",
+            "sender_membership_id",
+            "sender_name",
+            "content",
+            "is_read",
+            "created_at",
+        ]
+
+    def get_sender_name(self, obj):
+        user = obj.sender.user
+        return user.get_full_name().strip() or user.get_username()
+
+
+class PrivateConversationSerializer(serializers.ModelSerializer):
+    other_user = serializers.SerializerMethodField()
+    last_message = serializers.SerializerMethodField()
+    unread_count = serializers.SerializerMethodField()
+
+    class Meta:
+        from .models import PrivateConversation
+
+        model = PrivateConversation
+        fields = [
+            "id",
+            "other_user",
+            "last_message",
+            "unread_count",
+            "created_at",
+            "updated_at",
+        ]
+
+    def _get_my_membership(self):
+        return self.context.get("my_membership")
+
+    def _get_other_membership(self, obj):
+        my = self._get_my_membership()
+        if my and obj.member_one_id == my.id:
+            return obj.member_two
+        return obj.member_one
+
+    def get_other_user(self, obj):
+        other = self._get_other_membership(obj)
+        user = other.user
+        return {
+            "membership_id": other.id,
+            "full_name": user.get_full_name().strip() or user.get_username(),
+            "email": user.email,
+        }
+
+    def get_last_message(self, obj):
+        msg = obj.messages.order_by("-created_at").first()
+        if not msg:
+            return None
+        return {
+            "content": msg.content[:80],
+            "created_at": msg.created_at.isoformat(),
+            "is_mine": msg.sender_id == (self._get_my_membership().id if self._get_my_membership() else None),
+        }
+
+    def get_unread_count(self, obj):
+        my = self._get_my_membership()
+        if not my:
+            return 0
+        return obj.messages.filter(is_read=False).exclude(sender=my).count()
+
+
+class SendMessageSerializer(serializers.Serializer):
+    content = serializers.CharField(max_length=5000)
+
+    def validate_content(self, value):
+        if not value.strip():
+            raise serializers.ValidationError("El mensaje no puede estar vacío.")
+        return value.strip()
+
+
+class StartConversationSerializer(serializers.Serializer):
+    membership_id = serializers.IntegerField()
+
+    def validate_membership_id(self, value):
+        request = self.context["request"]
+        residence = getattr(request, "residence", None)
+
+        target = Membership.objects.filter(
+            id=value,
+            residence=residence,
+            is_active=True,
+            role__name__iexact="Student",
+        ).first()
+        if not target:
+            raise serializers.ValidationError("No se encontró ese residente.")
+
+        # No se puede chatear consigo mismo
+        my_membership = self.context.get("my_membership")
+        if my_membership and target.id == my_membership.id:
+            raise serializers.ValidationError("No puedes chatear contigo mismo.")
+
+        self.context["target_membership"] = target
+        return value
+
+
+class ChatResidentSerializer(serializers.ModelSerializer):
+    full_name = serializers.SerializerMethodField()
+    email = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Membership
+        fields = ["id", "full_name", "email"]
+
+    def get_full_name(self, obj):
+        return obj.user.get_full_name().strip() or obj.user.get_username()
+
+    def get_email(self, obj):
+        return obj.user.email
+

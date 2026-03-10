@@ -71,3 +71,62 @@ class ChatGroupMember(models.Model):
 
 	def __str__(self) -> str:
 		return f"{self.group_id}:{self.membership_id}"
+
+
+class PrivateConversation(models.Model):
+	"""Conversación privada 1-a-1 entre dos residentes."""
+
+	residence = models.ForeignKey(
+		Residence,
+		on_delete=models.CASCADE,
+		related_name="private_conversations",
+	)
+	member_one = models.ForeignKey(
+		"membership.Membership",
+		on_delete=models.CASCADE,
+		related_name="conversations_as_one",
+	)
+	member_two = models.ForeignKey(
+		"membership.Membership",
+		on_delete=models.CASCADE,
+		related_name="conversations_as_two",
+	)
+	created_at = models.DateTimeField(auto_now_add=True)
+	updated_at = models.DateTimeField(auto_now=True)
+
+	class Meta:
+		ordering = ["-updated_at"]
+		constraints = [
+			models.UniqueConstraint(
+				fields=["residence", "member_one", "member_two"],
+				name="uniq_private_conversation",
+			)
+		]
+
+	def __str__(self) -> str:
+		return f"Conversación {self.id}: {self.member_one_id} ↔ {self.member_two_id}"
+
+
+class PrivateMessage(models.Model):
+	"""Mensaje dentro de una conversación privada."""
+
+	conversation = models.ForeignKey(
+		PrivateConversation,
+		on_delete=models.CASCADE,
+		related_name="messages",
+	)
+	sender = models.ForeignKey(
+		"membership.Membership",
+		on_delete=models.CASCADE,
+		related_name="private_messages_sent",
+	)
+	content = models.TextField()
+	is_read = models.BooleanField(default=False)
+	created_at = models.DateTimeField(auto_now_add=True)
+
+	class Meta:
+		ordering = ["created_at"]
+
+	def __str__(self) -> str:
+		return f"Msg {self.id} en conv {self.conversation_id}"
+
