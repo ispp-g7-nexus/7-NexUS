@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import { listBedrooms, createBedroom, updateBedroom, deleteBedroom } from "../../services/bedrooms";
 import "../../index.css";
 import roomSvg from "../../assets/room.svg";
-import { Plus, Edit2, Trash2, Search as SearchIcon, Bed } from "lucide-react";
+import { Plus, Edit2, Trash2, Search as SearchIcon, Bed, Building2, Grid3x3, List } from "lucide-react";
+import { motion } from "framer-motion";
 
 import { Input } from "../../components/ui/input";
 import {
@@ -26,6 +27,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "../../components/ui/dialog";
 import { Label } from "../../components/ui/label";
 
@@ -34,6 +36,8 @@ export function Rooms() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("todos");
+  const [viewLayout, setViewLayout] = useState<"list" | "map">("list");
+  const [selectedRoom, setSelectedRoom] = useState<any | null>(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -128,6 +132,23 @@ export function Rooms() {
     return list;
   }, [rooms, search, filter]);
 
+  const roomsByBuildingAndFloor = useMemo(() => {
+    const organized: Record<string, Record<number, any[]>> = {};
+    filteredRooms.forEach((room) => {
+      const b = room.edificio ?? "—";
+      const f = room.planta ?? 0;
+      if (!organized[b]) organized[b] = {};
+      if (!organized[b][f]) organized[b][f] = [];
+      organized[b][f].push(room);
+    });
+    Object.keys(organized).forEach((b) => {
+      Object.keys(organized[b]).forEach((f) => {
+        organized[b][parseInt(f)].sort((a: any, b: any) => a.numero.localeCompare(b.numero));
+      });
+    });
+    return organized;
+  }, [filteredRooms]);
+
   const onChange = (k: string, v: any) => {
     setForm((prev) => ({ ...prev, [k]: v }));
     validateField(k, v);
@@ -211,6 +232,16 @@ export function Rooms() {
         <Stat title="Libres" value={stats.libres} />
       </div>
 
+      {/* Toggle Lista / Mapa */}
+      <div className="flex items-center justify-center gap-1 bg-gray-100 p-1 rounded-lg">
+        <button onClick={() => setViewLayout("list")} className={`flex items-center gap-1.5 px-4 py-1.5 rounded text-sm font-medium transition-all ${viewLayout === "list" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+          <List className="w-4 h-4" />Lista
+        </button>
+        <button onClick={() => setViewLayout("map")} className={`flex items-center gap-1.5 px-4 py-1.5 rounded text-sm font-medium transition-all ${viewLayout === "map" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+          <Grid3x3 className="w-4 h-4" />Mapa
+        </button>
+      </div>
+
       {/* Buscador */}
       <Card>
         <CardContent className="flex gap-3 p-4">
@@ -238,61 +269,155 @@ export function Rooms() {
       </Card>
 
       {/* Lista */}
-      <div className="grid gap-4">
-        {filteredRooms.map((r) => (
-          <Card
-            key={r.id}
-            className={`hover:shadow-md transition ${!r.is_active ? 'border-destructive/30 bg-destructive/5' : 'bg-card'} `}
-          >
-            <CardContent className="flex justify-between items-center p-4">
-              <div>
-                <h3 className="font-semibold flex items-center gap-2">
-                  <Bed className="w-5 h-5 text-muted-foreground" /> {r.numero}-{r.edificio}{console.log(r)}
-                </h3>
-                <p className="text-sm text-muted-foreground">Planta {r.planta ?? "-"} · {r.tipo}</p>
+      {viewLayout === "list" && (
+        <div className="grid gap-4">
+          {filteredRooms.map((r) => (
+            <Card
+              key={r.id}
+              className={`hover:shadow-md transition ${!r.is_active ? 'border-destructive/30 bg-destructive/5' : 'bg-card'} `}
+            >
+              <CardContent className="flex justify-between items-center p-4">
+                <div>
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <Bed className="w-5 h-5 text-muted-foreground" /> {r.numero}-{r.edificio}{console.log(r)}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">Planta {r.planta ?? "-"} · {r.tipo}</p>
+                </div>
+
+                <div className="flex gap-3 items-center">
+                  <Badge variant={!r.is_active ? "default" : "secondary"}>{!r.is_active ? "Ocupada" : "Libre"}</Badge>
+
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setEditingId(r.id);
+                      setForm({
+                        numero: r.numero,
+                        edificio: r.edificio,
+                        planta: r.planta,
+                        tipo: r.tipo,
+                        unidades: 1,
+                      });
+                      setIsEditing(true);
+                      setIsModalOpen(true);
+                    }}
+                  >
+                    <Edit2 className="w-4 h-4 mr-2" />Editar
+                  </Button>
+
+                  <Button
+                    variant="destructive"
+                    onClick={async () => {
+                      if (!confirm("¿Eliminar habitación?")) return;
+                      try {
+                        await deleteBedroom(r.id);
+                        fetchRooms();
+                      } catch (err) {
+                        console.error(err);
+                        alert("Error al eliminar");
+                      }
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />Eliminar
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Mapa */}
+      {viewLayout === "map" && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-4 text-sm text-gray-600">
+            <span className="flex items-center gap-1.5"><span className="w-4 h-4 rounded border-2 border-green-400 bg-green-50 inline-block" />Libre</span>
+            <span className="flex items-center gap-1.5"><span className="w-4 h-4 rounded border-2 border-red-400 bg-red-50 inline-block" />Ocupada</span>
+          </div>
+          {Object.entries(roomsByBuildingAndFloor)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([building, floors]) => (
+              <motion.div key={building} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+                <Card className="border border-gray-100 shadow-sm overflow-hidden">
+                  <div className="bg-[#509550] text-white px-4 py-2 flex items-center gap-2">
+                    <Building2 className="w-4 h-4" />
+                    <span className="font-bold text-sm">Edificio {building}</span>
+                  </div>
+                  <CardContent className="p-3 space-y-4">
+                    {Object.entries(floors)
+                      .sort(([a], [b]) => parseInt(b) - parseInt(a))
+                      .map(([floor, floorRooms]) => (
+                        <div key={floor} className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <div className="bg-gray-100 px-2 py-1 rounded text-xs font-bold text-gray-600">
+                              {parseInt(floor) === 0 ? "Planta baja" : `Planta ${floor}`}
+                            </div>
+                            <div className="flex-1 h-px bg-gray-200" />
+                            <span className="text-[11px] text-gray-400">{(floorRooms as any[]).filter((r: any) => !r.is_active).length}/{(floorRooms as any[]).length} ocupadas</span>
+                          </div>
+                          <div className="grid grid-cols-5 sm:grid-cols-8 gap-2">
+                            {(floorRooms as any[]).map((room) => (
+                              <motion.button
+                                key={room.id}
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => setSelectedRoom(room)}
+                                title={`Hab. ${room.numero} — ${!room.is_active ? "Ocupada" : "Libre"}`}
+                                className={`relative aspect-square rounded-lg border-2 flex flex-col items-center justify-center p-1.5 transition-all ${!room.is_active ? "bg-red-50 border-red-400 hover:bg-red-100" : "bg-green-50 border-green-400 hover:bg-green-100"}`}
+                              >
+                                <Bed className={`w-4 h-4 mb-0.5 ${!room.is_active ? "text-red-500" : "text-green-600"}`} />
+                                <span className={`text-[9px] font-bold leading-tight text-center ${!room.is_active ? "text-red-700" : "text-green-700"}`}>{room.numero}</span>
+                              </motion.button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+        </div>
+      )}
+
+      {/* Detalle habitación (mapa) */}
+      <Dialog open={!!selectedRoom} onOpenChange={(open) => !open && setSelectedRoom(null)}>
+        <DialogContent className="max-w-sm rounded-2xl">
+          {selectedRoom && (
+            <>
+              <DialogHeader>
+                <div className="flex items-center gap-3 mb-1">
+                  <div className={`p-2 rounded-xl ${!selectedRoom.is_active ? "bg-red-100" : "bg-green-100"}`}>
+                    <Bed className={`w-5 h-5 ${!selectedRoom.is_active ? "text-red-600" : "text-green-600"}`} />
+                  </div>
+                  <div>
+                    <DialogTitle className="text-lg leading-tight">Habitación {selectedRoom.numero}</DialogTitle>
+                    <DialogDescription>Edificio {selectedRoom.edificio} · Planta {selectedRoom.planta ?? "—"}</DialogDescription>
+                  </div>
+                </div>
+              </DialogHeader>
+              <div className="grid grid-cols-2 gap-3 py-2">
+                <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                  <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1">Tipo</p>
+                  <p className="text-sm font-semibold">{selectedRoom.tipo}</p>
+                </div>
+                <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                  <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1">Capacidad</p>
+                  <p className="text-sm font-semibold">{selectedRoom.capacidad_maxima} persona{selectedRoom.capacidad_maxima !== 1 ? "s" : ""}</p>
+                </div>
+                <div className="col-span-2 bg-gray-50 p-3 rounded-xl border border-gray-100">
+                  <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1">Estado</p>
+                  <Badge className={!selectedRoom.is_active ? "bg-red-100 text-red-700 border-0" : "bg-green-100 text-green-700 border-0"}>{!selectedRoom.is_active ? "Ocupada" : "Libre"}</Badge>
+                </div>
               </div>
-
-              <div className="flex gap-3 items-center">
-                <Badge variant={!r.is_active ? "default" : "secondary"}>{!r.is_active ? "Ocupada" : "Libre"}</Badge>
-
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setEditingId(r.id);
-                    setForm({
-                      numero: r.numero,
-                      edificio: r.edificio,
-                      planta: r.planta,
-                      tipo: r.tipo,
-                      unidades: 1,
-                    });
-                    setIsEditing(true);
-                    setIsModalOpen(true);
-                  }}
-                >
-                  <Edit2 className="w-4 h-4 mr-2" />Editar
+              <DialogFooter>
+                <Button className="w-full" variant="outline" onClick={() => { setSelectedRoom(null); setEditingId(selectedRoom.id); setForm({ numero: selectedRoom.numero, edificio: selectedRoom.edificio, planta: selectedRoom.planta, tipo: selectedRoom.tipo, unidades: 1 }); setIsEditing(true); setIsModalOpen(true); }}>
+                  <Edit2 className="w-4 h-4 mr-2" />Editar habitación
                 </Button>
-
-                <Button
-                  variant="destructive"
-                  onClick={async () => {
-                    if (!confirm("¿Eliminar habitación?")) return;
-                    try {
-                      await deleteBedroom(r.id);
-                      fetchRooms();
-                    } catch (err) {
-                      console.error(err);
-                      alert("Error al eliminar");
-                    }
-                  }}
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />Eliminar
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
