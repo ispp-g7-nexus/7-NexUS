@@ -125,6 +125,21 @@ export const chatsService = {
     await handleResponse<void>(res);
   },
 
+  // ── Mensajes de Grupo ──
+
+  listGroupMessages: async (groupId: number): Promise<GroupMessage[]> => {
+    const res = await fetchWithAuth(`${MY_GROUPS_URL}${groupId}/messages/`);
+    return handleResponse<GroupMessage[]>(res);
+  },
+
+  sendGroupMessage: async (groupId: number, content: string): Promise<GroupMessage> => {
+    const res = await fetchWithAuth(`${MY_GROUPS_URL}${groupId}/messages/`, {
+      method: "POST",
+      body: JSON.stringify({ content }),
+    });
+    return handleResponse<GroupMessage>(res);
+  },
+
   // ── Chats privados ──
 
   listConversations: async (): Promise<PrivateConversation[]> => {
@@ -206,6 +221,15 @@ export interface PrivateMessage {
   sender_name: string;
   content: string;
   is_read: boolean;
+  created_at: string;
+}
+
+export interface GroupMessage {
+  id: number;
+  sender_membership_id: number;
+  sender_name: string;
+  sender_email: string;
+  content: string;
   created_at: string;
 }
 

@@ -18,7 +18,9 @@ import {
     type ChatResident,
     type PrivateConversation,
     type PrivateMessage,
+    type GroupMessage,
 } from "../../../services/chats";
+import { authService } from "../../../services/auth";
 
 /* ── Helpers ────────────────────────────────────────────────── */
 
@@ -61,6 +63,14 @@ export function StudentChats() {
     const [showLeaveDialog, setShowLeaveDialog] = useState(false);
     const [leaving, setLeaving] = useState(false);
 
+    // ── Estado mensajes de grupo ──
+    const [groupMessages, setGroupMessages] = useState<GroupMessage[]>([]);
+    const [loadingGroupMsgs, setLoadingGroupMsgs] = useState(false);
+    const [groupMsgText, setGroupMsgText] = useState("");
+    const [sendingGroupMsg, setSendingGroupMsg] = useState(false);
+    const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
+    const groupMessagesEndRef = useRef<HTMLDivElement>(null);
+
     // ── Estado privados ──
     const [conversations, setConversations] = useState<PrivateConversation[]>([]);
     const [loadingConvs, setLoadingConvs] = useState(false);
@@ -91,7 +101,18 @@ export function StudentChats() {
         }
     }, []);
 
-    useEffect(() => { loadGroups(); }, [loadGroups]);
+    useEffect(() => {
+        const fetchUser = async () => {
+            try {
+                const response = await authService.me();
+                if (response.user && response.user.email) {
+                    setCurrentUserEmail(response.user.email);
+                }
+            } catch { /* empty */ }
+        };
+        fetchUser();
+        loadGroups();
+    }, [loadGroups]);
 
     const filteredGroups = useMemo(() =>
         groups.filter(
@@ -114,6 +135,38 @@ export function StudentChats() {
             toast.error(err instanceof Error ? err.message : "No se pudo abandonar el grupo.");
         } finally {
             setLeaving(false);
+        }
+    };
+
+    /* ────────────────── Apertura y Mensajes de Grupo ─────────────────────── */
+
+    const openGroup = async (group: ChatGroup) => {
+        setSelectedGroup(group);
+        setLoadingGroupMsgs(true);
+        try {
+            setGroupMessages(await chatsService.listGroupMessages(group.id));
+        } catch {
+            toast.error("No se pudieron cargar los mensajes del grupo.");
+        } finally {
+            setLoadingGroupMsgs(false);
+        }
+    };
+
+    useEffect(() => {
+        groupMessagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [groupMessages]);
+
+    const handleSendGroupMessage = async () => {
+        if (!selectedGroup || !groupMsgText.trim()) return;
+        setSendingGroupMsg(true);
+        try {
+            const newMsg = await chatsService.sendGroupMessage(selectedGroup.id, groupMsgText.trim());
+            setGroupMessages((prev) => [...prev, newMsg]);
+            setGroupMsgText("");
+        } catch (err: unknown) {
+            toast.error(err instanceof Error ? err.message : "No se pudo enviar el mensaje.");
+        } finally {
+            setSendingGroupMsg(false);
         }
     };
 
@@ -299,60 +352,80 @@ export function StudentChats() {
             icon: <Tag className="w-3 h-3" />,
         };
         return (
-            <div className="space-y-5">
-                <div className="flex items-center gap-3">
-                    <Button variant="ghost" size="icon" onClick={() => setSelectedGroup(null)} className="w-9 h-9 shrink-0">
-                        <ArrowLeft className="w-5 h-5" />
-                    </Button>
-                    <div className="min-w-0">
-                        <h2 className="text-xl font-bold text-gray-900 truncate">{selectedGroup.name}</h2>
-                        <span className={`inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${config.color}`}>
-                            {config.icon} {config.label}
-                        </span>
-                    </div>
-                </div>
-
-                {selectedGroup.description && (
-                    <div className="bg-white rounded-lg border border-gray-200 p-4">
-                        <h3 className="text-sm font-semibold text-gray-700 mb-1">Descripción</h3>
-                        <p className="text-sm text-gray-600 whitespace-pre-line">{selectedGroup.description}</p>
-                    </div>
-                )}
-
-                <div className="bg-white rounded-lg border border-gray-200">
-                    <div className="p-4 border-b border-gray-200 flex items-center gap-2">
-                        <Users className="w-4 h-4 text-gray-600" />
-                        <h3 className="font-medium text-gray-900">
-                            Miembros ({selectedGroup.members_list?.length ?? selectedGroup.members})
-                        </h3>
-                    </div>
-                    <div className="divide-y divide-gray-100 max-h-72 overflow-y-auto">
-                        {selectedGroup.members_list?.map((member) => (
-                            <div key={member.id} className="px-4 py-3 flex items-center gap-3">
-                                <div className="w-9 h-9 bg-gradient-to-br from-green-200 to-green-400 rounded-full flex items-center justify-center text-sm font-semibold text-green-800 shrink-0">
-                                    {member.full_name.charAt(0).toUpperCase()}
-                                </div>
-                                <div className="min-w-0">
-                                    <p className="text-sm font-medium text-gray-900 truncate">
-                                        {member.full_name}
-                                        {member.is_admin && (
-                                            <span className="ml-2 px-1.5 py-0.5 text-[10px] bg-blue-100 text-blue-700 rounded-full">Admin</span>
-                                        )}
-                                    </p>
-                                    <p className="text-xs text-gray-500 truncate">{member.email}</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {selectedGroup.can_members_leave && (
-                    <div className="flex justify-center pt-2">
-                        <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 gap-2" onClick={() => setShowLeaveDialog(true)}>
-                            <LogOut className="w-4 h-4" /> Abandonar grupo
+            <div className="flex flex-col h-[calc(100vh-220px)]">
+                {/* Cabecera del Grupo */}
+                <div className="flex items-center gap-3 pb-3 border-b border-gray-200 shrink-0 justify-between">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <Button variant="ghost" size="icon" onClick={() => setSelectedGroup(null)} className="w-9 h-9 shrink-0">
+                            <ArrowLeft className="w-5 h-5" />
                         </Button>
+                        <div className="w-9 h-9 bg-gradient-to-br from-green-200 to-green-400 rounded-full flex items-center justify-center text-green-800 font-bold text-sm shrink-0">
+                            {selectedGroup.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0 flex flex-col">
+                            <h2 className="text-base font-bold text-gray-900 truncate">{selectedGroup.name}</h2>
+                            <span className={`inline-flex items-center gap-1 mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-medium w-fit ${config.color}`}>
+                                {config.icon} {config.label}
+                            </span>
+                        </div>
                     </div>
-                )}
+                    {selectedGroup.can_members_leave && (
+                        <Button variant="ghost" className="text-red-600 hover:bg-red-50 hover:text-red-700 shrink-0" onClick={() => setShowLeaveDialog(true)}>
+                            <LogOut className="w-4 h-4 text-red-600" />
+                        </Button>
+                    )}
+                </div>
+
+                {/* Mensajes del Grupo */}
+                <div className="flex-1 overflow-y-auto py-4 space-y-3">
+                    {loadingGroupMsgs ? (
+                        <p className="text-center text-sm text-gray-400 py-8">Cargando mensajes…</p>
+                    ) : groupMessages.length === 0 ? (
+                        <p className="text-center text-sm text-gray-400 py-8">
+                            Aún no hay mensajes en este grupo. ¡Escribe el primero!
+                        </p>
+                    ) : (
+                        groupMessages.map((msg) => {
+                            const isMine = msg.sender_email === currentUserEmail;
+                            return (
+                                <div key={msg.id} className={`flex flex-col ${isMine ? "items-end" : "items-start"} mb-3`}>
+                                    {!isMine && (
+                                        <span className="text-[10px] text-gray-500 mb-1 ml-1">{msg.sender_name}</span>
+                                    )}
+                                    <div className={`max-w-[75%] px-3.5 py-2 rounded-2xl text-sm ${isMine
+                                        ? "bg-green-600 text-white rounded-br-md"
+                                        : "bg-gray-100 text-gray-900 rounded-bl-md"
+                                        }`}>
+                                        <p className="whitespace-pre-line break-words">{msg.content}</p>
+                                        <p className={`text-[10px] mt-1 ${isMine ? "text-green-200" : "text-gray-400"}`}>
+                                            {timeAgo(msg.created_at)}
+                                        </p>
+                                    </div>
+                                </div>
+                            );
+                        })
+                    )}
+                    <div ref={groupMessagesEndRef} />
+                </div>
+
+                {/* Input del Grupo */}
+                <div className="flex items-center gap-2 pt-3 border-t border-gray-200 shrink-0">
+                    <Input
+                        placeholder="Escribe un mensaje al grupo…"
+                        value={groupMsgText}
+                        onChange={(e) => setGroupMsgText(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendGroupMessage(); } }}
+                        className="flex-1"
+                    />
+                    <Button
+                        size="icon"
+                        className="bg-green-600 hover:bg-green-700 shrink-0 w-10 h-10"
+                        onClick={handleSendGroupMessage}
+                        disabled={sendingGroupMsg || !groupMsgText.trim()}
+                    >
+                        <Send className="w-4 h-4 ml-0.5" />
+                    </Button>
+                </div>
 
                 <Dialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>
                     <DialogContent>
@@ -545,7 +618,7 @@ export function StudentChats() {
                                 return (
                                     <button
                                         key={group.id}
-                                        onClick={() => setSelectedGroup(group)}
+                                        onClick={() => openGroup(group)}
                                         className="w-full text-left px-4 py-3.5 hover:bg-gray-50 transition-colors flex items-center gap-3"
                                     >
                                         <div className="w-10 h-10 bg-gradient-to-br from-green-200 to-green-400 rounded-full flex items-center justify-center text-green-800 font-bold text-sm shrink-0">

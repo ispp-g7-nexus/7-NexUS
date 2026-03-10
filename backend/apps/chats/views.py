@@ -7,7 +7,7 @@ from rest_framework.response import Response
 
 from apps.membership.models import Membership
 
-from .models import ChatGroup, ChatGroupMember, ChatGroupLabel, PrivateConversation, PrivateMessage
+from .models import ChatGroup, ChatGroupMember, ChatGroupLabel, GroupMessage, PrivateConversation, PrivateMessage
 from .permissions import IsAuthenticatedResident, IsResidenceAdmin
 from .serializers import (
 	AddChatMemberSerializer,
@@ -15,6 +15,7 @@ from .serializers import (
 	ChatGroupLabelSerializer,
 	ChatGroupSerializer,
 	ChatResidentSerializer,
+	GroupMessageSerializer,
 	PrivateConversationSerializer,
 	PrivateMessageSerializer,
 	SendMessageSerializer,
@@ -210,6 +211,43 @@ class MyGroupsViewSet(viewsets.ReadOnlyModelViewSet):
 
 		chat_member.delete()
 		return Response(status=status.HTTP_204_NO_CONTENT)
+
+	@action(detail=True, methods=["get", "post"], url_path="messages")
+	def messages(self, request, pk=None):
+		"""GET: listar mensajes del grupo. POST: enviar mensaje."""
+		residence = getattr(request, "residence", None)
+		membership = request.user.memberships.filter(
+			residence=residence,
+			is_active=True,
+		).first()
+		if not membership:
+			raise ValidationError({"detail": "No tienes membresía activa."})
+
+		group = ChatGroup.objects.filter(
+			id=pk,
+			residence=residence,
+			memberships__membership=membership,
+		).first()
+		if not group:
+			raise NotFound("Grupo no encontrado o no eres miembro.")
+
+		if request.method == "GET":
+			msgs = group.messages.select_related("sender__user").order_by("created_at")
+			return Response(GroupMessageSerializer(msgs, many=True).data)
+
+		# POST — enviar mensaje
+		ser = SendMessageSerializer(data=request.data)
+		ser.is_valid(raise_exception=True)
+
+		msg = GroupMessage.objects.create(
+			group=group,
+			sender=membership,
+			content=ser.validated_data["content"],
+		)
+		return Response(
+			GroupMessageSerializer(msg).data,
+			status=status.HTTP_201_CREATED,
+		)
 
 
 class PrivateConversationViewSet(viewsets.ViewSet):
