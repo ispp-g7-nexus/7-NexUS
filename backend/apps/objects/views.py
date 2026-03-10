@@ -85,7 +85,8 @@ class ObjectDetailView(AuthenticatedView):
         if not request.user.is_staff:
             return JsonResponse({"detail": "Unauthorized"}, status=403)
         obj.delete()
-        return JsonResponse({"detail": "Object deleted"}, status=204)
+        # 204 responses must not include a body. Return 200 to keep a JSON payload.
+        return JsonResponse({"detail": "Object deleted"}, status=200)
 
 class ObjectReserveView(AuthenticatedView):
     def post(self, request, object_id):
