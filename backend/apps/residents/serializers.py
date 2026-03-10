@@ -38,8 +38,8 @@ class AdminCreateResidentSerializer(ResidentFieldValidatorMixin, serializers.Ser
     )
     checkin_date = serializers.DateField(required=False, allow_null=True)
     is_active = serializers.BooleanField(default=True)
-    # ID de la habitación a asignar (opcional en la creación)
-    bedroom_id = serializers.IntegerField(required=False, allow_null=True)
+    # ID de la habitación a asignar (obligatorio en la creación)
+    bedroom_id = serializers.IntegerField(required=True, allow_null=False, error_messages={"required": "Debes asignar una habitación al residente.", "null": "Debes asignar una habitación al residente."})
 
     def validate_password(self, value: str) -> str:
         if value and len(value.strip()) < 8:
