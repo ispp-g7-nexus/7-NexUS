@@ -34,6 +34,7 @@ class ChatMemberSerializer(serializers.ModelSerializer):
 class ChatGroupSerializer(serializers.ModelSerializer):
     members = serializers.SerializerMethodField()
     members_list = ChatMemberSerializer(source="memberships", many=True, read_only=True)
+    created_by_email = serializers.SerializerMethodField()
 
     class Meta:
         model = ChatGroup
@@ -45,13 +46,17 @@ class ChatGroupSerializer(serializers.ModelSerializer):
             "can_members_leave",
             "members",
             "members_list",
+            "created_by_email",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "members", "members_list", "created_at", "updated_at"]
+        read_only_fields = ["id", "members", "members_list", "created_by_email", "created_at", "updated_at"]
 
     def get_members(self, obj):
         return obj.memberships.count()
+        
+    def get_created_by_email(self, obj):
+        return obj.created_by.email if obj.created_by else None
 
 
 class ChatGroupCreateUpdateSerializer(serializers.ModelSerializer):
