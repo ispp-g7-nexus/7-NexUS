@@ -1,7 +1,10 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 
-from apps.residents.validators import ResidentFieldValidatorMixin
+from apps.residents.validators import (
+    ResidentFieldValidatorMixin,
+    INVALID_EMAIL_MESSAGE,
+)
 from apps.membership.models import Membership, Role
 from apps.bedrooms.models import Bedroom
 
@@ -33,7 +36,7 @@ class AdminCreateResidentSerializer(ResidentFieldValidatorMixin, serializers.Ser
     )
     email = serializers.EmailField(
         max_length=254,
-        error_messages={"invalid": "Por favor, introduce un correo electrónico válido."},
+        error_messages={"invalid": INVALID_EMAIL_MESSAGE},
     )
     password = serializers.CharField(
         write_only=True,
@@ -61,27 +64,42 @@ class AdminCreateResidentSerializer(ResidentFieldValidatorMixin, serializers.Ser
     def validate(self, attrs: dict) -> dict:
         residence = self.context.get("residence") if hasattr(self, "context") else None
 
-        email = attrs.get("email")
-        room = attrs.get("room")
-        building = attrs.get("building")
-
-        if residence:
-            if email:
-                user = UserModel.objects.filter(email__iexact=email).first()
-                if user:
-                    student_role, _ = Role.objects.get_or_create(
-                        name="Student",
-                        residence=None,
-                        defaults={"description": "Estudiante / Residente", "is_system_default": True},
-                    )
-                    if Membership.objects.filter(user=user, role=student_role, residence=residence).exists():
-                        raise serializers.ValidationError({"email": "Ya existe un residente con ese correo en esta residencia."})
-
-            if room and building:
-                if not Bedroom.objects.filter(residence=residence, numero=room, edificio=building, is_active=True).exists():
-                    raise serializers.ValidationError({"room": "La habitación indicada no existe en esta residencia."})
+        self._validate_email_uniqueness(attrs, residence)
+        self._validate_room_and_building(attrs, residence)
 
         return attrs
+
+    def _validate_email_uniqueness(self, attrs: dict, residence):
+        """Comprueba que no exista ya un residente con el mismo email en la residencia."""
+        if not residence:
+            return
+        email = attrs.get("email")
+        if not email:
+            return
+
+        user = UserModel.objects.filter(email__iexact=email).first()
+        if not user:
+            return
+
+        student_role, _ = Role.objects.get_or_create(
+            name="Student",
+            residence=None,
+            defaults={"description": "Estudiante / Residente", "is_system_default": True},
+        )
+        if Membership.objects.filter(user=user, role=student_role, residence=residence).exists():
+            raise serializers.ValidationError({"email": "Ya existe un residente con ese correo en esta residencia."})
+
+    def _validate_room_and_building(self, attrs: dict, residence):
+        """Valida que la habitación indicada exista en la residencia."""
+        if not residence:
+            return
+        room = attrs.get("room")
+        building = attrs.get("building")
+        if not (room and building):
+            return
+
+        if not Bedroom.objects.filter(residence=residence, numero=room, edificio=building, is_active=True).exists():
+            raise serializers.ValidationError({"room": "La habitación indicada no existe en esta residencia."})
 
 
 class ResidentUpdateSerializer(ResidentFieldValidatorMixin, serializers.Serializer):
@@ -95,7 +113,7 @@ class ResidentUpdateSerializer(ResidentFieldValidatorMixin, serializers.Serializ
     )
     email = serializers.EmailField(
         required=False,
-        error_messages={"invalid": "Por favor, introduce un correo electrónico válido."},
+        error_messages={"invalid": INVALID_EMAIL_MESSAGE},
     )
     room = serializers.CharField(max_length=20, required=False, allow_blank=True)
     building = serializers.CharField(max_length=100, required=False, allow_blank=True)
