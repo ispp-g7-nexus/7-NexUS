@@ -16,7 +16,10 @@ def send_return_reminders():
     window_start = now
     window_end = now + timedelta(hours=24)
 
-    rentals = ObjectRental.objects.filter(end_dategt=window_start, end_datelte=window_end).select_related('user', 'object')
+    rentals = ObjectRental.objects.filter(
+        end_date__gt=window_start,
+        end_date__lte=window_end,
+    ).select_related('user', 'object')
     reminders = []
     for r in rentals:
         reminders.append({
