@@ -11,6 +11,7 @@ class ResidentReadSerializer(serializers.Serializer):
     full_name = serializers.CharField()
     email = serializers.EmailField()
     is_active = serializers.BooleanField()
+    bedroom_id = serializers.IntegerField(allow_null=True)
     room = serializers.CharField(allow_blank=True)
     building = serializers.CharField(allow_blank=True)
     check_in_date = serializers.DateField(allow_null=True)
@@ -35,10 +36,10 @@ class AdminCreateResidentSerializer(ResidentFieldValidatorMixin, serializers.Ser
         allow_blank=True,
         error_messages={"min_length": "La contraseña debe tener al menos 8 caracteres."},
     )
-    room = serializers.CharField(max_length=20, allow_blank=True, default="")
-    building = serializers.CharField(max_length=100, allow_blank=True, default="")
     checkin_date = serializers.DateField(required=False, allow_null=True)
     is_active = serializers.BooleanField(default=True)
+    # ID de la habitación a asignar (opcional en la creación)
+    bedroom_id = serializers.IntegerField(required=False, allow_null=True)
 
     def validate_password(self, value: str) -> str:
         if value and len(value.strip()) < 8:
@@ -61,7 +62,7 @@ class ResidentUpdateSerializer(ResidentFieldValidatorMixin, serializers.Serializ
         required=False,
         error_messages={"invalid": "Por favor, introduce un correo electrónico válido."},
     )
-    room = serializers.CharField(max_length=20, required=False, allow_blank=True)
-    building = serializers.CharField(max_length=100, required=False, allow_blank=True)
     check_in_date = serializers.DateField(required=False, allow_null=True)
     is_active = serializers.BooleanField(required=False)
+    # ID de la habitación; null para desasignar, omitir para no cambiar
+    bedroom_id = serializers.IntegerField(required=False, allow_null=True)

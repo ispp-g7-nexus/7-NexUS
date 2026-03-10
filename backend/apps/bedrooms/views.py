@@ -9,6 +9,7 @@ from apps.common.utils.jwt_auth import resolve_user_from_request
 from apps.membership.models import Membership
 from .models import Bedroom
 from .serializers import BedroomSerializer
+from .services import delete_bedroom, list_available_bedrooms
 
 
 @method_decorator(csrf_exempt, name="dispatch")
@@ -106,15 +107,34 @@ class BedroomUpdateView(AdminRequiredView):
 
 class BedroomDeleteView(AdminRequiredView):
 	def delete(self, request, bedroom_id):
-		bedroom = get_object_or_404(Bedroom, id=bedroom_id, residence=request.residence)
-		if not getattr(request.user, "is_staff", False):
-			return JsonResponse({"detail": "Unauthorized"}, status=403)
-		bedroom.delete()
+		"""Elimina una habitación. Devuelve 409 si tiene residentes activos."""
+		try:
+			deleted = delete_bedroom(bedroom_id, request.residence)
+		except ValueError as exc:
+			return JsonResponse({"detail": str(exc)}, status=409)
+
+		if not deleted:
+			return JsonResponse({"detail": "Bedroom not found."}, status=404)
+
 		return JsonResponse({"detail": "Bedroom deleted"}, status=200)
 
 
-class BedroomResidentsView(AdminRequiredView):
+class AvailableBedroomsView(AdminRequiredView):
 	def get(self, request):
+		"""GET /bedrooms/available/?exclude_resident_id=<id>
+		Devuelve habitaciones activas con hueco. Si se pasa exclude_resident_id,
+		ese residente no cuenta como ocupante (útil al editar).
+		"""
+		if not hasattr(request, "residence") or not request.residence:
+			return JsonResponse({"detail": "No residence context."}, status=400)
+		exclude_param = request.GET.get("exclude_resident_id")
+		exclude_id = int(exclude_param) if exclude_param and exclude_param.isdigit() else None
+		data = list_available_bedrooms(request.residence, exclude_membership_id=exclude_id)
+		return JsonResponse(data, safe=False)
+
+
+class BedroomResidentsView(AdminRequiredView):
+	def get(self, request):		
 		if not hasattr(request, 'residence') or not request.residence:
 			return JsonResponse({"detail": "No residence context."}, status=400)
 		qs = Membership.objects.filter(
