@@ -76,21 +76,30 @@ El plan abarca todas las funcionalidades del sistema: autenticación, gestión d
 ### 2.2 Objetivos Específicos
 
 - Alcanzar al menos un **80% de cobertura de código** en cada módulo funcional
-- **Cero bugs críticos** en producción
-- **Compatibilidad** con navegadores modernos y dispositivos móviles
-- Asegurar **Escalabilidad** del sistema
+- Reducir al mínimo la aparición de **errores críticos en producción**
+- Garantizar **compatibilidad** con navegadores modernos y dispositivos móviles
+- Verificar que el sistema pueda soportar **múltiples residencias y usuarios concurrentes**
 
 ---
 
 ## 3. Alcance y Principios de Testing
 
-### 3.1 Filosofía de Cobertura Universal
+### 3.1 Principio de Cobertura de Pruebas
 
-**Todos los módulos funcionales del sistema NexUS están sujetos a pruebas exhaustivas**, independientemente de su nombre, estructura final o implementación específica. Esta estrategia universal garantiza que cualquier componente que contribuya a la funcionalidad del sistema mantenga los estándares de calidad establecidos.
+Todos los módulos funcionales del sistema NexUS deben incluir pruebas automatizadas que validen su comportamiento. Esto incluye tanto componentes de backend como de frontend.
+
+El objetivo es garantizar que cada funcionalidad relevante del sistema disponga de pruebas que permitan detectar errores durante el desarrollo y facilitar el mantenimiento del código.
+
+Las pruebas deben cubrir:
+
+- Lógica de negocio
+- Validación de datos
+- Interacciones entre módulos
+- Manejo de errores y casos límite
 
 ### 3.2 Categorización por Criticidad
 
-#### 3.2.1 Módulos de Criticidad Máxima
+#### 3.2.1 Módulos Críticos
 **Cobertura requerida: Mínimo 80%**
 
 Todos los módulos que gestionen:
@@ -103,12 +112,15 @@ Todos los módulos que gestionen:
 #### 3.2.2 Módulos de Funcionalidad Principal  
 **Cobertura requerida: Mínimo 80%**
 
-Todos los módulos que implementen:
-- **Reservas** de cualquier tipo (espacios, objetos, servicios)
-- **Gestión de incidencias** y comunicaciones
+Todos los módulos que implementen las funcionalidades principales de la aplicación, entre ellos:
+- **Reservas** de cualquier tipo (espacios y objetos)
+- Gestión de **incidencias** y comunicaciones
 - **Algoritmos de negocio** (matching, recomendaciones)
 - **Interfaces de usuario** principales
-- **APIs públicas** y endpoints críticos
+- **Eventos** de cualquier tipo
+- **Chats** de residentes y administradores
+- Gestión y visualización de **menús**
+- Control de acceso
 
 #### 3.2.3 Módulos de Soporte y Utilidades
 **Cobertura requerida: Mínimo 75%**
@@ -153,7 +165,6 @@ Independientemente de la funcionalidad específica, todo módulo debe cumplir:
 - **Tests de integración** para interacciones con otros módulos  
 - **Validación de entrada** para todos los inputs
 - **Manejo de errores** y casos límite
-- **Test de seguridad** para endpoints que manejen datos sensibles
 
 ### 3.5 Exclusiones Específicas
 
@@ -171,31 +182,40 @@ Los siguientes elementos **NO requieren testing exhaustivo**:
 #### 4.1.1 Pruebas Unitarias
 
 **Backend (pytest)**
-- **Modelos**: Validación de datos, relaciones, métodos custom
-- **Vistas**: Lógica de negocio, permisos, responses
-- **Servicios**: Algoritmos de negocio, procesamientos
-- **Serializers**: Validación y transformación de datos
+- **Modelos**: Validación de datos, relaciones entre entidades y métodos personalizados
+- **Vistas**: Lógica asociada a cada endpoint, permisos y códigos de respuesta
+- **Servicios**: Lógica de negocio y operaciones del dominio
+- **Serializers**: Validación y transformación de datos entre API y modelo
 
 **Frontend (Jest)**
-- **Componentes**: Renderizado, props, eventos, estado
-- **Hooks**: Lógica de estado y efectos
-- **Servicios**: Llamadas API, manejo de errores
-- **Utilidades**: Funciones helper, formatters
+- **Componentes**: Renderizado, props, eventos y cambios de estado
+- **Hooks**: Gestión del estado y efectos secundarios
+- **Servicios**: Llamadas a la API y gestión de errores
+- **Utilidades**: Funciones auxiliares y transformación de datos
 
 #### 4.1.2 Pruebas de Integración
 
 **Backend (Django Test Framework)**
-- **APIs**: Request/Response completos
-- **Autenticación**: Flujos de login/logout
-- **Permisos**: Autorización por roles
+
+Se verificarán flujos completos de interacción con la API:
+
+- **APIs**: Peticiones HTTP completas y verificación de respuestas
+- **Autenticación**: Flujos de login, logout y gestión de sesión
+- **Permisos**: Acceso a recursos según roles de usuario
+
+También se validará que los principales endpoints funcionen correctamente cuando interactúan con la base de datos y otros servicios internos.
 
 #### 4.1.3 Pruebas de Rendimiento
 
-**Grafana k6 con Mocks**
-- **Carga normal**: Usuarios concurrentes representativos del uso real
-- **Tests de estrés**: Carga pico para validar límites del sistema
-- **Endpoints críticos**: Reservas, autenticación, listados principales
-- **Tiempo de respuesta**: Objetivo de performance según SLA definido
+Las pruebas de carga se realizarán utilizando **k6** para evaluar el comportamiento del sistema bajo distintos niveles de uso.
+
+Se evaluarán principalmente:
+
+- **Carga normal**: simulación de usuarios concurrentes representativos del uso esperado
+- **Pruebas de estrés**: incremento progresivo de usuarios hasta identificar los límites del sistema
+- **Endpoints críticos**: autenticación, reservas y listados principales
+- **Tiempo de respuesta** de las APIs más utilizadas
+- **Estabilidad del sistema** ante múltiples peticiones simultáneas
 
 ---
 
@@ -232,13 +252,12 @@ Los siguientes elementos **NO requieren testing exhaustivo**:
 
 ### 6.1 Objetivos de Cobertura
 
-| Categoría | Objetivo Mínimo | Objetivo Ideal | Medición |
-|-----------|-----------------|----------------|----------|
-| **Backend Crítico** | 80% | 95% | pytest-cov |
-| **Backend Soporte** | 75% | 85% | pytest-cov |
-| **Frontend Crítico** | 80% | 90% | Jest coverage |
-| **Frontend Soporte** | 70% | 80% | Jest coverage |
-| **Integración** | 90% | 95% | Django TestCase |
+| Categoría | Cobertura mínima | Herramienta |
+|-----------|-----------------|-------------|
+| **Backend (módulos críticos)** | 80% | pytest y pytest-cov |
+| **Backend (módulos de soporte)** | 75% | pytest y pytest-cov |
+| **Frontend (componentes principales)** | 80% | Jest |
+| **Frontend (componentes de soporte)** | 70% | Jest |
 
 ### 6.2 Criterios de Calidad
 
@@ -254,29 +273,17 @@ Los siguientes elementos **NO requieren testing exhaustivo**:
 
 ### 6.3 Métricas de Seguimiento
 
-| Métrica | KPI | Herramienta |
-|---------|-----|-------------|
-| **Cobertura de código** | >80% promedio | pytest-cov, Jest |
-| **Bugs encontrados** | 0 bugs críticos | pytest, Jest, Grafana k6 |
+| Métrica | Objetivo | Herramienta |
+|---------|---------|-------------|
+| **Cobertura de código** | 80% promedio | pytest-cov, Jest |
+| **Errores críticos detectados en producción** | Mantener el número al mínimo posible | Sistema de seguimiento de incidencias |
 
 ---
 
 ## 7. Conclusión
 
-Este **Plan de Pruebas** para NexUS establece una **metodología robusta y escalable** que garantiza la calidad del software independientemente de la evolución futura del proyecto.
+Este plan de pruebas establece las bases para mantener un nivel adecuado de calidad en el desarrollo del proyecto NexUS.
 
-### 7.1 Garantías de Calidad
+La estrategia definida combina pruebas unitarias, de integración y de rendimiento con el objetivo de detectar errores durante el desarrollo y reducir su impacto en producción.
 
-Con este plan aseguramos que **todos los módulos funcionales** mantengan:
-- **Mínimo 80% cobertura** en componentes críticos y funcionalidades principales
-- **Mínimo 75% cobertura** en módulos de soporte y utilidades
-- **Testing continuo** durante todo el ciclo de desarrollo
-- **Adaptabilidad** a cambios de arquitectura y nuevos requerimientos
-
-### 7.2 Sostenibilidad a Largo Plazo
-
-La **metodología de testing evolutiva** establecida garantiza que:
-- Cualquier **nuevo módulo** hereda automáticamente los estándares de su categoría
-- Los **criterios de calidad** se mantienen sin intervención manual
-- La **eficiencia** mejora con la experiencia del equipo
-- La **deuda técnica** se minimiza mediante testing proactivo
+El uso de herramientas automatizadas permitirá ejecutar las pruebas de forma continua durante el ciclo de desarrollo, facilitando el mantenimiento del sistema y la evolución futura del proyecto.
