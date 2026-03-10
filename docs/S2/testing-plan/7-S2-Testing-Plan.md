@@ -276,7 +276,7 @@ Se evaluarán principalmente:
 | Métrica | Objetivo | Herramienta |
 |---------|---------|-------------|
 | **Cobertura de código** | 80% promedio | pytest-cov, Jest |
-| **Errores críticos detectados en producción** | Mantener el número al mínimo posible | Sistema de seguimiento de incidencias |
+| **Errores críticos detectados en producción** | Mantener el número al mínimo posible | Feedback de usuarios piloto |
 
 ---
 
