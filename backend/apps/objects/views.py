@@ -8,7 +8,25 @@ from django.db.utils import IntegrityError
 from django.contrib.auth import get_user_model
 from django.views.decorators.csrf import csrf_exempt
 from apps.common.utils.jwt_auth import resolve_user_from_request
-from django.db.models import Q, Count
+from django.db.models import Q
+
+
+def _serialize_object(obj):
+    is_available_now = obj.can_rent()
+    return {
+        'id': obj.id,
+        'name': obj.name,
+        'description': obj.description,
+        'location': obj.location,
+        # "Disponibilidad" representa si puede reservarse ahora mismo.
+        'availability': is_available_now,
+        # Bandera de configuración para admin/debug.
+        'lending_enabled': obj.available,
+        'image_url': obj.image_url,
+        'tags': obj.tags,
+        'rentals_count': obj.rentals.count(),
+        'can_rent': is_available_now,
+    }
 
 @method_decorator(csrf_exempt, name='dispatch')
 class AuthenticatedView(View):
@@ -31,20 +49,7 @@ class ObjectListView(AuthenticatedView):
             return JsonResponse({"detail": "No residence context."}, status=400)
 
         objs = Object.objects.filter(residence=request.residence)
-        data = []
-        for obj in objs:
-            rentals_count = obj.rentals.count()
-            data.append({
-                'id': obj.id,
-                'name': obj.name,
-                'description': obj.description,
-                'location': obj.location,
-                'availability': obj.available,
-                'image_url': obj.image_url,
-                'tags': obj.tags,
-                'rentals_count': rentals_count,
-                'can_rent': obj.can_rent(),
-            })
+        data = [_serialize_object(obj) for obj in objs]
         return JsonResponse(data, safe=False)
 
     def post(self, request):
@@ -67,18 +72,7 @@ class ObjectListView(AuthenticatedView):
 class ObjectDetailView(AuthenticatedView):
     def get(self, request, object_id):
         obj = get_object_or_404(Object, id=object_id, residence=request.residence)
-        rentals_count = obj.rentals.count()
-        return JsonResponse({
-            'id': obj.id,
-            'name': obj.name,
-            'description': obj.description,
-            'location': obj.location,
-            'image_url': obj.image_url,
-            'tags': obj.tags,
-            'availability': obj.available,
-            'rentals_count': rentals_count,
-            'can_rent': obj.can_rent(),
-        })
+        return JsonResponse(_serialize_object(obj))
 
     def delete(self, request, object_id):
         obj = get_object_or_404(Object, id=object_id, residence=request.residence)
@@ -96,6 +90,9 @@ class ObjectReserveView(AuthenticatedView):
             end = body.get('end_date')
             if not start or not end:
                 return JsonResponse({"detail": "start_date y end_date son requeridos."}, status=400)
+
+            if not obj.available:
+                return JsonResponse({"detail": "Este objeto no está disponible para préstamo."}, status=400)
 
             # Check overlapping rentals
             overlapping = ObjectRental.objects.filter(object=obj).filter(
@@ -180,16 +177,6 @@ class UserReservationsView(AuthenticatedView):
                         'last_name': rental.user.last_name,
                     }
                 },
-                'object': {
-                    'id': rental.object.id,
-                    'name': rental.object.name,
-                    'description': rental.object.description,
-                    'location': rental.object.location,
-                    'availability': rental.object.available,
-                    'image_url': rental.object.image_url,
-                    'tags': rental.object.tags,
-                    'rentals_count': rental.object.rentals.count(),
-                    'can_rent': rental.object.can_rent(),
-                }
+                'object': _serialize_object(rental.object),
             })
         return JsonResponse(data, safe=False)
