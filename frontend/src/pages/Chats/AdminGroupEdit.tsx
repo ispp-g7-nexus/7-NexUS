@@ -1,57 +1,93 @@
 import { ArrowLeft, UserPlus, X, Plus, Users } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
-
-interface Member {
-    id: string;
-    name: string;
-    email: string;
-    avatar?: string;
-    isAdmin: boolean;
-}
-
-interface Group {
-    id: string;
-    name: string;
-    description: string;
-    members: number;
-    type: "general" | "floor" | "activity" | "private";
-    canLeave: boolean;
-    membersList: Member[];
-}
+import { chatsService, type ChatGroup, type ChatLabel } from "../../services/chats";
 
 interface AdminGroupEditProps {
-    group: Group;
+    group: ChatGroup;
     onBack: () => void;
+    onGroupUpdated: (group: ChatGroup) => void;
 }
 
-export function AdminGroupEdit({ group, onBack }: AdminGroupEditProps) {
+export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEditProps) {
+    const [currentGroup, setCurrentGroup] = useState(group);
     const [groupName, setGroupName] = useState(group.name);
     const [groupDescription, setGroupDescription] = useState(group.description);
-    const [groupType, setGroupType] = useState<"general" | "floor" | "activity" | "private">(group.type);
-    const [canLeave, setCanLeave] = useState(group.canLeave);
+    const [groupType, setGroupType] = useState<ChatLabel>(group.label);
+    const [canLeave, setCanLeave] = useState(group.can_members_leave);
+    const [newMemberEmail, setNewMemberEmail] = useState("");
+    const [newMemberIsAdmin, setNewMemberIsAdmin] = useState(false);
+    const [saving, setSaving] = useState(false);
 
-    const handleRemoveMember = (memberId: string) => {
-        // TODO: Lógica para eliminar un miembro del grupo
-        console.log('Eliminar miembro:', memberId);
+    const handleRemoveMember = async (memberId: number) => {
+        try {
+            await chatsService.removeMember(currentGroup.id, memberId);
+            const updated = {
+                ...currentGroup,
+                members_list: currentGroup.members_list.filter((member) => member.id !== memberId),
+                members: currentGroup.members - 1,
+            };
+            setCurrentGroup(updated);
+            onGroupUpdated(updated);
+            toast.success("Miembro eliminado correctamente.");
+        } catch (err: unknown) {
+            toast.error(err instanceof Error ? err.message : "No se pudo eliminar el miembro.");
+        }
     };
 
-    const handleMakeAdmin = (memberId: string) => {
-        // TODO: Lógica para hacer administrador a un miembro
-        console.log('Hacer administrador:', memberId);
+    const handleMakeAdmin = async (memberId: number) => {
+        try {
+            const updated = await chatsService.updateMemberRole(currentGroup.id, memberId, true);
+            setCurrentGroup(updated);
+            onGroupUpdated(updated);
+            toast.success("Miembro promocionado a admin.");
+        } catch (err: unknown) {
+            toast.error(err instanceof Error ? err.message : "No se pudo actualizar el rol del miembro.");
+        }
     };
 
-    const handleSaveChanges = () => {
-        // TODO: Lógica para guardar los cambios
-        console.log('Guardar cambios del grupo:', {
-            id: group.id,
-            name: groupName,
-            description: groupDescription,
-            type: groupType,
-            canLeave
-        });
-        onBack();
+    const handleAddMember = async () => {
+        const email = newMemberEmail.trim();
+        if (!email) {
+            toast.error("Debes introducir un email para añadir un miembro.");
+            return;
+        }
+
+        try {
+            const updated = await chatsService.addMember(currentGroup.id, {
+                email,
+                is_admin: newMemberIsAdmin,
+            });
+            setCurrentGroup(updated);
+            onGroupUpdated(updated);
+            setNewMemberEmail("");
+            setNewMemberIsAdmin(false);
+            toast.success("Miembro añadido correctamente.");
+        } catch (err: unknown) {
+            toast.error(err instanceof Error ? err.message : "No se pudo añadir el miembro.");
+        }
+    };
+
+    const handleSaveChanges = async () => {
+        setSaving(true);
+        try {
+            const updated = await chatsService.updateGroup(currentGroup.id, {
+                name: groupName.trim(),
+                description: groupDescription.trim(),
+                label: groupType,
+                can_members_leave: canLeave,
+            });
+            setCurrentGroup(updated);
+            onGroupUpdated(updated);
+            toast.success("Grupo actualizado correctamente.");
+            onBack();
+        } catch (err: unknown) {
+            toast.error(err instanceof Error ? err.message : "No se pudo guardar el grupo.");
+        } finally {
+            setSaving(false);
+        }
     };
 
     return (
@@ -133,17 +169,34 @@ export function AdminGroupEdit({ group, onBack }: AdminGroupEditProps) {
                     <div className="flex items-center gap-2">
                         <UserPlus className="w-5 h-5 text-gray-600" />
                         <h3 className="font-medium text-gray-900">
-                            Participantes ({group.membersList.length})
+                            Participantes ({currentGroup.members_list.length})
                         </h3>
                     </div>
-                    <Button size="sm" className="bg-green-600 hover:bg-green-700">
-                        <Plus className="w-4 h-4 mr-2" />
-                        Agregar Miembro
-                    </Button>
+                    <div className="flex items-center gap-3">
+                        <Input
+                            value={newMemberEmail}
+                            onChange={(e) => setNewMemberEmail(e.target.value)}
+                            placeholder="email@ejemplo.com"
+                            className="w-52"
+                        />
+                        <label className="text-xs text-gray-600 flex items-center gap-2">
+                            <input
+                                type="checkbox"
+                                checked={newMemberIsAdmin}
+                                onChange={(e) => setNewMemberIsAdmin(e.target.checked)}
+                                className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                            />
+                            Admin
+                        </label>
+                        <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={handleAddMember}>
+                            <Plus className="w-4 h-4 mr-2" />
+                            Agregar Miembro
+                        </Button>
+                    </div>
                 </div>
                 
                 <div className="divide-y divide-gray-200">
-                    {group.membersList.map((member) => (
+                    {currentGroup.members_list.map((member) => (
                         <div key={member.id} className="p-4 flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
@@ -151,8 +204,8 @@ export function AdminGroupEdit({ group, onBack }: AdminGroupEditProps) {
                                 </div>
                                 <div>
                                     <div className="flex items-center gap-2">
-                                        <p className="font-medium text-gray-900">{member.name}</p>
-                                        {member.isAdmin && (
+                                        <p className="font-medium text-gray-900">{member.full_name}</p>
+                                        {member.is_admin && (
                                             <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
                                                 Admin
                                             </span>
@@ -162,7 +215,7 @@ export function AdminGroupEdit({ group, onBack }: AdminGroupEditProps) {
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
-                                {!member.isAdmin && (
+                                {!member.is_admin && (
                                     <Button 
                                         variant="outline" 
                                         size="sm"
@@ -192,8 +245,8 @@ export function AdminGroupEdit({ group, onBack }: AdminGroupEditProps) {
                 <Button variant="outline" onClick={onBack}>
                     Cancelar
                 </Button>
-                <Button className="bg-green-600 hover:bg-green-700" onClick={handleSaveChanges}>
-                    Guardar Cambios
+                <Button className="bg-green-600 hover:bg-green-700" onClick={handleSaveChanges} disabled={saving}>
+                    {saving ? "Guardando..." : "Guardar Cambios"}
                 </Button>
             </div>
         </div>
