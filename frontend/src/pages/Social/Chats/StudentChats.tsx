@@ -1,4 +1,4 @@
-import { ArrowLeft, LogOut, MessageSquare, Plus, Search, Send, Users } from "lucide-react";
+import { ArrowLeft, LogOut, MessageSquare, Plus, Search, Send, Tag, Users } from "lucide-react";
 import { type ReactElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "../../../components/ui/button";
@@ -251,8 +251,8 @@ export function StudentChats() {
                             return (
                                 <div key={msg.id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
                                     <div className={`max-w-[75%] px-3.5 py-2 rounded-2xl text-sm ${isMine
-                                            ? "bg-green-600 text-white rounded-br-md"
-                                            : "bg-gray-100 text-gray-900 rounded-bl-md"
+                                        ? "bg-green-600 text-white rounded-br-md"
+                                        : "bg-gray-100 text-gray-900 rounded-bl-md"
                                         }`}>
                                         <p className="whitespace-pre-line break-words">{msg.content}</p>
                                         <p className={`text-[10px] mt-1 ${isMine ? "text-green-200" : "text-gray-400"}`}>
@@ -293,7 +293,11 @@ export function StudentChats() {
        ══════════════════════════════════════════════════════════════ */
 
     if (selectedGroup) {
-        const config = labelConfig[selectedGroup.label];
+        const config = labelConfig[selectedGroup.label as keyof typeof labelConfig] ?? {
+            label: selectedGroup.label,
+            color: "bg-amber-100 text-amber-800",
+            icon: <Tag className="w-3 h-3" />,
+        };
         return (
             <div className="space-y-5">
                 <div className="flex items-center gap-3">
@@ -533,7 +537,11 @@ export function StudentChats() {
                     ) : (
                         <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100 overflow-hidden">
                             {filteredGroups.map((group) => {
-                                const cfg = labelConfig[group.label];
+                                const cfg = labelConfig[group.label as keyof typeof labelConfig] ?? {
+                                    label: group.label,
+                                    color: "bg-amber-100 text-amber-800",
+                                    icon: <Tag className="w-3 h-3" />,
+                                };
                                 return (
                                     <button
                                         key={group.id}

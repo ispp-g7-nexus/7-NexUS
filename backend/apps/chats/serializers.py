@@ -3,9 +3,16 @@ from rest_framework import serializers
 
 from apps.membership.models import Membership
 
-from .models import ChatGroup, ChatGroupMember
+from .models import ChatGroup, ChatGroupMember, ChatGroupLabel
 
 User = get_user_model()
+
+
+class ChatGroupLabelSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ChatGroupLabel
+        fields = ["id", "name", "created_at"]
+        read_only_fields = ["id", "created_at"]
 
 
 class ChatMemberSerializer(serializers.ModelSerializer):

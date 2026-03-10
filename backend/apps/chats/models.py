@@ -20,7 +20,6 @@ class ChatGroup(models.Model):
 	description = models.TextField(blank=True)
 	label = models.CharField(
 		max_length=20,
-		choices=LabelChoices.choices,
 		default=LabelChoices.GENERAL,
 	)
 	can_members_leave = models.BooleanField(default=True)
@@ -71,6 +70,30 @@ class ChatGroupMember(models.Model):
 
 	def __str__(self) -> str:
 		return f"{self.group_id}:{self.membership_id}"
+
+
+class ChatGroupLabel(models.Model):
+	"""Etiquetas personalizadas creadas por el admin."""
+
+	residence = models.ForeignKey(
+		Residence,
+		on_delete=models.CASCADE,
+		related_name="custom_chat_labels",
+	)
+	name = models.CharField(max_length=50)
+	created_at = models.DateTimeField(auto_now_add=True)
+
+	class Meta:
+		ordering = ["name"]
+		constraints = [
+			models.UniqueConstraint(
+				fields=["residence", "name"],
+				name="uniq_chat_label_per_residence",
+			)
+		]
+
+	def __str__(self) -> str:
+		return self.name
 
 
 class PrivateConversation(models.Model):

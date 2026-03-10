@@ -7,11 +7,12 @@ from rest_framework.response import Response
 
 from apps.membership.models import Membership
 
-from .models import ChatGroup, ChatGroupMember, PrivateConversation, PrivateMessage
+from .models import ChatGroup, ChatGroupMember, ChatGroupLabel, PrivateConversation, PrivateMessage
 from .permissions import IsAuthenticatedResident, IsResidenceAdmin
 from .serializers import (
 	AddChatMemberSerializer,
 	ChatGroupCreateUpdateSerializer,
+	ChatGroupLabelSerializer,
 	ChatGroupSerializer,
 	ChatResidentSerializer,
 	PrivateConversationSerializer,
@@ -127,6 +128,25 @@ class ChatGroupViewSet(viewsets.ModelViewSet):
 
 		member.delete()
 		return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ChatGroupLabelViewSet(viewsets.ModelViewSet):
+	"""CRUD de etiquetas personalizadas para grupos de chat."""
+
+	permission_classes = [IsResidenceAdmin]
+	serializer_class = ChatGroupLabelSerializer
+
+	def get_queryset(self):
+		residence = getattr(self.request, "residence", None)
+		if not residence:
+			return ChatGroupLabel.objects.none()
+		return ChatGroupLabel.objects.filter(residence=residence)
+
+	def perform_create(self, serializer):
+		residence = getattr(self.request, "residence", None)
+		if not residence:
+			raise ValidationError({"detail": "No se ha determinado la residencia."})
+		serializer.save(residence=residence)
 
 
 class MyGroupsViewSet(viewsets.ReadOnlyModelViewSet):
