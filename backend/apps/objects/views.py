@@ -1,4 +1,5 @@
 import json
+import re
 from django.http import JsonResponse
 from django.views import View
 from django.utils.decorators import method_decorator
@@ -8,7 +9,22 @@ from django.db.utils import IntegrityError
 from django.contrib.auth import get_user_model
 from django.views.decorators.csrf import csrf_exempt
 from apps.common.utils.jwt_auth import resolve_user_from_request
-from django.db.models import Q, Count
+from django.db.models import Q
+
+OBJECT_NAME_PATTERN = re.compile(r"^[\w\-\.\(\), ]+$")
+
+
+def _validate_object_name(raw_name) -> tuple[str, str | None]:
+    name = str(raw_name or "").strip()
+    if not name:
+        return "", "El nombre del objeto es obligatorio."
+    if not OBJECT_NAME_PATTERN.fullmatch(name):
+        return (
+            "",
+            "El nombre contiene caracteres no válidos. Usa letras, números, espacios, guiones, paréntesis, comas o puntos.",
+        )
+    return name, None
+
 
 @method_decorator(csrf_exempt, name='dispatch')
 class AuthenticatedView(View):
@@ -50,10 +66,20 @@ class ObjectListView(AuthenticatedView):
     def post(self, request):
         if not hasattr(request, 'residence') or not request.residence:
             return JsonResponse({"detail": "No residence context."}, status=400)
+        if not request.user.is_staff:
+            return JsonResponse({"detail": "No tienes permisos para crear objetos."}, status=403)
         try:
             body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"detail": "JSON inválido."}, status=400)
+
+        name, name_error = _validate_object_name(body.get("name"))
+        if name_error:
+            return JsonResponse({"detail": name_error}, status=400)
+
+        try:
             obj = Object.objects.create(
-                name=body.get('name'),
+                name=name,
                 description=body.get('description', ''),
                 location=body.get('location', ''),
                 image_url=body.get('image_url', None),
