@@ -1,57 +1,27 @@
 import { MessageSquare, Users, Plus, Search, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { type ReactElement, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { AdminGroupEdit } from "./AdminGroupEdit";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "../../components/ui/dialog";
+import { chatsService, type ChatGroup, type ChatLabel, type UpsertChatGroupPayload } from "../../services/chats";
 
-interface Group {
-    id: string;
-    name: string;
-    description: string;
-    members: number;
-    type: "general" | "floor" | "activity" | "private";
-    canLeave: boolean;
-    membersList: Member[];
-}
+const EMPTY_GROUP_FORM: UpsertChatGroupPayload = {
+    name: "",
+    description: "",
+    label: "general",
+    can_members_leave: true,
+};
 
-interface Member {
-    id: string;
-    name: string;
-    email: string;
-    avatar?: string;
-    isAdmin: boolean;
-}
-
-const mockMembers: Member[] = [
-    { id: "1", name: "Ana García", email: "ana.garcia@email.com", isAdmin: true },
-    { id: "2", name: "Carlos López", email: "carlos.lopez@email.com", isAdmin: false },
-    { id: "3", name: "María Rodríguez", email: "maria.rodriguez@email.com", isAdmin: false },
-    { id: "4", name: "Juan Martín", email: "juan.martin@email.com", isAdmin: false },
-    { id: "5", name: "Laura Sánchez", email: "laura.sanchez@email.com", isAdmin: false },
-];
-
-const mockGroups: Group[] = [
-    {
-        id: "1",
-        name: "General - Residencia",
-        description: "Grupo general para todos los residentes",
-        members: 156,
-        type: "general",
-        canLeave: false,
-        membersList: mockMembers
-    },
-    {
-        id: "2", 
-        name: "Planta 1",
-        description: "Grupo para residentes de la primera planta",
-        members: 24,
-        type: "floor",
-        canLeave: true,
-        membersList: mockMembers.slice(0, 3)
-    }
-];
-
-const typeConfig = {
+const typeConfig: Record<ChatLabel, { label: string; color: string; icon: ReactElement }> = {
     general: { 
         label: "General", 
         color: "bg-blue-100 text-blue-800",
@@ -77,30 +47,112 @@ const typeConfig = {
 export function AdminChats() {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedType, setSelectedType] = useState<string>("all");
-    const [editingGroup, setEditingGroup] = useState<Group | null>(null);
+    const [groups, setGroups] = useState<ChatGroup[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [isUnauthorized, setIsUnauthorized] = useState(false);
+    const [editingGroup, setEditingGroup] = useState<ChatGroup | null>(null);
+    const [isCreateOpen, setIsCreateOpen] = useState(false);
+    const [isCreating, setIsCreating] = useState(false);
+    const [createForm, setCreateForm] = useState<UpsertChatGroupPayload>(EMPTY_GROUP_FORM);
 
-    const filteredGroups = mockGroups.filter(group => {
-        const matchesSearch = group.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            group.description.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesType = selectedType === "all" || group.type === selectedType;
-        return matchesSearch && matchesType;
-    });
+    const refreshGroups = async () => {
+        setLoading(true);
+        try {
+            const data = await chatsService.listGroups();
+            setGroups(data);
+            setIsUnauthorized(false);
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            if (msg.includes("401") || msg.includes("403")) {
+                setIsUnauthorized(true);
+            } else {
+                toast.error("No se pudieron cargar los grupos de chat.");
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        refreshGroups();
+    }, []);
+
+    const filteredGroups = useMemo(() => {
+        return groups.filter((group) => {
+            const matchesSearch =
+                group.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                group.description.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesType = selectedType === "all" || group.label === selectedType;
+            return matchesSearch && matchesType;
+        });
+    }, [groups, searchTerm, selectedType]);
 
     const handleBackToList = () => {
         setEditingGroup(null);
     };
 
-    const handleEditGroup = (group: Group) => {
+    const handleEditGroup = (group: ChatGroup) => {
         setEditingGroup(group);
     };
 
-    const handleDeleteGroup = (groupId: string) => {
-        // TODO: Lógica para eliminar el grupo
-        console.log('Eliminar grupo:', groupId);
+    const handleDeleteGroup = async (groupId: number) => {
+        const confirmed = window.confirm("¿Seguro que quieres eliminar este grupo?");
+        if (!confirmed) return;
+
+        try {
+            await chatsService.deleteGroup(groupId);
+            setGroups((prev) => prev.filter((group) => group.id !== groupId));
+            toast.success("Grupo eliminado correctamente.");
+        } catch (err: unknown) {
+            toast.error(err instanceof Error ? err.message : "No se pudo eliminar el grupo.");
+        }
+    };
+
+    const handleCreateGroup = async () => {
+        if (!createForm.name.trim()) {
+            toast.error("El nombre del grupo es obligatorio.");
+            return;
+        }
+
+        setIsCreating(true);
+        try {
+            const created = await chatsService.createGroup({
+                ...createForm,
+                name: createForm.name.trim(),
+                description: createForm.description.trim(),
+            });
+            setGroups((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
+            setCreateForm(EMPTY_GROUP_FORM);
+            setIsCreateOpen(false);
+            toast.success("Grupo creado correctamente.");
+        } catch (err: unknown) {
+            toast.error(err instanceof Error ? err.message : "No se pudo crear el grupo.");
+        } finally {
+            setIsCreating(false);
+        }
+    };
+
+    const handleGroupUpdated = (updated: ChatGroup) => {
+        setGroups((prev) => prev.map((group) => (group.id === updated.id ? updated : group)));
+        setEditingGroup(updated);
+    };
+
+    if (isUnauthorized) {
+        return (
+            <div className="flex items-center justify-center h-64 text-gray-500">
+                No tienes permisos para gestionar los chats.
+            </div>
+        );
     };
 
     if (editingGroup) {
-        return <AdminGroupEdit group={editingGroup} onBack={handleBackToList} />;
+        return (
+            <AdminGroupEdit
+                group={editingGroup}
+                onBack={handleBackToList}
+                onGroupUpdated={handleGroupUpdated}
+            />
+        );
     }
 
     return (
@@ -110,7 +162,7 @@ export function AdminChats() {
                     <h1 className="text-2xl font-bold text-gray-900">Grupos</h1>
                     <p className="text-sm text-gray-500 mt-1">Gestiona los grupos de chat de la residencia</p>
                 </div>
-                <Button className="bg-green-600 hover:bg-green-700">
+                <Button className="bg-green-600 hover:bg-green-700" onClick={() => setIsCreateOpen(true)}>
                     <Plus className="w-4 h-4 mr-2" />
                     Crear Grupo
                 </Button>
@@ -152,7 +204,7 @@ export function AdminChats() {
 
                 <div className="divide-y divide-gray-200">
                     {filteredGroups.map((group) => {
-                        const config = typeConfig[group.type];
+                        const config = typeConfig[group.label];
                         return (
                             <div key={group.id} className="p-4 hover:bg-gray-50 transition-colors">
                                 <div className="flex items-start justify-between">
@@ -200,6 +252,10 @@ export function AdminChats() {
                 </div>
             </div>
 
+            {loading && (
+                <div className="text-sm text-gray-500">Cargando grupos...</div>
+            )}
+
             {filteredGroups.length === 0 && (
                 <div className="text-center py-12">
                     <MessageSquare className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -207,6 +263,76 @@ export function AdminChats() {
                     <p className="text-gray-500">Intenta cambiar los filtros de búsqueda o crear un nuevo grupo.</p>
                 </div>
             )}
+
+            <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Crear nuevo grupo</DialogTitle>
+                        <DialogDescription>
+                            Define el nombre, descripción, etiqueta y si los miembros pueden abandonarlo.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+                            <Input
+                                value={createForm.name}
+                                onChange={(e) => setCreateForm((prev) => ({ ...prev, name: e.target.value }))}
+                                placeholder="Ej. Grupo General"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+                            <textarea
+                                value={createForm.description}
+                                onChange={(e) => setCreateForm((prev) => ({ ...prev, description: e.target.value }))}
+                                rows={3}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Etiqueta</label>
+                            <select
+                                value={createForm.label}
+                                onChange={(e) => setCreateForm((prev) => ({ ...prev, label: e.target.value as ChatLabel }))}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                            >
+                                <option value="general">General</option>
+                                <option value="floor">Por planta</option>
+                                <option value="activity">Actividades</option>
+                                <option value="private">Privado</option>
+                            </select>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            <input
+                                type="checkbox"
+                                id="create-can-leave"
+                                checked={createForm.can_members_leave}
+                                onChange={(e) =>
+                                    setCreateForm((prev) => ({ ...prev, can_members_leave: e.target.checked }))
+                                }
+                                className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                            />
+                            <label htmlFor="create-can-leave" className="text-sm text-gray-700">
+                                Los miembros pueden abandonar el grupo
+                            </label>
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
+                            Cancelar
+                        </Button>
+                        <Button className="bg-green-600 hover:bg-green-700" onClick={handleCreateGroup} disabled={isCreating}>
+                            {isCreating ? "Creando..." : "Crear grupo"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

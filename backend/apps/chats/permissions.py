@@ -17,7 +17,7 @@ class IsResidenceAdmin(permissions.BasePermission):
         qs = Membership.objects.filter(
             user=request.user,
             is_active=True,
-        ).exclude(rolenameiexact="Student")
+        ).exclude(role__name__iexact="Student")
 
         if residence:
             return qs.filter(residence=residence).exists()
