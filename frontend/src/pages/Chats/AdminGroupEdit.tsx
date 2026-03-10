@@ -4,8 +4,8 @@ import { toast } from "sonner";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { ConfirmationModal } from "../../components/ui/ConfirmationModal";
-import { chatsService, type ChatGroup, type ChatLabel } from "../../services/chats";
-import { residentsService, type Resident } from "../../services/residents";
+import { chatsService, type ChatGroup, type ChatLabel, type ChatGroupLabelItem } from "../../services/chats";
+import { residentsService } from "../../services/residents";
 import { authService } from "../../services/auth";
 
 interface AdminGroupEditProps {
@@ -29,6 +29,7 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
     const [showAddAllModal, setShowAddAllModal] = useState(false);
     const [memberToDelete, setMemberToDelete] = useState<{ id: number; name: string } | null>(null);
     const [deletingMember, setDeletingMember] = useState(false);
+    const [customLabels, setCustomLabels] = useState<ChatGroupLabelItem[]>([]);
 
     useEffect(() => {
         const loadCurrentUser = async () => {
@@ -42,6 +43,7 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
             }
         };
         loadCurrentUser();
+        chatsService.listLabels().then(setCustomLabels).catch(() => { });
     }, []);
 
     const filteredMembers = currentGroup.members_list.filter(member =>
@@ -51,7 +53,7 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
 
     const handleRemoveMember = async () => {
         if (!memberToDelete) return;
-        
+
         setDeletingMember(true);
         try {
             await chatsService.removeMember(currentGroup.id, memberToDelete.id);
@@ -109,8 +111,8 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
         try {
             const residents = await residentsService.list();
             const currentMemberEmails = new Set(currentGroup.members_list.map(m => m.email));
-            const residentsToAdd = residents.filter(r => 
-                r.is_active && 
+            const residentsToAdd = residents.filter(r =>
+                r.is_active &&
                 !currentMemberEmails.has(r.email)
             );
 
@@ -203,9 +205,9 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
     return (
         <div className="space-y-6">
             <div className="flex items-center gap-4">
-                <Button 
-                    variant="ghost" 
-                    size="icon" 
+                <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={onBack}
                     className="w-10 h-10"
                 >
@@ -229,7 +231,7 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
                             placeholder="Nombre del grupo"
                         />
                     </div>
-                    
+
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                             Etiqueta
@@ -243,6 +245,9 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
                             <option value="floor">Por planta</option>
                             <option value="activity">Actividades</option>
                             <option value="private">Privado</option>
+                            {customLabels.map((l) => (
+                                <option key={l.id} value={l.name}>{l.name}</option>
+                            ))}
                         </select>
                     </div>
                 </div>
@@ -293,10 +298,10 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
                                     className="pl-10 w-56"
                                 />
                             </div>
-                            <Button 
-                                size="sm" 
+                            <Button
+                                size="sm"
                                 variant="outline"
-                                className="bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100" 
+                                className="bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100"
                                 onClick={() => setShowAddAllModal(true)}
                                 disabled={addingAllResidents}
                             >
@@ -305,7 +310,7 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
                             </Button>
                         </div>
                     </div>
-                    
+
                     <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                         <h4 className="text-sm font-medium text-gray-700 mb-3">Añadir miembro individual</h4>
                         <div className="flex items-center gap-3">
@@ -322,7 +327,7 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
                         </div>
                     </div>
                 </div>
-                
+
                 <div className="divide-y divide-gray-200">
                     {filteredMembers.length === 0 ? (
                         <div className="p-8 text-center text-gray-500">
@@ -330,60 +335,60 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
                         </div>
                     ) : (
                         filteredMembers.map((member) => (
-                        <div key={member.id} className="p-4 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                                    <Users className="w-5 h-5 text-gray-600" />
-                                </div>
-                                <div>
-                                    <div className="flex items-center gap-2">
-                                        <p className="font-medium text-gray-900">{member.full_name}</p>
-                                        {member.is_admin && (
-                                            <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
-                                                Admin
-                                            </span>
-                                        )}
+                            <div key={member.id} className="p-4 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                                        <Users className="w-5 h-5 text-gray-600" />
                                     </div>
-                                    <p className="text-sm text-gray-500">{member.email}</p>
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <p className="font-medium text-gray-900">{member.full_name}</p>
+                                            {member.is_admin && (
+                                                <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
+                                                    Admin
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="text-sm text-gray-500">{member.email}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    {!member.is_admin ? (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleMakeAdmin(member.id)}
+                                            className="text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300 hover:bg-blue-50"
+                                            title="Hacer administrador"
+                                        >
+                                            Hacer admin
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleRemoveAdmin(member.id)}
+                                            className="text-orange-600 hover:text-orange-700 border-orange-200 hover:border-orange-300 hover:bg-orange-50"
+                                            title="Quitar rol de administrador"
+                                            disabled={member.email === currentGroup.created_by_email}
+                                        >
+                                            <ShieldX className="w-4 h-4 mr-1" />
+                                            Quitar admin
+                                        </Button>
+                                    )}
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => handleDeleteMemberClick(member)}
+                                        className="w-8 h-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                        title="Eliminar miembro"
+                                        disabled={member.email === currentUserEmail || currentGroup.members_list.length <= 1}
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </Button>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                {!member.is_admin ? (
-                                    <Button 
-                                        variant="outline" 
-                                        size="sm"
-                                        onClick={() => handleMakeAdmin(member.id)}
-                                        className="text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300 hover:bg-blue-50"
-                                        title="Hacer administrador"
-                                    >
-                                        Hacer admin
-                                    </Button>
-                                ) : (
-                                    <Button 
-                                        variant="outline" 
-                                        size="sm"
-                                        onClick={() => handleRemoveAdmin(member.id)}
-                                        className="text-orange-600 hover:text-orange-700 border-orange-200 hover:border-orange-300 hover:bg-orange-50"
-                                        title="Quitar rol de administrador"
-                                        disabled={member.email === currentGroup.created_by_email}
-                                    >
-                                        <ShieldX className="w-4 h-4 mr-1" />
-                                        Quitar admin
-                                    </Button>
-                                )}
-                                <Button 
-                                    variant="ghost" 
-                                    size="icon"
-                                    onClick={() => handleDeleteMemberClick(member)}
-                                    className="w-8 h-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                    title="Eliminar miembro"
-                                    disabled={member.email === currentUserEmail || currentGroup.members_list.length <= 1}
-                                >
-                                    <X className="w-4 h-4" />
-                                </Button>
-                            </div>
-                        </div>
-                    ))
+                        ))
                     )}
                 </div>
             </div>

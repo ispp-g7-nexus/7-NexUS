@@ -1,10 +1,11 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from .views import ChatGroupViewSet, MyGroupsViewSet, PrivateConversationViewSet, ResidentListForChatView
+from .views import ChatGroupViewSet, ChatGroupLabelViewSet, MyGroupsViewSet, PrivateConversationViewSet, ResidentListForChatView
 
 router = DefaultRouter()
 router.register(r"chats/groups", ChatGroupViewSet, basename="chat-group")
+router.register(r"chats/labels", ChatGroupLabelViewSet, basename="chat-label")
 router.register(r"chats/my-groups", MyGroupsViewSet, basename="my-chat-group")
 router.register(r"chats/conversations", PrivateConversationViewSet, basename="private-conversation")
 

@@ -1,11 +1,12 @@
 import { fetchWithAuth } from "../utils/api";
 
 const CHAT_GROUPS_URL = "/api/chats/groups/";
+const CHAT_LABELS_URL = "/api/chats/labels/";
 const MY_GROUPS_URL = "/api/chats/my-groups/";
 const CONVERSATIONS_URL = "/api/chats/conversations/";
 const CHAT_RESIDENTS_URL = "/api/chats/residents/";
 
-export type ChatLabel = "general" | "floor" | "activity" | "private";
+export type ChatLabel = string;
 
 export interface ChatMember {
   id: number;
@@ -156,6 +157,28 @@ export const chatsService = {
     const res = await fetchWithAuth(CHAT_RESIDENTS_URL);
     return handleResponse<ChatResident[]>(res);
   },
+
+  // ── Etiquetas personalizadas ──
+
+  listLabels: async (): Promise<ChatGroupLabelItem[]> => {
+    const res = await fetchWithAuth(CHAT_LABELS_URL);
+    return handleResponse<ChatGroupLabelItem[]>(res);
+  },
+
+  createLabel: async (name: string): Promise<ChatGroupLabelItem> => {
+    const res = await fetchWithAuth(CHAT_LABELS_URL, {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    });
+    return handleResponse<ChatGroupLabelItem>(res);
+  },
+
+  deleteLabel: async (id: number): Promise<void> => {
+    const res = await fetchWithAuth(`${CHAT_LABELS_URL}${id}/`, {
+      method: "DELETE",
+    });
+    await handleResponse<void>(res);
+  },
 };
 
 // ── Tipos para chats privados ──
@@ -190,4 +213,10 @@ export interface ChatResident {
   id: number;
   full_name: string;
   email: string;
+}
+
+export interface ChatGroupLabelItem {
+  id: number;
+  name: string;
+  created_at: string;
 }

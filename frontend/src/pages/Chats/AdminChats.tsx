@@ -1,4 +1,4 @@
-import { MessageSquare, Users, Plus, Search, Trash2 } from "lucide-react";
+import { MessageSquare, Users, Plus, Search, Trash2, Tag, X } from "lucide-react";
 import { type ReactElement, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AdminGroupEdit } from "./AdminGroupEdit";
@@ -12,7 +12,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "../../components/ui/dialog";
-import { chatsService, type ChatGroup, type ChatLabel, type UpsertChatGroupPayload } from "../../services/chats";
+import { chatsService, type ChatGroup, type ChatLabel, type ChatGroupLabelItem, type UpsertChatGroupPayload } from "../../services/chats";
 
 const EMPTY_GROUP_FORM: UpsertChatGroupPayload = {
     name: "",
@@ -22,14 +22,14 @@ const EMPTY_GROUP_FORM: UpsertChatGroupPayload = {
 };
 
 const typeConfig: Record<ChatLabel, { label: string; color: string; icon: ReactElement }> = {
-    general: { 
-        label: "General", 
+    general: {
+        label: "General",
         color: "bg-blue-100 text-blue-800",
         icon: <MessageSquare className="w-3 h-3" />
     },
     floor: {
         label: "Planta",
-        color: "bg-green-100 text-green-800", 
+        color: "bg-green-100 text-green-800",
         icon: <Users className="w-3 h-3" />
     },
     activity: {
@@ -55,6 +55,23 @@ export function AdminChats() {
     const [isCreating, setIsCreating] = useState(false);
     const [createForm, setCreateForm] = useState<UpsertChatGroupPayload>(EMPTY_GROUP_FORM);
 
+    // ── Etiquetas personalizadas ──
+    const [customLabels, setCustomLabels] = useState<ChatGroupLabelItem[]>([]);
+    const [isLabelsOpen, setIsLabelsOpen] = useState(false);
+    const [newLabelName, setNewLabelName] = useState("");
+    const [creatingLabel, setCreatingLabel] = useState(false);
+
+    const allLabelOptions = useMemo(() => {
+        const predefined = [
+            { value: "general", display: "General" },
+            { value: "floor", display: "Planta" },
+            { value: "activity", display: "Actividad" },
+            { value: "private", display: "Privado" },
+        ];
+        const custom = customLabels.map((l) => ({ value: l.name, display: l.name }));
+        return [...predefined, ...custom];
+    }, [customLabels]);
+
     const refreshGroups = async () => {
         setLoading(true);
         try {
@@ -75,6 +92,7 @@ export function AdminChats() {
 
     useEffect(() => {
         refreshGroups();
+        chatsService.listLabels().then(setCustomLabels).catch(() => { });
     }, []);
 
     const filteredGroups = useMemo(() => {
@@ -137,6 +155,32 @@ export function AdminChats() {
         setEditingGroup(updated);
     };
 
+    const handleCreateLabel = async () => {
+        const name = newLabelName.trim();
+        if (!name) return;
+        setCreatingLabel(true);
+        try {
+            const created = await chatsService.createLabel(name);
+            setCustomLabels((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
+            setNewLabelName("");
+            toast.success(`Etiqueta "${name}" creada.`);
+        } catch (err: unknown) {
+            toast.error(err instanceof Error ? err.message : "No se pudo crear la etiqueta.");
+        } finally {
+            setCreatingLabel(false);
+        }
+    };
+
+    const handleDeleteLabel = async (labelId: number) => {
+        try {
+            await chatsService.deleteLabel(labelId);
+            setCustomLabels((prev) => prev.filter((l) => l.id !== labelId));
+            toast.success("Etiqueta eliminada.");
+        } catch (err: unknown) {
+            toast.error(err instanceof Error ? err.message : "No se pudo eliminar la etiqueta.");
+        }
+    };
+
     if (isUnauthorized) {
         return (
             <div className="flex items-center justify-center h-64 text-gray-500">
@@ -162,10 +206,16 @@ export function AdminChats() {
                     <h1 className="text-2xl font-bold text-gray-900">Grupos</h1>
                     <p className="text-sm text-gray-500 mt-1">Gestiona los grupos de chat de la residencia</p>
                 </div>
-                <Button className="bg-green-600 hover:bg-green-700" onClick={() => setIsCreateOpen(true)}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Crear Grupo
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" onClick={() => setIsLabelsOpen(true)}>
+                        <Tag className="w-4 h-4 mr-2" />
+                        Gestionar etiquetas
+                    </Button>
+                    <Button className="bg-green-600 hover:bg-green-700" onClick={() => setIsCreateOpen(true)}>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Crear Grupo
+                    </Button>
+                </div>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4">
@@ -186,10 +236,9 @@ export function AdminChats() {
                     className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                 >
                     <option value="all">Todos los tipos</option>
-                    <option value="general">General</option>
-                    <option value="floor">Por planta</option>
-                    <option value="activity">Actividades</option>
-                    <option value="private">Privados</option>
+                    {allLabelOptions.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.display}</option>
+                    ))}
                 </select>
             </div>
 
@@ -204,7 +253,11 @@ export function AdminChats() {
 
                 <div className="divide-y divide-gray-200">
                     {filteredGroups.map((group) => {
-                        const config = typeConfig[group.label];
+                        const config = typeConfig[group.label as keyof typeof typeConfig] ?? {
+                            label: group.label,
+                            color: "bg-amber-100 text-amber-800",
+                            icon: <Tag className="w-3 h-3" />,
+                        };
                         return (
                             <div key={group.id} className="p-4 hover:bg-gray-50 transition-colors">
                                 <div className="flex items-start justify-between">
@@ -229,16 +282,16 @@ export function AdminChats() {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 ml-4">
-                                        <Button 
-                                            variant="outline" 
+                                        <Button
+                                            variant="outline"
                                             size="sm"
                                             onClick={() => handleEditGroup(group)}
                                         >
                                             Gestionar
                                         </Button>
-                                        <Button 
-                                            variant="ghost" 
-                                            size="icon" 
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
                                             className="w-8 h-8 text-red-600 hover:text-red-700 hover:bg-red-50"
                                             onClick={() => handleDeleteGroup(group.id)}
                                         >
@@ -300,10 +353,9 @@ export function AdminChats() {
                                 onChange={(e) => setCreateForm((prev) => ({ ...prev, label: e.target.value as ChatLabel }))}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                             >
-                                <option value="general">General</option>
-                                <option value="floor">Por planta</option>
-                                <option value="activity">Actividades</option>
-                                <option value="private">Privado</option>
+                                {allLabelOptions.map((opt) => (
+                                    <option key={opt.value} value={opt.value}>{opt.display}</option>
+                                ))}
                             </select>
                         </div>
 
@@ -329,6 +381,81 @@ export function AdminChats() {
                         </Button>
                         <Button className="bg-green-600 hover:bg-green-700" onClick={handleCreateGroup} disabled={isCreating}>
                             {isCreating ? "Creando..." : "Crear grupo"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Dialog: Gestionar etiquetas */}
+            <Dialog open={isLabelsOpen} onOpenChange={setIsLabelsOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Gestionar etiquetas</DialogTitle>
+                        <DialogDescription>
+                            Crea o elimina etiquetas personalizadas. Estarán disponibles al crear o editar un grupo.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                            <Input
+                                value={newLabelName}
+                                onChange={(e) => setNewLabelName(e.target.value)}
+                                placeholder="Nombre de la etiqueta..."
+                                className="flex-1"
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        handleCreateLabel();
+                                    }
+                                }}
+                            />
+                            <Button
+                                className="bg-green-600 hover:bg-green-700"
+                                onClick={handleCreateLabel}
+                                disabled={creatingLabel || !newLabelName.trim()}
+                            >
+                                <Plus className="w-4 h-4 mr-1" />
+                                Añadir
+                            </Button>
+                        </div>
+
+                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Predefinidas</div>
+                        <div className="flex flex-wrap gap-2">
+                            {["General", "Planta", "Actividad", "Privado"].map((l) => (
+                                <span key={l} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                    <Tag className="w-3 h-3" /> {l}
+                                </span>
+                            ))}
+                        </div>
+
+                        {customLabels.length > 0 && (
+                            <>
+                                <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Personalizadas</div>
+                                <div className="flex flex-wrap gap-2">
+                                    {customLabels.map((label) => (
+                                        <span
+                                            key={label.id}
+                                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                                        >
+                                            <Tag className="w-3 h-3" /> {label.name}
+                                            <button
+                                                onClick={() => handleDeleteLabel(label.id)}
+                                                className="ml-1 hover:text-red-600 transition-colors"
+                                                title="Eliminar etiqueta"
+                                            >
+                                                <X className="w-3 h-3" />
+                                            </button>
+                                        </span>
+                                    ))}
+                                </div>
+                            </>
+                        )}
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsLabelsOpen(false)}>
+                            Cerrar
                         </Button>
                     </DialogFooter>
                 </DialogContent>
