@@ -5,10 +5,21 @@ from django.utils.decorators import method_decorator
 from .models import Object, ObjectRental
 from django.shortcuts import get_object_or_404
 from django.db.utils import IntegrityError
+from django.db import transaction
 from django.contrib.auth import get_user_model
 from django.views.decorators.csrf import csrf_exempt
 from apps.common.utils.jwt_auth import resolve_user_from_request
-from django.db.models import Q, Count
+from django.utils import timezone
+from django.utils.dateparse import parse_datetime
+
+
+def _parse_request_datetime(value: str):
+    parsed = parse_datetime(value)
+    if not parsed:
+        return None
+    if timezone.is_naive(parsed):
+        return timezone.make_aware(parsed, timezone.get_current_timezone())
+    return parsed
 
 @method_decorator(csrf_exempt, name='dispatch')
 class AuthenticatedView(View):
@@ -89,32 +100,47 @@ class ObjectDetailView(AuthenticatedView):
 
 class ObjectReserveView(AuthenticatedView):
     def post(self, request, object_id):
-        obj = get_object_or_404(Object, id=object_id, residence=request.residence)
         try:
-            body = json.loads(request.body)
-            start = body.get('start_date')
-            end = body.get('end_date')
-            if not start or not end:
+            body = json.loads(request.body or "{}")
+            start_raw = str(body.get('start_date', '')).strip()
+            end_raw = str(body.get('end_date', '')).strip()
+            if not start_raw or not end_raw:
                 return JsonResponse({"detail": "start_date y end_date son requeridos."}, status=400)
 
-            # Check overlapping rentals
-            overlapping = ObjectRental.objects.filter(object=obj).filter(
-                Q(start_date__lt=end) & Q(end_date__gt=start)
-            ).count()
+            start = _parse_request_datetime(start_raw)
+            end = _parse_request_datetime(end_raw)
+            if not start or not end:
+                return JsonResponse({"detail": "Formato de fecha/hora inválido."}, status=400)
+            if start >= end:
+                return JsonResponse({"detail": "La fecha/hora de fin debe ser posterior a la de inicio."}, status=400)
 
-            # single-instance objects: if any overlapping rental exists, deny
-            if overlapping >= 1:
-                return JsonResponse({"detail": "No hay disponibilidad para ese horario."}, status=400)
+            with transaction.atomic():
+                obj = get_object_or_404(
+                    Object.objects.select_for_update(),
+                    id=object_id,
+                    residence=request.residence,
+                )
 
-            rental = ObjectRental.objects.create(
-                object=obj,
-                user=request.user,
-                start_date=start,
-                end_date=end,
-            )
+                overlapping = ObjectRental.objects.select_for_update().filter(
+                    object=obj,
+                    start_date__lt=end,
+                    end_date__gt=start,
+                ).exists()
+
+                if overlapping:
+                    return JsonResponse({"detail": "No hay disponibilidad para ese horario."}, status=400)
+
+                rental = ObjectRental.objects.create(
+                    object=obj,
+                    user=request.user,
+                    start_date=start,
+                    end_date=end,
+                )
             return JsonResponse({"id": rental.id, "detail": "Reserva creada."}, status=201)
         except IntegrityError:
             return JsonResponse({"detail": "Ya tienes una reserva conflictiva."}, status=400)
+        except json.JSONDecodeError:
+            return JsonResponse({"detail": "El cuerpo de la petición no es JSON válido."}, status=400)
         except Exception as e:
             return JsonResponse({"detail": str(e)}, status=400)
 
