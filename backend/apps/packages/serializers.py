@@ -62,6 +62,12 @@ class LabelPreviewInputSerializer(serializers.Serializer):
     # FileField avoids coupling the OCR flow to Pillow image validation.
     label_image = serializers.FileField(required=True)
 
+    def validate_label_image(self, value):
+        content_type = (getattr(value, "content_type", "") or "").lower()
+        if not content_type.startswith("image/"):
+            raise serializers.ValidationError("El archivo debe ser una imagen.")
+        return value
+
 
 class PackageDeliverByQrSerializer(serializers.Serializer):
     qr_token = serializers.CharField(required=True, allow_blank=False)

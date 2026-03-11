@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
@@ -48,12 +49,46 @@ class Package(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def clean(self) -> None:
+        super().clean()
+
+        if self.status == self.Status.DELIVERED and self.delivered_at is None:
+            raise ValidationError(
+                {
+                    "delivered_at": "Los paquetes entregados deben tener fecha de entrega.",
+                }
+            )
+
+        if self.status != self.Status.DELIVERED and self.delivered_at is not None:
+            raise ValidationError(
+                {
+                    "delivered_at": (
+                        "Solo los paquetes entregados pueden tener fecha de entrega."
+                    ),
+                }
+            )
+
     class Meta:
         ordering = ["-received_at", "-created_at"]
         indexes = [
             models.Index(fields=["residence", "status"]),
             models.Index(fields=["resident", "status"]),
             models.Index(fields=["residence", "resident_viewed_at"]),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                name="package_delivered_at_matches_status",
+                check=(
+                    (
+                        models.Q(status="DELIVERED")
+                        & models.Q(delivered_at__isnull=False)
+                    )
+                    | (
+                        ~models.Q(status="DELIVERED")
+                        & models.Q(delivered_at__isnull=True)
+                    )
+                ),
+            ),
         ]
 
     def __str__(self) -> str:

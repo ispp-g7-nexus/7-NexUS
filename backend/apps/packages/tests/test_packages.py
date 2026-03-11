@@ -4,7 +4,9 @@ from unittest.mock import patch
 
 import requests
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import IntegrityError, transaction
 from django.db.utils import ProgrammingError
 from django.test import override_settings
 from django.utils import timezone
@@ -317,6 +319,13 @@ class PackageApiTests(TenantTestCase):
             content_type="image/png",
         )
 
+    def _non_image_label(self):
+        return SimpleUploadedFile(
+            "label.txt",
+            b"not-an-image",
+            content_type="text/plain",
+        )
+
     def _error_text(self, payload, field_name: str) -> str:
         value = payload[field_name]
         if isinstance(value, list):
@@ -425,6 +434,34 @@ class PackageApiTests(TenantTestCase):
         self.assertIsNone(package.delivered_at)
         self.assertIsNone(package.resident_viewed_at)
         self.assertIsNotNone(package.resident_notified_at)
+
+    def test_model_clean_rejects_invalid_delivered_state(self):
+        package = Package(
+            residence=self.residence,
+            resident=self.resident_membership,
+            resident_name_snapshot="Maria Lopez",
+            room_snapshot="101",
+            building_snapshot="A",
+            status=Package.Status.DELIVERED,
+            delivered_at=None,
+        )
+
+        with self.assertRaises(ValidationError):
+            package.clean()
+
+    def test_db_constraint_rejects_status_and_delivered_at_mismatch(self):
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                Package.objects.create(
+                    residence=self.residence,
+                    resident=self.resident_membership,
+                    resident_name_snapshot="Maria Lopez",
+                    room_snapshot="101",
+                    building_snapshot="A",
+                    status=Package.Status.DELIVERED,
+                    delivered_at=None,
+                    created_by=self.admin_user,
+                )
 
     def test_delete_package_removes_record(self):
         package = self._create_package(resident=self.resident_membership)
@@ -575,6 +612,17 @@ class PackageApiTests(TenantTestCase):
         self.assertEqual(payload["candidate_residents"], [])
         request_payload = mocked_post.call_args.kwargs["json"]
         self.assertEqual(request_payload["response_format"]["type"], "json_schema")
+
+    @patch("apps.packages.services.requests.post")
+    def test_label_preview_rejects_non_image_uploads(self, mocked_post):
+        response = self.admin_client.post(
+            "/api/packages/label-preview/",
+            data={"label_image": self._non_image_label()},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("imagen", self._error_text(response.json(), "label_image"))
+        mocked_post.assert_not_called()
 
     @override_settings(
         FIREWORKS_API_KEY="test-fireworks-key",
