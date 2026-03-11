@@ -22,7 +22,8 @@ class IsResidenceAdmin(permissions.BasePermission):
         if residence:
             return qs.filter(residence=residence).exists()
 
-        return qs.exists()
+        
+        return False
 
 
 class IsAuthenticatedResident(permissions.BasePermission):

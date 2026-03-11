@@ -80,7 +80,7 @@ class ChatGroupLabel(models.Model):
 		on_delete=models.CASCADE,
 		related_name="custom_chat_labels",
 	)
-	name = models.CharField(max_length=50)
+	name = models.CharField(max_length=20)
 	created_at = models.DateTimeField(auto_now_add=True)
 
 	class Meta:
@@ -143,11 +143,38 @@ class PrivateConversation(models.Model):
 	class Meta:
 		ordering = ["-updated_at"]
 		constraints = [
+			models.CheckConstraint(
+				check=models.Q(member_one__lt=models.F('member_two')),
+				name="check_member_order",
+			),
 			models.UniqueConstraint(
 				fields=["residence", "member_one", "member_two"],
 				name="uniq_private_conversation",
 			)
 		]
+
+	def save(self, *args, **kwargs):
+		"""Normaliza el orden de los miembros antes de guardar."""
+		if self.member_one_id and self.member_two_id:
+			if self.member_one_id > self.member_two_id:
+				self.member_one, self.member_two = self.member_two, self.member_one
+		super().save(*args, **kwargs)
+
+	@classmethod
+	def get_or_create_conversation(cls, residence, member_a, member_b):
+		"""
+		Obtiene o crea una conversación entre dos miembros,
+		normalizando automáticamente el orden.
+		"""
+		if member_a.id > member_b.id:
+			member_a, member_b = member_b, member_a
+			
+		conversation, created = cls.objects.get_or_create(
+			residence=residence,
+			member_one=member_a,
+			member_two=member_b,
+		)
+		return conversation, created
 
 	def __str__(self) -> str:
 		return f"Conversación {self.id}: {self.member_one_id} ↔ {self.member_two_id}"

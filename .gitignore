@@ -32,5 +32,3 @@ frontend/dist/
 .sonar/
 node_modules/
 
-# Migrations
-migrations/

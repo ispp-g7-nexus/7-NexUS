@@ -130,6 +130,7 @@ export function StudentChats() {
             setGroups((prev) => prev.filter((g) => g.id !== selectedGroup.id));
             toast.success("Has abandonado el grupo.");
             setSelectedGroup(null);
+            setGroupMessages([]);
             setShowLeaveDialog(false);
         } catch (err: unknown) {
             toast.error(err instanceof Error ? err.message : "No se pudo abandonar el grupo.");
@@ -142,6 +143,7 @@ export function StudentChats() {
 
     const openGroup = async (group: ChatGroup) => {
         setSelectedGroup(group);
+        setGroupMessages([]);
         setLoadingGroupMsgs(true);
         try {
             setGroupMessages(await chatsService.listGroupMessages(group.id));
@@ -197,6 +199,7 @@ export function StudentChats() {
 
     const openConversation = async (conv: PrivateConversation) => {
         setActiveConv(conv);
+        setMessages([]);
         setLoadingMsgs(true);
         try {
             setMessages(await chatsService.listMessages(conv.id));
@@ -278,7 +281,10 @@ export function StudentChats() {
             <div className="flex flex-col h-[calc(100vh-220px)]">
                 {/* Cabecera */}
                 <div className="flex items-center gap-3 pb-3 border-b border-gray-200 shrink-0">
-                    <Button variant="ghost" size="icon" onClick={() => setActiveConv(null)} className="w-9 h-9 shrink-0">
+                    <Button variant="ghost" size="icon" onClick={() => {
+                        setActiveConv(null);
+                        setMessages([]);
+                    }} className="w-9 h-9 shrink-0">
                         <ArrowLeft className="w-5 h-5" />
                     </Button>
                     <div className="w-9 h-9 bg-gradient-to-br from-indigo-200 to-indigo-400 rounded-full flex items-center justify-center text-indigo-800 font-bold text-sm shrink-0">
@@ -356,7 +362,10 @@ export function StudentChats() {
                 {/* Cabecera del Grupo */}
                 <div className="flex items-center gap-3 pb-3 border-b border-gray-200 shrink-0 justify-between">
                     <div className="flex items-center gap-3 min-w-0">
-                        <Button variant="ghost" size="icon" onClick={() => setSelectedGroup(null)} className="w-9 h-9 shrink-0">
+                        <Button variant="ghost" size="icon" onClick={() => {
+                            setSelectedGroup(null);
+                            setGroupMessages([]);
+                        }} className="w-9 h-9 shrink-0">
                             <ArrowLeft className="w-5 h-5" />
                         </Button>
                         <div className="w-9 h-9 bg-gradient-to-br from-green-200 to-green-400 rounded-full flex items-center justify-center text-green-800 font-bold text-sm shrink-0">

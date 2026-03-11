@@ -323,14 +323,11 @@ class PrivateConversationViewSet(viewsets.ViewSet):
 		serializer.is_valid(raise_exception=True)
 		target = serializer.context["target_membership"]
 
-		# Normalizar: member_one siempre tiene el id menor
-		m1, m2 = (my, target) if my.id < target.id else (target, my)
-
 		residence = getattr(request, "residence", None)
-		conv, _created = PrivateConversation.objects.get_or_create(
+		conv, _created = PrivateConversation.get_or_create_conversation(
 			residence=residence,
-			member_one=m1,
-			member_two=m2,
+			member_a=my,
+			member_b=target,
 		)
 
 		out = PrivateConversationSerializer(conv, context={"my_membership": my})

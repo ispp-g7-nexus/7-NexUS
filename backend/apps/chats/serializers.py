@@ -9,10 +9,42 @@ User = get_user_model()
 
 
 class ChatGroupLabelSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(max_length=20)  
+    
     class Meta:
         model = ChatGroupLabel
         fields = ["id", "name", "created_at"]
         read_only_fields = ["id", "created_at"]
+    
+    def validate_name(self, value):
+        """Valida que el nombre de la etiqueta sea único en la residencia."""
+        normalized_name = value.strip()
+        if not normalized_name:
+            raise serializers.ValidationError("El nombre no puede estar vacío.")
+        
+        request = self.context.get('request')
+        if not request:
+            return normalized_name
+            
+        residence = getattr(request, 'residence', None)
+        if not residence:
+            return normalized_name
+        
+        existing = ChatGroupLabel.objects.filter(
+            residence=residence,
+            name__iexact=normalized_name  
+        )
+        
+        
+        if self.instance:
+            existing = existing.exclude(pk=self.instance.pk)
+            
+        if existing.exists():
+            raise serializers.ValidationError(
+                "Ya existe una etiqueta con este nombre en la residencia."
+            )
+        
+        return normalized_name
 
 
 class ChatMemberSerializer(serializers.ModelSerializer):
@@ -70,6 +102,35 @@ class ChatGroupCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = ChatGroup
         fields = ["name", "description", "label", "can_members_leave"]
+    
+    def validate_name(self, value):
+        """Valida que el nombre del grupo sea único en la residencia."""
+        normalized_name = value.strip()
+        if not normalized_name:
+            raise serializers.ValidationError("El nombre no puede estar vacío.")
+        
+        request = self.context.get('request')
+        if not request:
+            return normalized_name
+            
+        residence = getattr(request, 'residence', None)
+        if not residence:
+            return normalized_name
+        
+        existing = ChatGroup.objects.filter(
+            residence=residence,
+            name__iexact=normalized_name  
+        )
+        
+        if self.instance:
+            existing = existing.exclude(pk=self.instance.pk)
+            
+        if existing.exists():
+            raise serializers.ValidationError(
+                "Ya existe un grupo con este nombre en la residencia."
+            )
+        
+        return normalized_name
 
 
 class AddChatMemberSerializer(serializers.Serializer):

@@ -102,7 +102,7 @@ export function AdminChats({ onChatsChange }: { readonly onChatsChange?: () => v
             setIsUnauthorized(false);
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : String(err);
-            if (msg.includes("401") || msg.includes("403")) {
+            if (msg.includes("No tienes permisos para gestionar chats")) {
                 setIsUnauthorized(true);
             } else {
                 toast.error("No se pudieron cargar los grupos de chat.");
@@ -281,7 +281,10 @@ export function AdminChats({ onChatsChange }: { readonly onChatsChange?: () => v
         return (
             <div className="flex flex-col h-[calc(100vh-220px)] bg-white rounded-lg border border-gray-200 p-4">
                 <div className="flex items-center gap-3 pb-3 border-b border-gray-200 shrink-0">
-                    <Button variant="ghost" size="icon" onClick={() => setChattingGroup(null)} className="w-9 h-9 shrink-0">
+                    <Button variant="ghost" size="icon" onClick={() => {
+                        setChattingGroup(null);
+                        setGroupMessages([]);
+                    }} className="w-9 h-9 shrink-0">
                         <ArrowLeft className="w-5 h-5" />
                     </Button>
                     <div className="w-9 h-9 bg-gradient-to-br from-green-200 to-green-400 rounded-full flex items-center justify-center text-green-800 font-bold text-sm shrink-0">
@@ -437,7 +440,10 @@ export function AdminChats({ onChatsChange }: { readonly onChatsChange?: () => v
                                                 variant="default"
                                                 size="sm"
                                                 className="bg-green-600 hover:bg-green-700"
-                                                onClick={() => setChattingGroup(group)}
+                                                onClick={() => {
+                                                    setChattingGroup(group);
+                                                    setGroupMessages([]);
+                                                }}
                                             >
                                                 <MessageSquare className="w-4 h-4 mr-1.5" /> Entrar Chat
                                             </Button>
