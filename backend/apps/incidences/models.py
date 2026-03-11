@@ -18,8 +18,7 @@ class Incidence(models.Model):
 
     PRIORITY_CHOICES = [
         ('low', 'BAJA'),
-        ('medium', 'MEDIA'),
-        ('high', 'ALTA'),
+        ('high', 'URGENTE'),
     ]
 
     title = models.CharField(max_length=150)
