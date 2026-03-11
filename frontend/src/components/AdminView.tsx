@@ -1,5 +1,6 @@
 import { AlertCircle, BarChart3, BedDouble, Bell, BookOpen, Briefcase, Calendar, Home, Layout, LayoutDashboard, LogOut, Menu, MessageSquare, Shield, User, UserCheck, Users, Utensils } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { chatsService } from "../services/chats";
 import { Events } from "../pages/Social/Events/Events";
 import { Residents } from "../pages/Residents/Residents";
 import logo from "../assets/logo.png";
@@ -25,6 +26,29 @@ type AdminTab = "dashboard" | "rooms" | "students" | "incidences" | "reservation
 export function AdminView({ onLogout }: AdminViewProps) {
     const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
     const [notifications] = useState([{ id: 1, title: "Nueva reserva", message: "Sala reservada", time: "Hace 5 min", read: false }]);
+    const [totalChats, setTotalChats] = useState<number>(0);
+
+    const loadChatsCount = async () => {
+        try {
+            const groups = await chatsService.listGroups();
+            setTotalChats(groups.length);
+        } catch (error) {
+            console.error('Error loading chats count:', error);
+            setTotalChats(0);
+        }
+    };
+
+    useEffect(() => {
+        // Cargar conteo inicial
+        loadChatsCount();
+    }, []);
+
+    // Actualizar conteo cuando se visite la sección de chats
+    useEffect(() => {
+        if (activeTab === 'chats') {
+            loadChatsCount();
+        }
+    }, [activeTab]);
 
     const allNavItems = [
         { id: "dashboard", label: "Panel de Control", icon: <LayoutDashboard className="w-5 h-5" /> },
@@ -45,7 +69,7 @@ export function AdminView({ onLogout }: AdminViewProps) {
         { label: 'Incidencias',     value: '12',  trend: '-15%',   icon: AlertCircle,theme: 'red'    as const, onClick: () => setActiveTab('incidences')   },
         { label: 'Visitantes',      value: '23',  trend: '+12%',   icon: UserCheck,  theme: 'purple' as const, onClick: () => setActiveTab('visitors')     },
         { label: 'Espacios Comunes',value: '8',   trend: '+2',     icon: Layout,     theme: 'orange' as const, onClick: () => setActiveTab('reservations') },
-        { label: 'Chats',           value: '2',   trend: '', icon: MessageSquare, theme: 'blue' as const, onClick: () => setActiveTab('chats')        },
+        { label: 'Chats',           value: totalChats.toString(),   trend: '', icon: MessageSquare, theme: 'blue' as const, onClick: () => setActiveTab('chats')        },
         { label: 'Menú Comedor',    value: 'Ver', trend: 'Hoy',    icon: Utensils,   theme: 'blue'   as const, onClick: () => setActiveTab('kitchen')      },
         { label: 'Estadísticas',    value: 'Ver', trend: '+5%',    icon: BarChart3,  theme: 'green'  as const, onClick: () => setActiveTab('analytics')    },
         { label: 'Personal',        value: '42',  trend: 'Estable',icon: Briefcase,  theme: 'purple' as const, onClick: () => setActiveTab('staff')        },
@@ -137,7 +161,7 @@ export function AdminView({ onLogout }: AdminViewProps) {
             case "chats":
                 return (
                     <div className="p-4">
-                        <AdminChats />
+                        <AdminChats onChatsChange={loadChatsCount} />
                     </div>
                 );
 

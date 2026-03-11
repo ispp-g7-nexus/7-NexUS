@@ -57,7 +57,7 @@ const typeConfig: Record<ChatLabel, { label: string; color: string; icon: ReactE
     }
 };
 
-export function AdminChats() {
+export function AdminChats({ onChatsChange }: { onChatsChange?: () => void }) {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedType, setSelectedType] = useState<string>("all");
     const [groups, setGroups] = useState<ChatGroup[]>([]);
@@ -190,6 +190,8 @@ export function AdminChats() {
             await chatsService.deleteGroup(groupId);
             setGroups((prev) => prev.filter((group) => group.id !== groupId));
             toast.success("Grupo eliminado correctamente.");
+            // Actualizar contador del dashboard
+            onChatsChange?.();
         } catch (err: unknown) {
             toast.error(err instanceof Error ? err.message : "No se pudo eliminar el grupo.");
         }
@@ -212,6 +214,8 @@ export function AdminChats() {
             setCreateForm(EMPTY_GROUP_FORM);
             setIsCreateOpen(false);
             toast.success("Grupo creado correctamente.");
+            // Actualizar contador del dashboard
+            onChatsChange?.();
         } catch (err: unknown) {
             toast.error(err instanceof Error ? err.message : "No se pudo crear el grupo.");
         } finally {
@@ -482,7 +486,9 @@ export function AdminChats() {
 
                     <div className="space-y-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Nombre <span className="text-red-500">*</span>
+                            </label>
                             <Input
                                 value={createForm.name}
                                 onChange={(e) => setCreateForm((prev) => ({ ...prev, name: e.target.value }))}
