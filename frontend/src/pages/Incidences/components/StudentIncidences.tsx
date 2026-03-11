@@ -143,7 +143,7 @@ export default function StudentIncidences() {
             <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)} className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-200 bg-white">
               <option value="all">Todas las prioridades</option>
               <option value="low">BAJA</option>
-              <option value="high">ALTA</option>
+              <option value="high">URGENTE</option>
             </select>
           </div>
         </div>
