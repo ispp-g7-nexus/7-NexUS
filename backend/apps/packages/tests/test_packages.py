@@ -17,6 +17,7 @@ from apps.bedrooms.models import Bedroom
 from apps.common.services import build_access_token
 from apps.membership.models import Membership, Role
 from apps.packages.models import Package
+from apps.packages.services import _resolve_name_candidates
 from apps.residences.models import Residence, ResidenceDomain
 
 PNG_1X1_BYTES = base64.b64decode(
@@ -33,6 +34,14 @@ class DummyFireworksResponse:
 
     def json(self):
         return self._payload
+
+
+class DummyInvalidJsonFireworksResponse:
+    def raise_for_status(self):
+        return None
+
+    def json(self):
+        raise ValueError("invalid json")
 
 
 @override_settings(
@@ -435,6 +444,25 @@ class PackageApiTests(TenantTestCase):
         self.assertIsNone(package.resident_viewed_at)
         self.assertIsNotNone(package.resident_notified_at)
 
+    def test_cannot_reassign_delivered_package(self):
+        package = self._create_package(
+            resident=self.resident_membership,
+            status=Package.Status.DELIVERED,
+            delivered_at=timezone.now(),
+        )
+
+        response = self.admin_client.patch(
+            f"/api/packages/{package.id}/",
+            data=json.dumps({"resident_id": self.shared_membership_a.id}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("reassign delivered package", self._error_text(response.json(), "resident_id"))
+        package.refresh_from_db()
+        self.assertEqual(package.resident_id, self.resident_membership.id)
+        self.assertIsNotNone(package.delivered_at)
+
     def test_model_clean_rejects_invalid_delivered_state(self):
         package = Package(
             residence=self.residence,
@@ -462,6 +490,28 @@ class PackageApiTests(TenantTestCase):
                     delivered_at=None,
                     created_by=self.admin_user,
                 )
+
+    def test_name_token_match_uses_whole_tokens_only(self):
+        diana_user = get_user_model().objects.create_user(
+            username="diana",
+            email="diana@example.com",
+            password="demo1234",
+            first_name="Diana",
+            last_name="Lopez",
+        )
+        diana_membership = Membership.objects.create(
+            user=diana_user,
+            role=self.student_role,
+            residence=self.residence,
+            is_active=True,
+            bedroom=self.primary_bedroom,
+        )
+
+        matches, reason, score = _resolve_name_candidates([diana_membership], "ana")
+
+        self.assertEqual(matches, [])
+        self.assertEqual(reason, "")
+        self.assertEqual(score, 0.0)
 
     def test_delete_package_removes_record(self):
         package = self._create_package(resident=self.resident_membership)
@@ -678,3 +728,19 @@ class PackageApiTests(TenantTestCase):
 
         self.assertEqual(response.status_code, 502)
         self.assertIn("Fireworks", response.json()["detail"])
+
+    @override_settings(
+        FIREWORKS_API_KEY="test-fireworks-key",
+        FIREWORKS_LABEL_MODEL="accounts/test/models/kimi",
+    )
+    @patch("apps.packages.services.requests.post")
+    def test_label_preview_returns_bad_gateway_on_invalid_json_body(self, mocked_post):
+        mocked_post.return_value = DummyInvalidJsonFireworksResponse()
+
+        response = self.admin_client.post(
+            "/api/packages/label-preview/",
+            data={"label_image": self._label_image()},
+        )
+
+        self.assertEqual(response.status_code, 502)
+        self.assertIn("json", response.json()["detail"].lower())

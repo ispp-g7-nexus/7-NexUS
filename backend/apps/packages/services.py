@@ -89,12 +89,15 @@ def _resolve_name_candidates(
         return exact_matches, "exact_name_match", 1.0
 
     query_tokens = [token for token in normalized_name.split(" ") if token]
-    token_matches = [
-        membership
-        for membership in memberships
-        if query_tokens
-        and all(token in _normalise_text(_resident_full_name(membership)) for token in query_tokens)
-    ]
+    token_matches = []
+    for membership in memberships:
+        resident_tokens = [
+            token
+            for token in _normalise_text(_resident_full_name(membership)).split(" ")
+            if token
+        ]
+        if query_tokens and all(token in resident_tokens for token in query_tokens):
+            token_matches.append(membership)
     if token_matches:
         return token_matches, "name_db_search_match", 0.92
 
@@ -214,15 +217,34 @@ def update_package(package: Package, data: dict[str, Any], residence) -> Package
         package.status = data["status"]
 
     resident_changed = package.resident_id != previous_resident_id
+    if resident_changed and previous_status == Package.Status.DELIVERED:
+        raise ValidationError(
+            {
+                "resident_id": (
+                    "Cannot reassign delivered package; revert status before changing resident."
+                )
+            }
+        )
+
+    transitioned_to_delivered = (
+        package.status == Package.Status.DELIVERED
+        and previous_status != Package.Status.DELIVERED
+    )
     transitioned_to_received = (
         package.status == Package.Status.RECEIVED
         and previous_status != Package.Status.RECEIVED
     )
+    transitioned_away_from_delivered = (
+        previous_status == Package.Status.DELIVERED
+        and package.status != Package.Status.DELIVERED
+    )
 
     if package.status == Package.Status.DELIVERED:
-        package.delivered_at = package.delivered_at or now
+        if transitioned_to_delivered or package.delivered_at is None:
+            package.delivered_at = now
     else:
-        package.delivered_at = None
+        if transitioned_away_from_delivered:
+            package.delivered_at = None
         if resident_changed or transitioned_to_received:
             package.resident_viewed_at = None
             package.resident_notified_at = now
@@ -524,7 +546,10 @@ def _call_fireworks_label_reader(*, image_bytes: bytes, content_type: str) -> di
     except requests.RequestException as exc:
         raise LabelAIError("No se pudo procesar la etiqueta con Fireworks AI.") from exc
 
-    body = response.json()
+    try:
+        body = response.json()
+    except (json.JSONDecodeError, ValueError) as exc:
+        raise LabelAIError("La respuesta de Fireworks AI no es un JSON válido.") from exc
     try:
         content = body["choices"][0]["message"]["content"]
     except (KeyError, IndexError, TypeError) as exc:
