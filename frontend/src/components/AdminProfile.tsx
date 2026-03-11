@@ -17,19 +17,23 @@ export function AdminProfile() {
         status: 'Activo'
     });
 
+    const [originalData, setOriginalData] = useState(userData);
+
     useEffect(() => {
         const fetchProfile = async () => {
             try {
                 const session = await authService.me();
                 if (session.user) {
-                    setUserData({
+                    const data = {
                         username: session.user.username || '',
                         email: session.user.email || '',
                         first_name: session.user.first_name || '',
                         last_name: session.user.last_name || '',
                         roles: session.user.roles || [],
                         status: 'Activo'
-                    });
+                    };
+                    setUserData(data);
+                    setOriginalData(data);
                 }
             } catch (error) {
                 console.error("Error cargando el perfil", error);
@@ -83,6 +87,7 @@ export function AdminProfile() {
             });
 
             toast.success("Perfil actualizado correctamente.");
+            setOriginalData(userData);
             setIsEditing(false);
         } catch (error: unknown) {
             if (error instanceof Error) {
@@ -106,7 +111,6 @@ export function AdminProfile() {
 
     return (
         <div className="min-h-[85vh] w-full flex items-center justify-center p-4 md:p-6 bg-transparent">
-
             <div className="w-full max-w-4xl bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-gray-100 overflow-hidden transition-all duration-300">
 
                 <div className="bg-[#4a8f5d] p-8 text-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative overflow-hidden">
@@ -127,7 +131,10 @@ export function AdminProfile() {
                     <button
                         type="button"
                         onClick={() => {
-                            if (isEditing) setErrors({});
+                            if (isEditing) {
+                                setErrors({});
+                                setUserData(originalData);
+                            }
                             setIsEditing(!isEditing);
                         }}
                         className="relative z-10 w-full sm:w-auto bg-white/10 hover:bg-white/20 backdrop-blur-md transition-all duration-200 px-6 py-2.5 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-white/50 outline-none shadow-sm border border-white/20"
@@ -140,8 +147,9 @@ export function AdminProfile() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
 
                         <div className="md:col-span-1">
-                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Nombre</label>
+                            <label htmlFor="first_name" className="block text-sm font-semibold text-gray-700 mb-1.5">Nombre</label>
                             <input
+                                id="first_name"
                                 type="text"
                                 value={userData.first_name}
                                 onChange={(e) => handleInputChange('first_name', e.target.value)}
@@ -155,8 +163,9 @@ export function AdminProfile() {
                         </div>
 
                         <div className="md:col-span-1">
-                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Apellidos</label>
+                            <label htmlFor="last_name" className="block text-sm font-semibold text-gray-700 mb-1.5">Apellidos</label>
                             <input
+                                id="last_name"
                                 type="text"
                                 value={userData.last_name}
                                 onChange={(e) => handleInputChange('last_name', e.target.value)}
@@ -170,8 +179,9 @@ export function AdminProfile() {
                         </div>
 
                         <div className="md:col-span-1">
-                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Correo Electrónico</label>
+                            <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-1.5">Correo Electrónico</label>
                             <input
+                                id="email"
                                 type="email"
                                 value={userData.email}
                                 onChange={(e) => handleInputChange('email', e.target.value)}
@@ -185,8 +195,9 @@ export function AdminProfile() {
                         </div>
 
                         <div className="md:col-span-1">
-                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Nombre de Usuario</label>
+                            <label htmlFor="username" className="block text-sm font-semibold text-gray-700 mb-1.5">Nombre de Usuario</label>
                             <input
+                                id="username"
                                 type="text"
                                 value={userData.username}
                                 onChange={(e) => handleInputChange('username', e.target.value)}
@@ -224,6 +235,7 @@ export function AdminProfile() {
                                 onClick={() => {
                                     setIsEditing(false);
                                     setErrors({});
+                                    setUserData(originalData);
                                 }}
                                 disabled={isSaving}
                                 className="px-6 py-2.5 bg-white border-2 border-gray-200 rounded-xl text-gray-700 font-semibold hover:bg-gray-50 hover:border-gray-300 transition-all disabled:opacity-50"
