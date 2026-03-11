@@ -12,7 +12,7 @@ from django.utils.encoding import force_bytes, force_str
 from django.utils.html import strip_tags
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from rest_framework import authentication
-from rest_framework.exceptions import APIException, AuthenticationFailed, NotFound
+from rest_framework.exceptions import APIException, AuthenticationFailed
 
 from apps.membership.models import Membership
 
@@ -143,8 +143,8 @@ def process_password_reset_request(email: str, request):
             )
 
         except Exception as e:
-            logger.error("Error al enviar correo SMTP en recuperación de contraseña: %s", e)            
-            raise SMTPServerError()
+            logger.exception("Error al enviar correo SMTP en recuperación de contraseña")
+            raise SMTPServerError() from e
 
     return (
         True,
