@@ -23,7 +23,7 @@ export function ForgotPassword() {
                 toast.error(error.message);
             }
             else {
-                toast.error(String(error));
+                toast.error(typeof error === "string" ? error : JSON.stringify(error));
             }
 
         } finally {
