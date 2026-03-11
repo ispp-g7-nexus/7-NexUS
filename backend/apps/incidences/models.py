@@ -6,7 +6,9 @@ class Incidence(models.Model):
         ('habitacion', 'Mi Habitación'),
         ('baño', 'Baño Común'),
         ('cocina', 'Cocina'),
-        ('zonas_comunes', 'Zonas Comunes'),
+        ('comedor', 'Comedor'),
+        ('exterior', 'Zonas Exteriores'),
+        ('salas_comunes', 'Salas Comunes'),
     ]
     
     STATUS_CHOICES = [
@@ -18,8 +20,7 @@ class Incidence(models.Model):
 
     PRIORITY_CHOICES = [
         ('low', 'BAJA'),
-        ('medium', 'MEDIA'),
-        ('high', 'ALTA'),
+        ('high', 'URGENTE'),
     ]
 
     title = models.CharField(max_length=150)
