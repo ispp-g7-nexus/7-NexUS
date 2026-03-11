@@ -18,6 +18,8 @@ interface StudentViewProps {
     onLogout: () => void;
 }
 
+const HOME_INCIDENCES_SEEN_AT_KEY = "home-incidences-seen-at";
+
 export function StudentView({ onLogout }: StudentViewProps) {
     const [activeTab, setActiveTab] = useState<StudentTab>("home");
     const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
@@ -54,6 +56,10 @@ export function StudentView({ onLogout }: StudentViewProps) {
     }, [activeTab]);
 
     useEffect(() => {
+        if (activeTab === "incidences") {
+            window.localStorage.setItem(HOME_INCIDENCES_SEEN_AT_KEY, new Date().toISOString());
+        }
+
         if (activeTab !== "announcements") {
             if (markAsViewedTimeoutRef.current) {
                 window.clearTimeout(markAsViewedTimeoutRef.current);
