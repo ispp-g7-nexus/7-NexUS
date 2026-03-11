@@ -1,4 +1,3 @@
-import React, { ReactNode } from "react";
 import { Clock, Edit2, Plus, Trash2, Leaf, Flame, X } from "lucide-react";
 import { useState } from "react";
 import { MenuWeek, MenuDay, Meal } from "../../types/menu.types";
@@ -118,6 +117,7 @@ const MEAL_TYPES: MealTypeOption[] = [
 
 interface EditMealModalProps {
   meal?: Meal;
+  dayDate?: string;
   isOpen: boolean;
   onClose: () => void;
   onSave: (meal: Meal) => void;
