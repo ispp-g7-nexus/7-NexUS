@@ -10,6 +10,8 @@ import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
 import { objectsService, ObjectItem, ObjectRental } from "../../services/objects";
 
+const OBJECT_NAME_REGEX = /^[\p{L}\p{N} _().,-]+$/u;
+
 function ObjectCard({
   object,
   onDelete,
@@ -27,12 +29,12 @@ function ObjectCard({
             <h3 className="text-base font-semibold text-foreground truncate">{object.name}</h3>
             <span
               className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
-                object.availability
+                object.can_rent
                   ? "bg-emerald-100 text-emerald-700"
                   : "bg-slate-200 text-slate-600"
               }`}
             >
-              {object.availability ? "Disponible" : "No disponible"}
+              {object.can_rent ? "Disponible" : "No disponible"}
             </span>
           </div>
           {object.description && (
@@ -152,11 +154,21 @@ export function AdminObjects() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const trimmedName = formData.name.trim();
+    if (!trimmedName) {
+      toast.error("El nombre del objeto es obligatorio");
+      return;
+    }
+    if (!OBJECT_NAME_REGEX.test(trimmedName)) {
+      toast.error("El nombre contiene caracteres no válidos");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
       await objectsService.createObject({
-        name: formData.name,
+        name: trimmedName,
         description: formData.description || undefined,
         location: formData.location || undefined,
         tags: formData.tags || undefined,

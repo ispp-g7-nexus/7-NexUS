@@ -62,7 +62,7 @@ const dealbreakersOptions = [
 interface ProfileEditFormProps {
   initialData: ProfileFormData;
   onClose: () => void;
-  onSave: (updatedData: ProfileFormData) => void; 
+  onSave: (updatedData: ProfileFormData) => void;
 }
 
 export function ProfileEditForm({
@@ -116,6 +116,10 @@ export function ProfileEditForm({
 
   const addCustomInterest = () => {
     const trimmedInput = newInterestInput.trim();
+    if (trimmedInput.length > 30) {
+      alert("El interés no puede superar los 30 caracteres.");
+      return;
+    }
     if (trimmedInput && !formData.customInterests.includes(trimmedInput)) {
       setFormData((prev) => ({
         ...prev,
@@ -155,9 +159,9 @@ export function ProfileEditForm({
       };
 
       await saveStudentProfile(apiPayload);
-      
+
       onSave(formData);
-      
+
     } catch (error) {
       console.error("Failed to save profile:", error);
     } finally {
@@ -293,11 +297,10 @@ export function ProfileEditForm({
                     key={interest}
                     type="button"
                     onClick={() => toggleTag(interest, "interests")}
-                    className={`px-4 py-2 rounded-full transition-all text-sm font-medium border-2 ${
-                      formData.interests.includes(interest)
+                    className={`px-4 py-2 rounded-full transition-all text-sm font-medium border-2 ${formData.interests.includes(interest)
                         ? "bg-green-600 text-white border-green-600"
                         : "bg-gray-100 text-gray-700 border-gray-300 hover:border-green-400"
-                    }`}
+                      }`}
                   >
                     {interest}
                   </button>
@@ -380,11 +383,10 @@ export function ProfileEditForm({
                         chronotype: option.value as "early" | "night" | "flexible",
                       })
                     }
-                    className={`p-3 rounded-lg border-2 transition font-medium ${
-                      formData.chronotype === option.value
+                    className={`p-3 rounded-lg border-2 transition font-medium ${formData.chronotype === option.value
                         ? "bg-green-600 text-white border-green-600"
                         : "bg-gray-100 text-gray-700 border-gray-300 hover:border-green-400"
-                    }`}
+                      }`}
                   >
                     {option.label}
                   </button>
@@ -471,11 +473,10 @@ export function ProfileEditForm({
                           | "warm",
                       })
                     }
-                    className={`p-3 rounded-lg border-2 transition font-medium ${
-                      formData.temperaturePreference === option.value
+                    className={`p-3 rounded-lg border-2 transition font-medium ${formData.temperaturePreference === option.value
                         ? "bg-green-600 text-white border-green-600"
                         : "bg-gray-100 text-gray-700 border-gray-300 hover:border-green-400"
-                    }`}
+                      }`}
                   >
                     {option.label}
                   </button>
@@ -536,11 +537,10 @@ export function ProfileEditForm({
                     key={option}
                     type="button"
                     onClick={() => toggleTag(option, "lifestyle")}
-                    className={`px-4 py-2 rounded-full transition-all text-sm font-medium border-2 ${
-                      formData.lifestyle.includes(option)
+                    className={`px-4 py-2 rounded-full transition-all text-sm font-medium border-2 ${formData.lifestyle.includes(option)
                         ? "bg-purple-600 text-white border-purple-600"
                         : "bg-gray-100 text-gray-700 border-gray-300 hover:border-purple-400"
-                    }`}
+                      }`}
                   >
                     {option}
                   </button>
@@ -565,11 +565,10 @@ export function ProfileEditForm({
                     key={genre}
                     type="button"
                     onClick={() => toggleTag(genre, "musicGenres")}
-                    className={`px-4 py-2 rounded-full transition-all text-sm font-medium border-2 ${
-                      formData.musicGenres.includes(genre)
+                    className={`px-4 py-2 rounded-full transition-all text-sm font-medium border-2 ${formData.musicGenres.includes(genre)
                         ? "bg-pink-600 text-white border-pink-600"
                         : "bg-gray-100 text-gray-700 border-gray-300 hover:border-pink-400"
-                    }`}
+                      }`}
                   >
                     {genre}
                   </button>
