@@ -1,6 +1,11 @@
+import re
+
+from django.contrib.auth import get_user_model
 from rest_framework import serializers
+
 from apps.residences.models import StudentProfile
 
+UserModel = get_user_model()
 
 class LoginInputSerializer(serializers.Serializer):
     email = serializers.EmailField(
@@ -12,13 +17,11 @@ class LoginInputSerializer(serializers.Serializer):
         error_messages={"invalid_choice": "Portal inválido. Usa 'student' o 'admin'."},
     )
 
-
 class PlanSerializer(serializers.Serializer):
     code = serializers.CharField()
     name = serializers.CharField()
     max_residences = serializers.IntegerField()
     allows_whitelabel = serializers.BooleanField()
-
 
 class BrandingSerializer(serializers.Serializer):
     primary_color = serializers.CharField()
@@ -27,7 +30,6 @@ class BrandingSerializer(serializers.Serializer):
     logo_url = serializers.URLField()
     favicon_url = serializers.URLField()
     custom_css = serializers.CharField()
-
 
 class PasswordResetRequestSerializer(serializers.Serializer):
     email = serializers.EmailField(
@@ -97,3 +99,32 @@ class StudentProfileSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()
         return instance
+
+class AdminProfileUpdateSerializer(serializers.ModelSerializer):
+    first_name = serializers.CharField(
+        required=False,
+        allow_blank=False,
+        error_messages={"blank": "El nombre no puede estar vacío."},
+    )
+    last_name = serializers.CharField(
+        required=False,
+        allow_blank=False,
+        error_messages={"blank": "Los apellidos no pueden estar vacíos."},
+    )
+    username = serializers.CharField(
+        required=False,
+        allow_blank=False,
+        error_messages={"blank": "El nombre de usuario no puede estar vacío."},
+    )
+    email = serializers.EmailField(
+        required=False,
+        allow_blank=False,
+        error_messages={
+            "blank": "El correo electrónico no puede estar vacío.",
+            "invalid": "Por favor, introduce un correo válido."
+        },
+    )
+
+    class Meta:
+        model = UserModel
+        fields = ["first_name", "last_name", "username", "email"]

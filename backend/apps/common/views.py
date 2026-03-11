@@ -1,14 +1,18 @@
 # apps/common/views.py
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.common.utils.jwt_auth import resolve_user_from_request
+from apps.membership.models import Membership, Role
 from apps.residences.models import ResidenceBranding
 
 from .serializers import (
+    AdminCreateResidentSerializer,
+    AdminProfileUpdateSerializer,
     BrandingSerializer,
     LoginInputSerializer,
     PasswordResetConfirmSerializer,
@@ -22,7 +26,6 @@ from .services import (
     process_password_reset_confirm,
     process_password_reset_request,
 )
-from django.contrib.auth import get_user_model
 
 UserModel = get_user_model()
 
@@ -75,6 +78,15 @@ class AuthMeView(APIView):
 
     def get(self, request):
         user_data = resolve_user_from_request(request)
+        if user_data:
+            user_pk = user_data.get("user_id") or user_data.get("id") or user_data.get("sub")
+            try:
+                user_obj = UserModel.objects.get(pk=user_pk)
+                user_data["first_name"] = user_obj.first_name
+                user_data["last_name"] = user_obj.last_name
+            except UserModel.DoesNotExist:
+                pass
+
         return Response(
             {
                 "authenticated": bool(user_data),
@@ -82,6 +94,36 @@ class AuthMeView(APIView):
             }
         )
 
+    def patch(self, request):
+        user_data = resolve_user_from_request(request)
+        if not user_data:
+            return Response(
+                {"detail": "No autenticado."}, status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        user_pk = (
+            user_data.get("user_id") or user_data.get("id") or user_data.get("sub")
+        )
+        try:
+            user = UserModel.objects.get(pk=user_pk)
+        except UserModel.DoesNotExist:
+            return Response(
+                {"detail": "Usuario no encontrado."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = AdminProfileUpdateSerializer(user, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                {
+                    "detail": "Perfil actualizado correctamente.",
+                    "user": serializer.data,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class AuthLoginView(APIView):
     permission_classes = [AllowAny]
@@ -200,16 +242,24 @@ class AdminCreateResidentView(APIView):
 
         caller = resolve_user_from_request(request)
         if not caller:
-            return Response({"detail": "No autenticado."}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                {"detail": "No autenticado."}, status=status.HTTP_401_UNAUTHORIZED
+            )
 
         caller_roles = caller.get("roles", [])
         allowed = any(r in ["residence_admin", "portfolio_admin"] for r in caller_roles)
         if not allowed:
-            return Response({"detail": "No tienes permisos para crear residentes."}, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {"detail": "No tienes permisos para crear residentes."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         residence = getattr(request, "residence", None)
         if not residence:
-            return Response({"detail": "No se ha determinado la residencia."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "No se ha determinado la residencia."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         email = data["email"].lower()
 
@@ -273,50 +323,69 @@ class AdminCreateResidentView(APIView):
         except Exception:
             pass
 
-        return Response({"ok": True, "created": created, "email": user.email}, status=status.HTTP_201_CREATED)
+        return Response(
+            {"ok": True, "created": created, "email": user.email},
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class StudentProfileView(APIView):
     """Get or update student profile"""
-    
+
     permission_classes = [AllowAny]
 
     def get(self, request):
         user_data = resolve_user_from_request(request)
         if not user_data:
-            return Response({"detail": "No autenticado."}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                {"detail": "No autenticado."}, status=status.HTTP_401_UNAUTHORIZED
+            )
 
         from apps.residences.models import StudentProfile
-        
+
         try:
-            user_pk = user_data.get("user_id") or user_data.get("id") or user_data.get("sub")
+            user_pk = (
+                user_data.get("user_id") or user_data.get("id") or user_data.get("sub")
+            )
             user = UserModel.objects.get(pk=user_pk)
             profile = StudentProfile.objects.get(user=user)
             from .serializers import StudentProfileSerializer
+
             serializer = StudentProfileSerializer(profile)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except StudentProfile.DoesNotExist:
-            return Response({"detail": "Perfil no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "Perfil no encontrado."}, status=status.HTTP_404_NOT_FOUND
+            )
 
     def post(self, request):
         """Create or update student profile"""
         user_data = resolve_user_from_request(request)
         if not user_data:
-            return Response({"detail": "No autenticado."}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                {"detail": "No autenticado."}, status=status.HTTP_401_UNAUTHORIZED
+            )
 
         from apps.residences.models import StudentProfile
+
         from .serializers import StudentProfileSerializer
 
-        user_pk = user_data.get("user_id") or user_data.get("id") or user_data.get("sub")
+        user_pk = (
+            user_data.get("user_id") or user_data.get("id") or user_data.get("sub")
+        )
         user = UserModel.objects.get(pk=user_pk)
-        
+
         request.user = user
 
         try:
             profile = StudentProfile.objects.get(user=user)
-            serializer = StudentProfileSerializer(profile, data=request.data, partial=True, context={"request": request})
+            serializer = StudentProfileSerializer(
+                profile, data=request.data, partial=True, context={"request": request}
+            )
         except StudentProfile.DoesNotExist:
-            serializer = StudentProfileSerializer(data=request.data, context={"request": request})
+            serializer = StudentProfileSerializer(
+                data=request.data, context={"request": request}
+            )
 
         if serializer.is_valid():
             serializer.save()
