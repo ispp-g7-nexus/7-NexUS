@@ -143,12 +143,13 @@ def process_password_reset_request(email: str, request):
             )
 
         except Exception as e:
-            logger.error(f"Error al enviar correo SMTP a {user.email}: {e}")
+            logger.error("Error al enviar correo SMTP en recuperación de contraseña: %s", e)            
             raise SMTPServerError()
 
-    else:
-        logger.error(f"Solicitud de recuperación para email no registrado: {email}")
-        raise NotFound(detail="El email no está registrado en el sistema.")
+    return (
+        True,
+        "Si el email está registrado, recibirás un correo con las instrucciones.",
+    )
 
 
 def process_password_reset_confirm(uid: str, token: str, new_password: str):
