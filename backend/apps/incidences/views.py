@@ -6,7 +6,7 @@ from .models import Incidence, IncidenceUpdate
 from .serializers import IncidenceSerializer, AdminIncidenceSerializer
 from .permissions import IsAdminOrReadOnly
 from apps.common.authentication import CookieJWTAuthentication
-
+from django.db.models import Q
 
 class IncidenceViewSet(viewsets.ModelViewSet):
     LOCATION_LABELS = dict(Incidence.LOCATION_CHOICES)
@@ -26,7 +26,10 @@ class IncidenceViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if user.is_staff:
             return Incidence.objects.all()
-        return Incidence.objects.filter(student=user)
+        return Incidence.objects.filter(
+            Q(student=user) | ~Q(location_type='habitacion'),
+            is_active=True
+        )
 
     def get_location_label(self, incidence):
         return self.LOCATION_LABELS.get(incidence.location_type, incidence.location_type)

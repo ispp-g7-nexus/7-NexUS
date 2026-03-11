@@ -13,6 +13,7 @@ export interface ProfileFormData {
   bio: string;
   birthplace: string;
   roomNumber: string;
+  room: string;
   profileImage: string | null;
   interests: string[];
   customInterests: string[];
@@ -138,6 +139,13 @@ export function ProfileEditForm({
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+
+    // Validaciones (NX-FB.07/30)
+    if (!formData.birthplace || formData.birthplace.trim() === "") {
+      alert("El lugar de origen es obligatorio.");
+      return;
+    }
+
     setIsSaving(true);
     try {
       // Mapeamos los datos para el backend
@@ -145,7 +153,6 @@ export function ProfileEditForm({
         nickname: formData.nickname,
         bio: formData.bio,
         birthplace: formData.birthplace,
-        // profile_image: formData.profileImage, // Lo comentamos temporalmente para evitar fallos por base64
         chronotype: formData.chronotype === "early" ? "morning" : formData.chronotype === "night" ? "night" : "midday",
         study_level: formData.studyLevel,
         noise_sensitivity: formData.noiseSensitivity,
@@ -164,6 +171,7 @@ export function ProfileEditForm({
 
     } catch (error) {
       console.error("Failed to save profile:", error);
+      alert("Error al guardar el perfil. Por favor, inténtalo de nuevo.");
     } finally {
       setIsSaving(false);
     }
@@ -235,9 +243,8 @@ export function ProfileEditForm({
                   type="text"
                   name="name"
                   value={formData.name}
-                  onChange={handleInputChange}
-                  required
-                  placeholder="Carlos Ruiz"
+                  disabled
+                  className="bg-gray-100 cursor-not-allowed"
                 />
               </div>
               <div className="space-y-2">
@@ -251,6 +258,18 @@ export function ProfileEditForm({
                   value={formData.nickname}
                   onChange={handleInputChange}
                   placeholder="Carlos"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="room" className="text-sm font-medium text-gray-700">
+                  Habitación
+                </Label>
+                <Input
+                  id="room"
+                  type="text"
+                  value={formData.room || formData.roomNumber || "Sin asignar"}
+                  disabled
+                  className="bg-gray-100 cursor-not-allowed"
                 />
               </div>
             </div>
@@ -298,8 +317,8 @@ export function ProfileEditForm({
                     type="button"
                     onClick={() => toggleTag(interest, "interests")}
                     className={`px-4 py-2 rounded-full transition-all text-sm font-medium border-2 ${formData.interests.includes(interest)
-                        ? "bg-green-600 text-white border-green-600"
-                        : "bg-gray-100 text-gray-700 border-gray-300 hover:border-green-400"
+                      ? "bg-green-600 text-white border-green-600"
+                      : "bg-gray-100 text-gray-700 border-gray-300 hover:border-green-400"
                       }`}
                   >
                     {interest}
@@ -318,7 +337,8 @@ export function ProfileEditForm({
                   type="text"
                   value={newInterestInput}
                   onChange={(e) => setNewInterestInput(e.target.value)}
-                  placeholder="Ej: Fotografía"
+                  placeholder="Ej: Fotografía (máx 30 car.)"
+                  maxLength={30}
                   onKeyPress={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
@@ -384,8 +404,8 @@ export function ProfileEditForm({
                       })
                     }
                     className={`p-3 rounded-lg border-2 transition font-medium ${formData.chronotype === option.value
-                        ? "bg-green-600 text-white border-green-600"
-                        : "bg-gray-100 text-gray-700 border-gray-300 hover:border-green-400"
+                      ? "bg-green-600 text-white border-green-600"
+                      : "bg-gray-100 text-gray-700 border-gray-300 hover:border-green-400"
                       }`}
                   >
                     {option.label}
@@ -474,8 +494,8 @@ export function ProfileEditForm({
                       })
                     }
                     className={`p-3 rounded-lg border-2 transition font-medium ${formData.temperaturePreference === option.value
-                        ? "bg-green-600 text-white border-green-600"
-                        : "bg-gray-100 text-gray-700 border-gray-300 hover:border-green-400"
+                      ? "bg-green-600 text-white border-green-600"
+                      : "bg-gray-100 text-gray-700 border-gray-300 hover:border-green-400"
                       }`}
                   >
                     {option.label}
@@ -538,8 +558,8 @@ export function ProfileEditForm({
                     type="button"
                     onClick={() => toggleTag(option, "lifestyle")}
                     className={`px-4 py-2 rounded-full transition-all text-sm font-medium border-2 ${formData.lifestyle.includes(option)
-                        ? "bg-purple-600 text-white border-purple-600"
-                        : "bg-gray-100 text-gray-700 border-gray-300 hover:border-purple-400"
+                      ? "bg-purple-600 text-white border-purple-600"
+                      : "bg-gray-100 text-gray-700 border-gray-300 hover:border-purple-400"
                       }`}
                   >
                     {option}
@@ -566,8 +586,8 @@ export function ProfileEditForm({
                     type="button"
                     onClick={() => toggleTag(genre, "musicGenres")}
                     className={`px-4 py-2 rounded-full transition-all text-sm font-medium border-2 ${formData.musicGenres.includes(genre)
-                        ? "bg-pink-600 text-white border-pink-600"
-                        : "bg-gray-100 text-gray-700 border-gray-300 hover:border-pink-400"
+                      ? "bg-pink-600 text-white border-pink-600"
+                      : "bg-gray-100 text-gray-700 border-gray-300 hover:border-pink-400"
                       }`}
                   >
                     {genre}

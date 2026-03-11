@@ -5,14 +5,14 @@ on:
     branches:
       - main
       - develop
-      - "sprint/**"
+      - "sprint*"
       - "release/**"
       - "hotfix/**"
   push:
     branches:
       - main
       - develop
-      - "sprint/**"
+      - "sprint*"
       - "release/**"
       - "hotfix/**"
 

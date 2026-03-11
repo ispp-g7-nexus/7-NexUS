@@ -65,14 +65,19 @@ class AdminCreateResidentSerializer(serializers.Serializer):
 
 
 class StudentProfileSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(source="user.get_full_name", read_only=True)
+    room = serializers.SerializerMethodField()
+
     class Meta:
         model = StudentProfile
         fields = [
             "id",
+            "name",
             "nickname",
             "bio",
             "birth_year",
             "birthplace",
+            "room",
             "room_number",
             "profile_image",
             "chronotype",
@@ -88,7 +93,14 @@ class StudentProfileSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        read_only_fields = ["id", "name", "room", "created_at", "updated_at"]
+
+    def get_room(self, obj):
+        from apps.membership.models import Membership
+        membership = Membership.objects.filter(user=obj.user, role__name__iexact="Student", is_active=True).first()
+        if membership and membership.bedroom:
+            return membership.bedroom.numero
+        return obj.room_number or ""
 
     def create(self, validated_data):
         validated_data['user'] = self.context['request'].user
