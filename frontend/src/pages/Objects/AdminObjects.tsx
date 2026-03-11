@@ -29,12 +29,12 @@ function ObjectCard({
             <h3 className="text-base font-semibold text-foreground truncate">{object.name}</h3>
             <span
               className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
-                object.availability
+                object.can_rent
                   ? "bg-emerald-100 text-emerald-700"
                   : "bg-slate-200 text-slate-600"
               }`}
             >
-              {object.availability ? "Disponible" : "No disponible"}
+              {object.can_rent ? "Disponible" : "No disponible"}
             </span>
           </div>
           {object.description && (

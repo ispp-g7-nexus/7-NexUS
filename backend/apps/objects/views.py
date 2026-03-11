@@ -7,7 +7,38 @@ from .models import Object, ObjectRental
 from django.db.utils import IntegrityError
 from django.contrib.auth import get_user_model
 from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from apps.common.utils.jwt_auth import resolve_user_from_request
+from django.db.models import Count
+
+
+def _parse_datetime_or_none(value):
+    dt = parse_datetime(str(value).strip()) if value is not None else None
+    if dt is not None and timezone.is_naive(dt):
+        dt = timezone.make_aware(dt, timezone.get_current_timezone())
+    return dt
+
+
+def _serialize_object(obj):
+    is_available_now = obj.can_rent()
+    rentals_count = getattr(obj, "rentals_count", obj.rentals.count())
+    return {
+        'id': obj.id,
+        'name': obj.name,
+        'description': obj.description,
+        'location': obj.location,
+        # "Disponibilidad" representa si puede reservarse ahora mismo.
+        'availability': is_available_now,
+        # Bandera de configuración para admin/debug.
+        'lending_enabled': obj.available,
+        # Alias compatible con ramas donde se usaba otro nombre.
+        'is_enabled': obj.available,
+        'image_url': obj.image_url,
+        'tags': obj.tags,
+        'rentals_count': rentals_count,
+        'can_rent': is_available_now,
+    }
 from django.db.models import Q
 
 OBJECT_NAME_PATTERN = re.compile(r"^[\w\-\.\(\), ]+$")
@@ -45,21 +76,10 @@ class ObjectListView(AuthenticatedView):
         if not hasattr(request, 'residence') or not request.residence:
             return JsonResponse({"detail": "No residence context."}, status=400)
 
-        objs = Object.objects.filter(residence=request.residence)
-        data = []
-        for obj in objs:
-            rentals_count = obj.rentals.count()
-            data.append({
-                'id': obj.id,
-                'name': obj.name,
-                'description': obj.description,
-                'location': obj.location,
-                'availability': obj.available,
-                'image_url': obj.image_url,
-                'tags': obj.tags,
-                'rentals_count': rentals_count,
-                'can_rent': obj.can_rent(),
-            })
+        objs = Object.objects.filter(residence=request.residence).annotate(
+            rentals_count=Count("rentals")
+        )
+        data = [_serialize_object(obj) for obj in objs]
         return JsonResponse(data, safe=False)
 
     def post(self, request):
@@ -101,6 +121,14 @@ def get_residence_object(request, object_id):
 
 class ObjectDetailView(AuthenticatedView):
     def get(self, request, object_id):
+        if not hasattr(request, 'residence') or not request.residence:
+            return JsonResponse({"detail": "No residence context."}, status=400)
+        obj = get_object_or_404(Object, id=object_id, residence=request.residence)
+        return JsonResponse(_serialize_object(obj))
+
+    def delete(self, request, object_id):
+        if not hasattr(request, 'residence') or not request.residence:
+            return JsonResponse({"detail": "No residence context."}, status=400)
         obj, error_response = get_residence_object(request, object_id)
         if error_response:
             return error_response
@@ -133,23 +161,37 @@ class ObjectDetailView(AuthenticatedView):
 
 class ObjectReserveView(AuthenticatedView):
     def post(self, request, object_id):
+        if not hasattr(request, 'residence') or not request.residence:
+            return JsonResponse({"detail": "No residence context."}, status=400)
+
         obj, error_response = get_residence_object(request, object_id)
         if error_response:
             return error_response
         try:
             body = json.loads(request.body)
-            start = body.get('start_date')
-            end = body.get('end_date')
+            start = _parse_datetime_or_none(body.get('start_date'))
+            end = _parse_datetime_or_none(body.get('end_date'))
             if not start or not end:
                 return JsonResponse({"detail": "start_date y end_date son requeridos."}, status=400)
 
+            if not obj.available:
+                return JsonResponse({"detail": "Este objeto no está disponible para préstamo."}, status=400)
+
+            if start >= end:
+                return JsonResponse({"detail": "La fecha de fin debe ser posterior a la de inicio."}, status=400)
+
+            if start < timezone.now():
+                return JsonResponse({"detail": "No se pueden crear reservas en el pasado."}, status=400)
+
             # Check overlapping rentals
-            overlapping = ObjectRental.objects.filter(object=obj).filter(
-                Q(start_date__lt=end) & Q(end_date__gt=start)
-            ).count()
+            overlapping = ObjectRental.objects.filter(
+                object=obj,
+                start_date__lt=end,
+                end_date__gt=start,
+            ).exists()
 
             # single-instance objects: if any overlapping rental exists, deny
-            if overlapping >= 1:
+            if overlapping:
                 return JsonResponse({"detail": "No hay disponibilidad para ese horario."}, status=400)
 
             rental = ObjectRental.objects.create(
@@ -166,6 +208,9 @@ class ObjectReserveView(AuthenticatedView):
 
 class ObjectCancelView(AuthenticatedView):
     def post(self, request, object_id):
+        if not hasattr(request, 'residence') or not request.residence:
+            return JsonResponse({"detail": "No residence context."}, status=400)
+
         obj, error_response = get_residence_object(request, object_id)
         if error_response:
             return error_response
@@ -176,8 +221,12 @@ class ObjectCancelView(AuthenticatedView):
             if rental_id:
                 deleted, _ = ObjectRental.objects.filter(id=rental_id, object=obj, user=request.user).delete()
             else:
-                # delete upcoming rentals for this user and object
-                deleted, _ = ObjectRental.objects.filter(object=obj, user=request.user).delete()
+                # Cancelar solo reservas activas/futuras, preservando histórico.
+                deleted, _ = ObjectRental.objects.filter(
+                    object=obj,
+                    user=request.user,
+                    end_date__gt=timezone.now(),
+                ).delete()
 
             if deleted:
                 return JsonResponse({"detail": "Reserva cancelada."}, status=200)
@@ -187,6 +236,8 @@ class ObjectCancelView(AuthenticatedView):
 
 class ObjectRentalsView(AuthenticatedView):
     def get(self, request, object_id):
+        if not hasattr(request, 'residence') or not request.residence:
+            return JsonResponse({"detail": "No residence context."}, status=400)
         obj, error_response = get_residence_object(request, object_id)
         if error_response:
             return error_response
@@ -215,7 +266,7 @@ class UserReservationsView(AuthenticatedView):
         rentals = ObjectRental.objects.filter(
             user=request.user,
             object__residence=request.residence
-        ).select_related('object')
+        ).select_related('object').order_by('-start_date')
         
         data = []
         for rental in rentals:
@@ -230,16 +281,6 @@ class UserReservationsView(AuthenticatedView):
                         'last_name': rental.user.last_name,
                     }
                 },
-                'object': {
-                    'id': rental.object.id,
-                    'name': rental.object.name,
-                    'description': rental.object.description,
-                    'location': rental.object.location,
-                    'availability': rental.object.available,
-                    'image_url': rental.object.image_url,
-                    'tags': rental.object.tags,
-                    'rentals_count': rental.object.rentals.count(),
-                    'can_rent': rental.object.can_rent(),
-                }
+                'object': _serialize_object(rental.object),
             })
         return JsonResponse(data, safe=False)
