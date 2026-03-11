@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Clock, Wrench, ChevronRight, CheckCircle2, X, MapPin, MessageSquare } from 'lucide-react';
+import { Clock, Wrench, ChevronRight, CheckCircle2, MapPin, MessageSquare } from 'lucide-react';
 import { IncidenceService, Incidence, IncidenceStatus } from '../../../services/incidences';
 
 // --- COMPONENTE MODAL ---

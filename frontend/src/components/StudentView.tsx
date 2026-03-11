@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { AlertCircle, Calendar, Home, MessageSquare, User, Utensils } from "lucide-react";
+import { AlertCircle, Calendar, Home, MessageSquare, User } from "lucide-react";
 import { toast } from "sonner";
 
 // Importamos la página de inicio y el tipo de las pestañas
