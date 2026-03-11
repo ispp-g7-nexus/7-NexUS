@@ -8,6 +8,6 @@ class IsAdminOrReadOnly(permissions.BasePermission):
         if request.user.is_staff:
             return True
         if getattr(request.user, 'is_student', False):
-            return obj.student == request.user
+            return obj.student == request.user or (obj.location_type != 'habitacion' and request.method in permissions.SAFE_METHODS)
 
         return request.method in permissions.SAFE_METHODS

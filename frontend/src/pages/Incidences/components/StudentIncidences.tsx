@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import {  Clock, CheckCircle2, Plus, Bell,  MapPin,} from "lucide-react";
+import { Clock, Plus, Bell, MapPin, User } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent } from "../../../components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "../../../components/ui/dialog";
@@ -7,6 +7,33 @@ import { Popover, PopoverContent, PopoverTrigger } from "../../../components/ui/
 import { fetchWithAuth, API_URL_INCIDENCES } from "../../../utils/api";
 import { IncidenceForm } from "./IncidenceForm";
 import "../Incidences.css";
+
+const NOTIFICATIONS_LAST_READ_KEY = "incidences-notifications-last-read";
+
+const getLastReadNotificationsAt = () => {
+  if (typeof window === "undefined") return 0;
+  const storedValue = window.localStorage.getItem(NOTIFICATIONS_LAST_READ_KEY);
+  if (!storedValue) return 0;
+  const parsedValue = Date.parse(storedValue);
+  return Number.isNaN(parsedValue) ? 0 : parsedValue;
+};
+
+const saveLastReadNotificationsAt = (timestamp?: string) => {
+  if (typeof window === "undefined" || !timestamp) return;
+  window.localStorage.setItem(NOTIFICATIONS_LAST_READ_KEY, timestamp);
+};
+
+const formatNotificationTime = (value: string) => {
+  const createdAt = new Date(value);
+  const diffInMinutes = Math.max(0, Math.round((Date.now() - createdAt.getTime()) / 60000));
+  if (diffInMinutes < 1) return "Ahora";
+  if (diffInMinutes < 60) return `Hace ${diffInMinutes} min`;
+  const diffInHours = Math.round(diffInMinutes / 60);
+  if (diffInHours < 24) return `Hace ${diffInHours} h`;
+  const diffInDays = Math.round(diffInHours / 24);
+  if (diffInDays < 7) return `Hace ${diffInDays} d`;
+  return createdAt.toLocaleDateString();
+};
 
 type IncidenceNotification = {
   id: string;
@@ -29,311 +56,159 @@ type Incidence = {
   status: "pending" | "reviewing" | "in_progress" | "resolved";
   priority: "low" | "high";
   created_at: string;
-};
-
-type IncidenceUpdateItem = {
-  id: number;
-  author_name?: string;
-  created_at: string;
-  text: string;
+  is_mine: boolean;
 };
 
 type IncidenceDetails = {
   title: string;
   description?: string;
   admin_notes?: string;
-  updates?: IncidenceUpdateItem[];
-};
-
-const NOTIFICATIONS_LAST_READ_KEY = "incidences-notifications-last-read";
-
-const getLastReadNotificationsAt = () => {
-  if (typeof window === "undefined") {
-    return 0;
-  }
-
-  const storedValue = window.localStorage.getItem(NOTIFICATIONS_LAST_READ_KEY);
-  if (!storedValue) {
-    return 0;
-  }
-
-  const parsedValue = Date.parse(storedValue);
-  return Number.isNaN(parsedValue) ? 0 : parsedValue;
-};
-
-const saveLastReadNotificationsAt = (timestamp?: string) => {
-  if (typeof window === "undefined" || !timestamp) {
-    return;
-  }
-
-  window.localStorage.setItem(NOTIFICATIONS_LAST_READ_KEY, timestamp);
-};
-
-const formatNotificationTime = (value: string) => {
-  const createdAt = new Date(value);
-  const diffInMinutes = Math.max(0, Math.round((Date.now() - createdAt.getTime()) / 60000));
-
-  if (diffInMinutes < 1) {
-    return "Ahora";
-  }
-
-  if (diffInMinutes < 60) {
-    return `Hace ${diffInMinutes} min`;
-  }
-
-  const diffInHours = Math.round(diffInMinutes / 60);
-  if (diffInHours < 24) {
-    return `Hace ${diffInHours} h`;
-  }
-
-  const diffInDays = Math.round(diffInHours / 24);
-  if (diffInDays < 7) {
-    return `Hace ${diffInDays} d`;
-  }
-
-  return createdAt.toLocaleDateString();
+  updates?: { id: number; author_name?: string; created_at: string; text: string }[];
 };
 
 export default function StudentIncidences() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [incidences, setIncidences] = useState<Incidence[]>([]);
-  const [selectedIncidenceDetails, setSelectedIncidenceDetails] = useState<IncidenceDetails | null>(null);
+  const [selectedDetails, setSelectedDetails] = useState<IncidenceDetails | null>(null);
   const [isNotesOpen, setIsNotesOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState<IncidenceNotification[]>([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [loading, setLoading] = useState(true);
+
   const [search, setSearch] = useState('');
   const [filterLocation, setFilterLocation] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterPriority, setFilterPriority] = useState('all');
-  const locationLabels: Record<string, string> = {
-    habitacion: 'Habitación',
-    baño: 'Baño Común',
-    cocina: 'Cocina',
-    zonas_comunes: 'Zonas Comunes',
-  };
 
-  const loadIncidences = async () => {
-    try {
-      const response = await fetchWithAuth(API_URL_INCIDENCES);
-      if (response.ok) {
-        const data: Incidence[] = await response.json();
-        setIncidences(data);
-      }
-    } catch (error) {
-      console.error("Error cargando incidencias:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [showOnlyMine, setShowOnlyMine] = useState(false);
 
   const updateUnreadNotifications = (nextNotifications: IncidenceNotification[]) => {
     const lastReadAt = getLastReadNotificationsAt();
-    const unreadCount = nextNotifications.filter((notification) => {
-      return Date.parse(notification.created_at) > lastReadAt;
-    }).length;
-
+    const unreadCount = nextNotifications.filter((n) => Date.parse(n.created_at) > lastReadAt).length;
     setUnreadNotifications(unreadCount);
   };
 
   const loadNotifications = useCallback(async (markAsRead = false, silent = false) => {
     try {
-      if (!silent) {
-        setNotificationsLoading(true);
-      }
+      if (!silent) setNotificationsLoading(true);
       const response = await fetchWithAuth(`${API_URL_INCIDENCES}notifications/`);
-
-      if (!response.ok) {
-        return;
-      }
-
-      const data: { results?: IncidenceNotification[] } = await response.json();
+      if (!response.ok) return;
+      const data = await response.json();
       let nextNotifications: IncidenceNotification[] = Array.isArray(data.results) ? data.results : [];
-
-      // Filtrar las notificaciones ya leídas
       const lastReadAt = getLastReadNotificationsAt();
       nextNotifications = nextNotifications.filter((n) => Date.parse(n.created_at) > lastReadAt);
-
-      // Si ya están leídas, actualizar la marca de la campanita
       if (markAsRead && nextNotifications.length > 0) {
         saveLastReadNotificationsAt(nextNotifications[0].created_at);
         setUnreadNotifications(0);
       }
-
       setNotifications(nextNotifications);
-
-      // Solo contar unread si no está marcadas como leídas
-      if (!markAsRead) {
-        updateUnreadNotifications(nextNotifications);
-      }
+      if (!markAsRead) updateUnreadNotifications(nextNotifications);
     } catch (error) {
-      console.error("Error cargando notificaciones de incidencias:", error);
+      console.error(error);
     } finally {
-      if (!silent) {
-        setNotificationsLoading(false);
-      }
+      if (!silent) setNotificationsLoading(false);
     }
   }, []);
 
-  const openNotes = async (inc: Incidence) => {
+  const loadIncidences = async () => {
     try {
-      const response = await fetchWithAuth(`${API_URL_INCIDENCES}${inc.id}/`);
+      setLoading(true);
+      const response = await fetchWithAuth(API_URL_INCIDENCES);
       if (response.ok) {
-        const data: IncidenceDetails = await response.json();
-        setSelectedIncidenceDetails(data);
-        setIsNotesOpen(true);
+        setIncidences(await response.json());
       }
     } catch (error) {
-      console.error('Error cargando notas de la incidencia:', error);
+      +    console.error("Error cargando incidencias:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
     loadIncidences();
     loadNotifications();
-
-    const intervalId = window.setInterval(() => {
-      if (isNotificationsOpen) {
-        // Cada 5 seg cuando está abierto para actualizar sin sobrecargar
-        loadNotifications(false, true);
-      }
-    }, isNotificationsOpen ? 5000 : 15000);
-
-    return () => window.clearInterval(intervalId);
+    const interval = setInterval(() => loadNotifications(false, true), isNotificationsOpen ? 5000 : 15000);
+    return () => clearInterval(interval);
   }, [isNotificationsOpen, loadNotifications]);
 
-  useEffect(() => {
-    if (isNotificationsOpen) {
-      loadNotifications(true);
-    }
-  }, [isNotificationsOpen, loadNotifications]);
+  useEffect(() => { if (isNotificationsOpen) loadNotifications(true); }, [isNotificationsOpen, loadNotifications]);
 
-  const handleNotificationsOpenChange = (open: boolean) => {
-    setIsNotificationsOpen(open);
-  };
-
-  // Formatea el texto de una actualización: elimina el prefijo "Nota:" y traduce claves de estado a etiquetas en español.
   const formatUpdateText = (text: string) => {
     if (!text) return '';
     let out = text.replace(/Nota:\s*/i, '');
-
-    const statusMap: Record<string, string> = {
-      pending: 'Pendiente',
-      reviewing: 'En revisión',
-      in_progress: 'En proceso',
-      resolved: 'Resuelto',
+    const statusMapTr: Record<string, string> = {
+      pending: 'Pendiente', reviewing: 'En revisión', in_progress: 'En proceso', resolved: 'Resuelto',
     };
-
-    Object.keys(statusMap).forEach((key) => {
+    Object.keys(statusMapTr).forEach((key) => {
       const re = new RegExp(`\\b${key}\\b`, 'g');
-      out = out.replace(re, statusMap[key]);
+      out = out.replace(re, statusMapTr[key]);
     });
-
-    out = out.replace(/\s+\./g, '.');
-    return out.trim();
+    return out.replace(/\s+\./g, '.').trim();
   };
 
-  const statusMap: Record<string, { label: string; colorClass: string; barClass: string }> = {
-    pending: {
-      label: "Pendiente",
-      colorClass: "bg-[#FFF4E5] text-[#FFB457]",
-      barClass: "bg-[#FFB457]"
-    },
-    reviewing: {
-      label: "En revisión",
-      colorClass: "bg-[#E5F1FF] text-[#0061A7]",
-      barClass: "bg-[#0061A7]"
-    },
-    in_progress: {
-      label: "En proceso",
-      colorClass: "bg-[#E0F7FA] text-[#00ACC1]",
-      barClass: "bg-[#00ACC1]"
-    },
-    resolved: {
-      label: "Resuelto",
-      colorClass: "bg-[#F0F9EB] text-[#82D14C]",
-      barClass: "bg-[#82D14C]"
-    },
-  };
-
-  const hasUnreadNotifications = unreadNotifications > 0;
+  const filteredIncidences = incidences.filter((inc) => {
+    const isVisible = inc.is_mine || inc.location_type !== 'habitacion';
+    if (!isVisible) return false;
+    if (showOnlyMine && !inc.is_mine) return false;
+    const q = search.trim().toLowerCase();
+    if (q && !(inc.title?.toLowerCase().includes(q) || inc.room_number?.toLowerCase().includes(q))) return false;
+    if (filterLocation !== 'all' && inc.location_type !== filterLocation) return false;
+    if (filterStatus !== 'all' && inc.status !== filterStatus) return false;
+    if (filterPriority !== 'all' && inc.priority !== filterPriority) return false;
+    return true;
+  });
 
   return (
-    <div className="flex flex-col h-screen bg-[#F6F7F9] relative">
-      <header className="bg-[#1B4D1C] p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg">
-        <h1 className="text-white text-2xl font-bold">Incidencias</h1>
-        <Popover open={isNotificationsOpen} onOpenChange={handleNotificationsOpenChange}>
+    <div className={UI_CLASSES.mainLayout}>
+      <header className={UI_CLASSES.header}>
+        <h1 className={UI_CLASSES.headerTitle}>Incidencias</h1>
+        <Popover open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen}>
           <PopoverTrigger asChild>
-            <button
-              type="button"
-              className="relative rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/15"
-              aria-label="Ver notificaciones recientes de incidencias"
-            >
+            <button type="button" aria-label="Abrir notificaciones" className={UI_CLASSES.bellContainer}>
               <Bell className="w-6 h-6 text-white" />
-              {hasUnreadNotifications && (
-                <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-[#82D14C] px-1.5 py-0.5 text-[10px] font-black text-[#123313] shadow-lg">
+              {unreadNotifications > 0 && (
+                <span className={UI_CLASSES.bellBadge}>
                   {unreadNotifications > 9 ? "9+" : unreadNotifications}
                 </span>
               )}
             </button>
           </PopoverTrigger>
-
           <PopoverContent align="end" sideOffset={14} className="w-[min(24rem,calc(100vw-2rem))] rounded-[28px] border-none p-0 shadow-2xl">
             <div className="overflow-hidden rounded-[28px] bg-white">
               <div className="border-b border-slate-100 px-5 py-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-sm font-black uppercase tracking-[0.18em] text-[#1B4D1C]">Notificaciones</p>
-                    <p className="mt-1 text-sm text-slate-500">Incidencias recientes de residentes y actualizaciones del personal.</p>
+                    <p className="mt-1 text-sm text-slate-500">Incidencias recientes y actualizaciones.</p>
                   </div>
                   <span className="rounded-full bg-[#EEF8E7] px-3 py-1 text-xs font-bold text-[#3A7A1C]">
                     {notifications.length} recientes
                   </span>
                 </div>
               </div>
-
               <div className="max-h-[26rem] overflow-y-auto px-3 py-3">
                 {notificationsLoading ? (
-                  <p className="px-2 py-8 text-center text-sm text-slate-400">Cargando notificaciones...</p>
+                  <p className="px-2 py-8 text-center text-sm text-slate-400">Cargando...</p>
                 ) : notifications.length === 0 ? (
                   <div className="px-2 py-8 text-center text-slate-400">
                     <Bell className="mx-auto mb-3 h-8 w-8 opacity-25" />
-                    <p className="text-sm font-medium">No hay notificaciones recientes</p>
-                    <p className="mt-1 text-xs">Las incidencias nuevas o las actualizadas por el staff se mostrarán aquí.</p>
+                    <p className="text-sm font-medium">No hay notificaciones</p>
                   </div>
                 ) : (
-                  notifications.map((notification) => {
-                    const isAdminUpdate = notification.kind === "admin_update";
-                    return (
-                      <div
-                        key={notification.id}
-                        className="mb-2 rounded-[22px] border border-slate-100 bg-slate-50/80 px-4 py-3 last:mb-0"
-                      >
-                        <div className="mb-2 flex items-start justify-between gap-3">
-                          <div className="flex items-center gap-2">
-                            <span className={`h-2.5 w-2.5 rounded-full ${isAdminUpdate ? "bg-[#0061A7]" : "bg-[#82D14C]"}`} />
-                            <p className="text-sm font-bold text-slate-800">{notification.title}</p>
-                          </div>
-                          <span className="shrink-0 text-[11px] font-semibold text-slate-400">
-                            {formatNotificationTime(notification.created_at)}
-                          </span>
+                  notifications.map((n) => (
+                    <div key={n.id} className="mb-2 rounded-[22px] border border-slate-100 bg-slate-50/80 px-4 py-3 last:mb-0">
+                      <div className="mb-2 flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                          <span className={`h-2.5 w-2.5 rounded-full ${n.kind === "admin_update" ? "bg-[#0061A7]" : "bg-[#82D14C]"}`} />
+                          <p className="text-sm font-bold text-slate-800">{n.title}</p>
                         </div>
-
-                        <p className="text-sm leading-5 text-slate-600">
-                          {isAdminUpdate ? formatUpdateText(notification.message) : notification.message}
-                        </p>
-
-                        <div className="mt-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                          <MapPin className="h-3.5 w-3.5" />
-                          <span>{notification.location_label}</span>
-                          <span className="text-slate-300">•</span>
-                          <span>{isAdminUpdate ? notification.actor_name : "Residente"}</span>
-                        </div>
+                        <span className="shrink-0 text-[11px] font-semibold text-slate-400">{formatNotificationTime(n.created_at)}</span>
                       </div>
-                    );
-                  })
+                      <p className="text-sm leading-5 text-slate-600">{n.kind === "admin_update" ? formatUpdateText(n.message) : n.message}</p>
+                    </div>
+                  ))
                 )}
               </div>
             </div>
@@ -341,169 +216,165 @@ export default function StudentIncidences() {
         </Popover>
       </header>
 
-      <main className="flex-1 overflow-y-auto p-4 space-y-4 pb-32">
-
-        <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <main className={UI_CLASSES.mainContent}>
+        <div className={UI_CLASSES.filterGrid}>
           <div className="relative col-span-1 sm:col-span-2">
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por título, persona o lugar..."
-              className="w-full pl-3 pr-3 py-2 rounded-xl border border-slate-200 shadow-sm"
-            />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar..." className={UI_CLASSES.filterInput} />
           </div>
-          <div>
-            <select value={filterLocation} onChange={(e) => setFilterLocation(e.target.value)} className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-200 bg-white">
-              <option value="all">Todas las áreas</option>
-              <option value="habitacion">Habitación</option>
-              <option value="baño">Baño Común</option>
-              <option value="cocina">Cocina</option>
-              <option value="zonas_comunes">Zonas Comunes</option>
-            </select>
-          </div>
-          <div>
-            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-200 bg-white">
-              <option value="all">Todos los estados</option>
-              <option value="pending">Pendiente</option>
-              <option value="reviewing">En revisión</option>
-              <option value="in_progress">En proceso</option>
-              <option value="resolved">Resuelto</option>
-            </select>
-          </div>
-          <div>
-            <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)} className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-200 bg-white">
-              <option value="all">Todas las prioridades</option>
-              <option value="low">BAJA</option>
-              <option value="high">URGENTE</option>
-            </select>
-          </div>
+          <select value={filterLocation} onChange={(e) => setFilterLocation(e.target.value)} className={UI_CLASSES.filterSelect}>
+            <option value="all">Todas las áreas</option>
+            {Object.entries(LOCATION_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </select>
+          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className={UI_CLASSES.filterSelect}>
+            <option value="all">Todos los estados</option>
+            {Object.entries(STATUS_MAP).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+          </select>
+          <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)} className={UI_CLASSES.filterSelect}>
+            <option value="all">Todas las prioridades</option>
+            <option value="low">BAJA</option>
+            <option value="high">URGENTE</option>
+          </select>
         </div>
-        {loading ? (
-          <p className="text-center text-gray-400 mt-10 text-sm">Cargando reportes...</p>
-        ) : incidences.length === 0 ? (
-          <div className="text-center py-20 text-gray-400">
-            <CheckCircle2 className="w-12 h-12 mx-auto mb-2 opacity-20" />
-            <p className="text-sm">No tienes incidencias activas</p>
-          </div>
-        ) : (
-          incidences
-            .filter((inc) => {
-              const q = search.trim().toLowerCase();
-              if (q) {
-                const inTitle = inc.title?.toLowerCase().includes(q);
-                const inRoom = inc.room_number?.toLowerCase().includes(q);
-                if (!inTitle && !inRoom) return false;
-              }
-              if (filterLocation !== 'all' && inc.location_type !== filterLocation) return false;
-              if (filterStatus !== 'all' && inc.status !== filterStatus) return false;
-              if (filterPriority !== 'all' && inc.priority !== filterPriority) return false;
-              return true;
-            })
-            .map((inc) => {
-              
-              const currentStatus = statusMap[inc.status as keyof typeof statusMap] || statusMap.pending;
+        <div className={UI_CLASSES.btnMineWrapper}>
+          <button
+            onClick={() => setShowOnlyMine(!showOnlyMine)}
+            className={`${UI_CLASSES.btnMineBase} ${showOnlyMine ? UI_CLASSES.btnMineActive : UI_CLASSES.btnMineInactive}`}
+          >
+            <User className={`${UI_CLASSES.btnMineIcon} ${showOnlyMine ? "text-[#82D14C]" : "text-slate-300"}`} />
+            {showOnlyMine ? "Viendo mis incidencias" : "Ver mis incidencias"}
+          </button>
+        </div>
 
-              return (
-                <Card key={inc.id} className="border-none shadow-sm rounded-[24px] overflow-hidden bg-white">
-                  <CardContent className="p-0 flex">
-                    <div className={`w-1.5 ${currentStatus.barClass}`} />
-
-                    <div className="p-5 flex-1">
-                      <div className="flex justify-between items-start mb-2">
-                        <h3 className="font-bold text-lg text-[#1A1C1E]">{inc.title}</h3>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${currentStatus.colorClass}`}>
-                          {currentStatus.label}
-                        </span>
+        {loading ? <p className={UI_CLASSES.loadingText}>Cargando...</p> :
+          filteredIncidences.map((inc) => {
+            const currentStatus = STATUS_MAP[inc.status] || STATUS_MAP.pending;
+            return (
+              <Card key={inc.id} className={UI_CLASSES.card}>
+                <CardContent className="p-0 flex">
+                  <div className={`${UI_CLASSES.cardSideBar} ${currentStatus.barClass}`} />
+                  <div className="p-5 flex-1">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex flex-col">
+                        <h3 className={UI_CLASSES.cardTitle}>{inc.title}</h3>
+                        {inc.is_mine && <span className="text-[10px] font-bold text-[#1B4D1C] uppercase tracking-tighter">Tu incidencia</span>}
                       </div>
-
-                      <div className="flex items-center gap-1.5 text-slate-500 mb-4">
-                        <MapPin size={14} strokeWidth={2.5} className="text-slate-400" />
-                        <span className="text-sm font-medium">
-                          {locationLabels[inc.location_type] || inc.location_type}
-                          {inc.location_type === 'habitacion' && inc.room_number ? ` • Planta ${inc.room_number.charAt(0)}` : ''}
-                        </span>
-                      </div>
-
-                      <div className="space-y-1 text-[#74777F] mb-4 text-xs">
-                        <div className="flex items-center gap-2 opacity-60"><Clock className="w-3.5 h-3.5" />{new Date(inc.created_at).toLocaleDateString()}</div>
-                      </div>
-                      <div className="flex justify-end">
-                        <Button
-                          variant="outline"
-                          onClick={() => openNotes(inc)}
-                          className="rounded-xl border-[#D1E4FF] text-[#0061A7] hover:bg-[#D1E4FF]/20 h-8 px-4 text-xs font-bold"
-                        >
-                          Ver notas
-                        </Button>
-                      </div>
+                      <span className={`${UI_CLASSES.statusBadge} ${currentStatus.colorClass}`}>{currentStatus.label}</span>
                     </div>
-                  </CardContent>
-                </Card>
-              );
-            })
-        )}
-
+                    <div className={UI_CLASSES.cardLocationRow}>
+                      <MapPin size={14} className="text-slate-400" />
+                      <span className="text-sm font-medium">{LOCATION_LABELS[inc.location_type] || inc.location_type} {inc.room_number ? ` • Hab. ${inc.room_number}` : ''}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <div className={UI_CLASSES.cardDateRow}>
+                        <Clock size={14} />
+                        <span>{new Date(inc.created_at).toLocaleDateString()}</span>
+                      </div>
+                      <Button
+                        variant="outline"
+                        onClick={async () => {
+                          try {
+                            const res = await fetchWithAuth(`${API_URL_INCIDENCES}${inc.id}/`);
+                            if (!res.ok) throw new Error(`Error ${res.status} al cargar detalles`);
+                            const data = await res.json();
+                            setSelectedDetails(data);
+                            setIsNotesOpen(true);
+                          } catch (error) {
+                            console.error("Error cargando detalles de incidencia:", error);
+                          }
+                        }}
+                        className={UI_CLASSES.btnNotes}
+                      >
+                        Ver notas
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })
+        }
       </main>
 
-      <button
-        onClick={() => setIsFormOpen(true)}
-        className="fixed bottom-24 right-6 w-14 h-14 bg-[#82D14C] hover:bg-[#74bc44] text-white rounded-full shadow-2xl flex items-center justify-center z-50 transition-transform active:scale-90"
-      >
-        <Plus className="w-8 h-8" strokeWidth={3} />
-      </button>
-
+      <button type="button" aria-label="Crear nueva incidencia" onClick={() => setIsFormOpen(true)} className={UI_CLASSES.btnFloating}><Plus size={32} strokeWidth={3} /></button>
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="max-w-[90vw] sm:max-w-[425px] rounded-[32px] p-0 border-none overflow-hidden">
+        <DialogContent className={UI_CLASSES.dialogForm}>
           <DialogTitle className="sr-only">Nueva Incidencia</DialogTitle>
-          <IncidenceForm
-            onSuccess={() => {
-              loadIncidences();
-              setIsFormOpen(false);
-            }}
-            onClose={() => setIsFormOpen(false)}
-          />
+          <IncidenceForm onSuccess={() => { loadIncidences(); setIsFormOpen(false); }} onClose={() => setIsFormOpen(false)} />
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isNotesOpen} onOpenChange={(open) => { if (!open) { setIsNotesOpen(false); setSelectedIncidenceDetails(null);} }}>
-        <DialogContent className="max-w-[90vw] sm:max-w-[640px] rounded-[24px] p-0 border-none overflow-hidden">
-          <DialogTitle className="p-6 bg-white border-b">Notas de la incidencia</DialogTitle>
-          <div className="p-6 bg-white">
-            {selectedIncidenceDetails ? (
-              <div>
-                <h3 className="font-bold text-lg mb-2">{selectedIncidenceDetails.title}</h3>
-                <p className="text-sm text-slate-500 italic mb-4">{selectedIncidenceDetails.description}</p>
-
-                {selectedIncidenceDetails.admin_notes && (
-                  <div className="mb-4 p-4 bg-emerald-50 rounded">
-                    <div className="text-[10px] font-black uppercase text-emerald-600 mb-1">Nota del admin</div>
-                    <div className="text-emerald-700">{selectedIncidenceDetails.admin_notes}</div>
+      <Dialog open={isNotesOpen} onOpenChange={(open) => { if (!open) setIsNotesOpen(false); }}>
+        <DialogContent className={UI_CLASSES.dialogNotes}>
+          <DialogTitle className={UI_CLASSES.notesTitle}>Notas</DialogTitle>
+          <div className="p-6 bg-white overflow-y-auto max-h-[70vh]">
+            {selectedDetails && (
+              <>
+                <h3 className="font-bold text-lg mb-2">{selectedDetails.title}</h3>
+                <p className="text-sm text-slate-500 italic mb-6">"{selectedDetails.description}"</p>
+                {selectedDetails.admin_notes && (
+                  <div className={UI_CLASSES.adminNoteBox}>
+                    <div className={UI_CLASSES.adminNoteLabel}>Admin</div>
+                    <div className="text-emerald-700">{selectedDetails.admin_notes}</div>
                   </div>
                 )}
-
-                <div className="mt-4">
-                  <div className="text-[10px] font-black uppercase text-slate-400 mb-3">Historial de actualizaciones</div>
-                  {selectedIncidenceDetails.updates && selectedIncidenceDetails.updates.length > 0 ? (
-                    <ul className="space-y-3">
-                      {selectedIncidenceDetails.updates.map((u) => (
-                        <li key={u.id} className="p-3 border rounded bg-slate-50">
-                          <div className="text-xs text-slate-500 mb-1">{u.author_name || 'Sistema'} • {new Date(u.created_at).toLocaleString()}</div>
-                          <div className="text-sm text-slate-700">{formatUpdateText(u.text)}</div>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-sm text-slate-400">No hay actualizaciones aún.</p>
-                  )}
+                <div className={UI_CLASSES.historyLabel}>Actualizaciones</div>
+                <div className="space-y-3">
+                  {selectedDetails.updates?.map(u => (
+                    <div key={u.id} className={UI_CLASSES.historyItem}>
+                      <div className="text-[10px] text-slate-400 font-bold mb-1 uppercase">{u.author_name} • {new Date(u.created_at).toLocaleString()}</div>
+                      <div className="text-sm text-slate-700">{formatUpdateText(u.text)}</div>
+                    </div>
+                  ))}
                 </div>
-              </div>
-            ) : (
-              <p className="text-sm text-slate-400">Cargando...</p>
+              </>
             )}
           </div>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 }
+
+const LOCATION_LABELS: Record<string, string> = {
+  habitacion: 'Habitación', baño: 'Baño Común', cocina: 'Cocina', comedor: 'Comedor', salas_comunes: 'Salas Comunes', exterior: 'Exterior',
+};
+
+const STATUS_MAP: Record<string, any> = {
+  pending: { label: "Pendiente", colorClass: "bg-[#FFF4E5] text-[#FFB457]", barClass: "bg-[#FFB457]" },
+  reviewing: { label: "En revisión", colorClass: "bg-[#E5F1FF] text-[#0061A7]", barClass: "bg-[#0061A7]" },
+  in_progress: { label: "En proceso", colorClass: "bg-[#E0F7FA] text-[#00ACC1]", barClass: "bg-[#00ACC1]" },
+  resolved: { label: "Resuelto", colorClass: "bg-[#F0F9EB] text-[#82D14C]", barClass: "bg-[#82D14C]" },
+};
+
+const UI_CLASSES = {
+  mainLayout: "flex flex-col h-screen bg-[#F6F7F9] relative",
+  header: "bg-[#1B4D1C] p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg",
+  headerTitle: "text-white text-2xl font-bold",
+  bellContainer: "relative p-2 bg-white/10 rounded-full",
+  bellBadge: "absolute -right-1 -top-1 min-w-5 h-5 flex items-center justify-center rounded-full bg-[#82D14C] px-1 text-[10px] font-black text-[#123313]",
+  mainContent: "flex-1 overflow-y-auto p-4 space-y-4 pb-32",
+  btnMineWrapper: "flex justify-end mb-2",
+  btnMineBase: "flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all border",
+  btnMineActive: "bg-[#1B4D1C] text-white border-[#1B4D1C]",
+  btnMineInactive: "bg-white text-[#1B4D1C] border-slate-200 hover:bg-slate-50",
+  btnMineIcon: "w-4 h-4",
+  filterGrid: "mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 px-1",
+  filterInput: "w-full px-4 py-2 rounded-xl border border-slate-200 shadow-sm outline-none",
+  filterSelect: "w-full px-3 py-2 rounded-xl border border-slate-200 bg-white",
+  card: "border-none shadow-sm rounded-[24px] overflow-hidden bg-white",
+  cardSideBar: "w-1.5 shrink-0",
+  cardTitle: "font-bold text-lg text-[#1A1C1E]",
+  cardLocationRow: "flex items-center gap-1.5 text-slate-500 mb-4",
+  cardDateRow: "flex items-center gap-2 opacity-60 text-[#74777F] text-xs",
+  statusBadge: "text-[10px] px-2 py-0.5 rounded-full font-bold uppercase",
+  btnNotes: "rounded-xl border-[#D1E4FF] text-[#0061A7] hover:bg-[#D1E4FF]/20 h-8 px-4 text-xs font-bold",
+  btnFloating: "fixed bottom-24 right-6 w-14 h-14 bg-[#82D14C] hover:bg-[#74bc44] text-white rounded-full shadow-2xl flex items-center justify-center z-50",
+  dialogForm: "max-w-[90vw] sm:max-w-[425px] rounded-[32px] p-0 border-none overflow-hidden",
+  dialogNotes: "max-w-[90vw] sm:max-w-[640px] rounded-[24px] p-0 border-none overflow-hidden",
+  notesTitle: "p-6 bg-white border-b font-bold text-slate-800",
+  adminNoteBox: "mb-6 p-4 bg-emerald-50 rounded-2xl border border-emerald-100",
+  adminNoteLabel: "text-[10px] font-black uppercase text-emerald-600 mb-1",
+  historyLabel: "text-[10px] font-black uppercase text-slate-400 mb-3",
+  historyItem: "p-3 border border-slate-100 rounded-xl bg-slate-50/50",
+  loadingText: "text-center text-slate-400 mt-10 text-sm",
+};
