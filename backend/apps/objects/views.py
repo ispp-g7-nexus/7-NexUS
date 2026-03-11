@@ -3,12 +3,11 @@ from django.http import JsonResponse
 from django.views import View
 from django.utils.decorators import method_decorator
 from .models import Object, ObjectRental
-from django.shortcuts import get_object_or_404
 from django.db.utils import IntegrityError
 from django.contrib.auth import get_user_model
 from django.views.decorators.csrf import csrf_exempt
 from apps.common.utils.jwt_auth import resolve_user_from_request
-from django.db.models import Q, Count
+from django.db.models import Q
 
 @method_decorator(csrf_exempt, name='dispatch')
 class AuthenticatedView(View):
@@ -64,9 +63,21 @@ class ObjectListView(AuthenticatedView):
         except Exception as e:
             return JsonResponse({"detail": str(e)}, status=400)
 
+
+def get_residence_object(request, object_id):
+    if not hasattr(request, 'residence') or not request.residence:
+        return None, JsonResponse({"detail": "No residence context."}, status=400)
+    try:
+        return Object.objects.get(id=object_id, residence=request.residence), None
+    except Object.DoesNotExist:
+        return None, JsonResponse({"detail": "Objeto no encontrado."}, status=404)
+
+
 class ObjectDetailView(AuthenticatedView):
     def get(self, request, object_id):
-        obj = get_object_or_404(Object, id=object_id, residence=request.residence)
+        obj, error_response = get_residence_object(request, object_id)
+        if error_response:
+            return error_response
         rentals_count = obj.rentals.count()
         return JsonResponse({
             'id': obj.id,
@@ -81,16 +92,24 @@ class ObjectDetailView(AuthenticatedView):
         })
 
     def delete(self, request, object_id):
-        obj = get_object_or_404(Object, id=object_id, residence=request.residence)
+        obj, error_response = get_residence_object(request, object_id)
+        if error_response:
+            return error_response
         if not request.user.is_staff:
             return JsonResponse({"detail": "Unauthorized"}, status=403)
-        obj.delete()
-        # 204 responses must not include a body. Return 200 to keep a JSON payload.
-        return JsonResponse({"detail": "Object deleted"}, status=200)
+        try:
+            obj.delete()
+            return JsonResponse({"detail": "Object deleted"}, status=200)
+        except IntegrityError:
+            return JsonResponse({"detail": "No se puede eliminar el objeto por dependencias activas."}, status=400)
+        except Exception as e:
+            return JsonResponse({"detail": str(e)}, status=500)
 
 class ObjectReserveView(AuthenticatedView):
     def post(self, request, object_id):
-        obj = get_object_or_404(Object, id=object_id, residence=request.residence)
+        obj, error_response = get_residence_object(request, object_id)
+        if error_response:
+            return error_response
         try:
             body = json.loads(request.body)
             start = body.get('start_date')
@@ -121,7 +140,9 @@ class ObjectReserveView(AuthenticatedView):
 
 class ObjectCancelView(AuthenticatedView):
     def post(self, request, object_id):
-        obj = get_object_or_404(Object, id=object_id, residence=request.residence)
+        obj, error_response = get_residence_object(request, object_id)
+        if error_response:
+            return error_response
         try:
             body = json.loads(request.body) if request.body else {}
             # try to cancel specific rental id
@@ -140,7 +161,9 @@ class ObjectCancelView(AuthenticatedView):
 
 class ObjectRentalsView(AuthenticatedView):
     def get(self, request, object_id):
-        obj = get_object_or_404(Object, id=object_id, residence=request.residence)
+        obj, error_response = get_residence_object(request, object_id)
+        if error_response:
+            return error_response
         rentals = obj.rentals.select_related('user').all()
         data = []
         for r in rentals:

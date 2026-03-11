@@ -94,6 +94,7 @@ class AnnouncementListSerializer(serializers.ModelSerializer):
             'category',
             'category_display',
             'featured',
+            'publication_date',
             'announcement_date',
             'has_passed',
         ]

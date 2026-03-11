@@ -3,6 +3,27 @@ import { API_URL } from "./api";
 
 const OBJECTS_URL = `${API_URL}/objects`;
 
+async function buildApiError(response: Response, fallbackMessage: string): Promise<Error> {
+  try {
+    const contentType = response.headers.get("content-type") || "";
+
+    if (contentType.includes("application/json")) {
+      const payload = await response.json();
+      const detail = typeof payload?.detail === "string" ? payload.detail : "";
+      return new Error(detail || `${fallbackMessage} (HTTP ${response.status})`);
+    }
+
+    const rawText = (await response.text()).trim();
+    if (rawText && !rawText.startsWith("<")) {
+      return new Error(rawText);
+    }
+  } catch {
+    // Fall back to a generic message when body parsing fails.
+  }
+
+  return new Error(`${fallbackMessage} (HTTP ${response.status})`);
+}
+
 export interface ObjectRental {
   id: number;
   start_date: string;
@@ -58,8 +79,7 @@ export const objectsService = {
     });
     
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || 'Error al obtener objetos');
+      throw await buildApiError(response, 'Error al obtener objetos');
     }
     
     return response.json();
@@ -74,8 +94,7 @@ export const objectsService = {
     });
     
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || 'Error al obtener detalles del objeto');
+      throw await buildApiError(response, 'Error al obtener detalles del objeto');
     }
     
     return response.json();
@@ -91,8 +110,7 @@ export const objectsService = {
     });
     
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || 'Error al crear objeto');
+      throw await buildApiError(response, 'Error al crear objeto');
     }
     
     return response.json();
@@ -107,8 +125,7 @@ export const objectsService = {
     });
     
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || 'Error al eliminar objeto');
+      throw await buildApiError(response, 'Error al eliminar objeto');
     }
   },
 
@@ -122,8 +139,7 @@ export const objectsService = {
     });
     
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || 'Error al reservar objeto');
+      throw await buildApiError(response, 'Error al reservar objeto');
     }
     
     return response.json();
@@ -139,8 +155,7 @@ export const objectsService = {
     });
     
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || 'Error al cancelar reserva');
+      throw await buildApiError(response, 'Error al cancelar reserva');
     }
     
     return response.json();
@@ -155,8 +170,7 @@ export const objectsService = {
     });
     
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || 'Error al obtener reservas del objeto');
+      throw await buildApiError(response, 'Error al obtener reservas del objeto');
     }
     
     return response.json();
@@ -171,8 +185,7 @@ export const objectsService = {
     });
     
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || 'Error al obtener mis reservas');
+      throw await buildApiError(response, 'Error al obtener mis reservas');
     }
     
     return response.json();
