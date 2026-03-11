@@ -10,17 +10,44 @@ import { fetchWithAuth, API_URL_INCIDENCES } from "../../../utils/api";
 import { IncidenceForm } from "./IncidenceForm";
 import "../Incidences.css";
 
-// --- TIPOS ---
-type Incidence = {
-  id: number;
-  title: string;
-  description?: string;
-  room_number?: string;
-  location_type: string;
-  status: "pending" | "reviewing" | "in_progress" | "resolved";
-  priority: "low" | "high";
-  created_at: string;
+
+const NOTIFICATIONS_LAST_READ_KEY = "incidences-notifications-last-read";
+
+const getLastReadNotificationsAt = () => {
+  if (typeof window === "undefined") {
+    return 0;
+  }
+  const storedValue = window.localStorage.getItem(NOTIFICATIONS_LAST_READ_KEY);
+  if (!storedValue) {
+    return 0;
+  }
+  const parsedValue = Date.parse(storedValue);
+  return Number.isNaN(parsedValue) ? 0 : parsedValue;
 };
+
+const saveLastReadNotificationsAt = (timestamp?: string) => {
+  if (typeof window === "undefined" || !timestamp) {
+    return;
+  }
+  window.localStorage.setItem(NOTIFICATIONS_LAST_READ_KEY, timestamp);
+};
+
+const formatNotificationTime = (value: string) => {
+  const createdAt = new Date(value);
+  const diffInMinutes = Math.max(0, Math.round((Date.now() - createdAt.getTime()) / 60000));
+
+  if (diffInMinutes < 1) return "Ahora";
+  if (diffInMinutes < 60) return `Hace ${diffInMinutes} min`;
+  
+  const diffInHours = Math.round(diffInMinutes / 60);
+  if (diffInHours < 24) return `Hace ${diffInHours} h`;
+  
+  const diffInDays = Math.round(diffInHours / 24);
+  if (diffInDays < 7) return `Hace ${diffInDays} d`;
+  
+  return createdAt.toLocaleDateString();
+};
+
 
 type IncidenceNotification = {
   id: string;
@@ -34,32 +61,22 @@ type IncidenceNotification = {
   created_at: string;
 };
 
+type Incidence = {
+  id: number;
+  title: string;
+  description?: string;
+  room_number?: string;
+  location_type: string;
+  status: "pending" | "reviewing" | "in_progress" | "resolved";
+  priority: "low" | "high";
+  created_at: string;
+};
+
 type IncidenceDetails = {
   title: string;
   description?: string;
   admin_notes?: string;
   updates?: { id: number; author_name?: string; created_at: string; text: string }[];
-};
-
-// --- LÓGICA DE NOTIFICACIONES ---
-const NOTIFICATIONS_LAST_READ_KEY = "incidences-notifications-last-read";
-const getLastReadNotificationsAt = () => {
-  if (typeof window === "undefined") return 0;
-  const storedValue = window.localStorage.getItem(NOTIFICATIONS_LAST_READ_KEY);
-  return storedValue ? Date.parse(storedValue) : 0;
-};
-const saveLastReadNotificationsAt = (timestamp?: string) => {
-  if (typeof window === "undefined" || !timestamp) return;
-  window.localStorage.setItem(NOTIFICATIONS_LAST_READ_KEY, timestamp);
-};
-const formatNotificationTime = (value: string) => {
-  const createdAt = new Date(value);
-  const diffInMinutes = Math.max(0, Math.round((Date.now() - createdAt.getTime()) / 60000));
-  if (diffInMinutes < 1) return "Ahora";
-  if (diffInMinutes < 60) return `Hace ${diffInMinutes} min`;
-  const diffInHours = Math.round(diffInMinutes / 60);
-  if (diffInHours < 24) return `Hace ${diffInHours} h`;
-  return createdAt.toLocaleDateString();
 };
 
 export default function StudentIncidences() {
@@ -73,20 +90,17 @@ export default function StudentIncidences() {
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  // --- FILTROS RESTAURADOS ---
   const [search, setSearch] = useState('');
   const [filterLocation, setFilterLocation] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterPriority, setFilterPriority] = useState('all');
 
-  const loadIncidences = async () => {
-    try {
-      setLoading(true);
-      const response = await fetchWithAuth(API_URL_INCIDENCES);
-      if (response.ok) setIncidences(await response.json());
-    } finally {
-      setLoading(false);
-    }
+  const updateUnreadNotifications = (nextNotifications: IncidenceNotification[]) => {
+    const lastReadAt = getLastReadNotificationsAt();
+    const unreadCount = nextNotifications.filter((notification) => {
+      return Date.parse(notification.created_at) > lastReadAt;
+    }).length;
+    setUnreadNotifications(unreadCount);
   };
 
   const loadNotifications = useCallback(async (markAsRead = false, silent = false) => {
@@ -94,18 +108,36 @@ export default function StudentIncidences() {
       if (!silent) setNotificationsLoading(true);
       const response = await fetchWithAuth(`${API_URL_INCIDENCES}notifications/`);
       if (!response.ok) return;
+
       const data = await response.json();
       let nextNotifications: IncidenceNotification[] = Array.isArray(data.results) ? data.results : [];
+
       const lastReadAt = getLastReadNotificationsAt();
+
       nextNotifications = nextNotifications.filter((n) => Date.parse(n.created_at) > lastReadAt);
+
       if (markAsRead && nextNotifications.length > 0) {
         saveLastReadNotificationsAt(nextNotifications[0].created_at);
         setUnreadNotifications(0);
       }
+
       setNotifications(nextNotifications);
-      if (!markAsRead) setUnreadNotifications(nextNotifications.length);
-    } catch (error) { console.error(error); } finally { if (!silent) setNotificationsLoading(false); }
+      if (!markAsRead) updateUnreadNotifications(nextNotifications);
+      
+    } catch (error) {
+      console.error(error);
+    } finally {
+      if (!silent) setNotificationsLoading(false);
+    }
   }, []);
+
+  const loadIncidences = async () => {
+    try {
+      setLoading(true);
+      const response = await fetchWithAuth(API_URL_INCIDENCES);
+      if (response.ok) setIncidences(await response.json());
+    } finally { setLoading(false); }
+  };
 
   useEffect(() => {
     loadIncidences();
@@ -116,7 +148,19 @@ export default function StudentIncidences() {
 
   useEffect(() => { if (isNotificationsOpen) loadNotifications(true); }, [isNotificationsOpen, loadNotifications]);
 
-  // --- LÓGICA DE FILTRADO COMPLETA ---
+  const formatUpdateText = (text: string) => {
+    if (!text) return '';
+    let out = text.replace(/Nota:\s*/i, '');
+    const statusMapTr: Record<string, string> = {
+      pending: 'Pendiente', reviewing: 'En revisión', in_progress: 'En proceso', resolved: 'Resuelto',
+    };
+    Object.keys(statusMapTr).forEach((key) => {
+      const re = new RegExp(`\\b${key}\\b`, 'g');
+      out = out.replace(re, statusMapTr[key]);
+    });
+    return out.replace(/\s+\./g, '.').trim();
+  };
+
   const filteredIncidences = incidences.filter((inc) => {
     const q = search.trim().toLowerCase();
     if (q && !(inc.title?.toLowerCase().includes(q) || inc.room_number?.toLowerCase().includes(q))) return false;
@@ -134,32 +178,70 @@ export default function StudentIncidences() {
           <PopoverTrigger asChild>
             <button className={UI_CLASSES.bellContainer}>
               <Bell className="w-6 h-6 text-white" />
-              {unreadNotifications > 0 && <span className={UI_CLASSES.bellBadge}>{unreadNotifications}</span>}
+              {unreadNotifications > 0 && (
+                <span className={UI_CLASSES.bellBadge}>
+                  {unreadNotifications > 9 ? "9+" : unreadNotifications}
+                </span>
+              )}
             </button>
           </PopoverTrigger>
-          <PopoverContent align="end" className={UI_CLASSES.popoverContent}>
-             <div className={UI_CLASSES.popoverHeader}>Notificaciones</div>
-             <div className="max-h-80 overflow-y-auto p-3">
-                {notifications.map(n => (
-                  <div key={n.id} className="mb-2 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                    <p className="text-xs font-bold">{n.title}</p>
-                    <p className="text-[11px] text-slate-500">{n.message}</p>
+          <PopoverContent align="end" sideOffset={14} className="w-[min(24rem,calc(100vw-2rem))] rounded-[28px] border-none p-0 shadow-2xl">
+            <div className="overflow-hidden rounded-[28px] bg-white">
+              <div className="border-b border-slate-100 px-5 py-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-black uppercase tracking-[0.18em] text-[#1B4D1C]">Notificaciones</p>
+                    <p className="mt-1 text-sm text-slate-500">Incidencias recientes y actualizaciones.</p>
                   </div>
-                ))}
-             </div>
+                  <span className="rounded-full bg-[#EEF8E7] px-3 py-1 text-xs font-bold text-[#3A7A1C]">
+                    {notifications.length} recientes
+                  </span>
+                </div>
+              </div>
+
+              <div className="max-h-[26rem] overflow-y-auto px-3 py-3">
+                {notificationsLoading ? (
+                  <p className="px-2 py-8 text-center text-sm text-slate-400">Cargando...</p>
+                ) : notifications.length === 0 ? (
+                  <div className="px-2 py-8 text-center text-slate-400">
+                    <Bell className="mx-auto mb-3 h-8 w-8 opacity-25" />
+                    <p className="text-sm font-medium">No hay notificaciones</p>
+                  </div>
+                ) : (
+                  notifications.map((n) => (
+                    <div key={n.id} className="mb-2 rounded-[22px] border border-slate-100 bg-slate-50/80 px-4 py-3 last:mb-0">
+                      <div className="mb-2 flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                          <span className={`h-2.5 w-2.5 rounded-full ${n.kind === "admin_update" ? "bg-[#0061A7]" : "bg-[#82D14C]"}`} />
+                          <p className="text-sm font-bold text-slate-800">{n.title}</p>
+                        </div>
+                        <span className="shrink-0 text-[11px] font-semibold text-slate-400">
+                          {formatNotificationTime(n.created_at)}
+                        </span>
+                      </div>
+                      <p className="text-sm leading-5 text-slate-600">
+                        {n.kind === "admin_update" ? formatUpdateText(n.message) : n.message}
+                      </p>
+                      <div className="mt-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                        <MapPin className="h-3.5 w-3.5" />
+                        <span>{n.location_label}</span>
+                        <span className="text-slate-300">•</span>
+                        <span>{n.kind === "admin_update" ? n.actor_name : "Residente"}</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </PopoverContent>
         </Popover>
       </header>
 
+      {/* ... Resto del componente (Filtros, Cards, Dialogs) ... */}
       <main className={UI_CLASSES.mainContent}>
-        {/* BARRA DE FILTROS  */}
         <div className={UI_CLASSES.filterGrid}>
           <div className="relative col-span-1 sm:col-span-2">
-            <input
-              value={search} onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por título o habitación..."
-              className={UI_CLASSES.filterInput}
-            />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar..." className={UI_CLASSES.filterInput} />
           </div>
           <select value={filterLocation} onChange={(e) => setFilterLocation(e.target.value)} className={UI_CLASSES.filterSelect}>
             <option value="all">Todas las áreas</option>
@@ -176,14 +258,7 @@ export default function StudentIncidences() {
           </select>
         </div>
 
-        {loading ? (
-          <p className={UI_CLASSES.loadingText}>Cargando...</p>
-        ) : filteredIncidences.length === 0 ? (
-          <div className={UI_CLASSES.emptyState}>
-            <CheckCircle2 className="w-12 h-12 mx-auto mb-2 opacity-20" />
-            <p>No hay resultados</p>
-          </div>
-        ) : (
+        {loading ? <p className={UI_CLASSES.loadingText}>Cargando...</p> : 
           filteredIncidences.map((inc) => {
             const currentStatus = STATUS_MAP[inc.status] || STATUS_MAP.pending;
             return (
@@ -206,8 +281,7 @@ export default function StudentIncidences() {
                       <div className={UI_CLASSES.cardDateRow}><Clock size={14} /> <span>{new Date(inc.created_at).toLocaleDateString()}</span></div>
                       <Button variant="outline" onClick={() => {
                         fetchWithAuth(`${API_URL_INCIDENCES}${inc.id}/`).then(res => res.json()).then(data => {
-                          setSelectedDetails(data);
-                          setIsNotesOpen(true);
+                          setSelectedDetails(data); setIsNotesOpen(true);
                         });
                       }} className={UI_CLASSES.btnNotes}>Ver notas</Button>
                     </div>
@@ -216,7 +290,7 @@ export default function StudentIncidences() {
               </Card>
             );
           })
-        )}
+        }
       </main>
 
       <button onClick={() => setIsFormOpen(true)} className={UI_CLASSES.btnFloating}><Plus size={32} strokeWidth={3} /></button>
@@ -247,7 +321,7 @@ export default function StudentIncidences() {
                   {selectedDetails.updates?.map(u => (
                     <div key={u.id} className={UI_CLASSES.historyItem}>
                       <div className="text-[10px] text-slate-400 font-bold mb-1 uppercase">{u.author_name} • {new Date(u.created_at).toLocaleString()}</div>
-                      <div className="text-sm text-slate-700">{u.text}</div>
+                      <div className="text-sm text-slate-700">{formatUpdateText(u.text)}</div>
                     </div>
                   ))}
                 </div>
@@ -260,8 +334,9 @@ export default function StudentIncidences() {
   );
 }
 
+// Configuración de etiquetas y estilos (UI_CLASSES)
 const LOCATION_LABELS: Record<string, string> = {
-  habitacion: 'Habitación', baño: 'Baño Común', cocina: 'Cocina', comedor: 'Comedor', salas_comunes: 'Salas Comunes', exterior: 'Exterior',
+  habitacion: 'Habitación', baño: 'Baño Común', cocina: 'Cocina', comedor: 'Comedor', zonas_comunes: 'Zonas Comunes', exterior: 'Exterior',
 };
 
 const STATUS_MAP: Record<string, any> = {
@@ -279,8 +354,8 @@ const UI_CLASSES = {
   bellBadge: "absolute -right-1 -top-1 min-w-5 h-5 flex items-center justify-center rounded-full bg-[#82D14C] px-1 text-[10px] font-black text-[#123313]",
   mainContent: "flex-1 overflow-y-auto p-4 space-y-4 pb-32",
   filterGrid: "mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3",
-  filterInput: "w-full px-4 py-2 rounded-xl border border-slate-200 shadow-sm outline-none focus:ring-2 focus:ring-[#82D14C]",
-  filterSelect: "w-full px-3 py-2 rounded-xl border border-slate-200 bg-white outline-none",
+  filterInput: "w-full px-4 py-2 rounded-xl border border-slate-200 shadow-sm outline-none",
+  filterSelect: "w-full px-3 py-2 rounded-xl border border-slate-200 bg-white",
   card: "border-none shadow-sm rounded-[24px] overflow-hidden bg-white",
   cardSideBar: "w-1.5 shrink-0",
   cardTitle: "font-bold text-lg text-[#1A1C1E]",
@@ -290,14 +365,11 @@ const UI_CLASSES = {
   btnNotes: "rounded-xl border-[#D1E4FF] text-[#0061A7] hover:bg-[#D1E4FF]/20 h-8 px-4 text-xs font-bold",
   btnFloating: "fixed bottom-24 right-6 w-14 h-14 bg-[#82D14C] hover:bg-[#74bc44] text-white rounded-full shadow-2xl flex items-center justify-center z-50",
   dialogForm: "max-w-[90vw] sm:max-w-[425px] rounded-[32px] p-0 border-none overflow-hidden",
-  dialogNotes: "max-w-[90vw] sm:max-w-[600px] rounded-[24px] p-0 border-none overflow-hidden",
+  dialogNotes: "max-w-[90vw] sm:max-w-[640px] rounded-[24px] p-0 border-none overflow-hidden",
   notesTitle: "p-6 bg-white border-b font-bold text-slate-800",
   adminNoteBox: "mb-6 p-4 bg-emerald-50 rounded-2xl border border-emerald-100",
   adminNoteLabel: "text-[10px] font-black uppercase text-emerald-600 mb-1",
   historyLabel: "text-[10px] font-black uppercase text-slate-400 mb-3",
   historyItem: "p-3 border border-slate-100 rounded-xl bg-slate-50/50",
-  popoverContent: "w-[min(24rem,calc(100vw-2rem))] rounded-[28px] border-none shadow-2xl bg-white p-0 overflow-hidden",
-  popoverHeader: "bg-slate-50 px-5 py-3 border-b text-[10px] font-bold uppercase tracking-widest text-[#1B4D1C]",
   loadingText: "text-center text-slate-400 mt-10 text-sm",
-  emptyState: "text-center py-20 text-slate-300 font-medium"
 };
