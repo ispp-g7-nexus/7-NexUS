@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Clock, CheckCircle2, Plus, Bell, MapPin, User } from "lucide-react";
+import { Clock, Plus, Bell, MapPin, User } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent } from "../../../components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "../../../components/ui/dialog";

@@ -1,14 +1,14 @@
 "use client"
 
 import React, { useState } from "react"
-import { AlertTriangle, Info, Send } from "lucide-react" // Se elimina 'X' según la captura
+import { AlertTriangle, Info } from "lucide-react"
 import { Button } from "../../../components/ui/button"
 import { Input } from "../../../components/ui/input"
 import { Label } from "../../../components/ui/label"
 import { Checkbox } from "../../../components/ui/checkbox"
 import { Select, SelectContent, SelectTrigger, SelectItem, SelectValue } from "../../../components/ui/select2"
 import { DialogDescription } from "../../../components/ui/dialog"
-import { IncidenceService } from "../../../services/incidences"
+import { IncidenceService, type LocationType } from "../../../services/incidences"
 
 interface IncidenceFormProps {
   onSuccess: () => void
@@ -28,7 +28,7 @@ export function IncidenceForm({ onSuccess, onClose }: IncidenceFormProps) {
     const payload = {
       title: formData.get("title") as string,
       description: formData.get("description") as string,
-      location_type: locationType,
+      location_type: locationType as LocationType,
       priority: (urgent ? "high" : "low") as 'low' | 'high',
     }
 
@@ -144,7 +144,6 @@ export function IncidenceForm({ onSuccess, onClose }: IncidenceFormProps) {
 const UI_CLASSES = {
   form: "flex flex-col h-full max-h-[90vh] bg-white overflow-hidden",
   header: "p-6 text-center border-b border-gray-50 shrink-0 relative",
-  // Se mantiene el estilo por si se usa en otro lado, pero el botón ya no está en el JSX
   closeBtn: "absolute right-4 top-4 p-2 hover:bg-gray-100 rounded-full transition-colors z-10",
   title: "text-xl font-bold text-[#1B4D1C] mt-2",
   description: "text-sm text-gray-500 mt-1 px-6 leading-tight text-center font-normal",
