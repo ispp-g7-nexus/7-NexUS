@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Clock, CheckCircle2, Plus, Bell, MapPin } from "lucide-react";
+import { Clock, CheckCircle2, Plus, Bell, MapPin, User } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent } from "../../../components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "../../../components/ui/dialog";
@@ -10,44 +10,32 @@ import { fetchWithAuth, API_URL_INCIDENCES } from "../../../utils/api";
 import { IncidenceForm } from "./IncidenceForm";
 import "../Incidences.css";
 
-
 const NOTIFICATIONS_LAST_READ_KEY = "incidences-notifications-last-read";
 
 const getLastReadNotificationsAt = () => {
-  if (typeof window === "undefined") {
-    return 0;
-  }
+  if (typeof window === "undefined") return 0;
   const storedValue = window.localStorage.getItem(NOTIFICATIONS_LAST_READ_KEY);
-  if (!storedValue) {
-    return 0;
-  }
+  if (!storedValue) return 0;
   const parsedValue = Date.parse(storedValue);
   return Number.isNaN(parsedValue) ? 0 : parsedValue;
 };
 
 const saveLastReadNotificationsAt = (timestamp?: string) => {
-  if (typeof window === "undefined" || !timestamp) {
-    return;
-  }
+  if (typeof window === "undefined" || !timestamp) return;
   window.localStorage.setItem(NOTIFICATIONS_LAST_READ_KEY, timestamp);
 };
 
 const formatNotificationTime = (value: string) => {
   const createdAt = new Date(value);
   const diffInMinutes = Math.max(0, Math.round((Date.now() - createdAt.getTime()) / 60000));
-
   if (diffInMinutes < 1) return "Ahora";
   if (diffInMinutes < 60) return `Hace ${diffInMinutes} min`;
-  
   const diffInHours = Math.round(diffInMinutes / 60);
   if (diffInHours < 24) return `Hace ${diffInHours} h`;
-  
   const diffInDays = Math.round(diffInHours / 24);
   if (diffInDays < 7) return `Hace ${diffInDays} d`;
-  
   return createdAt.toLocaleDateString();
 };
-
 
 type IncidenceNotification = {
   id: string;
@@ -70,6 +58,7 @@ type Incidence = {
   status: "pending" | "reviewing" | "in_progress" | "resolved";
   priority: "low" | "high";
   created_at: string;
+  is_mine: boolean; 
 };
 
 type IncidenceDetails = {
@@ -95,11 +84,11 @@ export default function StudentIncidences() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterPriority, setFilterPriority] = useState('all');
 
+  const [showOnlyMine, setShowOnlyMine] = useState(false);
+
   const updateUnreadNotifications = (nextNotifications: IncidenceNotification[]) => {
     const lastReadAt = getLastReadNotificationsAt();
-    const unreadCount = nextNotifications.filter((notification) => {
-      return Date.parse(notification.created_at) > lastReadAt;
-    }).length;
+    const unreadCount = nextNotifications.filter((n) => Date.parse(n.created_at) > lastReadAt).length;
     setUnreadNotifications(unreadCount);
   };
 
@@ -108,22 +97,16 @@ export default function StudentIncidences() {
       if (!silent) setNotificationsLoading(true);
       const response = await fetchWithAuth(`${API_URL_INCIDENCES}notifications/`);
       if (!response.ok) return;
-
       const data = await response.json();
       let nextNotifications: IncidenceNotification[] = Array.isArray(data.results) ? data.results : [];
-
       const lastReadAt = getLastReadNotificationsAt();
-
       nextNotifications = nextNotifications.filter((n) => Date.parse(n.created_at) > lastReadAt);
-
       if (markAsRead && nextNotifications.length > 0) {
         saveLastReadNotificationsAt(nextNotifications[0].created_at);
         setUnreadNotifications(0);
       }
-
       setNotifications(nextNotifications);
       if (!markAsRead) updateUnreadNotifications(nextNotifications);
-      
     } catch (error) {
       console.error(error);
     } finally {
@@ -135,8 +118,12 @@ export default function StudentIncidences() {
     try {
       setLoading(true);
       const response = await fetchWithAuth(API_URL_INCIDENCES);
-      if (response.ok) setIncidences(await response.json());
-    } finally { setLoading(false); }
+      if (response.ok) {
+        setIncidences(await response.json());
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -162,6 +149,9 @@ export default function StudentIncidences() {
   };
 
   const filteredIncidences = incidences.filter((inc) => {
+    const isVisible = inc.is_mine || inc.location_type !== 'habitacion';
+    if (!isVisible) return false;
+    if (showOnlyMine && !inc.is_mine) return false;
     const q = search.trim().toLowerCase();
     if (q && !(inc.title?.toLowerCase().includes(q) || inc.room_number?.toLowerCase().includes(q))) return false;
     if (filterLocation !== 'all' && inc.location_type !== filterLocation) return false;
@@ -198,7 +188,6 @@ export default function StudentIncidences() {
                   </span>
                 </div>
               </div>
-
               <div className="max-h-[26rem] overflow-y-auto px-3 py-3">
                 {notificationsLoading ? (
                   <p className="px-2 py-8 text-center text-sm text-slate-400">Cargando...</p>
@@ -215,19 +204,9 @@ export default function StudentIncidences() {
                           <span className={`h-2.5 w-2.5 rounded-full ${n.kind === "admin_update" ? "bg-[#0061A7]" : "bg-[#82D14C]"}`} />
                           <p className="text-sm font-bold text-slate-800">{n.title}</p>
                         </div>
-                        <span className="shrink-0 text-[11px] font-semibold text-slate-400">
-                          {formatNotificationTime(n.created_at)}
-                        </span>
+                        <span className="shrink-0 text-[11px] font-semibold text-slate-400">{formatNotificationTime(n.created_at)}</span>
                       </div>
-                      <p className="text-sm leading-5 text-slate-600">
-                        {n.kind === "admin_update" ? formatUpdateText(n.message) : n.message}
-                      </p>
-                      <div className="mt-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                        <MapPin className="h-3.5 w-3.5" />
-                        <span>{n.location_label}</span>
-                        <span className="text-slate-300">•</span>
-                        <span>{n.kind === "admin_update" ? n.actor_name : "Residente"}</span>
-                      </div>
+                      <p className="text-sm leading-5 text-slate-600">{n.kind === "admin_update" ? formatUpdateText(n.message) : n.message}</p>
                     </div>
                   ))
                 )}
@@ -237,7 +216,6 @@ export default function StudentIncidences() {
         </Popover>
       </header>
 
-      {/* ... Resto del componente (Filtros, Cards, Dialogs) ... */}
       <main className={UI_CLASSES.mainContent}>
         <div className={UI_CLASSES.filterGrid}>
           <div className="relative col-span-1 sm:col-span-2">
@@ -257,6 +235,15 @@ export default function StudentIncidences() {
             <option value="high">URGENTE</option>
           </select>
         </div>
+        <div className={UI_CLASSES.btnMineWrapper}>
+          <button
+            onClick={() => setShowOnlyMine(!showOnlyMine)}
+            className={`${UI_CLASSES.btnMineBase} ${showOnlyMine ? UI_CLASSES.btnMineActive : UI_CLASSES.btnMineInactive}`}
+          >
+            <User className={`${UI_CLASSES.btnMineIcon} ${showOnlyMine ? "text-[#82D14C]" : "text-slate-300"}`} />
+            {showOnlyMine ? "Viendo mis incidencias" : "Ver mis incidencias"}
+          </button>
+        </div>
 
         {loading ? <p className={UI_CLASSES.loadingText}>Cargando...</p> : 
           filteredIncidences.map((inc) => {
@@ -267,18 +254,21 @@ export default function StudentIncidences() {
                   <div className={`${UI_CLASSES.cardSideBar} ${currentStatus.barClass}`} />
                   <div className="p-5 flex-1">
                     <div className="flex justify-between items-start mb-2">
-                      <h3 className={UI_CLASSES.cardTitle}>{inc.title}</h3>
+                      <div className="flex flex-col">
+                        <h3 className={UI_CLASSES.cardTitle}>{inc.title}</h3>
+                        {inc.is_mine && <span className="text-[10px] font-bold text-[#1B4D1C] uppercase tracking-tighter">Tu incidencia</span>}
+                      </div>
                       <span className={`${UI_CLASSES.statusBadge} ${currentStatus.colorClass}`}>{currentStatus.label}</span>
                     </div>
                     <div className={UI_CLASSES.cardLocationRow}>
                       <MapPin size={14} className="text-slate-400" />
-                      <span className="text-sm font-medium">
-                        {LOCATION_LABELS[inc.location_type] || inc.location_type}
-                        {inc.room_number ? ` • Hab. ${inc.room_number}` : ''}
-                      </span>
+                      <span className="text-sm font-medium">{LOCATION_LABELS[inc.location_type] || inc.location_type} {inc.room_number ? ` • Hab. ${inc.room_number}` : ''}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <div className={UI_CLASSES.cardDateRow}><Clock size={14} /> <span>{new Date(inc.created_at).toLocaleDateString()}</span></div>
+                      <div className={UI_CLASSES.cardDateRow}>
+                        <Clock size={14} />
+                        <span>{new Date(inc.created_at).toLocaleDateString()}</span>
+                      </div>
                       <Button variant="outline" onClick={() => {
                         fetchWithAuth(`${API_URL_INCIDENCES}${inc.id}/`).then(res => res.json()).then(data => {
                           setSelectedDetails(data); setIsNotesOpen(true);
@@ -302,7 +292,7 @@ export default function StudentIncidences() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isNotesOpen} onOpenChange={(open) => { if(!open) setIsNotesOpen(false); }}>
+      <Dialog open={isNotesOpen} onOpenChange={(open) => { if (!open) setIsNotesOpen(false); }}>
         <DialogContent className={UI_CLASSES.dialogNotes}>
           <DialogTitle className={UI_CLASSES.notesTitle}>Notas</DialogTitle>
           <div className="p-6 bg-white overflow-y-auto max-h-[70vh]">
@@ -334,7 +324,6 @@ export default function StudentIncidences() {
   );
 }
 
-// Configuración de etiquetas y estilos (UI_CLASSES)
 const LOCATION_LABELS: Record<string, string> = {
   habitacion: 'Habitación', baño: 'Baño Común', cocina: 'Cocina', comedor: 'Comedor', zonas_comunes: 'Zonas Comunes', exterior: 'Exterior',
 };
@@ -353,7 +342,12 @@ const UI_CLASSES = {
   bellContainer: "relative p-2 bg-white/10 rounded-full",
   bellBadge: "absolute -right-1 -top-1 min-w-5 h-5 flex items-center justify-center rounded-full bg-[#82D14C] px-1 text-[10px] font-black text-[#123313]",
   mainContent: "flex-1 overflow-y-auto p-4 space-y-4 pb-32",
-  filterGrid: "mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3",
+  btnMineWrapper: "flex justify-end mb-2",
+  btnMineBase: "flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all border",
+  btnMineActive: "bg-[#1B4D1C] text-white border-[#1B4D1C]",
+  btnMineInactive: "bg-white text-[#1B4D1C] border-slate-200 hover:bg-slate-50",
+  btnMineIcon: "w-4 h-4",
+  filterGrid: "mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 px-1",
   filterInput: "w-full px-4 py-2 rounded-xl border border-slate-200 shadow-sm outline-none",
   filterSelect: "w-full px-3 py-2 rounded-xl border border-slate-200 bg-white",
   card: "border-none shadow-sm rounded-[24px] overflow-hidden bg-white",
