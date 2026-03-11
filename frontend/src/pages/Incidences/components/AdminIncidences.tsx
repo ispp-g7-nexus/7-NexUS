@@ -160,7 +160,7 @@ export const AdminIncidences = () => {
 
   const priorityLabels: Record<string, string> = {
     low: 'BAJA',
-    high: 'ALTA',
+    high: 'URGENTE',
   };
 
   const statusStyles: Record<string, { label: string; bg: string; text: string; border: string; icon: any }> = {
