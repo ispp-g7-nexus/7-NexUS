@@ -33,8 +33,8 @@ interface StudentHomeProps {
     onLogout?: () => void;
 }
 
-const HOME_INCIDENCES_SEEN_AT_KEY = "home-incidences-seen-at";
 const HOME_NOTIFICATIONS_SEEN_IDS_KEY = "home-notifications-seen-ids";
+const HOME_INCIDENCES_DISMISSED_IDS_KEY = "home-incidences-dismissed-ids";
 const NOTIFICATIONS_POLL = 15000;
 const NOTIFICATIONS_LIMIT = 12;
 
@@ -51,26 +51,20 @@ const parseSeenIds = (raw: string | null): string[] => {
     }
 };
 
-const getStoredTimestamp = (key: string): number => {
-    if (typeof window === "undefined") {
-        return 0;
-    }
-
-    const raw = window.localStorage.getItem(key);
-    if (!raw) {
-        return 0;
-    }
-
-    const parsed = Date.parse(raw);
-    return Number.isNaN(parsed) ? 0 : parsed;
-};
-
 const getInitialSeenIds = (): string[] => {
     if (typeof window === "undefined") {
         return [];
     }
 
     return parseSeenIds(window.localStorage.getItem(HOME_NOTIFICATIONS_SEEN_IDS_KEY));
+};
+
+const getInitialDismissedIncidenceIds = (): string[] => {
+    if (typeof window === "undefined") {
+        return [];
+    }
+
+    return parseSeenIds(window.localStorage.getItem(HOME_INCIDENCES_DISMISSED_IDS_KEY));
 };
 
 type HomeNotification = {
@@ -125,6 +119,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
     const [notifications, setNotifications] = useState<HomeNotification[]>([]);
     const [isNotificationsLoading, setIsNotificationsLoading] = useState(false);
     const [seenNotificationIds, setSeenNotificationIds] = useState<string[]>(getInitialSeenIds);
+    const [dismissedIncidenceIds, setDismissedIncidenceIds] = useState<string[]>(getInitialDismissedIncidenceIds);
     const [unviewedAnnouncements, setUnviewedAnnouncements] = useState(0);
 
     const wifiPassword = "NexUS2026@Residence";
@@ -190,6 +185,16 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
         });
     };
 
+    const appendDismissedIncidenceIds = (notificationIds: string[]) => {
+        setDismissedIncidenceIds((previousIds) => {
+            const nextIds = Array.from(new Set([...previousIds, ...notificationIds]));
+            if (typeof window !== "undefined") {
+                window.localStorage.setItem(HOME_INCIDENCES_DISMISSED_IDS_KEY, JSON.stringify(nextIds));
+            }
+            return nextIds;
+        });
+    };
+
     const buildAnnouncementItems = (announcements: AnnouncementItem[]): HomeNotification[] => {
         return announcements
             .filter((announcement) => !announcement.has_passed)
@@ -208,11 +213,10 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
     };
 
     const buildIncidenceItems = (incidenceItems: IncidenceNotificationItem[]): HomeNotification[] => {
-        const seenAt = getStoredTimestamp(HOME_INCIDENCES_SEEN_AT_KEY);
         return incidenceItems
-            .filter((item) => Date.parse(item.created_at) > seenAt)
+            .filter((item) => !dismissedIncidenceIds.includes(item.id))
             .map((item) => ({
-                id: `incidence-${item.id}`,
+                id: item.id,
                 title: `[Incidencias] ${item.title || "Nueva incidencia"}`,
                 description: item.message || "Tienes una actualización de incidencias.",
                 time: formatRelativeTime(item.created_at),
@@ -380,6 +384,13 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                                                     time={notification.time}
                                                     type={notification.type}
                                                     onOpenSource={() => {
+                                                        if (notification.source === "incidences") {
+                                                            const incidenceIds = notifications
+                                                                .filter((item) => item.source === "incidences")
+                                                                .map((item) => item.id);
+                                                            appendDismissedIncidenceIds(incidenceIds);
+                                                            setNotifications((previous) => previous.filter((item) => item.source !== "incidences"));
+                                                        }
                                                         setIsNotificationsOpen(false);
                                                         onNavigate(notification.source);
                                                     }}

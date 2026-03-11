@@ -26,8 +26,8 @@ type Incidence = {
   description?: string;
   room_number?: string;
   location_type: string;
-  status: "pending" | "reviewing" | "in_progress" | "resolved" | string;
-  priority: "low" | "high" | string;
+  status: "pending" | "reviewing" | "in_progress" | "resolved";
+  priority: "low" | "high";
   created_at: string;
 };
 
