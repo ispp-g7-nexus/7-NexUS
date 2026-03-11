@@ -57,7 +57,7 @@ export function AdminProfile() {
 
         if (!userData.email.trim()) {
             newErrors.email = "El correo es obligatorio.";
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userData.email)) {
+        } else if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(userData.email)) {
             newErrors.email = "Formato de correo inválido.";
         }
 

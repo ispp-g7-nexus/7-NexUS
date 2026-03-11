@@ -1,11 +1,10 @@
-import re
-
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from apps.residences.models import StudentProfile
 
 UserModel = get_user_model()
+
 
 class LoginInputSerializer(serializers.Serializer):
     email = serializers.EmailField(
@@ -17,11 +16,13 @@ class LoginInputSerializer(serializers.Serializer):
         error_messages={"invalid_choice": "Portal inválido. Usa 'student' o 'admin'."},
     )
 
+
 class PlanSerializer(serializers.Serializer):
     code = serializers.CharField()
     name = serializers.CharField()
     max_residences = serializers.IntegerField()
     allows_whitelabel = serializers.BooleanField()
+
 
 class BrandingSerializer(serializers.Serializer):
     primary_color = serializers.CharField()
@@ -30,6 +31,7 @@ class BrandingSerializer(serializers.Serializer):
     logo_url = serializers.URLField()
     favicon_url = serializers.URLField()
     custom_css = serializers.CharField()
+
 
 class PasswordResetRequestSerializer(serializers.Serializer):
     email = serializers.EmailField(
@@ -51,6 +53,7 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
             "min_length": "La contraseña debe tener al menos 6 caracteres."
         },
     )
+
 
 class AdminCreateResidentSerializer(serializers.Serializer):
     full_name = serializers.CharField(allow_blank=True)
@@ -97,13 +100,16 @@ class StudentProfileSerializer(serializers.ModelSerializer):
 
     def get_room(self, obj):
         from apps.membership.models import Membership
-        membership = Membership.objects.filter(user=obj.user, role__name__iexact="Student", is_active=True).first()
+
+        membership = Membership.objects.filter(
+            user=obj.user, role__name__iexact="Student", is_active=True
+        ).first()
         if membership and membership.bedroom:
             return membership.bedroom.numero
         return obj.room_number or ""
 
     def create(self, validated_data):
-        validated_data['user'] = self.context['request'].user
+        validated_data["user"] = self.context["request"].user
         return StudentProfile.objects.create(**validated_data)
 
     def update(self, instance, validated_data):
@@ -111,6 +117,7 @@ class StudentProfileSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()
         return instance
+
 
 class AdminProfileUpdateSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(
@@ -133,10 +140,22 @@ class AdminProfileUpdateSerializer(serializers.ModelSerializer):
         allow_blank=False,
         error_messages={
             "blank": "El correo electrónico no puede estar vacío.",
-            "invalid": "Por favor, introduce un correo válido."
+            "invalid": "Por favor, introduce un correo válido.",
         },
     )
 
     class Meta:
         model = UserModel
         fields = ["first_name", "last_name", "username", "email"]
+
+    def validate_username(self, value):
+        user = self.instance
+        if UserModel.objects.exclude(pk=user.pk).filter(username=value).exists():
+            raise serializers.ValidationError("Este nombre de usuario ya está en uso.")
+        return value
+
+    def validate_email(self, value):
+        user = self.instance
+        if UserModel.objects.exclude(pk=user.pk).filter(email__iexact=value).exists():
+            raise serializers.ValidationError("Este correo electrónico ya está en uso.")
+        return value

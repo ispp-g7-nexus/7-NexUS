@@ -15,6 +15,8 @@ interface AuthMeUser {
     username?: string;
     email?: string;
     roles?: string[];
+    first_name?: string;
+    last_name?: string;
 }
 
 interface AuthMeResponse {
