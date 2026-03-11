@@ -138,9 +138,11 @@ export default function StudentIncidences() {
     setUnreadNotifications(unreadCount);
   };
 
-  const loadNotifications = useCallback(async (markAsRead = false) => {
+  const loadNotifications = useCallback(async (markAsRead = false, silent = false) => {
     try {
-      setNotificationsLoading(true);
+      if (!silent) {
+        setNotificationsLoading(true);
+      }
       const response = await fetchWithAuth(`${API_URL_INCIDENCES}notifications/`);
 
       if (!response.ok) {
@@ -169,7 +171,9 @@ export default function StudentIncidences() {
     } catch (error) {
       console.error("Error cargando notificaciones de incidencias:", error);
     } finally {
-      setNotificationsLoading(false);
+      if (!silent) {
+        setNotificationsLoading(false);
+      }
     }
   }, []);
 
@@ -193,7 +197,7 @@ export default function StudentIncidences() {
     const intervalId = window.setInterval(() => {
       if (isNotificationsOpen) {
         // Cada 5 seg cuando está abierto para actualizar sin sobrecargar
-        loadNotifications(false);
+        loadNotifications(false, true);
       }
     }, isNotificationsOpen ? 5000 : 15000);
 

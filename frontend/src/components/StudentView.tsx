@@ -113,6 +113,9 @@ export function StudentView({ onLogout }: StudentViewProps) {
             case "community":
                 tabContent = <SocialHub />;
                 break;
+            case "events":
+                tabContent = <SocialHub initialTab="eventos" />;
+                break;
             case "matches":
                 tabContent = <MyMatchesPage />;
                 break;
@@ -141,7 +144,7 @@ export function StudentView({ onLogout }: StudentViewProps) {
             <nav className="fixed bottom-0 left-0 right-0 bg-background border-t border-border px-6 py-2 pb-6 z-20 w-full shadow-[0_-4px_15px_rgba(0,0,0,0.02)]">
                 <div className="flex justify-between items-center">
                     <NavButton icon={<AlertCircle className="w-5 h-5" />} label="Incidencias" active={activeTab === "incidences"} onClick={() => setActiveTab("incidences")} />
-                    <NavButton icon={<User className="w-5 h-5" />} label="Social" active={activeTab === "community"} onClick={() => setActiveTab("community")} />
+                    <NavButton icon={<User className="w-5 h-5" />} label="Social" active={activeTab === "community" || activeTab === "events"} onClick={() => setActiveTab("community")} />
                     <div className="relative -top-5">
                         <motion.button whileTap={{ scale: 0.95 }} onClick={() => setActiveTab("home")} className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-colors ${activeTab === "home" ? "bg-secondary-brand text-white" : "bg-white text-slate-400 border border-slate-100"}`}>
                             <Home className="w-6 h-6" />

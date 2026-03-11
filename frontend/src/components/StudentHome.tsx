@@ -26,7 +26,7 @@ import { Card, CardContent } from "./ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 
-export type StudentTab = "home" | "incidences" | "reservations" | "community" | "matches" | "announcements" | "menu" | "deliveries" | "visitors";
+export type StudentTab = "home" | "incidences" | "reservations" | "community" | "events" | "matches" | "announcements" | "menu" | "deliveries" | "visitors";
 
 interface StudentHomeProps {
     onNavigate: (view: StudentTab) => void;
@@ -88,6 +88,7 @@ type AnnouncementItem = {
     title: string;
     description: string;
     announcement_date: string;
+    publication_date?: string;
     has_passed: boolean;
 };
 
@@ -193,7 +194,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
         return announcements
             .filter((announcement) => !announcement.has_passed)
             .map((announcement) => {
-                const createdAt = `${announcement.announcement_date}T00:00:00`;
+                const createdAt = announcement.publication_date || `${announcement.announcement_date}T00:00:00`;
                 return {
                     id: `announcement-${announcement.id}`,
                     title: `[Avisos] ${announcement.title}`,
@@ -231,14 +232,16 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                 description: event.location ? `Lugar: ${event.location}` : "Evento disponible en tu residencia.",
                 time: formatRelativeTime(event.start_time),
                 type: "event" as const,
-                source: "community" as const,
+                source: "events" as const,
                 createdAt: event.start_time,
             }));
     };
 
-    const loadHomeNotifications = async () => {
+    const loadHomeNotifications = async (silent = false) => {
         try {
-            setIsNotificationsLoading(true);
+            if (!silent) {
+                setIsNotificationsLoading(true);
+            }
 
             const [announcementsResult, unviewedResult, incidencesResult, eventsResult] = await Promise.allSettled([
                 announcementService.getAnnouncements(),
@@ -276,13 +279,15 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
         } catch (error) {
             console.error("Error cargando notificaciones del panel central:", error);
         } finally {
-            setIsNotificationsLoading(false);
+            if (!silent) {
+                setIsNotificationsLoading(false);
+            }
         }
     };
 
     useEffect(() => {
         loadHomeNotifications();
-        const intervalId = window.setInterval(loadHomeNotifications, NOTIFICATIONS_POLL);
+        const intervalId = window.setInterval(() => loadHomeNotifications(true), NOTIFICATIONS_POLL);
 
         return () => window.clearInterval(intervalId);
     }, []);
@@ -293,7 +298,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
 
         if (open) {
             appendSeenNotificationIds(notifications.map((notification) => notification.id));
-            loadHomeNotifications();
+            loadHomeNotifications(true);
         }
     };
 
