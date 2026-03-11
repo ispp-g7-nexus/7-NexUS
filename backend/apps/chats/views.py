@@ -23,6 +23,10 @@ from .serializers import (
 	UpdateChatMemberSerializer,
 )
 
+# Constantes para mensajes duplicados
+NO_MEMBERSHIP_MESSAGE = "No tienes membresía activa."
+CONVERSATION_NOT_FOUND_MESSAGE = "Conversación no encontrada."
+
 
 class ChatGroupViewSet(viewsets.ModelViewSet):
 	permission_classes = [IsResidenceAdmin]
@@ -92,7 +96,7 @@ class ChatGroupViewSet(viewsets.ModelViewSet):
 		serializer.is_valid(raise_exception=True)
 
 		membership = serializer.context["target_membership"]
-		member, created = ChatGroupMember.objects.get_or_create(
+		_, created = ChatGroupMember.objects.get_or_create(
 			group=group,
 			membership=membership,
 			defaults={"is_admin": serializer.validated_data["is_admin"]},
@@ -188,7 +192,7 @@ class MyGroupsViewSet(viewsets.ReadOnlyModelViewSet):
 			is_active=True,
 		).first()
 		if not membership:
-			raise ValidationError({"detail": "No tienes membresía activa."})
+			raise ValidationError({"detail": NO_MEMBERSHIP_MESSAGE})
 
 		group = ChatGroup.objects.filter(
 			id=pk,
@@ -285,7 +289,7 @@ class PrivateConversationViewSet(viewsets.ViewSet):
 		"""Detalle de una conversación — marca mensajes como leídos."""
 		my = self._get_membership(request)
 		if not my:
-			raise NotFound("Conversación no encontrada.")
+			raise NotFound(CONVERSATION_NOT_FOUND_MESSAGE)
 
 		conv = (
 			PrivateConversation.objects.filter(
@@ -295,7 +299,7 @@ class PrivateConversationViewSet(viewsets.ViewSet):
 			.first()
 		)
 		if not conv:
-			raise NotFound("Conversación no encontrada.")
+			raise NotFound(CONVERSATION_NOT_FOUND_MESSAGE)
 
 		# Marcar como leídos los mensajes del otro
 		conv.messages.filter(is_read=False).exclude(sender=my).update(is_read=True)
@@ -310,7 +314,7 @@ class PrivateConversationViewSet(viewsets.ViewSet):
 		"""Crear o recuperar una conversación con otro residente."""
 		my = self._get_membership(request)
 		if not my:
-			raise ValidationError({"detail": "No tienes membresía activa."})
+			raise ValidationError({"detail": NO_MEMBERSHIP_MESSAGE})
 
 		serializer = StartConversationSerializer(
 			data=request.data,
@@ -337,13 +341,13 @@ class PrivateConversationViewSet(viewsets.ViewSet):
 		"""GET: listar mensajes. POST: enviar mensaje."""
 		my = self._get_membership(request)
 		if not my:
-			raise NotFound("Conversación no encontrada.")
+			raise NotFound(CONVERSATION_NOT_FOUND_MESSAGE)
 
 		conv = PrivateConversation.objects.filter(
 			Q(member_one=my) | Q(member_two=my), id=pk
 		).first()
 		if not conv:
-			raise NotFound("Conversación no encontrada.")
+			raise NotFound(CONVERSATION_NOT_FOUND_MESSAGE)
 
 		if request.method == "GET":
 			# Marcar como leídos

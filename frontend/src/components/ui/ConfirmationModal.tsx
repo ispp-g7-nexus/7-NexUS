@@ -2,15 +2,15 @@ import { X } from "lucide-react";
 import { Button } from "./button";
 
 interface ConfirmationModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onConfirm: () => void;
-    title: string;
-    message: string;
-    confirmText?: string;
-    cancelText?: string;
-    isDestructive?: boolean;
-    isLoading?: boolean;
+    readonly isOpen: boolean;
+    readonly onClose: () => void;
+    readonly onConfirm: () => void;
+    readonly title: string;
+    readonly message: string;
+    readonly confirmText?: string;
+    readonly cancelText?: string;
+    readonly isDestructive?: boolean;
+    readonly isLoading?: boolean;
 }
 
 export function ConfirmationModal({
@@ -31,6 +31,10 @@ export function ConfirmationModal({
             <div 
                 className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
                 onClick={onClose}
+                onKeyDown={(e) => e.key === 'Escape' && onClose()}
+                role="button"
+                tabIndex={0}
+                aria-label="Cerrar modal"
             />
             
             <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
@@ -38,8 +42,11 @@ export function ConfirmationModal({
                     <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
                     <button
                         onClick={onClose}
+                        onKeyDown={(e) => e.key === 'Enter' && onClose()}
                         className="text-gray-400 hover:text-gray-600 transition-colors"
                         disabled={isLoading}
+                        aria-label="Cerrar"
+                        type="button"
                     >
                         <X className="w-5 h-5" />
                     </button>

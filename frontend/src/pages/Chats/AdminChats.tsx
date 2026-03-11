@@ -13,7 +13,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "../../components/ui/dialog";
-import { chatsService, type ChatGroup, type GroupMessage, type ChatLabel, type ChatGroupLabelItem, type UpsertChatGroupPayload } from "../../services/chats";
+import { chatsService, type ChatGroup, type GroupMessage, type ChatGroupLabelItem, type UpsertChatGroupPayload } from "../../services/chats";
 
 // Helper
 function timeAgo(iso: string): string {
@@ -34,7 +34,7 @@ const EMPTY_GROUP_FORM: UpsertChatGroupPayload = {
     can_members_leave: true,
 };
 
-const typeConfig: Record<ChatLabel, { label: string; color: string; icon: ReactElement }> = {
+const typeConfig: Record<string, { label: string; color: string; icon: ReactElement }> = {
     general: {
         label: "General",
         color: "bg-blue-100 text-blue-800",
@@ -57,7 +57,7 @@ const typeConfig: Record<ChatLabel, { label: string; color: string; icon: ReactE
     }
 };
 
-export function AdminChats({ onChatsChange }: { onChatsChange?: () => void }) {
+export function AdminChats({ onChatsChange }: { readonly onChatsChange?: () => void }) {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedType, setSelectedType] = useState<string>("all");
     const [groups, setGroups] = useState<ChatGroup[]>([]);
@@ -183,7 +183,7 @@ export function AdminChats({ onChatsChange }: { onChatsChange?: () => void }) {
     };
 
     const handleDeleteGroup = async (groupId: number) => {
-        const confirmed = window.confirm("¿Seguro que quieres eliminar este grupo?");
+        const confirmed = globalThis.confirm("¿Seguro que quieres eliminar este grupo?");
         if (!confirmed) return;
 
         try {
@@ -305,17 +305,19 @@ export function AdminChats({ onChatsChange }: { onChatsChange?: () => void }) {
                     ) : (
                         groupMessages.map((msg) => {
                             const isMine = msg.sender_email === currentUserEmail;
+                            const bubbleClasses = isMine
+                                ? "bg-green-600 text-white rounded-br-md"
+                                : "bg-gray-100 text-gray-900 rounded-bl-md";
+                            const timeClasses = isMine ? "text-green-200" : "text-gray-400";
+                            
                             return (
                                 <div key={msg.id} className={`flex flex-col ${isMine ? "items-end" : "items-start"} mb-3`}>
                                     {!isMine && (
                                         <span className="text-[10px] text-gray-500 mb-1 ml-1">{msg.sender_name}</span>
                                     )}
-                                    <div className={`max-w-[75%] px-3.5 py-2 rounded-2xl text-sm ${isMine
-                                        ? "bg-green-600 text-white rounded-br-md"
-                                        : "bg-gray-100 text-gray-900 rounded-bl-md"
-                                        }`}>
+                                    <div className={`max-w-[75%] px-3.5 py-2 rounded-2xl text-sm ${bubbleClasses}`}>
                                         <p className="whitespace-pre-line break-words">{msg.content}</p>
-                                        <p className={`text-[10px] mt-1 ${isMine ? "text-green-200" : "text-gray-400"}`}>
+                                        <p className={`text-[10px] mt-1 ${timeClasses}`}>
                                             {timeAgo(msg.created_at)}
                                         </p>
                                     </div>
@@ -486,10 +488,11 @@ export function AdminChats({ onChatsChange }: { onChatsChange?: () => void }) {
 
                     <div className="space-y-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label htmlFor="create-group-name" className="block text-sm font-medium text-gray-700 mb-1">
                                 Nombre <span className="text-red-500">*</span>
                             </label>
                             <Input
+                                id="create-group-name"
                                 value={createForm.name}
                                 onChange={(e) => setCreateForm((prev) => ({ ...prev, name: e.target.value }))}
                                 placeholder="Ej. Grupo General"
@@ -497,8 +500,9 @@ export function AdminChats({ onChatsChange }: { onChatsChange?: () => void }) {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+                            <label htmlFor="create-group-description" className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
                             <textarea
+                                id="create-group-description"
                                 value={createForm.description}
                                 onChange={(e) => setCreateForm((prev) => ({ ...prev, description: e.target.value }))}
                                 rows={3}
@@ -507,10 +511,11 @@ export function AdminChats({ onChatsChange }: { onChatsChange?: () => void }) {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Etiqueta</label>
+                            <label htmlFor="create-group-label" className="block text-sm font-medium text-gray-700 mb-1">Etiqueta</label>
                             <select
+                                id="create-group-label"
                                 value={createForm.label}
-                                onChange={(e) => setCreateForm((prev) => ({ ...prev, label: e.target.value as ChatLabel }))}
+                                onChange={(e) => setCreateForm((prev) => ({ ...prev, label: e.target.value }))}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                             >
                                 {allLabelOptions.map((opt) => (

@@ -14,7 +14,7 @@ import {
 import {
     chatsService,
     type ChatGroup,
-    type ChatLabel,
+    type ChatGroupLabelItem,
     type ChatResident,
     type PrivateConversation,
     type PrivateMessage,
@@ -37,7 +37,7 @@ function timeAgo(iso: string): string {
 
 /* ── Config etiquetas ───────────────────────────────────────── */
 
-const labelConfig: Record<ChatLabel, { label: string; color: string; icon: ReactElement }> = {
+const labelConfig: Record<string, { label: string; color: string; icon: ReactElement }> = {
     general: { label: "General", color: "bg-blue-100 text-blue-800", icon: <MessageSquare className="w-3 h-3" /> },
     floor: { label: "Planta", color: "bg-green-100 text-green-800", icon: <Users className="w-3 h-3" /> },
     activity: { label: "Actividad", color: "bg-purple-100 text-purple-800", icon: <Users className="w-3 h-3" /> },
@@ -105,7 +105,7 @@ export function StudentChats() {
         const fetchUser = async () => {
             try {
                 const response = await authService.me();
-                if (response.user && response.user.email) {
+                if (response.user?.email) {
                     setCurrentUserEmail(response.user.email);
                 }
             } catch { /* empty */ }

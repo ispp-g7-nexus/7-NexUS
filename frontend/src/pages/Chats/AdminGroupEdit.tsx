@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { ConfirmationModal } from "../../components/ui/ConfirmationModal";
-import { chatsService, type ChatGroup, type ChatLabel, type ChatGroupLabelItem } from "../../services/chats";
+import { chatsService, type ChatGroup, type ChatGroupLabelItem } from "../../services/chats";
 import { residentsService } from "../../services/residents";
 import { authService } from "../../services/auth";
 
@@ -18,7 +18,7 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
     const [currentGroup, setCurrentGroup] = useState(group);
     const [groupName, setGroupName] = useState(group.name);
     const [groupDescription, setGroupDescription] = useState(group.description);
-    const [groupType, setGroupType] = useState<ChatLabel>(group.label);
+    const [groupType, setGroupType] = useState<string>(group.label);
     const [canLeave, setCanLeave] = useState(group.can_members_leave);
     const [newMemberEmail, setNewMemberEmail] = useState("");
     const [saving, setSaving] = useState(false);
@@ -222,10 +222,11 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
             <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label htmlFor="edit-group-name" className="block text-sm font-medium text-gray-700 mb-2">
                             Nombre del grupo
                         </label>
                         <Input
+                            id="edit-group-name"
                             value={groupName}
                             onChange={(e) => setGroupName(e.target.value)}
                             placeholder="Nombre del grupo"
@@ -233,10 +234,11 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label htmlFor="edit-group-label" className="block text-sm font-medium text-gray-700 mb-2">
                             Etiqueta
                         </label>
                         <select
+                            id="edit-group-label"
                             value={groupType}
                             onChange={(e) => setGroupType(e.target.value as typeof groupType)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -253,10 +255,11 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="edit-group-description" className="block text-sm font-medium text-gray-700 mb-2">
                         Descripción
                     </label>
                     <textarea
+                        id="edit-group-description"
                         value={groupDescription}
                         onChange={(e) => setGroupDescription(e.target.value)}
                         placeholder="Descripción del grupo"
@@ -353,7 +356,17 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    {!member.is_admin ? (
+                                    {member.is_admin ? (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleRemoveAdmin(member.id)}
+                                            className="text-orange-600 hover:text-orange-700 border-orange-200 hover:border-orange-300 hover:bg-orange-50"
+                                            title="Quitar administrador"
+                                        >
+                                            Quitar Admin
+                                        </Button>
+                                    ) : (
                                         <Button
                                             variant="outline"
                                             size="sm"
@@ -362,18 +375,6 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
                                             title="Hacer administrador"
                                         >
                                             Hacer admin
-                                        </Button>
-                                    ) : (
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => handleRemoveAdmin(member.id)}
-                                            className="text-orange-600 hover:text-orange-700 border-orange-200 hover:border-orange-300 hover:bg-orange-50"
-                                            title="Quitar rol de administrador"
-                                            disabled={member.email === currentGroup.created_by_email}
-                                        >
-                                            <ShieldX className="w-4 h-4 mr-1" />
-                                            Quitar admin
                                         </Button>
                                     )}
                                     <Button

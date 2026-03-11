@@ -6,7 +6,7 @@ const MY_GROUPS_URL = "/api/chats/my-groups/";
 const CONVERSATIONS_URL = "/api/chats/conversations/";
 const CHAT_RESIDENTS_URL = "/api/chats/residents/";
 
-export type ChatLabel = string;
+// Eliminado tipo alias redundante - usar string directamente
 
 export interface ChatMember {
   id: number;
@@ -21,7 +21,7 @@ export interface ChatGroup {
   id: number;
   name: string;
   description: string;
-  label: ChatLabel;
+  label: string;
   can_members_leave: boolean;
   members: number;
   members_list: ChatMember[];
@@ -31,7 +31,7 @@ export interface ChatGroup {
 export interface UpsertChatGroupPayload {
   name: string;
   description: string;
-  label: ChatLabel;
+  label: string;
   can_members_leave: boolean;
 }
 
@@ -45,9 +45,13 @@ async function handleResponse<T>(res: Response): Promise<T> {
     const body = await res.json().catch(() => ({}));
     const message =
       body?.detail ||
-      Object.values(body as Record<string, unknown>)
-        .flat()
-        .join(" ") ||
+      (typeof body === 'object' && body 
+        ? Object.values(body)
+          .flat()
+          .filter(val => typeof val === 'string')
+          .join(" ") 
+        : ""
+      ) ||
       `Error ${res.status}`;
     throw new Error(message);
   }
