@@ -1,4 +1,4 @@
-# Plan de Pruebas - NexUS
+# Matriz de riesgos, problemas y contingencias - NexUS
 
 <p align="center">
   <img src="../../images/logo-app.png" alt="Logo NexUS" width="500">
@@ -67,7 +67,7 @@ En la columna de impacto hemos puesto una escala del 1 al 5, siendo el 1 un impa
 
 | ID | CATEGORÍA | RIESGO | PRIORIDAD | IMPACTO | RESPONSABLE | PLAN DE MITIGACIÓN | PLAN DE CONTINGENCIA |
 | :--- | :--- | :--- | :--- | :---: | :--- | :--- | :--- |
-| 1 | Coordinación | Falta de coordinación en el equipo de trabajo | Alta | 5 | Scrum Master / PM | Reuniones de sincronización semanales (Weeklys) y definición estricta de roles desde el día 1. | Reestructuración jerárquica: división en subequipos con coordinadores, canal de solo lectura para comunicados oficiales y canales segmentados por subequipos. |
+| 1 | Coordinación | Falta de coordinación en el equipo de trabajo | Alta | 5 | Scrum Master / PM | Reuniones de sincronización semanales y definición estricta de roles desde el día 1. | Reestructuración jerárquica: división en subequipos con coordinadores, canal de solo lectura para comunicados oficiales y canales segmentados por subequipos. |
 | 2 | Técnica | Dificultades con la estructura del proyecto | Alta | 4 | Desarrolladores | Revisar código automáticamente. | Descarte del código autogenerado por Figma y reconstrucción manual de la base del proyecto con arquitectura limpia y modular. |
 | 3 | Coordinación | Desorganización al coordinar la documentación | Media | 3 | PM/Coordinadores | Centralizar todo en una única herramienta con una estructura de carpetas inamovible. | Creación de plantillas oficiales: documentos, actas de reuniones, issues en GitHub y diapositivas de presentación, todas alineadas con la imagen corporativa del equipo. |
 | 4 | Coordinación | Inconsistencia visual en las presentaciones | Baja | 2 | PM/Coordinadores | Crear un pequeño manual de marca antes de elaborar los documentos. | Diseño y aprobación de una presentación base corporativa (colores, tipografías, formato, apoyo visual) de forma obligatoria. |
