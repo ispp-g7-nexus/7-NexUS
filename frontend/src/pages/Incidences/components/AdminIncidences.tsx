@@ -24,7 +24,10 @@ const ManageIncidenceModal = ({
         status: status as IncidenceStatus,
         assigned_technician: technician,
         admin_notes: note,
-        quick_comment: note
+        quick_comment:
+          note.trim() && note.trim() !== (incidence.admin_notes || "").trim()
+            ? note
+            : undefined
       });
       onRefresh();
       onClose();
@@ -42,8 +45,7 @@ const ManageIncidenceModal = ({
   return (
     <div className={UI_CLASSES.modalOverlay}>
       <div className={UI_CLASSES.modalContainer}>
-        <button onClick={onClose} className={UI_CLASSES.modalCloseBtn}>
-          <X size={20} className="text-gray-400" />
+        <button type="button" aria-label="Cerrar modal" onClick={onClose} className={UI_CLASSES.modalCloseBtn}> 
         </button>
 
         <div className={UI_CLASSES.modalPadding}>

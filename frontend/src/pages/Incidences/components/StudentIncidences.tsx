@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useEffect, useCallback } from "react";
 import { Clock, Plus, Bell, MapPin, User } from "lucide-react";
 import { Button } from "../../../components/ui/button";
@@ -58,7 +56,7 @@ type Incidence = {
   status: "pending" | "reviewing" | "in_progress" | "resolved";
   priority: "low" | "high";
   created_at: string;
-  is_mine: boolean; 
+  is_mine: boolean;
 };
 
 type IncidenceDetails = {
@@ -121,6 +119,8 @@ export default function StudentIncidences() {
       if (response.ok) {
         setIncidences(await response.json());
       }
+    } catch (error) {
+      +    console.error("Error cargando incidencias:", error);
     } finally {
       setLoading(false);
     }
@@ -166,7 +166,7 @@ export default function StudentIncidences() {
         <h1 className={UI_CLASSES.headerTitle}>Incidencias</h1>
         <Popover open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen}>
           <PopoverTrigger asChild>
-            <button className={UI_CLASSES.bellContainer}>
+            <button type="button" aria-label="Abrir notificaciones" className={UI_CLASSES.bellContainer}>
               <Bell className="w-6 h-6 text-white" />
               {unreadNotifications > 0 && (
                 <span className={UI_CLASSES.bellBadge}>
@@ -245,7 +245,7 @@ export default function StudentIncidences() {
           </button>
         </div>
 
-        {loading ? <p className={UI_CLASSES.loadingText}>Cargando...</p> : 
+        {loading ? <p className={UI_CLASSES.loadingText}>Cargando...</p> :
           filteredIncidences.map((inc) => {
             const currentStatus = STATUS_MAP[inc.status] || STATUS_MAP.pending;
             return (
@@ -269,11 +269,23 @@ export default function StudentIncidences() {
                         <Clock size={14} />
                         <span>{new Date(inc.created_at).toLocaleDateString()}</span>
                       </div>
-                      <Button variant="outline" onClick={() => {
-                        fetchWithAuth(`${API_URL_INCIDENCES}${inc.id}/`).then(res => res.json()).then(data => {
-                          setSelectedDetails(data); setIsNotesOpen(true);
-                        });
-                      }} className={UI_CLASSES.btnNotes}>Ver notas</Button>
+                      <Button
+                        variant="outline"
+                        onClick={async () => {
+                          try {
+                            const res = await fetchWithAuth(`${API_URL_INCIDENCES}${inc.id}/`);
+                            if (!res.ok) throw new Error(`Error ${res.status} al cargar detalles`);
+                            const data = await res.json();
+                            setSelectedDetails(data);
+                            setIsNotesOpen(true);
+                          } catch (error) {
+                            console.error("Error cargando detalles de incidencia:", error);
+                          }
+                        }}
+                        className={UI_CLASSES.btnNotes}
+                      >
+                        Ver notas
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
@@ -283,8 +295,7 @@ export default function StudentIncidences() {
         }
       </main>
 
-      <button onClick={() => setIsFormOpen(true)} className={UI_CLASSES.btnFloating}><Plus size={32} strokeWidth={3} /></button>
-
+      <button type="button" aria-label="Crear nueva incidencia" onClick={() => setIsFormOpen(true)} className={UI_CLASSES.btnFloating}><Plus size={32} strokeWidth={3} /></button>
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className={UI_CLASSES.dialogForm}>
           <DialogTitle className="sr-only">Nueva Incidencia</DialogTitle>
