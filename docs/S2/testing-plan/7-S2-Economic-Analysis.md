@@ -1,14 +1,14 @@
-<h1>Infome de seguimiento económico - NexUS</h1>
+# Economic Analysis - NexUS
 
-<p align="center">
-  <img src="../images/logo-app.png" alt="Logo NexUS" width="500">
+<p align="center">  
+  <img src="../../images/logo-app.png" alt="Logo NexUS" width="500">
 </p>
 
 <div align="center">
 
 <p>
   <img src="https://img.shields.io/badge/Versión-1.0.0-blue?style=flat-square" alt="Versión">
-  <img src="https://img.shields.io/badge/Estado-Completado-yellow?style=flat-square" alt="Estado">
+  <img src="https://img.shields.io/badge/Estado-Completado-orange?style=flat-square" alt="Estado">
   <img src="https://img.shields.io/badge/Grupo-7--NexUS-green?style=flat-square" alt="Grupo">
   <img src="https://img.shields.io/badge/Asignatura-ISPP-red?style=flat-square" alt="Asignatura">
 </p>
@@ -29,17 +29,16 @@
 **Fecha:** 11/03/2026  
 
 <p align="center">
-  <img src="../images/logo-etsii.jpe" alt="Logo ETSII" width="400">
+  <img src="../../images/logo-etsii.jpe" alt="Logo ETSII" width="400">
 </p>
 
----
 
 
 ## Historial de Versiones
 
 | Versión | Fecha | Cambio principal |
 |---------|-------|------------------|
-| 1.0.0 | 11/03/2026 | Creación del documento base |
+| 1.0.0 | 11/03/2026 | Creación del documento del seguimiento económico |
 ---
 
 
