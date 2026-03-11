@@ -48,9 +48,9 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
     )
     new_password = serializers.CharField(
         write_only=True,
-        min_length=6,
+        min_length=8,
         error_messages={
-            "min_length": "La contraseña debe tener al menos 6 caracteres."
+            "min_length": "La contraseña debe tener al menos 8 caracteres."
         },
     )
 
