@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { AlertCircle, Calendar, Home, MessageSquare, User } from "lucide-react";
+import { AlertCircle, Calendar, Home, MessageSquare, User, Utensils } from "lucide-react";
 import { toast } from "sonner";
 
 // Importamos la página de inicio y el tipo de las pestañas
@@ -11,6 +11,7 @@ import { SocialHub } from "../pages/Social/SocialHub.tsx";
 import { StudentAnnouncements } from "../pages/announcements/StudentAnnouncements";
 import StudentIncidences from "../pages/Incidences/components/StudentIncidences";
 import { MyMatchesPage } from "../pages/Matching/MyMatchesPage";
+import { ResidentMenuView } from "../pages/Menu/ResidentMenuView";
 import announcementService from "../services/announcement.service";
 import { StudentReservations } from "./StudentReservations";
 
@@ -121,6 +122,9 @@ export function StudentView({ onLogout }: StudentViewProps) {
                 break;
             case "announcements":
                 tabContent = <StudentAnnouncements />;
+                break;
+            case "menu":
+                tabContent = <ResidentMenuView />;
                 break;
             default:
                 tabContent = <div className="p-8 text-center text-gray-500">Módulo en construcción</div>;
