@@ -10,6 +10,7 @@ import { Staff } from "../pages/Staff/Staff";
 import { AdminAnnouncements } from "../pages/announcements/AdminAnnouncements";
 import { AdminProfile } from "./AdminProfile";
 import { AdminReservations } from "./AdminReservations";
+import { AdminMenuView } from "../pages/Menu/AdminMenuView";
 import { StatCard } from "./statCard";
 import { Button } from "./ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
@@ -32,6 +33,7 @@ export function AdminView({ onLogout }: AdminViewProps) {
         { id: "students", label: "Residentes", icon: <Users className="w-5 h-5" /> },
         { id: "staff", label: "Personal", icon: <Briefcase className="w-5 h-5" /> },
         { id: "incidences", label: "Incidencias", icon: <AlertCircle className="w-5 h-5" /> },
+        { id: "kitchen", label: "Menú Comedor", icon: <Utensils className="w-5 h-5" /> },
         { id: "events", label: "Eventos & Comunidad", icon: <Calendar className="w-5 h-5" /> },
         { id: "reservations", label: "Recursos & Reservas", icon: <BookOpen className="w-5 h-5" /> },
         { id: "roles", label: "Roles", icon: <Shield className="w-5 h-5" /> },
@@ -131,6 +133,9 @@ export function AdminView({ onLogout }: AdminViewProps) {
                         <AdminIncidences />
                     </div>
                 );
+
+            case "kitchen":
+                return <AdminMenuView />;
 
             default:
                 return (
