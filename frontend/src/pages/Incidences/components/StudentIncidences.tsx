@@ -1,17 +1,107 @@
 import { useState, useEffect } from "react";
-import { Clock, CheckCircle2, Plus, Bell, MapPin, MessageSquare, X } from "lucide-react";
+import {  Clock, CheckCircle2, Plus, Bell,  MapPin,} from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent } from "../../../components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "../../../components/ui/dialog";
-import { IncidenceService, Incidence } from "../../../services/incidences";
+import { fetchWithAuth, API_URL_INCIDENCES } from "../../../utils/api";
 import { IncidenceForm } from "./IncidenceForm";
 import "../Incidences.css";
 
+type IncidenceNotification = {
+  id: string;
+  kind: "incidence_created" | "admin_update";
+  incidence_id: number;
+  title: string;
+  message: string;
+  actor_name: string;
+  location_label: string;
+  status: string;
+  created_at: string;
+};
+
+type Incidence = {
+  id: number;
+  title: string;
+  description?: string;
+  room_number?: string;
+  location_type: string;
+  status: "pending" | "reviewing" | "in_progress" | "resolved";
+  priority: "low" | "high";
+  created_at: string;
+};
+
+type IncidenceUpdateItem = {
+  id: number;
+  author_name?: string;
+  created_at: string;
+  text: string;
+};
+
+type IncidenceDetails = {
+  title: string;
+  description?: string;
+  admin_notes?: string;
+  updates?: IncidenceUpdateItem[];
+};
+
+const NOTIFICATIONS_LAST_READ_KEY = "incidences-notifications-last-read";
+
+const getLastReadNotificationsAt = () => {
+  if (typeof window === "undefined") {
+    return 0;
+  }
+
+  const storedValue = window.localStorage.getItem(NOTIFICATIONS_LAST_READ_KEY);
+  if (!storedValue) {
+    return 0;
+  }
+
+  const parsedValue = Date.parse(storedValue);
+  return Number.isNaN(parsedValue) ? 0 : parsedValue;
+};
+
+const saveLastReadNotificationsAt = (timestamp?: string) => {
+  if (typeof window === "undefined" || !timestamp) {
+    return;
+  }
+
+  window.localStorage.setItem(NOTIFICATIONS_LAST_READ_KEY, timestamp);
+};
+
+const formatNotificationTime = (value: string) => {
+  const createdAt = new Date(value);
+  const diffInMinutes = Math.max(0, Math.round((Date.now() - createdAt.getTime()) / 60000));
+
+  if (diffInMinutes < 1) {
+    return "Ahora";
+  }
+
+  if (diffInMinutes < 60) {
+    return `Hace ${diffInMinutes} min`;
+  }
+
+  const diffInHours = Math.round(diffInMinutes / 60);
+  if (diffInHours < 24) {
+    return `Hace ${diffInHours} h`;
+  }
+
+  const diffInDays = Math.round(diffInHours / 24);
+  if (diffInDays < 7) {
+    return `Hace ${diffInDays} d`;
+  }
+
+  return createdAt.toLocaleDateString();
+};
+
 export default function StudentIncidences() {
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [incidences, setIncidences] = useState<Incidence[]>([]);
-  const [selectedDetails, setSelectedDetails] = useState<any>(null);
+  const [incidences, setIncidences] = useState([]);
+  const [selectedIncidenceDetails, setSelectedIncidenceDetails] = useState<any>(null);
   const [isNotesOpen, setIsNotesOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState<IncidenceNotification[]>([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [loading, setLoading] = useState(true);
   
   // Filtros
@@ -22,9 +112,11 @@ export default function StudentIncidences() {
 
   const loadIncidences = async () => {
     try {
-      setLoading(true);
-      const data = await IncidenceService.getAll();
-      setIncidences(data);
+      const response = await fetchWithAuth(API_URL_INCIDENCES);
+      if (response.ok) {
+        const data = await response.json();
+        setIncidences(data);
+      }
     } catch (error) {
       console.error("Error cargando incidencias:", error);
     } finally {
@@ -32,34 +124,96 @@ export default function StudentIncidences() {
     }
   };
 
-  const openNotes = async (incId: number) => {
+  const openNotes = async (inc: any) => {
     try {
-      const data = await IncidenceService.getById(incId);
-      setSelectedDetails(data);
-      setIsNotesOpen(true);
+      const response = await fetchWithAuth(`${API_URL_INCIDENCES}${inc.id}/`);
+      if (response.ok) {
+        const data = await response.json();
+        setSelectedIncidenceDetails(data);
+        setIsNotesOpen(true);
+      }
     } catch (error) {
       console.error('Error cargando detalles:', error);
     }
   };
 
-  useEffect(() => { loadIncidences(); }, []);
+  useEffect(() => {
+    loadIncidences();
+    loadNotifications();
 
-  const filteredIncidences = incidences.filter((inc) => {
-    const q = search.trim().toLowerCase();
-    if (q && !(inc.title?.toLowerCase().includes(q) || inc.room_number?.toLowerCase().includes(q))) return false;
-    if (filterLocation !== 'all' && inc.location_type !== filterLocation) return false;
-    if (filterStatus !== 'all' && inc.status !== filterStatus) return false;
-    if (filterPriority !== 'all' && inc.priority !== filterPriority) return false;
-    return true;
-  });
+    const intervalId = window.setInterval(() => {
+      if (isNotificationsOpen) {
+        // Cada 5 seg cuando está abierto para actualizar sin sobrecargar
+        loadNotifications(false, true);
+      }
+    }, isNotificationsOpen ? 5000 : 15000);
+
+    return () => window.clearInterval(intervalId);
+  }, [isNotificationsOpen, loadNotifications]);
+
+  useEffect(() => {
+    if (isNotificationsOpen) {
+      loadNotifications(true);
+    }
+  }, [isNotificationsOpen, loadNotifications]);
+
+  const handleNotificationsOpenChange = (open: boolean) => {
+    setIsNotificationsOpen(open);
+  };
+
+  // Formatea el texto de una actualización: elimina el prefijo "Nota:" y
+  // traduce claves de estado a etiquetas en español.
+  const formatUpdateText = (text: string) => {
+    if (!text) return '';
+    // Eliminar 'Nota:' (mayúsc/minúsc)
+    let out = text.replace(/Nota:\s*/i, '');
+
+    const statusMap: Record<string, string> = {
+      pending: 'Pendiente',
+      reviewing: 'En revisión',
+      in_progress: 'En proceso',
+      resolved: 'Resuelto',
+    };
+
+    Object.keys(statusMap).forEach((key) => {
+      const re = new RegExp(`\\b${key}\\b`, 'g');
+      out = out.replace(re, statusMap[key]);
+    });
+
+    // Normalizar espacios y puntos
+    out = out.replace(/\s+\./g, '.');
+    return out.trim();
+  };
+
+  const statusMap: Record<string, { label: string; colorClass: string; barClass: string }> = {
+    pending: {
+      label: "Pendiente",
+      colorClass: "bg-[#FFF4E5] text-[#FFB457]",
+      barClass: "bg-[#FFB457]"
+    },
+    reviewing: {
+      label: "En revisión",
+      colorClass: "bg-[#E5F1FF] text-[#0061A7]",
+      barClass: "bg-[#0061A7]"
+    },
+    in_progress: {
+      label: "En proceso",
+      colorClass: "bg-[#E0F7FA] text-[#00ACC1]",
+      barClass: "bg-[#00ACC1]"
+    },
+    resolved: {
+      label: "Resuelto",
+      colorClass: "bg-[#F0F9EB] text-[#82D14C]",
+      barClass: "bg-[#82D14C]"
+    },
+  };
 
   return (
-    <div className={UI_CLASSES.mainLayout}>
-      {/* Header Estilo Alumno */}
-      <header className={UI_CLASSES.header}>
-        <h1 className={UI_CLASSES.headerTitle}>Incidencias</h1>
-        <div className={UI_CLASSES.bellContainer}>
-          <div className={UI_CLASSES.bellDot}></div>
+    <div className="flex flex-col h-screen bg-[#F6F7F9] relative">
+      <header className="bg-[#1B4D1C] p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg">
+        <h1 className="text-white text-2xl font-bold">Incidencias</h1>
+        <div className="relative p-2 bg-white/10 rounded-full">
+          <div className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-[#1B4D1C]"></div>
           <Bell className="w-6 h-6 text-white" />
         </div>
       </header>
@@ -98,19 +252,35 @@ export default function StudentIncidences() {
             <p className="text-sm">No tienes incidencias activas</p>
           </div>
         ) : (
-          filteredIncidences.map((inc) => {
-            const currentStatus = STATUS_MAP[inc.status] || STATUS_MAP.pending;
-            return (
-              <Card key={inc.id} className={UI_CLASSES.card}>
-                <CardContent className="p-0 flex">
-                  <div className={`${UI_CLASSES.cardSideBar} ${currentStatus.barClass}`} />
-                  <div className="p-5 flex-1">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className={UI_CLASSES.cardTitle}>{inc.title}</h3>
-                      <span className={`${UI_CLASSES.statusBadge} ${currentStatus.colorClass}`}>
-                        {currentStatus.label}
-                      </span>
-                    </div>
+          incidences
+            .filter((inc: any) => {
+              const q = search.trim().toLowerCase();
+              if (q) {
+                const inTitle = inc.title?.toLowerCase().includes(q);
+                const inRoom = inc.room_number?.toLowerCase().includes(q);
+                if (!inTitle && !inRoom) return false;
+              }
+              if (filterLocation !== 'all' && inc.location_type !== filterLocation) return false;
+              if (filterStatus !== 'all' && inc.status !== filterStatus) return false;
+              if (filterPriority !== 'all' && inc.priority !== filterPriority) return false;
+              return true;
+            })
+            .map((inc: any) => {
+              
+              const currentStatus = statusMap[inc.status as keyof typeof statusMap] || statusMap.pending;
+
+              return (
+                <Card key={inc.id} className="border-none shadow-sm rounded-[24px] overflow-hidden bg-white">
+                  <CardContent className="p-0 flex">
+                    <div className={`w-1.5 ${currentStatus.barClass}`} />
+
+                    <div className="p-5 flex-1">
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="font-bold text-lg text-[#1A1C1E]">{inc.title}</h3>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${currentStatus.colorClass}`}>
+                          {currentStatus.label}
+                        </span>
+                      </div>
 
                     <div className={UI_CLASSES.cardLocationRow}>
                       <MapPin size={14} strokeWidth={2.5} className="text-slate-400" />
@@ -179,12 +349,10 @@ export default function StudentIncidences() {
                   <div className={UI_CLASSES.historyLabel}>Historial de actualizaciones</div>
                   {selectedDetails.updates && selectedDetails.updates.length > 0 ? (
                     <ul className="space-y-3">
-                      {selectedDetails.updates.map((u: any) => (
-                        <li key={u.id} className={UI_CLASSES.historyItem}>
-                          <div className="text-[10px] text-slate-400 mb-1 font-bold uppercase">
-                            {u.author_name || 'Sistema'} • {new Date(u.created_at).toLocaleString()}
-                          </div>
-                          <div className="text-sm text-slate-700 font-normal">{formatUpdateText(u.text)}</div>
+                      {selectedIncidenceDetails.updates.map((u: any) => (
+                        <li key={u.id} className="p-3 border rounded bg-slate-50">
+                          <div className="text-xs text-slate-500 mb-1">{u.author_name || 'Sistema'} • {new Date(u.created_at).toLocaleString()}</div>
+                          <div className="text-sm text-slate-700">{formatUpdateText(u.text)}</div>
                         </li>
                       ))}
                     </ul>

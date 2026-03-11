@@ -55,9 +55,9 @@ class ResidentViewSet(viewsets.ViewSet):
 
     def create(self, request):
         """POST /residents/ — Crea un User + Membership con rol RESIDENT."""
-        serializer = AdminCreateResidentSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
         residence = self._get_residence(request)
+        serializer = AdminCreateResidentSerializer(data=request.data, context={"request": request, "residence": residence})
+        serializer.is_valid(raise_exception=True)
         result = create_resident(serializer.validated_data, residence, request)
         return Response({"ok": True, **result}, status=status.HTTP_201_CREATED)
 
