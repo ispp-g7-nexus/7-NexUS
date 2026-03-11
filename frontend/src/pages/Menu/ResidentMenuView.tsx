@@ -1,4 +1,3 @@
-import React from "react";
 import { Clock, Flame, Leaf } from "lucide-react";
 import { MenuWeek, MenuDay, Meal } from "../../types/menu.types";
 
