@@ -325,7 +325,7 @@ export default function StudentIncidences() {
 }
 
 const LOCATION_LABELS: Record<string, string> = {
-  habitacion: 'Habitación', baño: 'Baño Común', cocina: 'Cocina', comedor: 'Comedor', zonas_comunes: 'Zonas Comunes', exterior: 'Exterior',
+  habitacion: 'Habitación', baño: 'Baño Común', cocina: 'Cocina', comedor: 'Comedor', salas_comunes: 'Salas Comunes', exterior: 'Exterior',
 };
 
 const STATUS_MAP: Record<string, any> = {
