@@ -1,5 +1,5 @@
 import { Bell } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "../ui/button";
 import { cn } from "../ui/utils";
 import { toast } from "sonner";
@@ -10,9 +10,12 @@ interface NotificationBellProps {
   className?: string;
 }
 
+const TOAST_COOLDOWN_MS = 3500; // Tiempo para no repetir el mismo toast de notificación
+
 export function NotificationBell({ onMarkAsRead, className }: NotificationBellProps) {
   const [unviewedCount, setUnviewedCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const lastEmptyToastTimeRef = useRef<number>(0);
   const hasNotifications = unviewedCount > 0;
 
   useEffect(() => {
@@ -35,16 +38,26 @@ export function NotificationBell({ onMarkAsRead, className }: NotificationBellPr
       setUnviewedCount(data.count);
 
       if (data.count === 0) {
-        toast.info("Avisos", {
-          description: "No tienes avisos nuevos",
-          duration: 3000,
-        });
+        const now = Date.now();
+        // Solo mostrar el toast de "no hay avisos" si ha pasado el cooldown
+        if (now - lastEmptyToastTimeRef.current > TOAST_COOLDOWN_MS) {
+          toast.info("Avisos", {
+            description: "No tienes avisos nuevos",
+            duration: 3000,
+          });
+          lastEmptyToastTimeRef.current = now;
+        }
       } else {
+        // Si hay avisos, resetear el cooldown para permitir mostrar de nuevo
+        lastEmptyToastTimeRef.current = 0;
         const pluralSuffix = data.count !== 1 ? "s" : "";
         toast.info("Avisos", {
           description: `Tienes ${data.count} aviso${pluralSuffix} nuevo${pluralSuffix}`,
           duration: 3000,
         });
+
+        await announcementService.markAsViewed();
+        setUnviewedCount(0);
       }
 
       onMarkAsRead?.();

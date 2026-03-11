@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
-import { X, AlertTriangle, Info } from "lucide-react" 
+import { AlertTriangle, Info } from "lucide-react" 
 import { Button } from "../../../components/ui/button"
 import { Input } from "../../../components/ui/input"
 import { Label } from "../../../components/ui/label"
@@ -62,13 +62,6 @@ export function IncidenceForm({ onSuccess, onClose }: IncidenceFormProps) {
     <form onSubmit={handleSubmit} className="flex flex-col h-full max-h-[90vh] bg-white overflow-hidden">
       
       <div className="p-6 text-center border-b border-gray-50 shrink-0 relative">
-        <button 
-          onClick={onClose} 
-          type="button" 
-          className="absolute right-4 top-4 p-2 hover:bg-gray-100 rounded-full transition-colors z-10"
-        >
-          <X className="w-5 h-5 text-gray-400" />
-        </button>
         <h2 className="text-xl font-bold text-[#1B4D1C] mt-2">Nueva Incidencia</h2>
         <DialogDescription className="text-sm text-gray-500 mt-1 px-6 leading-tight text-center">
           Reporta cualquier problema o incidencia en tu residencia
