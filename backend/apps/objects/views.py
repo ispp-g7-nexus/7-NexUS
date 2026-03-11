@@ -1,9 +1,9 @@
 import json
+import re
 from django.http import JsonResponse
 from django.views import View
 from django.utils.decorators import method_decorator
 from .models import Object, ObjectRental
-from django.shortcuts import get_object_or_404
 from django.db.utils import IntegrityError
 from django.contrib.auth import get_user_model
 from django.views.decorators.csrf import csrf_exempt
@@ -39,6 +39,22 @@ def _serialize_object(obj):
         'rentals_count': rentals_count,
         'can_rent': is_available_now,
     }
+from django.db.models import Q
+
+OBJECT_NAME_PATTERN = re.compile(r"^[\w\-\.\(\), ]+$")
+
+
+def _validate_object_name(raw_name) -> tuple[str, str | None]:
+    name = str(raw_name or "").strip()
+    if not name:
+        return "", "El nombre del objeto es obligatorio."
+    if not OBJECT_NAME_PATTERN.fullmatch(name):
+        return (
+            "",
+            "El nombre contiene caracteres no válidos. Usa letras, números, espacios, guiones, paréntesis, comas o puntos.",
+        )
+    return name, None
+
 
 @method_decorator(csrf_exempt, name='dispatch')
 class AuthenticatedView(View):
@@ -69,10 +85,20 @@ class ObjectListView(AuthenticatedView):
     def post(self, request):
         if not hasattr(request, 'residence') or not request.residence:
             return JsonResponse({"detail": "No residence context."}, status=400)
+        if not request.user.is_staff:
+            return JsonResponse({"detail": "No tienes permisos para crear objetos."}, status=403)
         try:
             body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"detail": "JSON inválido."}, status=400)
+
+        name, name_error = _validate_object_name(body.get("name"))
+        if name_error:
+            return JsonResponse({"detail": name_error}, status=400)
+
+        try:
             obj = Object.objects.create(
-                name=body.get('name'),
+                name=name,
                 description=body.get('description', ''),
                 location=body.get('location', ''),
                 image_url=body.get('image_url', None),
@@ -82,6 +108,16 @@ class ObjectListView(AuthenticatedView):
             return JsonResponse({'id': obj.id, 'detail': 'Object created successfully'}, status=201)
         except Exception as e:
             return JsonResponse({"detail": str(e)}, status=400)
+
+
+def get_residence_object(request, object_id):
+    if not hasattr(request, 'residence') or not request.residence:
+        return None, JsonResponse({"detail": "No residence context."}, status=400)
+    try:
+        return Object.objects.get(id=object_id, residence=request.residence), None
+    except Object.DoesNotExist:
+        return None, JsonResponse({"detail": "Objeto no encontrado."}, status=404)
+
 
 class ObjectDetailView(AuthenticatedView):
     def get(self, request, object_id):
@@ -93,18 +129,44 @@ class ObjectDetailView(AuthenticatedView):
     def delete(self, request, object_id):
         if not hasattr(request, 'residence') or not request.residence:
             return JsonResponse({"detail": "No residence context."}, status=400)
-        obj = get_object_or_404(Object, id=object_id, residence=request.residence)
+        obj, error_response = get_residence_object(request, object_id)
+        if error_response:
+            return error_response
+        rentals_count = obj.rentals.count()
+        return JsonResponse({
+            'id': obj.id,
+            'name': obj.name,
+            'description': obj.description,
+            'location': obj.location,
+            'image_url': obj.image_url,
+            'tags': obj.tags,
+            'availability': obj.available,
+            'rentals_count': rentals_count,
+            'can_rent': obj.can_rent(),
+        })
+
+    def delete(self, request, object_id):
+        obj, error_response = get_residence_object(request, object_id)
+        if error_response:
+            return error_response
         if not request.user.is_staff:
             return JsonResponse({"detail": "Unauthorized"}, status=403)
-        obj.delete()
-        return JsonResponse({"detail": "Object deleted"}, status=204)
+        try:
+            obj.delete()
+            return JsonResponse({"detail": "Object deleted"}, status=200)
+        except IntegrityError:
+            return JsonResponse({"detail": "No se puede eliminar el objeto por dependencias activas."}, status=400)
+        except Exception as e:
+            return JsonResponse({"detail": str(e)}, status=500)
 
 class ObjectReserveView(AuthenticatedView):
     def post(self, request, object_id):
         if not hasattr(request, 'residence') or not request.residence:
             return JsonResponse({"detail": "No residence context."}, status=400)
 
-        obj = get_object_or_404(Object, id=object_id, residence=request.residence)
+        obj, error_response = get_residence_object(request, object_id)
+        if error_response:
+            return error_response
         try:
             body = json.loads(request.body)
             start = _parse_datetime_or_none(body.get('start_date'))
@@ -149,7 +211,9 @@ class ObjectCancelView(AuthenticatedView):
         if not hasattr(request, 'residence') or not request.residence:
             return JsonResponse({"detail": "No residence context."}, status=400)
 
-        obj = get_object_or_404(Object, id=object_id, residence=request.residence)
+        obj, error_response = get_residence_object(request, object_id)
+        if error_response:
+            return error_response
         try:
             body = json.loads(request.body) if request.body else {}
             # try to cancel specific rental id
@@ -174,7 +238,9 @@ class ObjectRentalsView(AuthenticatedView):
     def get(self, request, object_id):
         if not hasattr(request, 'residence') or not request.residence:
             return JsonResponse({"detail": "No residence context."}, status=400)
-        obj = get_object_or_404(Object, id=object_id, residence=request.residence)
+        obj, error_response = get_residence_object(request, object_id)
+        if error_response:
+            return error_response
         rentals = obj.rentals.select_related('user').all()
         data = []
         for r in rentals:

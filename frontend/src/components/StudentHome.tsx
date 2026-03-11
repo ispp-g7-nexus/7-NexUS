@@ -2,10 +2,12 @@ import {
     Bell,
     Check,
     Copy,
+    Calendar,
     LogOut,
     Megaphone,
     MessageSquare,
     Package,
+    AlertCircle,
     QrCode,
     Users,
     Utensils,
@@ -14,19 +16,90 @@ import {
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { authService } from "../services/auth";
+import announcementService from "../services/announcement.service";
+import { fetchWithAuth, API_URL, API_URL_INCIDENCES } from "../utils/api";
 
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 
-export type StudentTab = "home" | "incidences" | "reservations" | "community" | "matches" | "announcements" | "menu" | "deliveries" | "visitors";
+export type StudentTab = "home" | "incidences" | "reservations" | "community" | "events" | "matches" | "announcements" | "menu" | "deliveries" | "visitors";
 
 interface StudentHomeProps {
     onNavigate: (view: StudentTab) => void;
     onLogout?: () => void;
 }
+
+const HOME_NOTIFICATIONS_SEEN_IDS_KEY = "home-notifications-seen-ids";
+const HOME_INCIDENCES_DISMISSED_IDS_KEY = "home-incidences-dismissed-ids";
+const NOTIFICATIONS_POLL = 15000;
+const NOTIFICATIONS_LIMIT = 12;
+
+const parseSeenIds = (raw: string | null): string[] => {
+    if (!raw) {
+        return [];
+    }
+
+    try {
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch {
+        return [];
+    }
+};
+
+const getInitialSeenIds = (): string[] => {
+    if (typeof window === "undefined") {
+        return [];
+    }
+
+    return parseSeenIds(window.localStorage.getItem(HOME_NOTIFICATIONS_SEEN_IDS_KEY));
+};
+
+const getInitialDismissedIncidenceIds = (): string[] => {
+    if (typeof window === "undefined") {
+        return [];
+    }
+
+    return parseSeenIds(window.localStorage.getItem(HOME_INCIDENCES_DISMISSED_IDS_KEY));
+};
+
+type HomeNotification = {
+    id: string;
+    title: string;
+    description: string;
+    time: string;
+    type: NotificationType;
+    source: StudentTab;
+    createdAt: string;
+};
+
+type AnnouncementItem = {
+    id: number;
+    title: string;
+    description: string;
+    announcement_date: string;
+    publication_date?: string;
+    has_passed: boolean;
+};
+
+type IncidenceNotificationItem = {
+    id: string;
+    title?: string;
+    message?: string;
+    created_at: string;
+};
+
+type EventItem = {
+    id: number;
+    title: string;
+    location?: string;
+    start_time: string;
+    end_time: string;
+};
 
 export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
     // --- ESTADOS DE LA VISTA ---
@@ -43,14 +116,15 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
         status: "Cargando"
     });
 
-    const [notifications, setNotifications] = useState([
-        { id: 1, title: "Mensaje del administrador", read: false },
-        { id: 2, title: "Tienes paquetes pendientes", read: true },
-        { id: 3, title: "Incidencia resuelta", read: true },
-    ]);
+    const [notifications, setNotifications] = useState<HomeNotification[]>([]);
+    const [isNotificationsLoading, setIsNotificationsLoading] = useState(false);
+    const [seenNotificationIds, setSeenNotificationIds] = useState<string[]>(getInitialSeenIds);
+    const [dismissedIncidenceIds, setDismissedIncidenceIds] = useState<string[]>(getInitialDismissedIncidenceIds);
+    const [unviewedAnnouncements, setUnviewedAnnouncements] = useState(0);
 
     const wifiPassword = "NexUS2026@Residence";
-    const unreadCount = notifications.filter(n => !n.read).length;
+    const unreadCount = notifications.filter((notification) => !seenNotificationIds.includes(notification.id)).length;
+    const hasUnreadNotifications = unreadCount > 0 || unviewedAnnouncements > 0;
 
     // --- CARGA DE DATOS REALES ---
     useEffect(() => {
@@ -85,10 +159,151 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
         fetchUserData();
     }, []);
 
+    const formatRelativeTime = (isoDate: string) => {
+        const date = new Date(isoDate);
+        const diffInMinutes = Math.max(0, Math.floor((Date.now() - date.getTime()) / 60000));
+
+        if (diffInMinutes < 1) return "Ahora";
+        if (diffInMinutes < 60) return `Hace ${diffInMinutes} min`;
+
+        const diffInHours = Math.floor(diffInMinutes / 60);
+        if (diffInHours < 24) return `Hace ${diffInHours} h`;
+
+        const diffInDays = Math.floor(diffInHours / 24);
+        if (diffInDays < 7) return `Hace ${diffInDays} d`;
+
+        return date.toLocaleDateString();
+    };
+
+    const appendSeenNotificationIds = (notificationIds: string[]) => {
+        setSeenNotificationIds((previousIds) => {
+            const nextIds = Array.from(new Set([...previousIds, ...notificationIds]));
+            if (typeof window !== "undefined") {
+                window.localStorage.setItem(HOME_NOTIFICATIONS_SEEN_IDS_KEY, JSON.stringify(nextIds));
+            }
+            return nextIds;
+        });
+    };
+
+    const appendDismissedIncidenceIds = (notificationIds: string[]) => {
+        setDismissedIncidenceIds((previousIds) => {
+            const nextIds = Array.from(new Set([...previousIds, ...notificationIds]));
+            if (typeof window !== "undefined") {
+                window.localStorage.setItem(HOME_INCIDENCES_DISMISSED_IDS_KEY, JSON.stringify(nextIds));
+            }
+            return nextIds;
+        });
+    };
+
+    const buildAnnouncementItems = (announcements: AnnouncementItem[]): HomeNotification[] => {
+        return announcements
+            .filter((announcement) => !announcement.has_passed)
+            .map((announcement) => {
+                const createdAt = announcement.publication_date || `${announcement.announcement_date}T00:00:00`;
+                return {
+                    id: `announcement-${announcement.id}`,
+                    title: `[Avisos] ${announcement.title}`,
+                    description: announcement.description,
+                    time: formatRelativeTime(createdAt),
+                    type: "admin" as const,
+                    source: "announcements" as const,
+                    createdAt,
+                };
+            });
+    };
+
+    const buildIncidenceItems = (incidenceItems: IncidenceNotificationItem[]): HomeNotification[] => {
+        return incidenceItems
+            .filter((item) => !dismissedIncidenceIds.includes(item.id))
+            .map((item) => ({
+                id: item.id,
+                title: `[Incidencias] ${item.title || "Nueva incidencia"}`,
+                description: item.message || "Tienes una actualización de incidencias.",
+                time: formatRelativeTime(item.created_at),
+                type: "warning" as const,
+                source: "incidences" as const,
+                createdAt: item.created_at,
+            }));
+    };
+
+    const buildEventItems = (events: EventItem[]): HomeNotification[] => {
+        const now = Date.now();
+        return events
+            .filter((event) => Date.parse(event.end_time) > now)
+            .map((event) => ({
+                id: `event-${event.id}`,
+                title: `[Eventos] ${event.title}`,
+                description: event.location ? `Lugar: ${event.location}` : "Evento disponible en tu residencia.",
+                time: formatRelativeTime(event.start_time),
+                type: "event" as const,
+                source: "events" as const,
+                createdAt: event.start_time,
+            }));
+    };
+
+    const loadHomeNotifications = async (silent = false) => {
+        try {
+            if (!silent) {
+                setIsNotificationsLoading(true);
+            }
+
+            const [announcementsResult, unviewedResult, incidencesResult, eventsResult] = await Promise.allSettled([
+                announcementService.getAnnouncements(),
+                announcementService.getUnviewedCount(),
+                fetchWithAuth(`${API_URL_INCIDENCES}notifications/`),
+                fetchWithAuth(API_URL),
+            ]);
+
+            if (unviewedResult.status === "fulfilled") {
+                setUnviewedAnnouncements(unviewedResult.value.count);
+            }
+
+            const mergedNotifications: HomeNotification[] = [];
+
+            if (announcementsResult.status === "fulfilled") {
+                mergedNotifications.push(...buildAnnouncementItems(announcementsResult.value));
+            }
+
+            if (incidencesResult.status === "fulfilled" && incidencesResult.value.ok) {
+                const data = await incidencesResult.value.json();
+                const incidenceNotifications = Array.isArray(data.results) ? data.results : [];
+                mergedNotifications.push(...buildIncidenceItems(incidenceNotifications));
+            }
+
+            if (eventsResult.status === "fulfilled" && eventsResult.value.ok) {
+                const eventsData = await eventsResult.value.json();
+                mergedNotifications.push(...buildEventItems(Array.isArray(eventsData) ? eventsData : []));
+            }
+
+            const sortedNotifications = mergedNotifications
+                .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+                .slice(0, NOTIFICATIONS_LIMIT);
+
+            setNotifications(sortedNotifications);
+        } catch (error) {
+            console.error("Error cargando notificaciones del panel central:", error);
+        } finally {
+            if (!silent) {
+                setIsNotificationsLoading(false);
+            }
+        }
+    };
+
+    useEffect(() => {
+        loadHomeNotifications();
+        const intervalId = window.setInterval(() => loadHomeNotifications(true), NOTIFICATIONS_POLL);
+
+        return () => window.clearInterval(intervalId);
+    }, []);
+
     // --- FUNCIONES INTERNAS ---
-    const handleOpenNotifications = () => {
-        setIsNotificationsOpen(true);
-        setNotifications(notifications.map(n => ({ ...n, read: true })));
+    const handleNotificationsOpenChange = (open: boolean) => {
+        setIsNotificationsOpen(open);
+
+        if (open) {
+            appendSeenNotificationIds(notifications.map((notification) => notification.id));
+            loadHomeNotifications(true);
+        }
     };
 
     const handleCopyPassword = () => {
@@ -130,12 +345,62 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                         </div>
                     </div>
                     <div className="flex gap-2">
-                        <Button size="icon" variant="ghost" className="text-white hover:bg-white/20 rounded-full relative" onClick={handleOpenNotifications}>
-                            <Bell className="w-6 h-6" />
-                            {unreadCount > 0 && (
-                                <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-[#F5A623] rounded-full border-2 border-[#1B5E20]" />
-                            )}
-                        </Button>
+                        <Popover open={isNotificationsOpen} onOpenChange={handleNotificationsOpenChange}>
+                            <PopoverTrigger asChild>
+                                <Button size="icon" variant="ghost" className="text-white hover:bg-white/20 rounded-full relative">
+                                    <Bell className="w-6 h-6" />
+                                    {hasUnreadNotifications && (
+                                        <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-[#F5A623] rounded-full border-2 border-[#1B5E20]" />
+                                    )}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent align="end" sideOffset={10} className="w-[min(26rem,calc(100vw-2rem))] p-0">
+                                <div className="max-h-[70vh] overflow-y-auto rounded-md bg-white p-4">
+                                    <div className="mb-3 flex items-center gap-2">
+                                        <Bell className="h-5 w-5 text-[#35C759]" />
+                                        <h3 className="font-semibold text-gray-900">Notificaciones</h3>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        {isNotificationsLoading ? (
+                                            <p className="py-4 text-sm text-gray-500">Cargando notificaciones...</p>
+                                        ) : notifications.length === 0 ? (
+                                            <p className="py-4 text-sm text-gray-500">No tienes notificaciones pendientes.</p>
+                                        ) : (
+                                            notifications.map((notification) => (
+                                                <NotificationCard
+                                                    key={notification.id}
+                                                    icon={
+                                                        notification.source === "announcements" ? (
+                                                            <Megaphone className="w-5 h-5 text-blue-600" />
+                                                        ) : notification.source === "incidences" ? (
+                                                            <AlertCircle className="w-5 h-5 text-orange-600" />
+                                                        ) : (
+                                                            <Calendar className="w-5 h-5 text-purple-600" />
+                                                        )
+                                                    }
+                                                    title={notification.title}
+                                                    description={notification.description}
+                                                    time={notification.time}
+                                                    type={notification.type}
+                                                    onOpenSource={() => {
+                                                        if (notification.source === "incidences") {
+                                                            const incidenceIds = notifications
+                                                                .filter((item) => item.source === "incidences")
+                                                                .map((item) => item.id);
+                                                            appendDismissedIncidenceIds(incidenceIds);
+                                                            setNotifications((previous) => previous.filter((item) => item.source !== "incidences"));
+                                                        }
+                                                        setIsNotificationsOpen(false);
+                                                        onNavigate(notification.source);
+                                                    }}
+                                                />
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+                            </PopoverContent>
+                        </Popover>
                         {onLogout && (
                             <Button size="icon" variant="ghost" className="text-white hover:bg-white/20 rounded-full" onClick={onLogout}>
                                 <LogOut className="w-5 h-5" />
@@ -218,19 +483,6 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                 </DialogContent>
             </Dialog>
 
-            <Dialog open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen}>
-                <DialogContent className="sm:max-w-[425px] max-h-[80vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                            <Bell className="w-5 h-5 text-[#35C759]" /> Notificaciones
-                        </DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-3 mt-2">
-                        <NotificationCard icon={<Megaphone className="w-5 h-5 text-blue-600" />} title="Mensaje del administrador" description="Recordatorio: Por favor revisa las normas de convivencia." time="Hace 2 horas" type="admin" />
-                        <NotificationCard icon={<Package className="w-5 h-5 text-green-600" />} title="Tienes paquetes pendientes" description="1 paquete esperando en recepción" time="Ayer" type="info" />
-                    </div>
-                </DialogContent>
-            </Dialog>
         </div>
     );
 }
@@ -245,6 +497,7 @@ interface NotificationCardProps {
     description: string;
     time: string;
     type: NotificationType;
+    onOpenSource: () => void;
 }
 
 interface QuickActionProps {
@@ -255,7 +508,7 @@ interface QuickActionProps {
     onClick: () => void;
 }
 
-function NotificationCard({ icon, title, description, time, type }: NotificationCardProps) {
+function NotificationCard({ icon, title, description, time, type, onOpenSource }: NotificationCardProps) {
     const bgColors: Record<NotificationType, string> = {
         urgent: "bg-orange-50 border-orange-200",
         admin: "bg-blue-50 border-blue-200",
@@ -266,7 +519,11 @@ function NotificationCard({ icon, title, description, time, type }: Notification
     };
 
     return (
-        <div className={`p-4 rounded-xl border ${bgColors[type] || bgColors.info} transition-colors hover:shadow-sm`}>
+        <button
+            className={`w-full p-4 rounded-xl border ${bgColors[type] || bgColors.info} transition-colors hover:shadow-sm text-left`}
+            onClick={onOpenSource}
+            type="button"
+        >
             <div className="flex gap-3">
                 <div className="flex-shrink-0 w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm">
                     {icon}
@@ -277,7 +534,7 @@ function NotificationCard({ icon, title, description, time, type }: Notification
                     <p className="text-xs text-gray-400">{time}</p>
                 </div>
             </div>
-        </div>
+        </button>
     );
 }
 

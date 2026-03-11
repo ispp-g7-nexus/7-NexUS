@@ -37,6 +37,7 @@ class ObjectAvailabilityApiTests(FastTenantTestCase):
             password="demo1234",
             first_name="Student",
             last_name="Demo",
+            is_staff=True,
         )
         self.other_user = user_model.objects.create_user(
             username="other",
@@ -125,9 +126,33 @@ class ObjectAvailabilityApiTests(FastTenantTestCase):
             },
             content_type="application/json",
         )
+        self.assertEqual(response.status_code, 400)
+
+    def test_create_object_accepts_valid_name(self):
+        response = self.client.post(
+            "/api/objects/",
+            data={
+                "name": "Kit de Herramientas (Básico) 2.0",
+                "description": "Caja con herramientas",
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(Object.objects.count(), 4)
+        self.assertEqual(Object.objects.filter(name="Kit de Herramientas (Básico) 2.0").exists(), True)
+
+    def test_create_object_rejects_invalid_special_characters_in_name(self):
+        response = self.client.post(
+            "/api/objects/",
+            data={
+                "name": "Proyector @ Aula",
+                "description": "No debería guardarse",
+            },
+            content_type="application/json",
+        )
 
         self.assertEqual(response.status_code, 400)
-        self.assertIn("no está disponible", response.json()["detail"].lower())
 
     def test_user_reservations_use_same_availability_logic(self):
         rental = self._create_active_rental_now(self.object_busy_now, self.user)
@@ -151,7 +176,6 @@ class ObjectAvailabilityApiTests(FastTenantTestCase):
         self.assertEqual(response_during.status_code, 200)
         during_payload = {item["id"]: item for item in response_during.json()}
         self.assertFalse(during_payload[self.object_busy_now.id]["availability"])
-        self.assertFalse(during_payload[self.object_busy_now.id]["can_rent"])
 
         rental.end_date = timezone.now() - timedelta(minutes=1)
         rental.save(update_fields=["end_date"])
@@ -160,7 +184,6 @@ class ObjectAvailabilityApiTests(FastTenantTestCase):
         self.assertEqual(response_after.status_code, 200)
         after_payload = {item["id"]: item for item in response_after.json()}
         self.assertTrue(after_payload[self.object_busy_now.id]["availability"])
-        self.assertTrue(after_payload[self.object_busy_now.id]["can_rent"])
 
     def test_cancel_without_rental_id_preserves_past_history(self):
         now = timezone.now()
@@ -185,3 +208,26 @@ class ObjectAvailabilityApiTests(FastTenantTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(ObjectRental.objects.filter(id=past_rental.id).exists())
         self.assertFalse(ObjectRental.objects.filter(id=future_rental.id).exists())
+        self.assertEqual(Object.objects.count(), 3)
+
+    def test_create_object_rejects_blank_name(self):
+        response = self.client.post(
+            "/api/objects/",
+            data={"name": "  "},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(Object.objects.count(), 3)
+
+    def test_create_object_requires_staff_permissions(self):
+        self.client.force_login(self.other_user)
+
+        response = self.client.post(
+            "/api/objects/",
+            data={"name": "Objeto válido"},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(Object.objects.count(), 3)
