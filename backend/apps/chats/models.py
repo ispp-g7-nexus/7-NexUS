@@ -96,6 +96,29 @@ class ChatGroupLabel(models.Model):
 		return self.name
 
 
+class GroupMessage(models.Model):
+	"""Mensaje dentro de un grupo de chat."""
+
+	group = models.ForeignKey(
+		ChatGroup,
+		on_delete=models.CASCADE,
+		related_name="messages",
+	)
+	sender = models.ForeignKey(
+		"membership.Membership",
+		on_delete=models.CASCADE,
+		related_name="group_messages_sent",
+	)
+	content = models.TextField()
+	created_at = models.DateTimeField(auto_now_add=True)
+
+	class Meta:
+		ordering = ["created_at"]
+
+	def __str__(self) -> str:
+		return f"Msg {self.id} en grupo {self.group_id}"
+
+
 class PrivateConversation(models.Model):
 	"""Conversación privada 1-a-1 entre dos residentes."""
 

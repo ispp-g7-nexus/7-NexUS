@@ -101,6 +101,35 @@ class UpdateChatMemberSerializer(serializers.Serializer):
     is_admin = serializers.BooleanField()
 
 
+# ── Serializers para mensajes de grupo ───────────────────────
+
+
+class GroupMessageSerializer(serializers.ModelSerializer):
+    sender_name = serializers.SerializerMethodField()
+    sender_email = serializers.SerializerMethodField()
+    sender_membership_id = serializers.IntegerField(source="sender_id", read_only=True)
+
+    class Meta:
+        from .models import GroupMessage
+
+        model = GroupMessage
+        fields = [
+            "id",
+            "sender_membership_id",
+            "sender_name",
+            "sender_email",
+            "content",
+            "created_at",
+        ]
+
+    def get_sender_name(self, obj):
+        user = obj.sender.user
+        return user.get_full_name().strip() or user.get_username()
+
+    def get_sender_email(self, obj):
+        return obj.sender.user.email
+
+
 # ── Serializers para chats privados ──────────────────────────
 
 
