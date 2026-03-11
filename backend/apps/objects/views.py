@@ -5,12 +5,16 @@ from django.views import View
 from django.utils.decorators import method_decorator
 from .models import Object, ObjectRental
 from django.db.utils import IntegrityError
+from django.db import transaction
 from django.contrib.auth import get_user_model
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from apps.common.utils.jwt_auth import resolve_user_from_request
-from django.db.models import Count
+from django.db.models import Count, Q
+
+
+OBJECT_NAME_PATTERN = re.compile(r"^[\w\-\.\(\), ]+$")
 
 
 def _parse_datetime_or_none(value):
@@ -18,30 +22,6 @@ def _parse_datetime_or_none(value):
     if dt is not None and timezone.is_naive(dt):
         dt = timezone.make_aware(dt, timezone.get_current_timezone())
     return dt
-
-
-def _serialize_object(obj):
-    is_available_now = obj.can_rent()
-    rentals_count = getattr(obj, "rentals_count", obj.rentals.count())
-    return {
-        'id': obj.id,
-        'name': obj.name,
-        'description': obj.description,
-        'location': obj.location,
-        # "Disponibilidad" representa si puede reservarse ahora mismo.
-        'availability': is_available_now,
-        # Bandera de configuración para admin/debug.
-        'lending_enabled': obj.available,
-        # Alias compatible con ramas donde se usaba otro nombre.
-        'is_enabled': obj.available,
-        'image_url': obj.image_url,
-        'tags': obj.tags,
-        'rentals_count': rentals_count,
-        'can_rent': is_available_now,
-    }
-from django.db.models import Q
-
-OBJECT_NAME_PATTERN = re.compile(r"^[\w\-\.\(\), ]+$")
 
 
 def _validate_object_name(raw_name) -> tuple[str, str | None]:
@@ -54,6 +34,24 @@ def _validate_object_name(raw_name) -> tuple[str, str | None]:
             "El nombre contiene caracteres no válidos. Usa letras, números, espacios, guiones, paréntesis, comas o puntos.",
         )
     return name, None
+
+
+def _serialize_object(obj):
+    is_available_now = obj.can_rent()
+    rentals_count = getattr(obj, "rentals_count", obj.rentals.count())
+    return {
+        'id': obj.id,
+        'name': obj.name,
+        'description': obj.description,
+        'location': obj.location,
+        'availability': is_available_now,
+        'lending_enabled': obj.available,
+        'is_enabled': obj.available,
+        'image_url': obj.image_url,
+        'tags': obj.tags,
+        'rentals_count': rentals_count,
+        'can_rent': is_available_now,
+    }
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -70,6 +68,7 @@ class AuthenticatedView(View):
             else:
                 return JsonResponse({"detail": "Authentication credentials were not provided."}, status=401)
         return super().dispatch(request, *args, **kwargs)
+
 
 class ObjectListView(AuthenticatedView):
     def get(self, request):
@@ -123,29 +122,14 @@ class ObjectDetailView(AuthenticatedView):
     def get(self, request, object_id):
         if not hasattr(request, 'residence') or not request.residence:
             return JsonResponse({"detail": "No residence context."}, status=400)
-        obj = get_object_or_404(Object, id=object_id, residence=request.residence)
+        obj, error_response = get_residence_object(request, object_id)
+        if error_response:
+            return error_response
         return JsonResponse(_serialize_object(obj))
 
     def delete(self, request, object_id):
         if not hasattr(request, 'residence') or not request.residence:
             return JsonResponse({"detail": "No residence context."}, status=400)
-        obj, error_response = get_residence_object(request, object_id)
-        if error_response:
-            return error_response
-        rentals_count = obj.rentals.count()
-        return JsonResponse({
-            'id': obj.id,
-            'name': obj.name,
-            'description': obj.description,
-            'location': obj.location,
-            'image_url': obj.image_url,
-            'tags': obj.tags,
-            'availability': obj.available,
-            'rentals_count': rentals_count,
-            'can_rent': obj.can_rent(),
-        })
-
-    def delete(self, request, object_id):
         obj, error_response = get_residence_object(request, object_id)
         if error_response:
             return error_response
@@ -159,52 +143,56 @@ class ObjectDetailView(AuthenticatedView):
         except Exception as e:
             return JsonResponse({"detail": str(e)}, status=500)
 
+
 class ObjectReserveView(AuthenticatedView):
     def post(self, request, object_id):
         if not hasattr(request, 'residence') or not request.residence:
             return JsonResponse({"detail": "No residence context."}, status=400)
 
-        obj, error_response = get_residence_object(request, object_id)
-        if error_response:
-            return error_response
         try:
-            body = json.loads(request.body)
-            start = _parse_datetime_or_none(body.get('start_date'))
-            end = _parse_datetime_or_none(body.get('end_date'))
-            if not start or not end:
-                return JsonResponse({"detail": "start_date y end_date son requeridos."}, status=400)
+            body = json.loads(request.body or "{}")
+        except json.JSONDecodeError:
+            return JsonResponse({"detail": "El cuerpo de la petición no es JSON válido."}, status=400)
 
-            if not obj.available:
-                return JsonResponse({"detail": "Este objeto no está disponible para préstamo."}, status=400)
+        start = _parse_datetime_or_none(body.get('start_date'))
+        end = _parse_datetime_or_none(body.get('end_date'))
+        if not start or not end:
+            return JsonResponse({"detail": "start_date y end_date son requeridos."}, status=400)
+        if start >= end:
+            return JsonResponse({"detail": "La fecha de fin debe ser posterior a la de inicio."}, status=400)
+        if start < timezone.now():
+            return JsonResponse({"detail": "No se pueden crear reservas en el pasado."}, status=400)
 
-            if start >= end:
-                return JsonResponse({"detail": "La fecha de fin debe ser posterior a la de inicio."}, status=400)
+        try:
+            with transaction.atomic():
+                obj, error_response = get_residence_object(request, object_id)
+                if error_response:
+                    return error_response
 
-            if start < timezone.now():
-                return JsonResponse({"detail": "No se pueden crear reservas en el pasado."}, status=400)
+                if not obj.available:
+                    return JsonResponse({"detail": "Este objeto no está disponible para préstamo."}, status=400)
 
-            # Check overlapping rentals
-            overlapping = ObjectRental.objects.filter(
-                object=obj,
-                start_date__lt=end,
-                end_date__gt=start,
-            ).exists()
+                overlapping = ObjectRental.objects.select_for_update().filter(
+                    object=obj,
+                    start_date__lt=end,
+                    end_date__gt=start,
+                ).exists()
 
-            # single-instance objects: if any overlapping rental exists, deny
-            if overlapping:
-                return JsonResponse({"detail": "No hay disponibilidad para ese horario."}, status=400)
+                if overlapping:
+                    return JsonResponse({"detail": "No hay disponibilidad para ese horario."}, status=400)
 
-            rental = ObjectRental.objects.create(
-                object=obj,
-                user=request.user,
-                start_date=start,
-                end_date=end,
-            )
+                rental = ObjectRental.objects.create(
+                    object=obj,
+                    user=request.user,
+                    start_date=start,
+                    end_date=end,
+                )
             return JsonResponse({"id": rental.id, "detail": "Reserva creada."}, status=201)
         except IntegrityError:
             return JsonResponse({"detail": "Ya tienes una reserva conflictiva."}, status=400)
         except Exception as e:
             return JsonResponse({"detail": str(e)}, status=400)
+
 
 class ObjectCancelView(AuthenticatedView):
     def post(self, request, object_id):
@@ -216,12 +204,10 @@ class ObjectCancelView(AuthenticatedView):
             return error_response
         try:
             body = json.loads(request.body) if request.body else {}
-            # try to cancel specific rental id
             rental_id = body.get('rental_id')
             if rental_id:
                 deleted, _ = ObjectRental.objects.filter(id=rental_id, object=obj, user=request.user).delete()
             else:
-                # Cancelar solo reservas activas/futuras, preservando histórico.
                 deleted, _ = ObjectRental.objects.filter(
                     object=obj,
                     user=request.user,
@@ -233,6 +219,7 @@ class ObjectCancelView(AuthenticatedView):
             return JsonResponse({"detail": "No existe reserva para este usuario y objeto."}, status=400)
         except Exception as e:
             return JsonResponse({"detail": str(e)}, status=400)
+
 
 class ObjectRentalsView(AuthenticatedView):
     def get(self, request, object_id):
@@ -261,13 +248,12 @@ class UserReservationsView(AuthenticatedView):
     def get(self, request):
         if not hasattr(request, 'residence') or not request.residence:
             return JsonResponse({"detail": "No residence context."}, status=400)
-            
-        # Get all reservations for the current user in this residence
+
         rentals = ObjectRental.objects.filter(
             user=request.user,
             object__residence=request.residence
         ).select_related('object').order_by('-start_date')
-        
+
         data = []
         for rental in rentals:
             data.append({
