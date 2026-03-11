@@ -12,7 +12,7 @@ from django.utils.encoding import force_bytes, force_str
 from django.utils.html import strip_tags
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from rest_framework import authentication
-from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.exceptions import APIException, AuthenticationFailed
 
 from apps.membership.models import Membership
 
@@ -103,6 +103,12 @@ logger = logging.getLogger(__name__)
 UserModel = get_user_model()
 
 
+class SMTPServerError(APIException):
+    status_code = 500
+    default_detail = "El email no se pudo enviar debido a un error interno. Por favor, inténtalo de nuevo más tarde."
+    default_code = "smtp_error"
+
+
 def process_password_reset_request(email: str, request):
     """Genera el token y envía el correo usando SMTP nativo de Django."""
     user = get_user_by_email(email)
@@ -119,6 +125,7 @@ def process_password_reset_request(email: str, request):
             "password_reset_email.html", {"reset_link": reset_link}
         )
         plain_message = strip_tags(html_message)
+
         try:
             send_mail(
                 subject="Recuperación de contraseña en NexUS",
@@ -130,9 +137,19 @@ def process_password_reset_request(email: str, request):
                 recipient_list=[user.email],
                 fail_silently=False,
             )
-            logger.info(f"Correo de recuperación enviado a: {user.email}")
+            return (
+                True,
+                "Si el email está registrado, recibirás un correo con las instrucciones.",
+            )
+
         except Exception as e:
-            logger.error(f"Error al enviar correo SMTP a {user.email}: {e}")
+            logger.exception("Error al enviar correo SMTP en recuperación de contraseña")
+            raise SMTPServerError() from e
+
+    return (
+        True,
+        "Si el email está registrado, recibirás un correo con las instrucciones.",
+    )
 
 
 def process_password_reset_confirm(uid: str, token: str, new_password: str):
