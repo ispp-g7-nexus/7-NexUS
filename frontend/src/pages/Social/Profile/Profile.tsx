@@ -22,6 +22,7 @@ const emptyProfileData: ProfileFormData = {
   musicGenres: [],
   dealbreakers: [],
   roomNumber: "",
+  room: "",
 };
 
 export function Profile() {
@@ -54,6 +55,8 @@ export function Profile() {
             lifestyle: apiData.lifestyle || prev.lifestyle,
             musicGenres: apiData.music_genres || prev.musicGenres,
             dealbreakers: apiData.dealbreakers || prev.dealbreakers,
+            name: apiData.name || prev.name,
+            room: apiData.room || apiData.room_number || prev.room,
           }));
         }
       } catch (error) {
@@ -150,7 +153,7 @@ export function Profile() {
               <span className="profile-nickname">@{profileData.nickname}</span>
             )}
             <span className="profile-room">
-              <Home size={14} /> Habitación 305-A
+              <Home size={14} /> Habitación {profileData.room || profileData.roomNumber || "Sin asignar"}
             </span>
             <Button
               onClick={() => setIsEditModalOpen(true)}

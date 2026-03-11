@@ -287,7 +287,7 @@ export function Rooms() {
                     setForm({
                       numero: r.numero,
                       edificio: r.edificio,
-                      planta: r.planta,
+                      planta: r.planta != null ? String(r.planta) : "",
                       tipo: r.tipo,
                       unidades: 1,
                     });
