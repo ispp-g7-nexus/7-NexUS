@@ -11,19 +11,19 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 
 interface BaseLoginProps {
-    onLogin: () => void;
-    onBack: () => void;
-    portal: "student" | "admin";
-    subtitle: string;
-    emailLabel: string;
-    emailId: string;
-    passwordId: string;
-    forgotPasswordText: string;
-    buttonLoadingText: string;
-    buttonIdleText: React.ReactNode;
-    successMessage: string;
-    invalidCredentialsMessage: string;
-    alertBanner?: React.ReactNode;
+    readonly onLogin: () => void;
+    readonly onBack: () => void;
+    readonly portal: "student" | "admin";
+    readonly subtitle: string;
+    readonly emailLabel: string;
+    readonly emailId: string;
+    readonly passwordId: string;
+    readonly forgotPasswordText: string;
+    readonly buttonLoadingText: string;
+    readonly buttonIdleText: React.ReactNode;
+    readonly successMessage: string;
+    readonly invalidCredentialsMessage: string;
+    readonly alertBanner?: React.ReactNode;
 }
 
 export function BaseLogin({
@@ -83,8 +83,7 @@ export function BaseLogin({
                 <Card className="border-gray-200 shadow-xl shadow-gray-200/50">
                     <CardContent className="p-8 space-y-6">
 
-                        {/* Banner condicional (solo se pinta si se le pasa por props, ej: Admin) */}
-                        {alertBanner && alertBanner}
+                        {alertBanner}
 
                         <form onSubmit={handleSubmit} className="space-y-5">
                             <div className="space-y-2">

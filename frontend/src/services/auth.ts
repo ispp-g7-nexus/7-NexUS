@@ -70,24 +70,23 @@ export const authService = {
             cache: "no-store",
         });
 
-        const currentPath = window.location.pathname;
+        const currentPath = globalThis.location.pathname;
         const isPublicRoute = currentPath === "/" || currentPath.includes("login") || currentPath === "/forgot-password";
 
         if (!response.ok) {
             console.error("El servidor rechazó el token (caducado o inválido).");
             if (!isPublicRoute) {
-                window.location.href = "/";
+                globalThis.location.href = "/";
             }
             throw new Error("No se pudo validar la sesión");
         }
 
         const data = await response.json();
-        console.log("Respuesta del servidor al comprobar sesión:", data);
 
         if (!data.authenticated) {
             console.error("El servidor dice que no hay sesión activa.");
             if (!isPublicRoute) {
-                window.location.href = "/";
+                globalThis.location.href = "/";
             }
             throw new Error("Sesión caducada");
         }
