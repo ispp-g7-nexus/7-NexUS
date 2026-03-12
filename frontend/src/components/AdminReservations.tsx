@@ -2,8 +2,8 @@ import { useState } from "react";
 import { AdminSpaces } from "../pages/Reservations/AdminSpaces";
 import { AdminObjects } from "../pages/Objects/AdminObjects";
 
-export function AdminReservations() {
-  const [activeTab, setActiveTab] = useState("espacios");
+export function AdminReservations({ defaultTab = "espacios" }: { defaultTab?: string }) {
+  const [activeTab, setActiveTab] = useState(defaultTab);
   
   const tabs = [
     { id: "espacios", label: "Espacios" },

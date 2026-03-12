@@ -58,6 +58,7 @@ const getTabByNotificationSource = (source: AdminNotificationSource): AdminTab =
 
 export function AdminView({ onLogout }: AdminViewProps) {
     const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
+    const [reservationsSubTab, setReservationsSubTab] = useState("espacios");
     const {
         notifications,
         isNotificationsOpen,
@@ -149,7 +150,7 @@ export function AdminView({ onLogout }: AdminViewProps) {
             case "reservations":
                 return (
                     <div className="p-4">
-                        <AdminReservations />
+                        <AdminReservations key={reservationsSubTab} defaultTab={reservationsSubTab} />
                     </div>
                 );
 
@@ -252,6 +253,7 @@ export function AdminView({ onLogout }: AdminViewProps) {
                                                         type="button"
                                                         onClick={() => {
                                                             const source = handleOpenNotification(notification);
+                                                            if (source === "reservations") setReservationsSubTab(notification.id.startsWith("object-reservations-") ? "objetos" : "espacios");
                                                             setActiveTab(getTabByNotificationSource(source));
                                                         }}
                                                         className={`w-full rounded-lg border p-3 text-left transition-colors hover:shadow-sm ${getCardClassesBySource(notification.source)}`}
