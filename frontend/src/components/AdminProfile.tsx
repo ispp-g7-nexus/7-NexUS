@@ -102,16 +102,14 @@ export function AdminProfile() {
     };
 
     const handleLogout = async () => {
-        try {
-            await authService.logout();
-        } catch (error) {
-            console.error("Error en logout:", error);
-        } finally {
-            localStorage.clear();
-            sessionStorage.clear();
-            window.location.href = '/';
-        }
-    };
+    try {
+        await authService.logout();
+        globalThis.location.assign('/');
+    } catch (error) {
+        console.error("Error en logout:", error);
+        toast.error("No se pudo cerrar la sesión. Inténtalo de nuevo.");
+    }
+};
 
     if (isLoading) {
         return (
