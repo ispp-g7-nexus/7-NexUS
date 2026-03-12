@@ -19,13 +19,14 @@ export function AdminLogin({ onLogin, onBack }: AdminLoginProps) {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
+    const [rememberMe, setRememberMe] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
         try {
-            await authService.login({ email, password, portal: "admin" });
+            await authService.login({ email, password, portal: "admin", rememberMe });
             toast.success("Acceso concedido");
             onLogin();
         } catch (err) {
@@ -86,7 +87,12 @@ export function AdminLogin({ onLogin, onBack }: AdminLoginProps) {
 
                             <div className="flex items-center justify-between text-sm">
                                 <label className="flex items-center gap-2 cursor-pointer">
-                                    <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-primary-brand focus:ring-primary-brand" />
+                                    <input
+                                        type="checkbox"
+                                        checked={rememberMe}
+                                        onChange={(e) => setRememberMe(e.target.checked)}
+                                        className="w-4 h-4 rounded border-gray-300 text-primary-brand focus:ring-primary-brand"
+                                    />
                                     <span className="text-gray-600">Mantener sesión</span>
                                 </label>
                                 <Link to="/forgot-password" className="text-primary-brand hover:text-primary-brand-dark font-medium">

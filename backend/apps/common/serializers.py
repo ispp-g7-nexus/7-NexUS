@@ -1,4 +1,5 @@
 from rest_framework import serializers
+
 from apps.residences.models import StudentProfile
 
 
@@ -11,6 +12,7 @@ class LoginInputSerializer(serializers.Serializer):
         choices=["student", "admin"],
         error_messages={"invalid_choice": "Portal inválido. Usa 'student' o 'admin'."},
     )
+    rememberMe = serializers.BooleanField(default=False, required=False)
 
 
 class PlanSerializer(serializers.Serializer):
@@ -49,6 +51,7 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
             "min_length": "La contraseña debe tener al menos 8 caracteres."
         },
     )
+
 
 class AdminCreateResidentSerializer(serializers.Serializer):
     full_name = serializers.CharField(allow_blank=True)
@@ -95,13 +98,16 @@ class StudentProfileSerializer(serializers.ModelSerializer):
 
     def get_room(self, obj):
         from apps.membership.models import Membership
-        membership = Membership.objects.filter(user=obj.user, role__name__iexact="Student", is_active=True).first()
+
+        membership = Membership.objects.filter(
+            user=obj.user, role__name__iexact="Student", is_active=True
+        ).first()
         if membership and membership.bedroom:
             return membership.bedroom.numero
         return obj.room_number or ""
 
     def create(self, validated_data):
-        validated_data['user'] = self.context['request'].user
+        validated_data["user"] = self.context["request"].user
         return StudentProfile.objects.create(**validated_data)
 
     def update(self, instance, validated_data):
