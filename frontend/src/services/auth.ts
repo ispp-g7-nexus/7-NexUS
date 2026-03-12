@@ -16,6 +16,8 @@ interface AuthMeUser {
     username?: string;
     email?: string;
     roles?: string[];
+    first_name?: string;
+    last_name?: string;
 }
 
 interface AuthMeResponse {
@@ -116,6 +118,27 @@ export const authService = {
             const errorData = await response.json();
             throw new Error(errorData.detail || 'Enlace inválido o expirado');
         }
+        return response.json();
+    },
+
+    updateProfile: async (data: { first_name: string; last_name: string; username: string; email: string }) => {
+        const response = await fetch(`${AUTH_URL}/me/`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+            credentials: 'include',
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            if (errorData.email) throw new Error(errorData.email[0]);
+            if (errorData.username) throw new Error(errorData.username[0]);
+            if (errorData.first_name) throw new Error(errorData.first_name[0]);
+            if (errorData.last_name) throw new Error(errorData.last_name[0]);
+
+            throw new Error(errorData.detail || 'Error al actualizar el perfil');
+        }
+
         return response.json();
     }
 };

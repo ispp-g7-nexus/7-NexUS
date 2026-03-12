@@ -12,6 +12,7 @@ from apps.residences.models import ResidenceBranding
 
 from .serializers import (
     AdminCreateResidentSerializer,
+    AdminProfileUpdateSerializer,
     BrandingSerializer,
     LoginInputSerializer,
     PasswordResetConfirmSerializer,
@@ -77,12 +78,54 @@ class AuthMeView(APIView):
 
     def get(self, request):
         user_data = resolve_user_from_request(request)
+        if user_data:
+            user_pk = (
+                user_data.get("user_id") or user_data.get("id") or user_data.get("sub")
+            )
+            try:
+                user_obj = UserModel.objects.get(pk=user_pk)
+                user_data["first_name"] = user_obj.first_name
+                user_data["last_name"] = user_obj.last_name
+            except UserModel.DoesNotExist:
+                pass
+
         return Response(
             {
                 "authenticated": bool(user_data),
                 "user": user_data,
             }
         )
+
+    def patch(self, request):
+        user_data = resolve_user_from_request(request)
+        if not user_data:
+            return Response(
+                {"detail": "No autenticado."}, status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        user_pk = (
+            user_data.get("user_id") or user_data.get("id") or user_data.get("sub")
+        )
+        try:
+            user = UserModel.objects.get(pk=user_pk)
+        except UserModel.DoesNotExist:
+            return Response(
+                {"detail": "Usuario no encontrado."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = AdminProfileUpdateSerializer(user, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                {
+                    "detail": "Perfil actualizado correctamente.",
+                    "user": serializer.data,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class AuthLoginView(APIView):
