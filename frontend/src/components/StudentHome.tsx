@@ -67,6 +67,22 @@ const formatRelativeTime = (isoDate: string) => {
     return date.toLocaleDateString();
 };
 
+const formatRelativeFuture = (isoDate: string) => {
+    const date = new Date(isoDate);
+    const diffInMinutes = Math.floor((date.getTime() - Date.now()) / 60000);
+
+    if (diffInMinutes <= 0) return "Ahora";
+    if (diffInMinutes < 60) return `En ${diffInMinutes} min`;
+
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) return `En ${diffInHours} h`;
+
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays < 7) return `En ${diffInDays} d`;
+
+    return date.toLocaleDateString();
+};
+
 const getInitialSeenIds = (): string[] => {
     if (typeof window === "undefined") {
         return [];
@@ -259,11 +275,14 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
             .filter((event) => !(currentUserId !== null && event.host?.id === currentUserId))
             .map((event) => {
                 const createdAt = event.created_at || event.start_time;
+                const timeLabel = event.created_at
+                    ? formatRelativeTime(event.created_at)
+                    : formatRelativeFuture(event.start_time);
                 return {
                     id: `event-${event.id}`,
                     title: `[Eventos] ${event.title}`,
                     description: event.location ? `Lugar: ${event.location}` : "Evento disponible en tu residencia.",
-                    time: formatRelativeTime(createdAt),
+                    time: timeLabel,
                     type: "event" as const,
                     source: "events" as const,
                     createdAt,
