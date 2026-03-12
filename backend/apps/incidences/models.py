@@ -6,7 +6,9 @@ class Incidence(models.Model):
         ('habitacion', 'Mi Habitación'),
         ('baño', 'Baño Común'),
         ('cocina', 'Cocina'),
-        ('zonas_comunes', 'Zonas Comunes'),
+        ('comedor', 'Comedor'),
+        ('exterior', 'Zonas Exteriores'),
+        ('salas_comunes', 'Salas Comunes'),
     ]
     
     STATUS_CHOICES = [

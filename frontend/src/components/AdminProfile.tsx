@@ -1,36 +1,44 @@
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { authService } from '../services/auth';
 import { LogOut } from 'lucide-react';
 
 export function AdminProfile() {
     const [isEditing, setIsEditing] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+    const [errors, setErrors] = useState<Record<string, string>>({});
 
     const [userData, setUserData] = useState({
         username: '',
         email: '',
-        phone: '',
-        department: '',
+        first_name: '',
+        last_name: '',
         roles: [] as string[],
         status: 'Activo'
     });
+
+    const [originalData, setOriginalData] = useState(userData);
 
     useEffect(() => {
         const fetchProfile = async () => {
             try {
                 const session = await authService.me();
                 if (session.user) {
-                    setUserData({
+                    const data = {
                         username: session.user.username || '',
                         email: session.user.email || '',
+                        first_name: session.user.first_name || '',
+                        last_name: session.user.last_name || '',
                         roles: session.user.roles || [],
-                        phone: '+34 600 000 000',
-                        department: 'Dirección General',
                         status: 'Activo'
-                    });
+                    };
+                    setUserData(data);
+                    setOriginalData(data);
                 }
             } catch (error) {
                 console.error("Error cargando el perfil", error);
+                toast.error("No se pudo cargar el perfil");
             } finally {
                 setIsLoading(false);
             }
@@ -38,10 +46,59 @@ export function AdminProfile() {
         fetchProfile();
     }, []);
 
+    const handleInputChange = (field: string, value: string) => {
+        setUserData({ ...userData, [field]: value });
+        if (errors[field]) {
+            setErrors({ ...errors, [field]: '' });
+        }
+    };
+
+    const validateForm = () => {
+        const newErrors: Record<string, string> = {};
+
+        if (!userData.first_name.trim()) newErrors.first_name = "El nombre es obligatorio.";
+        if (!userData.last_name.trim()) newErrors.last_name = "Los apellidos son obligatorios.";
+        if (!userData.username.trim()) newErrors.username = "El nombre de usuario es obligatorio.";
+
+        if (!userData.email.trim()) {
+            newErrors.email = "El correo es obligatorio.";
+        } else if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(userData.email)) {
+            newErrors.email = "Formato de correo inválido.";
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Guardando datos:", userData);
-        setIsEditing(false);
+
+        if (!validateForm()) {
+            toast.error("Por favor, corrige los errores del formulario.");
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            await authService.updateProfile({
+                first_name: userData.first_name,
+                last_name: userData.last_name,
+                username: userData.username,
+                email: userData.email
+            });
+
+            toast.success("Perfil actualizado correctamente.");
+            setOriginalData(userData);
+            setIsEditing(false);
+        } catch (error: unknown) {
+            if (error instanceof Error) {
+                toast.error(error.message);
+            } else {
+                toast.error("Error al guardar los cambios.");
+            }
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const handleLogout = async () => {
@@ -58,7 +115,7 @@ export function AdminProfile() {
 
     if (isLoading) {
         return (
-            <div className="flex justify-center items-center h-64 text-gray-500">
+            <div className="flex justify-center items-center min-h-[70vh] text-gray-500">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4a8f5d] mr-3"></div>
                 Cargando datos del perfil...
             </div>
@@ -66,117 +123,155 @@ export function AdminProfile() {
     }
 
     return (
-        <div className="min-h-screen bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mx-4 my-4 sm:mx-6 sm:my-6">
-            <div className="bg-[#4a8f5d] p-6 sm:px-8 sm:py-6 text-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                    <div className="flex items-center gap-3">
-                        <h2 className="text-2xl font-bold">Mi Perfil</h2>
-                        <span className="bg-green-100 text-green-800 text-xs font-bold px-2.5 py-1 rounded-full border border-green-200">
-                            {userData.status}
-                        </span>
+        <div className="min-h-[85vh] w-full flex items-center justify-center p-4 md:p-6 bg-transparent">
+            <div className="w-full max-w-4xl bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-gray-100 overflow-hidden transition-all duration-300">
+
+                <div className="bg-[#4a8f5d] p-8 text-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-white opacity-10 rounded-full blur-2xl"></div>
+
+                    <div className="relative z-10">
+                        <div className="flex items-center gap-3">
+                            <h2 className="text-3xl font-bold tracking-tight">Mi Perfil</h2>
+                            <span className="bg-white/20 text-white text-xs font-semibold px-3 py-1 rounded-full border border-white/30 backdrop-blur-sm">
+                                {userData.status}
+                            </span>
+                        </div>
+                        <p className="text-green-50 text-sm mt-2 font-medium opacity-90">
+                            Gestiona tu información personal y credenciales de acceso
+                        </p>
                     </div>
-                    <p className="text-green-100 text-sm mt-1">Gestiona tu información personal y corporativa</p>
+
+                    <button
+                        type="button"
+                        onClick={() => {
+                            if (isEditing) {
+                                setErrors({});
+                                setUserData(originalData);
+                            }
+                            setIsEditing(!isEditing);
+                        }}
+                        className="relative z-10 w-full sm:w-auto bg-white/10 hover:bg-white/20 backdrop-blur-md transition-all duration-200 px-6 py-2.5 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-white/50 outline-none shadow-sm border border-white/20"
+                    >
+                        {isEditing ? 'Cancelar Edición' : 'Editar Perfil'}
+                    </button>
                 </div>
 
-                <button
-                    onClick={() => setIsEditing(!isEditing)}
-                    className="w-full sm:w-auto bg-white/20 hover:bg-white/30 transition-colors px-5 py-2.5 rounded-lg text-sm font-medium focus:ring-2 focus:ring-white/50 outline-none"
-                >
-                    {isEditing ? 'Cancelar Edición' : 'Editar Perfil'}
-                </button>
-            </div>
+                <form onSubmit={handleSubmit} className="p-8 sm:p-10 bg-white">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
 
-            <form onSubmit={handleSubmit} className="p-6 sm:p-8">
+                        <div className="md:col-span-1">
+                            <label htmlFor="first_name" className="block text-sm font-semibold text-gray-700 mb-1.5">Nombre</label>
+                            <input
+                                id="first_name"
+                                type="text"
+                                value={userData.first_name}
+                                onChange={(e) => handleInputChange('first_name', e.target.value)}
+                                disabled={!isEditing}
+                                className={`w-full px-4 py-3 border rounded-xl focus:outline-none transition-all duration-200 ${errors.first_name ? 'border-red-500 bg-red-50/30 focus:ring-4 focus:ring-red-500/10' :
+                                    isEditing ? 'border-[#4a8f5d]/50 focus:border-[#4a8f5d] focus:ring-4 focus:ring-[#4a8f5d]/10 bg-white hover:border-[#4a8f5d]/70' :
+                                        'border-gray-200 bg-gray-50/80 text-gray-600 cursor-default'
+                                    }`}
+                            />
+                            {errors.first_name && <p className="text-red-500 text-xs mt-1.5 font-medium">{errors.first_name}</p>}
+                        </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="md:col-span-1">
+                            <label htmlFor="last_name" className="block text-sm font-semibold text-gray-700 mb-1.5">Apellidos</label>
+                            <input
+                                id="last_name"
+                                type="text"
+                                value={userData.last_name}
+                                onChange={(e) => handleInputChange('last_name', e.target.value)}
+                                disabled={!isEditing}
+                                className={`w-full px-4 py-3 border rounded-xl focus:outline-none transition-all duration-200 ${errors.last_name ? 'border-red-500 bg-red-50/30 focus:ring-4 focus:ring-red-500/10' :
+                                    isEditing ? 'border-[#4a8f5d]/50 focus:border-[#4a8f5d] focus:ring-4 focus:ring-[#4a8f5d]/10 bg-white hover:border-[#4a8f5d]/70' :
+                                        'border-gray-200 bg-gray-50/80 text-gray-600 cursor-default'
+                                    }`}
+                            />
+                            {errors.last_name && <p className="text-red-500 text-xs mt-1.5 font-medium">{errors.last_name}</p>}
+                        </div>
 
-                    <div className="md:col-span-1">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico</label>
-                        <input
-                            type="email"
-                            value={userData.email}
-                            disabled
-                            className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-500 focus:outline-none cursor-not-allowed"
-                        />
-                        <p className="text-xs text-gray-400 mt-1">El correo no puede modificarse desde aquí.</p>
-                    </div>
+                        <div className="md:col-span-1">
+                            <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-1.5">Correo Electrónico</label>
+                            <input
+                                id="email"
+                                type="email"
+                                value={userData.email}
+                                onChange={(e) => handleInputChange('email', e.target.value)}
+                                disabled={!isEditing}
+                                className={`w-full px-4 py-3 border rounded-xl focus:outline-none transition-all duration-200 ${errors.email ? 'border-red-500 bg-red-50/30 focus:ring-4 focus:ring-red-500/10' :
+                                    isEditing ? 'border-[#4a8f5d]/50 focus:border-[#4a8f5d] focus:ring-4 focus:ring-[#4a8f5d]/10 bg-white hover:border-[#4a8f5d]/70' :
+                                        'border-gray-200 bg-gray-50/80 text-gray-600 cursor-default'
+                                    }`}
+                            />
+                            {errors.email && <p className="text-red-500 text-xs mt-1.5 font-medium">{errors.email}</p>}
+                        </div>
 
-                    <div className="md:col-span-1">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Nombre Completo / Usuario</label>
-                        <input
-                            type="text"
-                            value={userData.username}
-                            onChange={(e) => setUserData({ ...userData, username: e.target.value })}
-                            disabled={!isEditing}
-                            className={`w-full px-4 py-2 border rounded-lg focus:outline-none transition-colors ${isEditing
-                                ? 'border-[#4a8f5d] focus:ring-2 focus:ring-green-200 bg-white'
-                                : 'border-gray-200 bg-gray-50 text-gray-600'
-                                }`}
-                        />
-                    </div>
+                        <div className="md:col-span-1">
+                            <label htmlFor="username" className="block text-sm font-semibold text-gray-700 mb-1.5">Nombre de Usuario</label>
+                            <input
+                                id="username"
+                                type="text"
+                                value={userData.username}
+                                onChange={(e) => handleInputChange('username', e.target.value)}
+                                disabled={!isEditing}
+                                className={`w-full px-4 py-3 border rounded-xl focus:outline-none transition-all duration-200 ${errors.username ? 'border-red-500 bg-red-50/30 focus:ring-4 focus:ring-red-500/10' :
+                                    isEditing ? 'border-[#4a8f5d]/50 focus:border-[#4a8f5d] focus:ring-4 focus:ring-[#4a8f5d]/10 bg-white hover:border-[#4a8f5d]/70' :
+                                        'border-gray-200 bg-gray-50/80 text-gray-600 cursor-default'
+                                    }`}
+                            />
+                            {errors.username && <p className="text-red-500 text-xs mt-1.5 font-medium">{errors.username}</p>}
+                        </div>
 
-                    <div className="md:col-span-1">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono de Contacto</label>
-                        <input
-                            type="tel"
-                            value={userData.phone}
-                            onChange={(e) => setUserData({ ...userData, phone: e.target.value })}
-                            disabled={!isEditing}
-                            className={`w-full px-4 py-2 border rounded-lg focus:outline-none transition-colors ${isEditing
-                                ? 'border-[#4a8f5d] focus:ring-2 focus:ring-green-200 bg-white'
-                                : 'border-gray-200 bg-gray-50 text-gray-600'
-                                }`}
-                        />
-                    </div>
-
-                    <div className="md:col-span-1">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Departamento / Cargo</label>
-                        <input
-                            type="text"
-                            value={userData.department}
-                            onChange={(e) => setUserData({ ...userData, department: e.target.value })}
-                            disabled={!isEditing}
-                            className={`w-full px-4 py-2 border rounded-lg focus:outline-none transition-colors ${isEditing
-                                ? 'border-[#4a8f5d] focus:ring-2 focus:ring-green-200 bg-white'
-                                : 'border-gray-200 bg-gray-50 text-gray-600'
-                                }`}
-                        />
-                    </div>
-
-                    <div className="md:col-span-2 pt-2">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Permisos del Sistema</label>
-                        <div className="flex flex-wrap gap-2">
-                            {userData.roles.length > 0 ? (
-                                userData.roles.map((role, index) => (
-                                    <span key={index} className="bg-green-100 text-[#4a8f5d] text-xs font-semibold px-4 py-1.5 rounded-full border border-green-200">
-                                        {role}
+                        <div className="md:col-span-2 pt-4">
+                            <label className="block text-sm font-semibold text-gray-700 mb-3">Permisos del Sistema</label>
+                            <div className="flex flex-wrap gap-2">
+                                {userData.roles.length > 0 ? (
+                                    userData.roles.map((role, index) => (
+                                        <span key={index} className="bg-green-50 text-[#4a8f5d] text-sm font-bold px-5 py-2 rounded-xl border border-green-200/60 shadow-sm">
+                                            {role}
+                                        </span>
+                                    ))
+                                ) : (
+                                    <span className="text-sm text-gray-500 italic bg-gray-50 px-4 py-2 rounded-lg border border-gray-100">
+                                        No hay roles asignados
                                     </span>
-                                ))
-                            ) : (
-                                <span className="text-sm text-gray-500 italic">No hay roles asignados</span>
-                            )}
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                {isEditing && (
-                    <div className="mt-8 pt-5 border-t border-gray-100 flex flex-col sm:flex-row justify-end gap-3">
-                        <button
-                            type="button"
-                            onClick={() => setIsEditing(false)}
-                            className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-                        >
-                            Cancelar
-                        </button>
-                        <button
-                            type="submit"
-                            className="bg-[#4a8f5d] hover:bg-[#3d754b] text-white font-medium py-2 px-6 rounded-lg transition-colors shadow-sm"
-                        >
-                            Guardar Cambios
-                        </button>
-                    </div>
-                )}
-
+                    {isEditing && (
+                        <div className="mt-10 pt-6 border-t border-gray-100 flex flex-col sm:flex-row justify-end gap-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setIsEditing(false);
+                                    setErrors({});
+                                    setUserData(originalData);
+                                }}
+                                disabled={isSaving}
+                                className="px-6 py-2.5 bg-white border-2 border-gray-200 rounded-xl text-gray-700 font-semibold hover:bg-gray-50 hover:border-gray-300 transition-all disabled:opacity-50"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={isSaving}
+                                className="bg-[#4a8f5d] hover:bg-[#3d754b] text-white font-semibold py-2.5 px-8 rounded-xl transition-all shadow-[0_4px_14px_rgba(74,143,93,0.3)] hover:shadow-[0_6px_20px_rgba(74,143,93,0.4)] flex items-center justify-center disabled:opacity-70 disabled:hover:shadow-none"
+                            >
+                                {isSaving ? (
+                                    <>
+                                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+                                        Guardando...
+                                    </>
+                                ) : (
+                                    'Guardar Cambios'
+                                )}
+                            </button>
+                        </div>
+                    )}
+    
                 <div className="mt-12 pt-8 border-t border-gray-100 max-w-sm">
                     <button
                         type="button"
@@ -188,6 +283,7 @@ export function AdminProfile() {
                     </button>
                 </div>
             </form>
+            </div>
         </div>
     );
 }

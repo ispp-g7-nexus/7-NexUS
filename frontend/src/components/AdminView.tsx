@@ -1,4 +1,4 @@
-import { AlertCircle, BarChart3, BedDouble, Bell, BookOpen, Briefcase, Calendar, Home, Layout, LayoutDashboard, LogOut, Menu, Shield, User, UserCheck, Users, Utensils } from "lucide-react";
+import { AlertCircle, BarChart3, BedDouble, Bell, BookOpen, Briefcase, Calendar, Home, Layout, LayoutDashboard, LogOut, Menu, MessageSquare, Shield, User, UserCheck, Users, Utensils } from "lucide-react";
 import { useState } from "react";
 import { Events } from "../pages/Social/Events/Events";
 import { Residents } from "../pages/Residents/Residents";
@@ -10,6 +10,8 @@ import { Staff } from "../pages/Staff/Staff";
 import { AdminAnnouncements } from "../pages/announcements/AdminAnnouncements";
 import { AdminProfile } from "./AdminProfile";
 import { AdminReservations } from "./AdminReservations";
+import { AdminChats } from "../pages/Chats/AdminChats";
+import { AdminMenuView } from "../pages/Menu/AdminMenuView";
 import { StatCard } from "./statCard";
 import { Button } from "./ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
@@ -19,7 +21,7 @@ interface AdminViewProps {
     onLogout: () => void;
 }
 
-type AdminTab = "dashboard" | "rooms" | "students" | "incidences" | "reservations" | "kitchen" | "analytics" | "staff" | "announcements" | "visitors" | "events" | "roles" | "profile";
+type AdminTab = "dashboard" | "rooms" | "students" | "incidences" | "reservations" | "kitchen" | "analytics" | "staff" | "announcements" | "visitors" | "events" | "roles" | "profile" | "chats";
 
 export function AdminView({ onLogout }: AdminViewProps) {
     const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
@@ -32,6 +34,7 @@ export function AdminView({ onLogout }: AdminViewProps) {
         { id: "students", label: "Residentes", icon: <Users className="w-5 h-5" /> },
         { id: "staff", label: "Personal", icon: <Briefcase className="w-5 h-5" /> },
         { id: "incidences", label: "Incidencias", icon: <AlertCircle className="w-5 h-5" /> },
+        { id: "kitchen", label: "Menú Comedor", icon: <Utensils className="w-5 h-5" /> },
         { id: "events", label: "Eventos & Comunidad", icon: <Calendar className="w-5 h-5" /> },
         { id: "reservations", label: "Recursos & Reservas", icon: <BookOpen className="w-5 h-5" /> },
         { id: "roles", label: "Roles", icon: <Shield className="w-5 h-5" /> },
@@ -44,6 +47,7 @@ export function AdminView({ onLogout }: AdminViewProps) {
         { label: 'Incidencias',     value: '12',  trend: '-15%',   icon: AlertCircle,theme: 'red'    as const, onClick: () => setActiveTab('incidences')   },
         { label: 'Visitantes',      value: '23',  trend: '+12%',   icon: UserCheck,  theme: 'purple' as const, onClick: () => setActiveTab('visitors')     },
         { label: 'Espacios Comunes',value: '8',   trend: '+2',     icon: Layout,     theme: 'orange' as const, onClick: () => setActiveTab('reservations') },
+        { label: 'Chats',           value: '2',   trend: '', icon: MessageSquare, theme: 'blue' as const, onClick: () => setActiveTab('chats')        },
         { label: 'Menú Comedor',    value: 'Ver', trend: 'Hoy',    icon: Utensils,   theme: 'blue'   as const, onClick: () => setActiveTab('kitchen')      },
         { label: 'Estadísticas',    value: 'Ver', trend: '+5%',    icon: BarChart3,  theme: 'green'  as const, onClick: () => setActiveTab('analytics')    },
         { label: 'Personal',        value: '42',  trend: 'Estable',icon: Briefcase,  theme: 'purple' as const, onClick: () => setActiveTab('staff')        },
@@ -131,6 +135,15 @@ export function AdminView({ onLogout }: AdminViewProps) {
                         <AdminIncidences />
                     </div>
                 );
+
+            case "chats":
+                return (
+                    <div className="p-4">
+                        <AdminChats />
+                    </div>
+                );
+            case "kitchen":
+                return <AdminMenuView />;
 
             default:
                 return (
