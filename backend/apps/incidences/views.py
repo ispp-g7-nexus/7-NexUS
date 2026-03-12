@@ -10,7 +10,7 @@ from django.db.models import Q
 
 class IncidenceViewSet(viewsets.ModelViewSet):
     LOCATION_LABELS = dict(Incidence.LOCATION_CHOICES)
-    NOTIFICATION_LIMIT = 5
+    NOTIFICATION_LIMIT = 8
     STATUS_LABELS = dict(Incidence.STATUS_CHOICES)
 
     authentication_classes = [CookieJWTAuthentication]
@@ -66,11 +66,12 @@ class IncidenceViewSet(viewsets.ModelViewSet):
             'created_at': update.created_at.isoformat(),
         }
 
-    def get_staff_items(self):
+    def get_staff_items(self, user):
         recent_incidences = (
             Incidence.objects
             .select_related('student')
             .filter(is_active=True)
+            .exclude(student=user)
             .order_by('-created_at')[:self.NOTIFICATION_LIMIT]
         )
 
@@ -88,6 +89,7 @@ class IncidenceViewSet(viewsets.ModelViewSet):
             .select_related('student')
             .filter(is_active=True)
             .exclude(student=user)
+            .exclude(location_type='habitacion')
             .order_by('-created_at')[:self.NOTIFICATION_LIMIT]
         )
         recent_updates = (
@@ -118,7 +120,7 @@ class IncidenceViewSet(viewsets.ModelViewSet):
     def notifications(self, request):
         user = request.user
         notification_items = (
-            self.get_staff_items()
+            self.get_staff_items(user)
             if user.is_staff
             else self.get_resident_items(user)
         )

@@ -12,9 +12,23 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from apps.common.utils.jwt_auth import resolve_user_from_request
 from django.db.models import Count, Q
+from apps.membership.models import Membership
 
 
 OBJECT_NAME_PATTERN = re.compile(r"^[\w\-\.\(\), ]+$")
+
+
+def _is_admin_for_residence(user, residence) -> bool:
+    if getattr(user, "is_staff", False):
+        return True
+
+    return Membership.objects.filter(
+        user=user,
+        is_active=True,
+    ).filter(
+        Q(role=Membership.Role.RESIDENCE_ADMIN, residence=residence)
+        | Q(role=Membership.Role.PORTFOLIO_ADMIN)
+    ).exists()
 
 
 def _parse_datetime_or_none(value):
@@ -269,4 +283,40 @@ class UserReservationsView(AuthenticatedView):
                 },
                 'object': _serialize_object(rental.object),
             })
+        return JsonResponse(data, safe=False)
+
+
+class AdminObjectNotificationsView(AuthenticatedView):
+    NOTIFICATION_LIMIT = 8
+
+    def get(self, request):
+        residence = getattr(request, "residence", None)
+        if not residence:
+            return JsonResponse({"detail": "No residence context."}, status=400)
+
+        if not _is_admin_for_residence(request.user, residence):
+            return JsonResponse({"detail": "No tienes permisos de administrador."}, status=403)
+
+        now = timezone.now()
+        rentals = (
+            ObjectRental.objects.filter(
+                object__residence=residence,
+                end_date__gt=now,
+            )
+            .exclude(user=request.user)
+            .select_related("object", "user")
+            .order_by("-created_at")[: self.NOTIFICATION_LIMIT]
+        )
+
+        data = [
+            {
+                "id": rental.id,
+                "title": f"Nueva reserva de {rental.object.name}",
+                "message": f"{rental.user.first_name or rental.user.email} ha realizado una reserva.",
+                "created_at": rental.created_at.isoformat(),
+                "end_time": rental.end_date.isoformat(),
+            }
+            for rental in rentals
+        ]
+
         return JsonResponse(data, safe=False)
