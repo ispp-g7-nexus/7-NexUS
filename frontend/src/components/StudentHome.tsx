@@ -13,7 +13,7 @@ import {
     Utensils,
     Wifi
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { authService } from "../services/auth";
 import announcementService from "../services/announcement.service";
@@ -51,6 +51,38 @@ const parseSeenIds = (raw: string | null): string[] => {
     }
 };
 
+const formatRelativeTime = (isoDate: string) => {
+    const date = new Date(isoDate);
+    const diffInMinutes = Math.max(0, Math.floor((Date.now() - date.getTime()) / 60000));
+
+    if (diffInMinutes < 1) return "Ahora";
+    if (diffInMinutes < 60) return `Hace ${diffInMinutes} min`;
+
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) return `Hace ${diffInHours} h`;
+
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays < 7) return `Hace ${diffInDays} d`;
+
+    return date.toLocaleDateString();
+};
+
+const formatRelativeFuture = (isoDate: string) => {
+    const date = new Date(isoDate);
+    const diffInMinutes = Math.floor((date.getTime() - Date.now()) / 60000);
+
+    if (diffInMinutes <= 0) return "Ahora";
+    if (diffInMinutes < 60) return `En ${diffInMinutes} min`;
+
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) return `En ${diffInHours} h`;
+
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays < 7) return `En ${diffInDays} d`;
+
+    return date.toLocaleDateString();
+};
+
 const getInitialSeenIds = (): string[] => {
     if (typeof window === "undefined") {
         return [];
@@ -65,6 +97,12 @@ const getInitialDismissedIncidenceIds = (): string[] => {
     }
 
     return parseSeenIds(window.localStorage.getItem(HOME_INCIDENCES_DISMISSED_IDS_KEY));
+};
+
+const saveStoredIds = (key: string, ids: string[]) => {
+    if (typeof window !== "undefined") {
+        window.localStorage.setItem(key, JSON.stringify(ids));
+    }
 };
 
 type HomeNotification = {
@@ -97,8 +135,21 @@ type EventItem = {
     id: number;
     title: string;
     location?: string;
+    created_at?: string;
     start_time: string;
     end_time: string;
+    host?: { id?: number };
+};
+
+const parseUserId = (raw: unknown) => {
+    if (typeof raw === "number" && Number.isFinite(raw)) {
+        return raw;
+    }
+    if (typeof raw === "string") {
+        const parsed = Number(raw);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
 };
 
 export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
@@ -121,6 +172,9 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
     const [seenNotificationIds, setSeenNotificationIds] = useState<string[]>(getInitialSeenIds);
     const [dismissedIncidenceIds, setDismissedIncidenceIds] = useState<string[]>(getInitialDismissedIncidenceIds);
     const [unviewedAnnouncements, setUnviewedAnnouncements] = useState(0);
+    const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+    const [isSessionUserResolved, setIsSessionUserResolved] = useState(false);
+    const notificationsRequestIdRef = useRef(0);
 
     const wifiPassword = "NexUS2026@Residence";
     const unreadCount = notifications.filter((notification) => !seenNotificationIds.includes(notification.id)).length;
@@ -131,6 +185,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
         const fetchUserData = async () => {
             try {
                 const session = await authService.me();
+                setCurrentUserId(parseUserId(session.user?.id));
                 if (session.user) {
                     // Extraemos el nombre (puedes cambiarlo a session.user.first_name si tu backend lo envía)
                     const rawName = session.user.username || session.user.email || "Estudiante";
@@ -152,35 +207,20 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                 }
             } catch (error) {
                 console.error("Error cargando perfil del estudiante", error);
+                setCurrentUserId(null);
                 setUserData(prev => ({ ...prev, name: "Estudiante", room: "Error de conexión" }));
+            } finally {
+                setIsSessionUserResolved(true);
             }
         };
 
         fetchUserData();
     }, []);
 
-    const formatRelativeTime = (isoDate: string) => {
-        const date = new Date(isoDate);
-        const diffInMinutes = Math.max(0, Math.floor((Date.now() - date.getTime()) / 60000));
-
-        if (diffInMinutes < 1) return "Ahora";
-        if (diffInMinutes < 60) return `Hace ${diffInMinutes} min`;
-
-        const diffInHours = Math.floor(diffInMinutes / 60);
-        if (diffInHours < 24) return `Hace ${diffInHours} h`;
-
-        const diffInDays = Math.floor(diffInHours / 24);
-        if (diffInDays < 7) return `Hace ${diffInDays} d`;
-
-        return date.toLocaleDateString();
-    };
-
     const appendSeenNotificationIds = (notificationIds: string[]) => {
         setSeenNotificationIds((previousIds) => {
             const nextIds = Array.from(new Set([...previousIds, ...notificationIds]));
-            if (typeof window !== "undefined") {
-                window.localStorage.setItem(HOME_NOTIFICATIONS_SEEN_IDS_KEY, JSON.stringify(nextIds));
-            }
+            saveStoredIds(HOME_NOTIFICATIONS_SEEN_IDS_KEY, nextIds);
             return nextIds;
         });
     };
@@ -188,14 +228,12 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
     const appendDismissedIncidenceIds = (notificationIds: string[]) => {
         setDismissedIncidenceIds((previousIds) => {
             const nextIds = Array.from(new Set([...previousIds, ...notificationIds]));
-            if (typeof window !== "undefined") {
-                window.localStorage.setItem(HOME_INCIDENCES_DISMISSED_IDS_KEY, JSON.stringify(nextIds));
-            }
+            saveStoredIds(HOME_INCIDENCES_DISMISSED_IDS_KEY, nextIds);
             return nextIds;
         });
     };
 
-    const buildAnnouncementItems = (announcements: AnnouncementItem[]): HomeNotification[] => {
+    const buildAnnouncementItems = useCallback((announcements: AnnouncementItem[]): HomeNotification[] => {
         return announcements
             .filter((announcement) => !announcement.has_passed)
             .map((announcement) => {
@@ -210,9 +248,9 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                     createdAt,
                 };
             });
-    };
+    }, []);
 
-    const buildIncidenceItems = (incidenceItems: IncidenceNotificationItem[]): HomeNotification[] => {
+    const buildIncidenceItems = useCallback((incidenceItems: IncidenceNotificationItem[]): HomeNotification[] => {
         return incidenceItems
             .filter((item) => !dismissedIncidenceIds.includes(item.id))
             .map((item) => ({
@@ -224,24 +262,36 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                 source: "incidences" as const,
                 createdAt: item.created_at,
             }));
-    };
+    }, [dismissedIncidenceIds]);
 
-    const buildEventItems = (events: EventItem[]): HomeNotification[] => {
+    const buildEventItems = useCallback((events: EventItem[]): HomeNotification[] => {
+        if (!isSessionUserResolved) {
+            return [];
+        }
+
         const now = Date.now();
         return events
             .filter((event) => Date.parse(event.end_time) > now)
-            .map((event) => ({
-                id: `event-${event.id}`,
-                title: `[Eventos] ${event.title}`,
-                description: event.location ? `Lugar: ${event.location}` : "Evento disponible en tu residencia.",
-                time: formatRelativeTime(event.start_time),
-                type: "event" as const,
-                source: "events" as const,
-                createdAt: event.start_time,
-            }));
-    };
+            .filter((event) => !(currentUserId !== null && event.host?.id === currentUserId))
+            .map((event) => {
+                const createdAt = event.created_at || event.start_time;
+                const timeLabel = event.created_at
+                    ? formatRelativeTime(event.created_at)
+                    : formatRelativeFuture(event.start_time);
+                return {
+                    id: `event-${event.id}`,
+                    title: `[Eventos] ${event.title}`,
+                    description: event.location ? `Lugar: ${event.location}` : "Evento disponible en tu residencia.",
+                    time: timeLabel,
+                    type: "event" as const,
+                    source: "events" as const,
+                    createdAt,
+                };
+            });
+    }, [currentUserId, isSessionUserResolved]);
 
-    const loadHomeNotifications = async (silent = false) => {
+    const loadHomeNotifications = useCallback(async (silent = false) => {
+        const requestId = ++notificationsRequestIdRef.current;
         try {
             if (!silent) {
                 setIsNotificationsLoading(true);
@@ -254,7 +304,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                 fetchWithAuth(API_URL),
             ]);
 
-            if (unviewedResult.status === "fulfilled") {
+            if (requestId === notificationsRequestIdRef.current && unviewedResult.status === "fulfilled") {
                 setUnviewedAnnouncements(unviewedResult.value.count);
             }
 
@@ -279,22 +329,24 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                 .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
                 .slice(0, NOTIFICATIONS_LIMIT);
 
-            setNotifications(sortedNotifications);
+            if (requestId === notificationsRequestIdRef.current) {
+                setNotifications(sortedNotifications);
+            }
         } catch (error) {
             console.error("Error cargando notificaciones del panel central:", error);
         } finally {
-            if (!silent) {
+            if (requestId === notificationsRequestIdRef.current && !silent) {
                 setIsNotificationsLoading(false);
             }
         }
-    };
+    }, [buildAnnouncementItems, buildIncidenceItems, buildEventItems]);
 
     useEffect(() => {
         loadHomeNotifications();
         const intervalId = window.setInterval(() => loadHomeNotifications(true), NOTIFICATIONS_POLL);
 
         return () => window.clearInterval(intervalId);
-    }, []);
+    }, [loadHomeNotifications]);
 
     // --- FUNCIONES INTERNAS ---
     const handleNotificationsOpenChange = (open: boolean) => {
@@ -512,7 +564,7 @@ function NotificationCard({ icon, title, description, time, type, onOpenSource }
     const bgColors: Record<NotificationType, string> = {
         urgent: "bg-orange-50 border-orange-200",
         admin: "bg-blue-50 border-blue-200",
-        event: "bg-purple-50 border-purple-200",
+        event: "bg-yellow-50 border-yellow-200",
         info: "bg-gray-50 border-gray-200",
         success: "bg-green-50 border-green-200",
         warning: "bg-red-50 border-red-200",

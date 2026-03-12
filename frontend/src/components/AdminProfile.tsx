@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { authService } from '../services/auth';
+import { LogOut } from 'lucide-react';
 
 export function AdminProfile() {
     const [isEditing, setIsEditing] = useState(false);
@@ -99,6 +100,16 @@ export function AdminProfile() {
             setIsSaving(false);
         }
     };
+
+    const handleLogout = async () => {
+    try {
+        await authService.logout();
+        globalThis.location.assign('/');
+    } catch (error) {
+        console.error("Error en logout:", error);
+        toast.error("No se pudo cerrar la sesión. Inténtalo de nuevo.");
+    }
+};
 
     if (isLoading) {
         return (
@@ -258,7 +269,18 @@ export function AdminProfile() {
                             </button>
                         </div>
                     )}
-                </form>
+    
+                <div className="mt-12 pt-8 border-t border-gray-100 max-w-sm">
+                    <button
+                        type="button"
+                        onClick={handleLogout}
+                        className="w-full flex items-center justify-center gap-3 px-6 py-3.5 bg-gradient-to-r from-[#1a3a24] to-[#4a8f5d] text-white rounded-xl hover:shadow-lg transition-all font-bold tracking-wide"
+                    >
+                        <LogOut size={22} />
+                        CERRAR SESIÓN
+                    </button>
+                </div>
+            </form>
             </div>
         </div>
     );

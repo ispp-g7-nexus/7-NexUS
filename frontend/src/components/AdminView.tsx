@@ -16,6 +16,7 @@ import { StatCard } from "./statCard";
 import { Button } from "./ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet";
+import { useAdminNotifications, type AdminNotificationSource } from "./useAdminNotifications";
 
 interface AdminViewProps {
     onLogout: () => void;
@@ -23,9 +24,54 @@ interface AdminViewProps {
 
 type AdminTab = "dashboard" | "rooms" | "students" | "incidences" | "reservations" | "kitchen" | "analytics" | "staff" | "announcements" | "visitors" | "events" | "roles" | "profile" | "chats";
 
+const formatRelativeTime = (isoDate: string) => {
+    const parsedTime = Date.parse(isoDate);
+    if (Number.isNaN(parsedTime)) {
+        return "Ahora";
+    }
+
+    const diffInMinutes = Math.max(0, Math.floor((Date.now() - parsedTime) / 60000));
+
+    if (diffInMinutes < 1) return "Ahora";
+    if (diffInMinutes < 60) return `Hace ${diffInMinutes} min`;
+
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) return `Hace ${diffInHours} h`;
+
+    const diffInDays = Math.floor(diffInHours / 24);
+    return `Hace ${diffInDays} d`;
+};
+
+const getCardClassesBySource = (source: AdminNotificationSource) => {
+    if (source === "incidences") return "bg-red-50 border-red-200";
+    if (source === "announcements") return "bg-blue-50 border-blue-200";
+    if (source === "events") return "bg-yellow-50 border-yellow-200";
+    return "bg-green-50 border-green-200";
+};
+
+const getTabByNotificationSource = (source: AdminNotificationSource): AdminTab => {
+    if (source === "incidences") return "incidences";
+    if (source === "announcements") return "announcements";
+    if (source === "events") return "events";
+    return "reservations";
+};
+
 export function AdminView({ onLogout }: AdminViewProps) {
     const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
-    const [notifications] = useState([{ id: 1, title: "Nueva reserva", message: "Sala reservada", time: "Hace 5 min", read: false }]);
+    const [reservationsSubTab, setReservationsSubTab] = useState("espacios");
+    const {
+        notifications,
+        isNotificationsOpen,
+        notificationsLoading,
+        seenNotificationIds,
+        unreadCount,
+        unreadIncidencesCount,
+        unreadAnnouncementsCount,
+        hasUnreadNotifications,
+        handleNotificationsOpenChange,
+        handleOpenNotification,
+        handleNavbarModuleAccess,
+    } = useAdminNotifications();
 
     const allNavItems = [
         { id: "dashboard", label: "Panel de Control", icon: <LayoutDashboard className="w-5 h-5" /> },
@@ -104,7 +150,7 @@ export function AdminView({ onLogout }: AdminViewProps) {
             case "reservations":
                 return (
                     <div className="p-4">
-                        <AdminReservations />
+                        <AdminReservations key={reservationsSubTab} defaultTab={reservationsSubTab} />
                     </div>
                 );
 
@@ -171,14 +217,60 @@ export function AdminView({ onLogout }: AdminViewProps) {
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <Popover>
+                        <Popover open={isNotificationsOpen} onOpenChange={handleNotificationsOpenChange}>
                             <PopoverTrigger asChild>
                                 <Button variant="ghost" size="icon" className="text-gray-500 w-9 h-9 relative">
                                     <Bell className="w-5 h-5" />
-                                    {notifications.some(n => !n.read) && <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white" />}
+                                    {hasUnreadNotifications && <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white" />}
                                 </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-80 p-4">Notificaciones aquí</PopoverContent>
+                            <PopoverContent align="end" className="w-80 p-0">
+                                <div className="max-h-[70vh] overflow-y-auto rounded-md bg-white p-4">
+                                    <div className="mb-3 flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2">
+                                            <Bell className="h-5 w-5 text-[#35C759]" />
+                                            <h3 className="font-semibold text-gray-900">Notificaciones</h3>
+                                        </div>
+                                        {unreadCount > 0 && (
+                                            <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
+                                                {unreadCount} nuevas
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        {notificationsLoading && notifications.length === 0 ? (
+                                            <p className="py-4 text-sm text-gray-500">Cargando notificaciones...</p>
+                                        ) : notifications.length === 0 ? (
+                                            <p className="py-4 text-sm text-gray-500">No hay notificaciones pendientes.</p>
+                                        ) : (
+                                            notifications.map((notification) => {
+                                                const isSeen = seenNotificationIds.includes(notification.id);
+
+                                                return (
+                                                    <button
+                                                        key={notification.id}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const source = handleOpenNotification(notification);
+                                                            if (source === "reservations") setReservationsSubTab(notification.id.startsWith("object-reservations-") ? "objetos" : "espacios");
+                                                            setActiveTab(getTabByNotificationSource(source));
+                                                        }}
+                                                        className={`w-full rounded-lg border p-3 text-left transition-colors hover:shadow-sm ${getCardClassesBySource(notification.source)}`}
+                                                    >
+                                                        <div className="mb-1 flex items-start justify-between gap-2">
+                                                            <p className="text-sm font-semibold text-gray-900">{notification.title}</p>
+                                                            {!isSeen && <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-red-500" />}
+                                                        </div>
+                                                        <p className="line-clamp-2 text-xs text-gray-600">{notification.message}</p>
+                                                        <p className="mt-2 text-[11px] text-gray-400">{formatRelativeTime(notification.timestamp)}</p>
+                                                    </button>
+                                                );
+                                            })
+                                        )}
+                                    </div>
+                                </div>
+                            </PopoverContent>
                         </Popover>
 
                         <Sheet>
@@ -187,28 +279,44 @@ export function AdminView({ onLogout }: AdminViewProps) {
                                     <Menu className="w-5 h-5" />
                                 </Button>
                             </SheetTrigger>
-                            <SheetContent side="right" className="w-72 flex flex-col">
+                            <SheetContent side="right" className="w-72 flex flex-col overflow-hidden">
                                 <SheetHeader>
                                     <SheetTitle>Menú</SheetTitle>
                                     <SheetDescription className="sr-only">Navegación</SheetDescription>
                                 </SheetHeader>
-                                <div className="mt-6 space-y-2 flex-1">
+                                <div className="mt-6 space-y-2 flex-1 overflow-y-auto pr-1">
                                     {allNavItems.map((item) => (
                                         <SheetTrigger key={item.id} asChild>
                                             <button
-                                                onClick={() => setActiveTab(item.id as AdminTab)}
-                                                className={`w-full flex items-center gap-3 px-4 py-3 text-sm rounded-xl transition-colors ${
+                                                onClick={() => {
+                                                    const nextTab = item.id as AdminTab;
+                                                    handleNavbarModuleAccess(nextTab);
+                                                    setActiveTab(nextTab);
+                                                }}
+                                                className={`w-full flex items-center justify-between gap-3 px-4 py-3 text-sm rounded-xl transition-colors ${
                                                     activeTab === item.id
                                                         ? 'bg-green-50 text-green-700 font-medium'
                                                         : 'text-gray-600 hover:bg-gray-50'
                                                 }`}
                                             >
-                                                {item.icon} {item.label}
+                                                <span className="flex items-center gap-3">
+                                                    {item.icon} {item.label}
+                                                </span>
+                                                {item.id === "incidences" && unreadIncidencesCount > 0 && (
+                                                    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-semibold text-white">
+                                                        {unreadIncidencesCount > 9 ? "9+" : unreadIncidencesCount}
+                                                    </span>
+                                                )}
+                                                {item.id === "announcements" && unreadAnnouncementsCount > 0 && (
+                                                    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-500 px-1.5 text-[10px] font-semibold text-white">
+                                                        {unreadAnnouncementsCount > 9 ? "9+" : unreadAnnouncementsCount}
+                                                    </span>
+                                                )}
                                             </button>
                                         </SheetTrigger>
                                     ))}
                                 </div>
-                                <div className="pt-6 border-t mt-auto">
+                                <div className="pt-6 border-t mt-auto shrink-0">
                                     <Button variant="outline" className="w-full justify-start text-red-600" onClick={onLogout}>
                                         <LogOut className="w-4 h-4 mr-2" /> Cerrar Sesión
                                     </Button>
