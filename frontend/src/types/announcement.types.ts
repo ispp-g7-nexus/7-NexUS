@@ -26,6 +26,7 @@ export interface AnnouncementList {
   announcement_date: string;
   featured: boolean;
   has_passed: boolean;
+  user: number | null;
 }
 
 export interface CreateAnnouncementDTO {

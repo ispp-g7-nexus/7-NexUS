@@ -97,4 +97,5 @@ class AnnouncementListSerializer(serializers.ModelSerializer):
             'publication_date',
             'announcement_date',
             'has_passed',
+            'user',
         ]
