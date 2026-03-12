@@ -70,9 +70,9 @@ def build_access_token(user, tenant, residence, remember_me=False):
     now = timezone.now()
 
     if remember_me:
-        lifetime_seconds = 60 * 60 * 24
+        lifetime_seconds = 60 * 60 * 24 * 30
     else:
-        lifetime_seconds = 3600
+        lifetime_seconds = 60 * 60 * 24
 
     expires_at = now + timedelta(seconds=lifetime_seconds)
 
