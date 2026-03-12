@@ -26,8 +26,8 @@ def _is_admin_for_residence(user, residence) -> bool:
         user=user,
         is_active=True,
     ).filter(
-        Q(role=Membership.Role.RESIDENCE_ADMIN, residence=residence)
-        | Q(role=Membership.Role.PORTFOLIO_ADMIN)
+        Q(role__name__iexact="residence_admin", residence=residence)
+        | Q(role__name__iexact="portfolio_admin")
     ).exists()
 
 

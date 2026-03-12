@@ -13,7 +13,7 @@ import {
     Utensils,
     Wifi
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { authService } from "../services/auth";
 import announcementService from "../services/announcement.service";
@@ -158,6 +158,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
     const [unviewedAnnouncements, setUnviewedAnnouncements] = useState(0);
     const [currentUserId, setCurrentUserId] = useState<number | null>(null);
     const [isSessionUserResolved, setIsSessionUserResolved] = useState(false);
+    const notificationsRequestIdRef = useRef(0);
 
     const wifiPassword = "NexUS2026@Residence";
     const unreadCount = notifications.filter((notification) => !seenNotificationIds.includes(notification.id)).length;
@@ -271,6 +272,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
     }, [currentUserId, isSessionUserResolved]);
 
     const loadHomeNotifications = useCallback(async (silent = false) => {
+        const requestId = ++notificationsRequestIdRef.current;
         try {
             if (!silent) {
                 setIsNotificationsLoading(true);
@@ -283,7 +285,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                 fetchWithAuth(API_URL),
             ]);
 
-            if (unviewedResult.status === "fulfilled") {
+            if (requestId === notificationsRequestIdRef.current && unviewedResult.status === "fulfilled") {
                 setUnviewedAnnouncements(unviewedResult.value.count);
             }
 
@@ -308,11 +310,13 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                 .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
                 .slice(0, NOTIFICATIONS_LIMIT);
 
-            setNotifications(sortedNotifications);
+            if (requestId === notificationsRequestIdRef.current) {
+                setNotifications(sortedNotifications);
+            }
         } catch (error) {
             console.error("Error cargando notificaciones del panel central:", error);
         } finally {
-            if (!silent) {
+            if (requestId === notificationsRequestIdRef.current && !silent) {
                 setIsNotificationsLoading(false);
             }
         }
