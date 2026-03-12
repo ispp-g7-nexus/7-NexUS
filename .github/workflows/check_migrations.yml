@@ -63,8 +63,19 @@ jobs:
         working-directory: backend
         run: python manage.py makemigrations --check --dry-run
 
-      - name: Apply migrations to ephemeral database
+      - name: Apply shared migrations
         working-directory: backend
-        run: |
-          python manage.py migrate_schemas --shared --noinput
-          python manage.py migrate_schemas --tenant --noinput
+        run: python manage.py migrate_schemas --shared --noinput
+
+      - name: Create tenant and apply tenant migrations from scratch
+        working-directory: backend
+        env:
+          DEMO_TENANT_DOMAIN: ci-test.nexus.local
+          DEMO_TENANT_SCHEMA: ci_test
+          DEMO_TENANT_SLUG: ci-test
+          DEMO_TENANT_NAME: CI Test Tenant
+          DEMO_ADMIN_EMAIL: admin@ci-test.nexus.local
+          DEMO_STUDENT_EMAIL: student@ci-test.nexus.local
+          DEMO_STUDENT_2_EMAIL: student2@ci-test.nexus.local
+          DEMO_USERS_PASSWORD: ci-test-pass
+        run: python manage.py seed_demo
