@@ -1,5 +1,9 @@
+from django.contrib.auth import get_user_model
 from rest_framework import serializers
+
 from apps.residences.models import StudentProfile
+
+UserModel = get_user_model()
 
 
 class LoginInputSerializer(serializers.Serializer):
@@ -50,6 +54,7 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         },
     )
 
+
 class AdminCreateResidentSerializer(serializers.Serializer):
     full_name = serializers.CharField(allow_blank=True)
     email = serializers.EmailField(
@@ -95,13 +100,16 @@ class StudentProfileSerializer(serializers.ModelSerializer):
 
     def get_room(self, obj):
         from apps.membership.models import Membership
-        membership = Membership.objects.filter(user=obj.user, role__name__iexact="Student", is_active=True).first()
+
+        membership = Membership.objects.filter(
+            user=obj.user, role__name__iexact="Student", is_active=True
+        ).first()
         if membership and membership.bedroom:
             return membership.bedroom.numero
         return obj.room_number or ""
 
     def create(self, validated_data):
-        validated_data['user'] = self.context['request'].user
+        validated_data["user"] = self.context["request"].user
         return StudentProfile.objects.create(**validated_data)
 
     def update(self, instance, validated_data):
@@ -109,3 +117,45 @@ class StudentProfileSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()
         return instance
+
+
+class AdminProfileUpdateSerializer(serializers.ModelSerializer):
+    first_name = serializers.CharField(
+        required=False,
+        allow_blank=False,
+        error_messages={"blank": "El nombre no puede estar vacío."},
+    )
+    last_name = serializers.CharField(
+        required=False,
+        allow_blank=False,
+        error_messages={"blank": "Los apellidos no pueden estar vacíos."},
+    )
+    username = serializers.CharField(
+        required=False,
+        allow_blank=False,
+        error_messages={"blank": "El nombre de usuario no puede estar vacío."},
+    )
+    email = serializers.EmailField(
+        required=False,
+        allow_blank=False,
+        error_messages={
+            "blank": "El correo electrónico no puede estar vacío.",
+            "invalid": "Por favor, introduce un correo válido.",
+        },
+    )
+
+    class Meta:
+        model = UserModel
+        fields = ["first_name", "last_name", "username", "email"]
+
+    def validate_username(self, value):
+        user = self.instance
+        if UserModel.objects.exclude(pk=user.pk).filter(username=value).exists():
+            raise serializers.ValidationError("Este nombre de usuario ya está en uso.")
+        return value
+
+    def validate_email(self, value):
+        user = self.instance
+        if UserModel.objects.exclude(pk=user.pk).filter(email__iexact=value).exists():
+            raise serializers.ValidationError("Este correo electrónico ya está en uso.")
+        return value
