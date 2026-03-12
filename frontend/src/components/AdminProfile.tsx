@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { authService } from '../services/auth';
+import { LogOut } from 'lucide-react';
 
 export function AdminProfile() {
     const [isEditing, setIsEditing] = useState(false);
@@ -43,6 +44,18 @@ export function AdminProfile() {
         setIsEditing(false);
     };
 
+    const handleLogout = async () => {
+        try {
+            await authService.logout();
+        } catch (error) {
+            console.error("Error en logout:", error);
+        } finally {
+            localStorage.clear();
+            sessionStorage.clear();
+            window.location.href = '/';
+        }
+    };
+
     if (isLoading) {
         return (
             <div className="flex justify-center items-center h-64 text-gray-500">
@@ -53,8 +66,7 @@ export function AdminProfile() {
     }
 
     return (
-        <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden m-4 sm:m-6">
-
+        <div className="min-h-screen bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mx-4 my-4 sm:mx-6 sm:my-6">
             <div className="bg-[#4a8f5d] p-6 sm:px-8 sm:py-6 text-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <div className="flex items-center gap-3">
@@ -164,6 +176,17 @@ export function AdminProfile() {
                         </button>
                     </div>
                 )}
+
+                <div className="mt-12 pt-8 border-t border-gray-100 max-w-sm">
+                    <button
+                        type="button"
+                        onClick={handleLogout}
+                        className="w-full flex items-center justify-center gap-3 px-6 py-3.5 bg-gradient-to-r from-[#1a3a24] to-[#4a8f5d] text-white rounded-xl hover:shadow-lg transition-all font-bold tracking-wide"
+                    >
+                        <LogOut size={22} />
+                        CERRAR SESIÓN
+                    </button>
+                </div>
             </form>
         </div>
     );
