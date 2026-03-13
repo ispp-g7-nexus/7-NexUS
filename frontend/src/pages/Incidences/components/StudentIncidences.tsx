@@ -58,6 +58,7 @@ type Incidence = {
   created_at: string;
   assigned_staff_name?: string;
   assigned_staff_job?: string;
+  assigned_external_name?: string;
   is_mine: boolean;
 };
 
@@ -98,7 +99,7 @@ export default function StudentIncidences() {
       if (!response.ok) return;
       const data = await response.json();
       let nextNotifications: IncidenceNotification[] = Array.isArray(data.results) ? data.results : [];
-      
+
       const lastReadAt = getLastReadNotificationsAt();
       nextNotifications = nextNotifications.filter((n) => Date.parse(n.created_at) > lastReadAt);
       if (markAsRead && nextNotifications.length > 0) {
@@ -135,8 +136,8 @@ export default function StudentIncidences() {
     return () => clearInterval(interval);
   }, [isNotificationsOpen, loadNotifications]);
 
-  useEffect(() => { 
-    if (isNotificationsOpen) loadNotifications(true); 
+  useEffect(() => {
+    if (isNotificationsOpen) loadNotifications(true);
   }, [isNotificationsOpen, loadNotifications]);
 
   const formatUpdateText = (text: string) => {
@@ -239,7 +240,7 @@ export default function StudentIncidences() {
             <option value="high">URGENTE</option>
           </select>
         </div>
-        
+
         <div className={UI_CLASSES.btnMineWrapper}>
           <button
             onClick={() => setShowOnlyMine(!showOnlyMine)}
@@ -280,10 +281,17 @@ export default function StudentIncidences() {
 
                     <div className="flex justify-between items-center pt-3 border-t border-slate-50">
                       <div>
-                        {inc.assigned_staff_name ? (
+                        {(inc.assigned_staff_name || inc.assigned_external_name) ? (
                           <span className={UI_CLASSES.technicianBadge}>
-                            <Wrench size={12} className="text-[#1B4D1C]" /> 
-                            {inc.assigned_staff_name} - {inc.assigned_staff_job}
+                            <Wrench size={12} className="text-[#1B4D1C]" />
+                            {inc.assigned_staff_name ? (
+                              `${inc.assigned_staff_name} - ${inc.assigned_staff_job}`
+                            ) : (
+                              <span className={UI_CLASSES.technicianBadge}>
+                                {inc.assigned_external_name}
+                                <span className="text-[9px] bg-slate-200 px-1 rounded text-slate-500 font-bold uppercase">Ext</span>
+                              </span>
+                            )}
                           </span>
                         ) : (
                           <span className="text-[10px] text-slate-300 italic ml-1">Pendiente de asignar</span>

@@ -44,6 +44,14 @@ class Incidence(models.Model):
         related_name='incidences'
     )
 
+    # En tu modelo Incidence
+    assigned_external_name = models.CharField(
+    max_length=100, 
+    null=True, 
+    blank=True, 
+    verbose_name="Personal externo u otro"
+)
+
     @property
     def assigned_staff_job(self):
         if self.assigned_staff:

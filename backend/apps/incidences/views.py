@@ -164,19 +164,25 @@ class IncidenceViewSet(viewsets.ModelViewSet):
         
 
     def perform_update(self, serializer):
-        """
-        Lógica para el panel de Admin (Gestionar) y 
-        soporte (Visualización de notas y comentarios rápidos).
-        """
-        instance = self.get_object()
-        old_status = instance.status
-        old_staff = instance.assigned_staff
+        # 1. OBTENER LA INSTANCIA (Esto faltaba o estaba mal referenciado)
+        instance = self.get_object() 
         
-        # Guardamos los cambios
+        def get_current_assignee(obj):
+            if obj.assigned_staff:
+                # Usamos select_related o chequeo de nulidad para evitar errores
+                return obj.assigned_staff.user.get_full_name() or obj.assigned_staff.user.username
+            return obj.assigned_external_name
+
+        # Capturamos datos antes de salvar
+        old_assignee = get_current_assignee(instance)
+        old_status = instance.status
+        
+        # 2. Guardamos los cambios en la DB
         updated_incidence = serializer.save()
         
+        # Capturamos datos después de salvar
+        new_assignee = get_current_assignee(updated_incidence)
         new_status = updated_incidence.status
-        new_staff = updated_incidence.assigned_staff
         quick_comment = self.request.data.get('quick_comment')
 
         log_parts = []
@@ -186,15 +192,14 @@ class IncidenceViewSet(viewsets.ModelViewSet):
             new_label = self.get_status_label(new_status)
             log_parts.append(f"Estado cambiado de {old_label} a {new_label}.")
 
-        if old_staff != new_staff:
-            if not old_staff and new_staff:
-                log_parts.append(f"Asignada al técnico: {new_staff.user.get_full_name()}.")
-            elif old_staff and new_staff:
-                log_parts.append(f"Cambio de técnico: de {old_staff.user.get_full_name()} a {new_staff.user.get_full_name()}.")
-            elif old_staff and not new_staff:
-                log_parts.append(f"Se ha retirado al técnico ({old_staff.user.get_full_name()}).")
+        if old_assignee != new_assignee:
+            if not old_assignee and new_assignee:
+                log_parts.append(f"Asignada a: {new_assignee}.")
+            elif old_assignee and new_assignee:
+                log_parts.append(f"Cambio de técnico: de {old_assignee} a {new_assignee}.")
+            elif old_assignee and not new_assignee:
+                log_parts.append(f"Se ha retirado la asignación de {old_assignee}.")
 
-        
         if quick_comment:
             log_parts.append(f"Nota: {quick_comment}")
 

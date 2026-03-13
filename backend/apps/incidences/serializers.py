@@ -22,6 +22,10 @@ class IncidenceSerializer(serializers.ModelSerializer):
         read_only=True,
         allow_null=True
     )
+    assigned_external_name = serializers.CharField(
+        required =False,
+        allow_null=True
+    )
 
     class Meta:
         model = Incidence
@@ -29,7 +33,8 @@ class IncidenceSerializer(serializers.ModelSerializer):
             'id', 'title', 'description', 'location_type', 'room_number', 
             'status', 'priority', 'updates', 'admin_notes', 'created_at', 'is_mine',
             'assigned_staff_name', 
-            'assigned_staff_job'
+            'assigned_staff_job',
+            'assigned_external_name'
         ]
         read_only_fields = ['id', 'created_at', 'is_mine']
 
@@ -51,6 +56,13 @@ class AdminIncidenceSerializer(serializers.ModelSerializer):
         source='assigned_staff.job_title', 
         read_only=True,
         allow_null=True
+    )
+
+    assigned_external_name = serializers.CharField(
+        max_length=100,
+        required=False, 
+        allow_null=True, 
+        allow_blank=True
     )
 
     class Meta:

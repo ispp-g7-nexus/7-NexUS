@@ -19,7 +19,8 @@ export interface Incidence {
   
   assigned_staff: number | null;       
   assigned_staff_name?: string;          
-  assigned_staff_job?: string;        
+  assigned_staff_job?: string;
+  assigned_external_name?: string;        
 
   admin_notes: string | null;
   is_active: boolean;
@@ -47,7 +48,8 @@ export interface CreateIncidenceDTO {
 
 export interface UpdateIncidenceDTO {
   status?: IncidenceStatus;
-  assigned_staff?: number | null; 
+  assigned_staff?: number | null;
+  assigned_external_name?: string; 
   admin_notes?: string;
   quick_comment?: string; 
 }
@@ -75,7 +77,7 @@ export const IncidenceService = {
    * Actualizar estado, personal asignado o notas
    */
   update: async (id: number, data: UpdateIncidenceDTO): Promise<Incidence> => {
-    const response = await fetchWithAuth(`/api/incidences/${id}//`, {
+    const response = await fetchWithAuth(`/api/incidences/${id}/`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
