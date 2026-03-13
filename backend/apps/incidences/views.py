@@ -18,17 +18,33 @@ class IncidenceViewSet(viewsets.ModelViewSet):
     serializer_class = IncidenceSerializer
 
     def get_serializer_class(self):
-        if self.request.user.is_staff:
+        user = self.request.user
+        
+        user_role_names = [r.lower() for r in user.memberships.filter(is_active=True).values_list('role__name', flat=True)]
+
+        if "admin" in user_role_names or "student" not in user_role_names:
             return AdminIncidenceSerializer
+        
         return IncidenceSerializer
     
     def get_queryset(self):
         user = self.request.user
-        if user.is_staff:
-            return Incidence.objects.all()
-        return Incidence.objects.filter(
-            Q(student=user) | ~Q(location_type='habitacion'),
-            is_active=True
+        queryset = Incidence.objects.select_related('student', 'assigned_staff__user').all()
+
+        if user.is_superuser:
+            return queryset
+        
+        user_role_names = list(user.memberships.filter(is_active=True).values_list('role__name', flat=True))
+        roles_lower = [r.lower() for r in user_role_names]
+
+        if "admin" in roles_lower:
+            return queryset
+
+        if "student" not in roles_lower:
+            return queryset.filter(assigned_staff__user=user)
+
+        return queryset.filter(
+            Q(student=user) | ~Q(location_type='habitacion')
         )
 
     def get_location_label(self, incidence):
@@ -154,26 +170,40 @@ class IncidenceViewSet(viewsets.ModelViewSet):
         """
         instance = self.get_object()
         old_status = instance.status
+        old_staff = instance.assigned_staff
         
+        # Guardamos los cambios
         updated_incidence = serializer.save()
         
         new_status = updated_incidence.status
-        quick_comment = self.request.data.get('quick_comment') # Campo para comentarios rápidos
+        new_staff = updated_incidence.assigned_staff
+        quick_comment = self.request.data.get('quick_comment')
 
-        if old_status != new_status or quick_comment:
-            log_text = ""
-            if old_status != new_status:
-                old_status_label = self.get_status_label(old_status)
-                new_status_label = self.get_status_label(new_status)
-                log_text += f"Estado cambiado de {old_status_label} a {new_status_label}. "
-            if quick_comment:
-                log_text += f"Nota: {quick_comment}"
+        log_parts = []
 
-            # Esto crea el registro que se ve en el historial del modal "Gestionar"
+        if old_status != new_status:
+            old_label = self.get_status_label(old_status)
+            new_label = self.get_status_label(new_status)
+            log_parts.append(f"Estado cambiado de {old_label} a {new_label}.")
+
+        if old_staff != new_staff:
+            if not old_staff and new_staff:
+                log_parts.append(f"Asignada al técnico: {new_staff.user.get_full_name()}.")
+            elif old_staff and new_staff:
+                log_parts.append(f"Cambio de técnico: de {old_staff.user.get_full_name()} a {new_staff.user.get_full_name()}.")
+            elif old_staff and not new_staff:
+                log_parts.append(f"Se ha retirado al técnico ({old_staff.user.get_full_name()}).")
+
+        
+        if quick_comment:
+            log_parts.append(f"Nota: {quick_comment}")
+
+        if log_parts:
+            full_log_text = " ".join(log_parts)
             IncidenceUpdate.objects.create(
                 incidence=updated_incidence,
-                author_name="Staff",
-                text=log_text
+                author_name=self.request.user.get_full_name() or self.request.user.username,
+                text=full_log_text
             )
 
     def perform_destroy(self, instance):

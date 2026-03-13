@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Clock, Wrench, ChevronRight, CheckCircle2, MapPin, MessageSquare } from 'lucide-react';
 import { IncidenceService, Incidence, IncidenceStatus } from '../../../services/incidences';
+import { useStaff } from '../../Staff/hooks/useStaff';
 
-// --- COMPONENTE MODAL ---
 const ManageIncidenceModal = ({
   incidence,
   onClose,
@@ -12,8 +12,10 @@ const ManageIncidenceModal = ({
   onClose: () => void,
   onRefresh: () => void
 }) => {
+  const { staff, loading: loadingStaff } = useStaff();
+  
   const [status, setStatus] = useState(incidence.status);
-  const [technician, setTechnician] = useState(incidence.assigned_technician || '');
+  const [staffId, setStaffId] = useState<number | string>(incidence.assigned_staff || '');
   const [note, setNote] = useState(incidence.admin_notes || '');
   const [saving, setSaving] = useState(false);
 
@@ -22,7 +24,7 @@ const ManageIncidenceModal = ({
     try {
       await IncidenceService.update(incidence.id, {
         status: status as IncidenceStatus,
-        assigned_technician: technician,
+        assigned_staff: staffId ? Number(staffId) : null,
         admin_notes: note,
         quick_comment:
           note.trim() && note.trim() !== (incidence.admin_notes || "").trim()
@@ -71,8 +73,20 @@ const ManageIncidenceModal = ({
             </div>
 
             <div>
-              <label className={UI_CLASSES.label}>Asignar Técnico</label>
-              <input type="text" value={technician} onChange={(e) => setTechnician(e.target.value)} placeholder="Nombre del técnico..." className={UI_CLASSES.input} />
+              <label className={UI_CLASSES.label}>Asignar Personal Responsable (Nombre y Cargo)</label>
+              <select 
+                value={staffId} 
+                onChange={(e) => setStaffId(e.target.value)} 
+                className={UI_CLASSES.select}
+                disabled={loadingStaff}
+              >
+                <option value="">{loadingStaff ? "Cargando personal..." : "Sin asignar"}</option>
+                {staff.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.full_name} — {member.job_title} ({member.department})
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
@@ -93,7 +107,6 @@ const ManageIncidenceModal = ({
   );
 };
 
-// --- VISTA PRINCIPAL ---
 export const AdminIncidences = () => {
   const [incidences, setIncidences] = useState<Incidence[]>([]);
   const [loading, setLoading] = useState(true);
@@ -195,15 +208,17 @@ export const AdminIncidences = () => {
               </div>
 
               <div className="flex justify-between items-center pt-2">
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <span className={`${STATUS_STYLES[inc.status]?.bg} ${STATUS_STYLES[inc.status]?.text} ${UI_CLASSES.statusBadge}`}>
                     {STATUS_STYLES[inc.status]?.icon}
                     {STATUS_STYLES[inc.status]?.label}
                   </span>
-                  {inc.assigned_technician && (
-                    <span className={UI_CLASSES.technicianBadge}>
-                      <Wrench size={13} /> {inc.assigned_technician}
-                    </span>
+                  {inc.assigned_staff_name && (
+                    <div className="flex flex-col">
+                      <span className={UI_CLASSES.technicianBadge}>
+                        <Wrench size={13} /> {inc.assigned_staff_name} - {inc.assigned_staff_job}
+                      </span>
+                    </div>
                   )}
                 </div>
                 <button onClick={() => setSelectedIncidence(inc)} className={UI_CLASSES.btnManage}>
@@ -223,8 +238,6 @@ export const AdminIncidences = () => {
 };
 
 export default AdminIncidences;
-
-// --- CONFIGURACIÓN DE ESTILOS Y MAPEOS ---
 
 const LOCATION_LABELS: Record<string, string> = {
   habitacion: 'Habitación',
@@ -248,12 +261,9 @@ const STATUS_STYLES: Record<string, { label: string; bg: string; text: string; i
 };
 
 const UI_CLASSES = {
-  // Layout Principal
   mainLayout: "bg-slate-100 min-h-screen flex flex-col",
   mainContent: "flex-1 overflow-y-auto p-4 space-y-4 pb-32",
   loadingText: "text-center text-gray-400 mt-10 font-medium tracking-widest uppercase",
-
-  // Modal
   modalOverlay: "fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4",
   modalContainer: "bg-white w-full max-w-lg rounded-[32px] overflow-hidden shadow-xl relative animate-in fade-in zoom-in duration-200",
   modalCloseBtn: "absolute right-6 top-6 p-2 hover:bg-gray-100 rounded-full transition-colors",
@@ -261,38 +271,26 @@ const UI_CLASSES = {
   modalTitle: "text-xl font-bold text-slate-800",
   modalSubtitle: "text-slate-400 text-sm font-normal",
   modalIndicator: "w-2 h-2 rounded-full bg-blue-500",
-  
-  // Formularios
   label: "text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block ml-1",
   select: "w-full bg-slate-50 border-none rounded-2xl h-14 px-5 font-medium text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer",
   input: "w-full bg-slate-50 border-none rounded-2xl h-14 px-5 font-medium text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500",
   textarea: "w-full bg-slate-50 border-none rounded-2xl min-h-[100px] p-5 text-sm font-normal outline-none resize-none focus:ring-2 focus:ring-emerald-500",
-  
-  // Filtros
   filterGrid: "mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3",
   filterInput: "w-full pl-3 pr-3 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 font-normal",
   filterSelect: "w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white font-normal text-slate-600",
-  
-  // Botones
   btnPrimary: "flex-1 h-14 rounded-2xl bg-[#5B7C5C] hover:bg-[#4A664B] text-white font-bold shadow-md disabled:opacity-50 transition-all active:scale-95",
   btnSecondary: "flex-1 h-14 rounded-2xl font-bold text-slate-500 bg-slate-50 hover:bg-slate-100 transition-colors",
   btnManage: "text-[#5B7C5C] font-bold text-sm flex items-center gap-1 hover:gap-2 transition-all",
-  
-  // Tarjetas (Card)
   card: "bg-white rounded-[24px] p-6 shadow-sm border border-slate-100 mb-4 text-left",
   cardTitle: "font-bold text-xl text-slate-900 mb-1 leading-tight",
   cardStudentName: "font-bold text-[#1B4D1C] text-base leading-tight uppercase",
   cardDate: "flex items-center gap-1.5 text-slate-400 text-[11px] mt-1 uppercase font-medium tracking-wider",
   cardLocation: "flex items-center gap-1.5 text-orange-500 mb-4",
   avatar: "w-12 h-12 bg-green-50 text-green-700 rounded-full flex items-center justify-center font-bold text-lg border border-slate-100",
-  
-  // Descripción y Notas
   descriptionBox: "bg-[#F8FAFB] p-4 rounded-2xl mb-6 border border-slate-50",
   descriptionText: "text-slate-600 text-sm leading-relaxed font-normal",
   adminNoteText: "block pt-2 border-t border-slate-200 mt-2 text-emerald-700",
   adminNoteLabel: "flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest mb-1 text-emerald-600",
-  
-  // Badges
   priorityBadge: "text-[10px] font-bold px-3 py-1 rounded-full tracking-wider uppercase",
   statusBadge: "px-4 py-2 rounded-xl text-[11px] font-bold flex items-center gap-2",
   technicianBadge: "bg-slate-50 text-slate-500 px-3 py-2 rounded-xl text-[11px] font-medium flex items-center gap-1.5 border border-slate-100",
