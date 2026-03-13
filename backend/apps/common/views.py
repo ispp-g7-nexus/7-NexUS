@@ -79,7 +79,9 @@ class AuthMeView(APIView):
     def get(self, request):
         user_data = resolve_user_from_request(request)
         if user_data:
-            user_pk = user_data.get("user_id") or user_data.get("id") or user_data.get("sub")
+            user_pk = (
+                user_data.get("user_id") or user_data.get("id") or user_data.get("sub")
+            )
             try:
                 user_obj = UserModel.objects.get(pk=user_pk)
                 user_data["first_name"] = user_obj.first_name
@@ -125,8 +127,10 @@ class AuthMeView(APIView):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 class AuthLoginView(APIView):
     permission_classes = [AllowAny]
+    authentication_classes = []
 
     def post(self, request):
         serializer = LoginInputSerializer(data=request.data)
@@ -136,6 +140,7 @@ class AuthLoginView(APIView):
         email = data["email"]
         password = data["password"]
         portal = data["portal"]
+        remember_me = data.get("rememberMe", False)
 
         user = authenticate_user(request, email, password)
         if not user or not user.is_active:
@@ -151,7 +156,11 @@ class AuthLoginView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        token, max_age = build_access_token(user, request.tenant, residence)
+        token, max_age = build_access_token(
+            user, request.tenant, residence, remember_me
+        )
+
+        final_max_age = max_age if remember_me else None
 
         response = Response(
             {
@@ -165,7 +174,7 @@ class AuthLoginView(APIView):
         response.set_cookie(
             key=settings.JWT_ACCESS_COOKIE_NAME,
             value=token,
-            max_age=max_age,
+            max_age=final_max_age,
             httponly=True,
             secure=bool(getattr(settings, "JWT_COOKIE_SECURE", False)),
             samesite=str(getattr(settings, "JWT_COOKIE_SAMESITE", "Lax")),
@@ -191,6 +200,7 @@ class AuthLogoutView(APIView):
 
 class PasswordResetRequestView(APIView):
     permission_classes = [AllowAny]
+    authentication_classes = []
 
     def post(self, request):
         serializer = PasswordResetRequestSerializer(data=request.data)
@@ -210,6 +220,7 @@ class PasswordResetRequestView(APIView):
 
 class PasswordResetConfirmView(APIView):
     permission_classes = [AllowAny]
+    authentication_classes = []
 
     def post(self, request):
         serializer = PasswordResetConfirmSerializer(data=request.data)
