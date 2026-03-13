@@ -66,9 +66,14 @@ def has_access_for_portal(user, portal: str, residence):
     return False
 
 
-def build_access_token(user, tenant, residence):
+def build_access_token(user, tenant, residence, remember_me=False):
     now = timezone.now()
-    lifetime_seconds = int(getattr(settings, "JWT_ACCESS_TOKEN_LIFETIME_SECONDS", 3600))
+
+    if remember_me:
+        lifetime_seconds = 60 * 60 * 24 * 30
+    else:
+        lifetime_seconds = 60 * 60 * 24
+
     expires_at = now + timedelta(seconds=lifetime_seconds)
 
     roles = list(
@@ -90,7 +95,7 @@ def build_access_token(user, tenant, residence):
         "exp": int(expires_at.timestamp()),
     }
 
-    if settings.JWT_AUDIENCE:
+    if getattr(settings, "JWT_AUDIENCE", None):
         payload["aud"] = settings.JWT_AUDIENCE
 
     token = jwt.encode(
@@ -143,7 +148,9 @@ def process_password_reset_request(email: str, request):
             )
 
         except Exception as e:
-            logger.exception("Error al enviar correo SMTP en recuperación de contraseña")
+            logger.exception(
+                "Error al enviar correo SMTP en recuperación de contraseña"
+            )
             raise SMTPServerError() from e
 
     return (

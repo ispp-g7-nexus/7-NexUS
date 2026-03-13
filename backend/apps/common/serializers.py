@@ -15,6 +15,7 @@ class LoginInputSerializer(serializers.Serializer):
         choices=["student", "admin"],
         error_messages={"invalid_choice": "Portal inválido. Usa 'student' o 'admin'."},
     )
+    rememberMe = serializers.BooleanField(default=False, required=False)
 
 
 class PlanSerializer(serializers.Serializer):

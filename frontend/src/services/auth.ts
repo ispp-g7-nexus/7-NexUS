@@ -7,6 +7,7 @@ export interface LoginCredentials {
     email: string;
     password: string;
     portal?: string;
+    rememberMe?: boolean;
 }
 
 export type PortalRole = "student" | "admin";
@@ -66,13 +67,31 @@ export const authService = {
         const response = await fetch(`${AUTH_URL}/me/`, {
             method: "GET",
             credentials: "include",
+            cache: "no-store",
         });
 
+        const currentPath = globalThis.location.pathname;
+        const isPublicRoute = currentPath === "/" || currentPath.includes("login") || currentPath === "/forgot-password";
+
         if (!response.ok) {
+            console.error("El servidor rechazó el token (caducado o inválido).");
+            if (!isPublicRoute) {
+                globalThis.location.href = "/";
+            }
             throw new Error("No se pudo validar la sesión");
         }
 
-        return response.json();
+        const data = await response.json();
+
+        if (!data.authenticated) {
+            console.error("El servidor dice que no hay sesión activa.");
+            if (!isPublicRoute) {
+                globalThis.location.href = "/";
+            }
+            throw new Error("Sesión caducada");
+        }
+
+        return data;
     },
 
     requestPasswordReset: async (email: string) => {
