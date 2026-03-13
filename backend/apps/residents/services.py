@@ -228,18 +228,23 @@ def update_resident(membership_id: int, data: dict, residence) -> dict | None:
 
 def delete_resident(membership_id: int, residence) -> bool:
     """
-    Soft-delete: desactiva la Membership y libera la habitación asignada.
-    Retorna True si se desactivó, False si no existía.
+    Hard-delete: elimina físicamente la Membership del residente.
+    Si el usuario se queda sin memberships, elimina también su cuenta.
+    Devuelve True si se eliminó, False si no existía.
     """
     try:
-        membership = Membership.objects.get(
+        membership = Membership.objects.select_related("user").get(
             id=membership_id, role__name="Student", residence=residence
         )
     except Membership.DoesNotExist:
         return False
 
-    # Liberar habitación antes del soft-delete para que quede disponible
-    membership.bedroom = None
-    membership.is_active = False
-    membership.save()
+    user = membership.user
+
+    membership.delete()
+
+    has_other_memberships = Membership.objects.filter(user=user).exists()
+    if not has_other_memberships:
+        user.delete()
+
     return True

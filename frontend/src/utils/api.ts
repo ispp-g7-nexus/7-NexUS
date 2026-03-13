@@ -42,8 +42,15 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}) {
 
     const response = await fetch(url, options);
 
-    if (response.status === 401 || response.status === 403) {
-        console.warn(`API request unauthorized/forbidden (${response.status}). The user may need to log in.`);
+    if (response.status === 401) {
+        const currentPath = globalThis.location.pathname;
+        const isPublicRoute =
+            currentPath === '/' ||
+            currentPath.includes('login') ||
+            currentPath === '/forgot-password';
+        if (!isPublicRoute) {
+            globalThis.location.href = '/';
+        }
     }
 
     return response;
