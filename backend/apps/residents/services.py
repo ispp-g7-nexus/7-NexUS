@@ -7,6 +7,14 @@ from apps.common.services import process_password_reset_request
 UserModel = get_user_model()
 
 
+def _sync_user_active_status(user) -> None:
+    """Activa o desactiva el usuario según si mantiene memberships activas."""
+    has_active_memberships = Membership.objects.filter(user=user, is_active=True).exists()
+    if user.is_active != has_active_memberships:
+        user.is_active = has_active_memberships
+        user.save(update_fields=["is_active"])
+
+
 def _get_bedroom(bedroom_id: int, residence, exclude_membership_id: int | None = None):
     """Valida que la habitación exista, pertenezca a la residencia y tenga capacidad.
 
@@ -123,6 +131,8 @@ def create_resident(data: dict, residence, request) -> dict:
             setattr(existing_membership, attr, val)
         existing_membership.save()
 
+    _sync_user_active_status(user)
+
     passwd = data.get("password")
     if passwd:
         if not created:
@@ -223,6 +233,9 @@ def update_resident(membership_id: int, data: dict, residence) -> dict | None:
     if membership_dirty:
         membership.save()
 
+    if "is_active" in data:
+        _sync_user_active_status(user)
+
     return _membership_to_dict(membership)
 
 
@@ -246,5 +259,7 @@ def delete_resident(membership_id: int, residence) -> bool:
     has_other_memberships = Membership.objects.filter(user=user).exists()
     if not has_other_memberships:
         user.delete()
+    else:
+        _sync_user_active_status(user)
 
     return True
