@@ -46,8 +46,10 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}) {
         const currentPath = globalThis.location.pathname;
         const isPublicRoute =
             currentPath === '/' ||
-            currentPath.includes('login') ||
-            currentPath === '/forgot-password';
+            currentPath === '/login' ||
+            currentPath.startsWith('/login/') ||
+            currentPath === '/forgot-password' ||
+            currentPath.startsWith('/forgot-password/');
         if (!isPublicRoute) {
             globalThis.location.href = '/';
         }
