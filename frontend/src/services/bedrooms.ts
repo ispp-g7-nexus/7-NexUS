@@ -2,6 +2,11 @@ import { fetchWithAuth } from '../utils/api';
 
 const BASE = '/api/bedrooms/';
 
+export interface BedroomResident {
+    id: number;
+    full_name: string;
+}
+
 export interface Bedroom {
     id: number;
     numero: string;
@@ -11,6 +16,7 @@ export interface Bedroom {
     tipo: string;
     is_active: boolean;
     ocupantes_actuales: number;
+    residentes: BedroomResident[];
     created_at: string;
     updated_at: string;
 }
@@ -27,7 +33,11 @@ export interface AvailableBedroom {
 export async function listBedrooms(): Promise<Bedroom[]> {
     const res = await fetchWithAuth(BASE);
     if (!res.ok) throw new Error(`Error ${res.status}`);
-    return res.json();
+    const data = await res.json() as Array<Bedroom & { residentes?: BedroomResident[] }>;
+    return data.map((room) => ({
+        ...room,
+        residentes: Array.isArray(room.residentes) ? room.residentes : [],
+    }));
 }
 
 /**
@@ -66,4 +76,3 @@ export async function deleteBedroom(id: number) {
 export async function listResidents() {
     return fetchWithAuth(`${BASE}residents/`);
 }
-

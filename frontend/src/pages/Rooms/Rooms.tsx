@@ -1,8 +1,15 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { listBedrooms, createBedroom, updateBedroom, deleteBedroom, type Bedroom } from "../../services/bedrooms";
+import {
+  listBedrooms,
+  createBedroom,
+  updateBedroom,
+  deleteBedroom,
+  type Bedroom,
+  type BedroomResident,
+} from "../../services/bedrooms";
 import "../../index.css";
 import roomSvg from "../../assets/room.svg";
-import { Plus, Edit2, Trash2, Search as SearchIcon, Bed } from "lucide-react";
+import { Plus, Edit2, Trash2, Search as SearchIcon, Bed, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import { Input } from "../../components/ui/input";
@@ -263,15 +270,19 @@ export function Rooms() {
             key={r.id}
             className={`hover:shadow-md transition ${!r.is_active ? 'border-destructive/30 bg-destructive/5' : 'bg-card'} `}
           >
-            <CardContent className="flex justify-between items-center p-4">
-              <div>
+            <CardContent className="flex justify-between items-start gap-4 p-4">
+              <div className="min-w-0 flex-1">
                 <h3 className="font-semibold flex items-center gap-2">
                   <Bed className="w-5 h-5 text-muted-foreground" /> {r.numero}-{r.edificio}
                 </h3>
                 <p className="text-sm text-muted-foreground">Planta {r.planta ?? "-"} · {r.tipo} · {r.ocupantes_actuales}/{r.capacidad_maxima} ocupantes</p>
+                <div className="mt-2 flex items-start gap-2 min-w-0">
+                  <Users className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                  <ResidentsInlineList residents={r.residentes} />
+                </div>
               </div>
 
-              <div className="flex gap-3 items-center">
+              <div className="flex gap-3 items-center shrink-0">
                 <Badge variant={r.ocupantes_actuales > 0 ? "default" : "secondary"}>
                   {r.ocupantes_actuales >= r.capacidad_maxima
                     ? "Completa"
@@ -450,6 +461,39 @@ function Stat({ title, value }: any) {
         <p className="text-2xl font-bold">{value}</p>
       </CardContent>
     </Card>
+  );
+}
+
+function ResidentsInlineList({ residents }: { residents: BedroomResident[] }) {
+  if (residents.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">Sin residentes asignados</p>
+    );
+  }
+
+  if (residents.length === 1) {
+    return (
+      <p
+        className="text-sm text-foreground truncate"
+        title={residents[0].full_name}
+      >
+        {residents[0].full_name}
+      </p>
+    );
+  }
+
+  return (
+    <ul className="min-w-0 space-y-0.5">
+      {residents.map((resident) => (
+        <li
+          key={resident.id}
+          className="text-sm text-foreground truncate"
+          title={resident.full_name}
+        >
+          {resident.full_name}
+        </li>
+      ))}
+    </ul>
   );
 }
 
