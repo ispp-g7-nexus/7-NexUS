@@ -4,7 +4,6 @@ import type { MatchItem } from "../../../services/matching";
 import { getInitials, getTags } from "../utils";
 
 interface MatchCardProps {
-    key?: React.Key;
     match: MatchItem;
     index: number;
     isSaved: boolean;
@@ -18,14 +17,23 @@ export function MatchCard({
     isSaved,
     onToggleSave,
     onClick,
-}: MatchCardProps) {
+}: Readonly<MatchCardProps>) {
     const scorePercent = Math.round(match.score * 100);
     const isTop3 = index < 3;
     const tags = getTags(match);
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onClick();
+        }
+    };
 
     return (
         <div
             onClick={onClick}
+            onKeyDown={handleKeyDown}
+            role="button"
+            tabIndex={0}
             className="relative bg-white border border-slate-100 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] transition-all hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.1)] flex flex-col sm:flex-row gap-4 hover:-translate-y-0.5 cursor-pointer"
         >
             {isTop3 && (

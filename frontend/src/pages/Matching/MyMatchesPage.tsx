@@ -17,7 +17,7 @@ export function MyMatchesPage() {
             const data = await matchingService.getMyMatches(10);
             setPayload(data);
             setError(null);
-        } catch (err: any) {
+        } catch (err) {
             setError(err?.message || "No se pudieron cargar tus matches");
         } finally {
             setIsLoading(false);
@@ -32,8 +32,8 @@ export function MyMatchesPage() {
         if (payload?.status !== "processing") {
             return;
         }
-        const intervalId = window.setInterval(fetchMatches, 5000);
-        return () => window.clearInterval(intervalId);
+        const intervalId = globalThis.setInterval(fetchMatches, 5000);
+        return () => globalThis.clearInterval(intervalId);
     }, [payload?.status, fetchMatches]);
 
     const toggleSaveMatch = (membershipId: number, e?: React.MouseEvent) => {
