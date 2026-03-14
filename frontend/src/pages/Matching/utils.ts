@@ -1,4 +1,4 @@
-import type { MatchItem } from "../../../services/matching";
+import type { MatchItem } from "../../services/matching";
 
 export const getInitials = (name: string) => {
     return name
