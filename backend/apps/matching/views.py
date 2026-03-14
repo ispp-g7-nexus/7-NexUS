@@ -76,7 +76,7 @@ class MyMatchesView(APIView):
         rows = ResidenceCompatibility.objects.filter(
             residence_id=membership.residence_id,
             source_membership_id=membership.id,
-        ).select_related("target_membership__user")
+        ).select_related("target_membership__user", "target_membership__resident_preferences")
 
         if not rows.exists():
             return Response(
@@ -99,12 +99,28 @@ class MyMatchesView(APIView):
         matches: list[dict] = []
         for row in rows.order_by("-score")[:limit]:
             user = row.target_membership.user
+            prefs = getattr(row.target_membership, "resident_preferences", None)
+            
             matches.append(
                 {
                     "membership_id": row.target_membership_id,
                     "display_name": _masked_display_name(user.first_name, user.last_name, user.email),
                     "score": row.score,
                     "updated_at": row.updated_at,
+                    "horario_ritmo": prefs.schedule if prefs else None,
+                    "nivel_sociabilidad": prefs.social_level if prefs else None,
+                    "habito_fumar_vapear": prefs.smoking_vaping if prefs else None,
+                    "sex": prefs.sex if prefs else None,
+                    "age": prefs.age if prefs else None,
+                    "study_location": prefs.study_location if prefs else None,
+                    "weekend_return": prefs.weekend_return if prefs else None,
+                    "outside_plans_importance": prefs.outside_plans_importance if prefs else None,
+                    "desired_activity": prefs.desired_activity if prefs else None,
+                    "order_importance": prefs.order_importance if prefs else None,
+                    "noise_tolerance": prefs.noise_tolerance if prefs else None,
+                    "visitors_preference": prefs.visitors_preference if prefs else None,
+                    "basic_items_preference": prefs.basic_items_preference if prefs else None,
+                    "temperature_preference": prefs.temperature_preference if prefs else None,
                 }
             )
 
