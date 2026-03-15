@@ -135,16 +135,22 @@ class IncidenceViewSet(viewsets.ModelViewSet):
             'results': ordered_notifications,
         })
 
+
     def perform_create(self, serializer):
         user = self.request.user
-        location_type = self.request.data.get('location_type')
-        room_number = self.request.data.get('room_number')
         
-        # Si elige "habitacion" y no hay room_number del frontend, usar valor por defecto
-        if location_type == 'habitacion' and not room_number:
-            room_number = "3º A"
-        
-        serializer.save(student=user, room_number=room_number)
+        if user.is_staff:
+            serializer.save(student=user)
+        else:
+            location_type = self.request.data.get('location_type')
+            room_number = self.request.data.get('room_number')
+            
+            # Si el estudiante reporta en habitación y no puso número, 
+            # le ponemos el de su perfil (o el "3º A" por ahora)
+            if location_type == 'habitacion' and not room_number:
+                room_number = "3º A"
+            
+            serializer.save(student=user, room_number=room_number)
         
 
     def perform_update(self, serializer):
