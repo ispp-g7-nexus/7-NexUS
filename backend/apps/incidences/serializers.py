@@ -15,16 +15,19 @@ class IncidenceSerializer(serializers.ModelSerializer):
     assigned_staff_name = serializers.CharField(
         source='assigned_staff.user.get_full_name', 
         read_only=True,
-        allow_null=True
+        allow_null=True,
+        default=None
     )
     assigned_staff_job = serializers.CharField(
         source='assigned_staff.job_title', 
         read_only=True,
-        allow_null=True
+        allow_null=True,
+        default=None
     )
     assigned_external_name = serializers.CharField(
         required =False,
-        allow_null=True
+        allow_null=True,
+        allow_blank=True
     )
 
     class Meta:

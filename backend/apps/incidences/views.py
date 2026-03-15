@@ -41,7 +41,7 @@ class IncidenceViewSet(viewsets.ModelViewSet):
             return queryset
 
         if "student" not in roles_lower:
-            return queryset.filter(assigned_staff__user=user)
+            return queryset.filter(Q(assigned_staff__user=user) | Q(student=user))
 
         return queryset.filter(
             Q(student=user) | ~Q(location_type='habitacion')
@@ -110,6 +110,7 @@ class IncidenceViewSet(viewsets.ModelViewSet):
         )
         recent_updates = (
             IncidenceUpdate.objects
+            .filter(incidence__student=user)
             .select_related('incidence')
             .filter(incidence__student=user)
             .order_by('-created_at')[:self.NOTIFICATION_LIMIT]
@@ -170,23 +171,25 @@ class IncidenceViewSet(viewsets.ModelViewSet):
         
 
     def perform_update(self, serializer):
-        # 1. OBTENER LA INSTANCIA (Esto faltaba o estaba mal referenciado)
-        instance = self.get_object() 
+        """
+        Lógica para el panel de Admin (Gestionar) y 
+        soporte (Visualización de notas y comentarios rápidos).
+        """
+        instance = self.get_object()
+        old_status = instance.status
         
+        updated_incidence = serializer.save()
+
         def get_current_assignee(obj):
             if obj.assigned_staff:
                 # Usamos select_related o chequeo de nulidad para evitar errores
                 return obj.assigned_staff.user.get_full_name() or obj.assigned_staff.user.username
             return obj.assigned_external_name
 
-        # Capturamos datos antes de salvar
+        
         old_assignee = get_current_assignee(instance)
-        old_status = instance.status
         
-        # 2. Guardamos los cambios en la DB
-        updated_incidence = serializer.save()
         
-        # Capturamos datos después de salvar
         new_assignee = get_current_assignee(updated_incidence)
         new_status = updated_incidence.status
         quick_comment = self.request.data.get('quick_comment')
@@ -211,11 +214,12 @@ class IncidenceViewSet(viewsets.ModelViewSet):
 
         if log_parts:
             full_log_text = " ".join(log_parts)
-            IncidenceUpdate.objects.create(
-                incidence=updated_incidence,
-                author_name=self.request.user.get_full_name() or self.request.user.username,
-                text=full_log_text
-            )
+        IncidenceUpdate.objects.create(
+            incidence=updated_incidence,
+            author_name=self.request.user.get_full_name() or self.request.user.username,
+            text=full_log_text
+        )
 
+        
     def perform_destroy(self, instance):
         instance.delete()

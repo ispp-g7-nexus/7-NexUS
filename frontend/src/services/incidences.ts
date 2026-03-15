@@ -68,7 +68,7 @@ export const IncidenceService = {
   },
 
   getById: async (id: number): Promise<Incidence> => {
-    const response = await fetchWithAuth(`/api/incidences/${id}//`);
+    const response = await fetchWithAuth(`/api/incidences/${id}/`);
     if (!response.ok) throw new Error('Error al obtener los detalles');
     return response.json();
   },

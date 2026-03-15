@@ -12,7 +12,8 @@ const ManageIncidenceModal = ({
 }: {
   incidence: Incidence,
   onClose: () => void,
-  onRefresh: () => void
+  onRefresh: () => void,
+  isAdmin?: boolean
 }) => {
   const { staff, loading: loadingStaff } = useStaff();
 
@@ -21,6 +22,7 @@ const ManageIncidenceModal = ({
   const [externalName, setExternalName] = useState(incidence.assigned_external_name || '');
   const [note, setNote] = useState(incidence.admin_notes || '');
   const [saving, setSaving] = useState(false);
+  const isAdmin =true;
 
   const handleSave = async () => {
     setSaving(true);
@@ -51,7 +53,6 @@ const ManageIncidenceModal = ({
   return (
     <div className={UI_CLASSES.modalOverlay}>
       <div className={UI_CLASSES.modalContainer}>
-        <button type="button" aria-label="Cerrar modal" onClick={onClose} className={UI_CLASSES.modalCloseBtn}>
         <button type="button" aria-label="Cerrar modal" onClick={onClose} className={UI_CLASSES.modalCloseBtn}>
         </button>
 
@@ -300,6 +301,7 @@ export const AdminIncidences = () => {
         <DialogContent className="max-w-[90vw] sm:max-w-[425px] rounded-[32px] p-0 border-none overflow-hidden">
           <DialogTitle className="sr-only">Nueva Incidencia</DialogTitle>
           <IncidenceForm
+            isAdmin={true}
             onSuccess={() => { loadData(); setIsFormOpen(false); }}
             onClose={() => setIsFormOpen(false)}
           />
