@@ -17,6 +17,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { authService } from "../services/auth";
 import announcementService from "../services/announcement.service";
+import { packagesService } from "../services/packages";
 import { fetchWithAuth, API_URL, API_URL_INCIDENCES } from "../utils/api";
 
 import { Avatar, AvatarFallback } from "./ui/avatar";
@@ -26,7 +27,7 @@ import { Card, CardContent } from "./ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 
-export type StudentTab = "home" | "incidences" | "reservations" | "community" | "events" | "matches" | "announcements" | "menu" | "deliveries" | "visitors";
+export type StudentTab = "home" | "incidences" | "reservations" | "community" | "events" | "matches" | "announcements" | "menu" | "packages" | "visitors";
 
 interface StudentHomeProps {
     onNavigate: (view: StudentTab) => void;
@@ -172,6 +173,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
     const [seenNotificationIds, setSeenNotificationIds] = useState<string[]>(getInitialSeenIds);
     const [dismissedIncidenceIds, setDismissedIncidenceIds] = useState<string[]>(getInitialDismissedIncidenceIds);
     const [unviewedAnnouncements, setUnviewedAnnouncements] = useState(0);
+    const [unreadPackages, setUnreadPackages] = useState<number>(0);
     const [currentUserId, setCurrentUserId] = useState<number | null>(null);
     const [isSessionUserResolved, setIsSessionUserResolved] = useState(false);
     const notificationsRequestIdRef = useRef(0);
@@ -348,6 +350,36 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
         return () => window.clearInterval(intervalId);
     }, [loadHomeNotifications]);
 
+    // Paquetes: contador no leídos
+    useEffect(() => {
+        let mounted = true;
+        const loadUnread = async () => {
+            try {
+                const data = await packagesService.getUnreadCount();
+                if (mounted) setUnreadPackages(data?.count || 0);
+            } catch (err) {
+                if (mounted) setUnreadPackages(0);
+            }
+        };
+
+        loadUnread();
+        const pid = window.setInterval(loadUnread, NOTIFICATIONS_POLL);
+        return () => {
+            mounted = false;
+            window.clearInterval(pid);
+        };
+    }, []);
+
+    // Escucha evento cuando la página Packages marca paquetes como vistos
+    useEffect(() => {
+        const handler = (_ev: Event) => {
+            setUnreadPackages(0);
+        };
+
+        window.addEventListener('packages:markedAsViewed', handler as EventListener);
+        return () => window.removeEventListener('packages:markedAsViewed', handler as EventListener);
+    }, []);
+
     // --- FUNCIONES INTERNAS ---
     const handleNotificationsOpenChange = (open: boolean) => {
         setIsNotificationsOpen(open);
@@ -492,7 +524,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                     <QuickAction icon={<MessageSquare className="w-6 h-6" />} label="Avisos" color="bg-[#35C759]/10 text-[#35C759]" onClick={() => onNavigate("announcements")} />
                     <QuickAction icon={<Utensils className="w-6 h-6" />} label="Menú" color="bg-orange-100 text-orange-600" onClick={() => onNavigate("menu")} />
                     <QuickAction icon={<Wifi className="w-6 h-6" />} label="WiFi" color="bg-blue-100 text-blue-600" onClick={() => setIsWifiDialogOpen(true)} />
-                    <QuickAction icon={<Package className="w-6 h-6" />} label="Paquetes" color="bg-purple-100 text-purple-600" onClick={() => onNavigate("deliveries")} />
+                    <QuickAction icon={<Package className="w-6 h-6" />} label="Paquetes" color="bg-purple-100 text-purple-600" onClick={() => onNavigate("packages")} badge={unreadPackages > 0 ? unreadPackages : undefined} />
                     <QuickAction icon={<Users className="w-6 h-6" />} label="Invitados" color="bg-pink-100 text-pink-600" onClick={() => onNavigate("visitors")} />
                 </div>
             </div>
