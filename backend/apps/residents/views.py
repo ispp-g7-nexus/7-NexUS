@@ -27,7 +27,7 @@ class ResidentViewSet(viewsets.ViewSet):
       GET    /residents/{id}/    → Detalle de residente
       PUT    /residents/{id}/    → Actualizar residente
       PATCH  /residents/{id}/    → Actualización parcial
-      DELETE /residents/{id}/    → Soft-delete (desactiva la Membership)
+      DELETE /residents/{id}/    → Hard-delete (elimina Membership y, si aplica, User)
     """
 
     permission_classes = [IsResidenceAdmin]
@@ -79,7 +79,7 @@ class ResidentViewSet(viewsets.ViewSet):
         return Response(ResidentReadSerializer(result).data)
 
     def destroy(self, request, pk=None):
-        """DELETE /residents/{id}/ — Soft-delete: desactiva la Membership."""
+        """DELETE /residents/{id}/ — Hard-delete: elimina Membership y, si aplica, User."""
         residence = self._get_residence(request)
         deleted = delete_resident(pk, residence)
         if not deleted:

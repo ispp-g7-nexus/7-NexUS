@@ -44,6 +44,7 @@ class Incidence(models.Model):
         related_name='incidences'
     )
 
+
     # En tu modelo Incidence
     assigned_external_name = models.CharField(
     max_length=100, 

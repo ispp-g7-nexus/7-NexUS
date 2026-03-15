@@ -2,9 +2,11 @@ from typing import Any
 
 import jwt
 from django.conf import settings
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.exceptions import AuthenticationFailed
+
+UserModel = get_user_model()
 
 
 def _first_string(data: dict[str, Any], keys: list[str]) -> str:
@@ -86,7 +88,28 @@ def resolve_user_from_request(request) -> dict[str, Any] | None:
     if not isinstance(claims, dict):
         return None
 
-    return _serialize_user_claims(claims)
+    user_claims = _serialize_user_claims(claims)
+
+    try:
+        user_id = user_claims.get("id")
+        if user_id and user_id != "anon":
+            user = UserModel.objects.get(id=user_id)
+        else:
+            email = user_claims.get("email")
+            if not email:
+                return None
+            user = UserModel.objects.get(email=email)
+    except UserModel.DoesNotExist:
+        return None
+
+    if not user.is_active:
+        return None
+
+    user_claims["id"] = str(user.pk)
+    user_claims["email"] = getattr(user, "email", "") or ""
+    user_claims["username"] = user.get_username()
+
+    return user_claims
 
 
 class CustomJWTAuthentication(TokenAuthentication):
@@ -123,14 +146,17 @@ class CustomJWTAuthentication(TokenAuthentication):
         try:
             user_id = user_claims.get('id')
             if user_id and user_id != 'anon':
-                user = User.objects.get(id=user_id)
+                user = UserModel.objects.get(id=user_id)
             else:
                 email = user_claims.get('email')
                 if email:
-                    user = User.objects.get(email=email)
+                    user = UserModel.objects.get(email=email)
                 else:
-                    raise User.DoesNotExist
-        except User.DoesNotExist:
+                    raise UserModel.DoesNotExist
+        except UserModel.DoesNotExist:
             raise AuthenticationFailed('User not found')
-        
+
+        if not user.is_active:
+            raise AuthenticationFailed('User is inactive')
+
         return (user, token)
