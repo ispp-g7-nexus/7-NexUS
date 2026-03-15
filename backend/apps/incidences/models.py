@@ -6,7 +6,9 @@ class Incidence(models.Model):
         ('habitacion', 'Mi Habitación'),
         ('baño', 'Baño Común'),
         ('cocina', 'Cocina'),
-        ('zonas_comunes', 'Zonas Comunes'),
+        ('comedor', 'Comedor'),
+        ('exterior', 'Zonas Exteriores'),
+        ('salas_comunes', 'Salas Comunes'),
     ]
     
     STATUS_CHOICES = [
@@ -18,8 +20,7 @@ class Incidence(models.Model):
 
     PRIORITY_CHOICES = [
         ('low', 'BAJA'),
-        ('medium', 'MEDIA'),
-        ('high', 'ALTA'),
+        ('high', 'URGENTE'),
     ]
 
     title = models.CharField(max_length=150)
@@ -35,7 +36,14 @@ class Incidence(models.Model):
         related_name='incidences'
     )
     
-    assigned_technician = models.CharField(max_length=100, blank=True, null=True)
+    # assigned_technician = models.CharField(max_length=100, blank=True, null=True)
+    assigned_staff = models.ForeignKey(
+        'staff.Staff', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='incidences'
+    )
     admin_notes = models.TextField(blank=True, null=True)
     is_active = models.BooleanField(default=True)
     

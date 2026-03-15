@@ -1,0 +1,81 @@
+name: Check Migrations
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+      - "sprint*"
+
+jobs:
+  check-migrations:
+    name: Check Django migrations
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: nexus_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DJANGO_SETTINGS_MODULE: config.settings.local
+      DJANGO_SECRET_KEY: ci-migrations-secret
+      DJANGO_DEBUG: "1"
+      DJANGO_ALLOWED_HOSTS: localhost
+      POSTGRES_DB: nexus_ci
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      REDIS_URL: redis://localhost:6379/0
+      CELERY_BROKER_URL: redis://localhost:6379/0
+      CELERY_RESULT_BACKEND: redis://localhost:6379/1
+      CELERY_TASK_ALWAYS_EAGER: "1"
+      MATCHING_ENABLED: "0"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements/*.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements/local.txt
+
+      - name: Check for missing migrations (dry-run)
+        working-directory: backend
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Apply shared migrations
+        working-directory: backend
+        run: python manage.py migrate_schemas --shared --noinput
+
+      - name: Create tenant and apply tenant migrations from scratch
+        working-directory: backend
+        env:
+          DEMO_TENANT_DOMAIN: ci-test.nexus.local
+          DEMO_TENANT_SCHEMA: ci_test
+          DEMO_TENANT_SLUG: ci-test
+          DEMO_TENANT_NAME: CI Test Tenant
+          DEMO_ADMIN_EMAIL: admin@ci-test.nexus.local
+          DEMO_STUDENT_EMAIL: student@ci-test.nexus.local
+          DEMO_STUDENT_2_EMAIL: student2@ci-test.nexus.local
+          DEMO_USERS_PASSWORD: ci-test-pass
+        run: python manage.py seed_demo
