@@ -24,6 +24,8 @@ PNG_1X1_BYTES = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+tmr8AAAAASUVORK5CYII="
 )
 
+TEST_PASSWORD = "demo1234"
+
 
 class DummyFireworksResponse:
     def __init__(self, payload):
@@ -81,49 +83,49 @@ class PackageApiTests(TenantTestCase):
         self.admin_user = user_model.objects.create_user(
             username="admin",
             email="admin@example.com",
-            password="demo1234",
+            password=TEST_PASSWORD,
             first_name="Admin",
             last_name="User",
         )
         self.resident_user = user_model.objects.create_user(
             username="resident",
             email="resident@example.com",
-            password="demo1234",
+            password=TEST_PASSWORD,
             first_name="Maria",
             last_name="Lopez",
         )
         self.shared_user_a = user_model.objects.create_user(
             username="shared-a",
             email="shared-a@example.com",
-            password="demo1234",
+            password=TEST_PASSWORD,
             first_name="Laura",
             last_name="Diaz",
         )
         self.shared_user_b = user_model.objects.create_user(
             username="shared-b",
             email="shared-b@example.com",
-            password="demo1234",
+            password=TEST_PASSWORD,
             first_name="Lucia",
             last_name="Diaz",
         )
         self.inactive_user = user_model.objects.create_user(
             username="inactive",
             email="inactive@example.com",
-            password="demo1234",
+            password=TEST_PASSWORD,
             first_name="Inactive",
             last_name="Resident",
         )
         self.no_room_user = user_model.objects.create_user(
             username="noroom",
             email="noroom@example.com",
-            password="demo1234",
+            password=TEST_PASSWORD,
             first_name="No",
             last_name="Room",
         )
         self.other_residence_user = user_model.objects.create_user(
             username="other-residence",
             email="other-residence@example.com",
-            password="demo1234",
+            password=TEST_PASSWORD,
             first_name="Other",
             last_name="Residence",
         )
@@ -240,7 +242,7 @@ class PackageApiTests(TenantTestCase):
             user=get_user_model().objects.create_user(
                 username="inactive-room",
                 email="inactive-room@example.com",
-                password="demo1234",
+                password=TEST_PASSWORD,
                 first_name="Inactive",
                 last_name="Room",
             ),
@@ -369,7 +371,9 @@ class PackageApiTests(TenantTestCase):
         self.assertIsNone(package.delivered_at)
 
     def test_admin_list_and_retrieve_are_scoped_to_current_residence(self):
-        package = self._create_package(resident=self.resident_membership, tracking_number="CUR-1")
+        package = self._create_package(
+            resident=self.resident_membership, tracking_number="CUR-1"
+        )
         external_package = self._create_package(
             resident=self.other_residence_membership,
             residence=self.other_residence,
@@ -382,7 +386,9 @@ class PackageApiTests(TenantTestCase):
         self.assertEqual(len(payload), 1)
         self.assertEqual(payload[0]["id"], package.id)
 
-        external_response = self.admin_client.get(f"/api/packages/{external_package.id}/")
+        external_response = self.admin_client.get(
+            f"/api/packages/{external_package.id}/"
+        )
         self.assertEqual(external_response.status_code, 404)
 
     def test_student_cannot_access_admin_package_crud(self):
@@ -458,7 +464,10 @@ class PackageApiTests(TenantTestCase):
         )
 
         self.assertEqual(response.status_code, 400)
-        self.assertIn("reassign delivered package", self._error_text(response.json(), "resident_id"))
+        self.assertIn(
+            "reassign delivered package",
+            self._error_text(response.json(), "resident_id"),
+        )
         package.refresh_from_db()
         self.assertEqual(package.resident_id, self.resident_membership.id)
         self.assertIsNotNone(package.delivered_at)
@@ -495,7 +504,7 @@ class PackageApiTests(TenantTestCase):
         diana_user = get_user_model().objects.create_user(
             username="diana",
             email="diana@example.com",
-            password="demo1234",
+            password=TEST_PASSWORD,
             first_name="Diana",
             last_name="Lopez",
         )
@@ -522,8 +531,12 @@ class PackageApiTests(TenantTestCase):
         self.assertFalse(Package.objects.filter(id=package.id).exists())
 
     def test_resident_me_only_returns_packages_for_current_residence_membership(self):
-        own_package = self._create_package(resident=self.resident_membership, tracking_number="OWN-1")
-        self._create_package(resident=self.shared_membership_a, tracking_number="OTHER-1")
+        own_package = self._create_package(
+            resident=self.resident_membership, tracking_number="OWN-1"
+        )
+        self._create_package(
+            resident=self.shared_membership_a, tracking_number="OTHER-1"
+        )
         self._create_package(
             resident=self.same_user_other_residence_membership,
             residence=self.other_residence,
@@ -653,7 +666,9 @@ class PackageApiTests(TenantTestCase):
 
         self.assertEqual(response.status_code, 200)
         payload = response.json()
-        self.assertEqual(payload["resident_match"]["resident_id"], self.resident_membership.id)
+        self.assertEqual(
+            payload["resident_match"]["resident_id"], self.resident_membership.id
+        )
         self.assertEqual(payload["resident_match"]["reason"], "exact_name_match")
         self.assertEqual(payload["suggested_fields"]["recipient_name"], "Maria Lopez")
         self.assertEqual(payload["suggested_fields"]["room"], "101")

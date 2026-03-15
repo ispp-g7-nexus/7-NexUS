@@ -15,6 +15,7 @@ from rest_framework.exceptions import ValidationError
 from apps.membership.models import Membership
 
 from .models import Package
+from datetime import datetime
 
 FIREWORKS_TIMEOUT_SECONDS = 30
 RESIDENT_MATCH_CONFIDENCE_THRESHOLD = 0.7
@@ -197,10 +198,38 @@ def create_package(data: dict[str, Any], residence, created_by) -> Package:
     return package
 
 
+def _handle_package_status_transitions(
+    package: Package,
+    previous_status: str,
+    previous_resident_id: int,
+    now: datetime
+) -> None:
+    """Maneja los efectos secundarios de los cambios de estado y residente."""
+    resident_changed = package.resident_id != previous_resident_id
+
+    if resident_changed and previous_status == Package.Status.DELIVERED:
+        raise ValidationError({
+            "resident_id": "Cannot reassign delivered package; revert status before changing resident."
+        })
+
+    if package.status == Package.Status.DELIVERED:
+        if previous_status != Package.Status.DELIVERED or package.delivered_at is None:
+            package.delivered_at = now
+        return
+
+    if previous_status == Package.Status.DELIVERED:
+        package.delivered_at = None
+
+    transitioned_to_received = (package.status == Package.Status.RECEIVED and previous_status != Package.Status.RECEIVED)
+    
+    if resident_changed or transitioned_to_received:
+        package.resident_viewed_at = None
+        package.resident_notified_at = now
+
+
 def update_package(package: Package, data: dict[str, Any], residence) -> Package:
     previous_status = package.status
     previous_resident_id = package.resident_id
-    now = timezone.now()
 
     if "resident_id" in data:
         package.resident = validate_resident_membership(data["resident_id"], residence)
@@ -216,42 +245,12 @@ def update_package(package: Package, data: dict[str, Any], residence) -> Package
     if "status" in data:
         package.status = data["status"]
 
-    resident_changed = package.resident_id != previous_resident_id
-    if resident_changed and previous_status == Package.Status.DELIVERED:
-        raise ValidationError(
-            {
-                "resident_id": (
-                    "Cannot reassign delivered package; revert status before changing resident."
-                )
-            }
-        )
-
-    transitioned_to_delivered = (
-        package.status == Package.Status.DELIVERED
-        and previous_status != Package.Status.DELIVERED
+    _handle_package_status_transitions(
+        package=package,
+        previous_status=previous_status,
+        previous_resident_id=previous_resident_id,
+        now=timezone.now()
     )
-    transitioned_to_received = (
-        package.status == Package.Status.RECEIVED
-        and previous_status != Package.Status.RECEIVED
-    )
-    transitioned_away_from_delivered = (
-        previous_status == Package.Status.DELIVERED
-        and package.status != Package.Status.DELIVERED
-    )
-
-    if package.status == Package.Status.DELIVERED:
-        if transitioned_to_delivered or package.delivered_at is None:
-            package.delivered_at = now
-    else:
-        if transitioned_away_from_delivered:
-            package.delivered_at = None
-        if resident_changed or transitioned_to_received:
-            package.resident_viewed_at = None
-            package.resident_notified_at = now
-
-    if resident_changed and package.status == Package.Status.RECEIVED:
-        package.resident_viewed_at = None
-        package.resident_notified_at = now
 
     package.save()
     return package
@@ -375,104 +374,85 @@ def _coerce_confidence(value: Any) -> float:
     return max(0.0, min(confidence, 1.0))
 
 
+def _filter_memberships_by_location(
+    candidates: list[Membership], 
+    room: str, 
+    building: str
+) -> list[Membership]:
+    """Filtra una lista de candidatos por habitación y edificio si están presentes."""
+    filtered = candidates
+    if room:
+        filtered = [
+            m for m in filtered
+            if m.bedroom and m.bedroom.numero.lower() == room.lower()
+        ]
+    if building and filtered:
+        building_filtered = [
+            m for m in filtered
+            if (m.bedroom.edificio or "").lower() == building.lower()
+        ]
+        if building_filtered:
+            filtered = building_filtered
+    return filtered
+
+
+def _build_match_response(
+    resident_id: int | None,
+    reason: str,
+    candidates: list[Membership],
+    confidence: float
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Estandariza el formato de retorno de las coincidencias."""
+    return (
+        {"resident_id": resident_id, "confidence": confidence, "reason": reason},
+        [_serialize_candidate(candidate) for candidate in candidates],
+    )
+
+
 def _resolve_resident_match(
     *,
     suggested_fields: dict[str, str],
     residence,
     confidence: float,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    
     memberships = list(_student_membership_queryset(residence).filter(bedroom__isnull=False))
     room = (suggested_fields.get("room") or "").strip()
     building = (suggested_fields.get("building") or "").strip()
+    recipient_name = suggested_fields.get("recipient_name", "")
 
-    def filter_by_room(candidates: list[Membership]) -> list[Membership]:
-        filtered = candidates
-        if room:
-            filtered = [
-                membership
-                for membership in filtered
-                if membership.bedroom and membership.bedroom.numero.lower() == room.lower()
-            ]
-        if building and filtered:
-            building_filtered = [
-                membership
-                for membership in filtered
-                if (membership.bedroom.edificio or "").lower() == building.lower()
-            ]
-            if building_filtered:
-                filtered = building_filtered
-        return filtered
-
-    def build_response(
-        *,
-        resident_id: int | None,
-        reason: str,
-        candidates: list[Membership],
-        confidence_value: float | None = None,
-    ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-        return (
-            {
-                "resident_id": resident_id,
-                "confidence": confidence if confidence_value is None else confidence_value,
-                "reason": reason,
-            },
-            [_serialize_candidate(candidate) for candidate in candidates],
-        )
-
-    name_matches, name_reason, name_score = _resolve_name_candidates(
-        memberships,
-        suggested_fields.get("recipient_name", ""),
-    )
+    name_matches, name_reason, name_score = _resolve_name_candidates(memberships, recipient_name)
+    
     if name_matches:
         if len(name_matches) == 1:
-            return build_response(
-                resident_id=name_matches[0].id,
-                reason=name_reason,
-                candidates=[],
-                confidence_value=name_score,
+            return _build_match_response(name_matches[0].id, name_reason, [], name_score)
+
+        narrowed_matches = _filter_memberships_by_location(name_matches, room, building)
+        if len(narrowed_matches) == 1:
+            return _build_match_response(
+                narrowed_matches[0].id, 
+                "name_room_disambiguated_match", 
+                [], 
+                max(name_score, confidence)
             )
+            
+        return _build_match_response(None, "ambiguous_name_match", name_matches, name_score)
 
-        narrowed_name_matches = filter_by_room(name_matches)
-        if len(narrowed_name_matches) == 1:
-            return build_response(
-                resident_id=narrowed_name_matches[0].id,
-                reason="name_room_disambiguated_match",
-                candidates=[],
-                confidence_value=max(name_score, confidence),
-            )
-        return (
-            {
-                "resident_id": None,
-                "confidence": name_score,
-                "reason": "ambiguous_name_match",
-            },
-            [_serialize_candidate(candidate) for candidate in name_matches],
-        )
+    if not room:
+        return _build_match_response(None, "no_match", [], confidence)
 
-    if room:
-        room_matches = filter_by_room(memberships)
+    room_matches = _filter_memberships_by_location(memberships, room, building)
+    
+    if len(room_matches) == 1 and confidence >= RESIDENT_MATCH_CONFIDENCE_THRESHOLD:
+        return _build_match_response(room_matches[0].id, "unique_room_match", [], confidence)
+        
+    if len(room_matches) == 1:
+        return _build_match_response(None, "low_confidence", room_matches, confidence)
+        
+    if len(room_matches) > 1:
+        return _build_match_response(None, "ambiguous_room_match", room_matches, confidence)
 
-        if len(room_matches) == 1:
-            if confidence >= RESIDENT_MATCH_CONFIDENCE_THRESHOLD:
-                return build_response(
-                    resident_id=room_matches[0].id,
-                    reason="unique_room_match",
-                    candidates=[],
-                )
-            return build_response(
-                resident_id=None,
-                reason="low_confidence",
-                candidates=room_matches,
-            )
-        if len(room_matches) > 1:
-            return build_response(
-                resident_id=None,
-                reason="ambiguous_room_match",
-                candidates=room_matches,
-            )
-
-    return build_response(resident_id=None, reason="no_match", candidates=[])
-
+    return _build_match_response(None, "no_match", [], confidence)
 
 def _call_fireworks_label_reader(*, image_bytes: bytes, content_type: str) -> dict[str, Any]:
     api_key = getattr(settings, "FIREWORKS_API_KEY", "")
