@@ -4,6 +4,7 @@ import base64
 import difflib
 import json
 import re
+from datetime import datetime
 from typing import Any
 
 import requests
@@ -15,7 +16,6 @@ from rest_framework.exceptions import ValidationError
 from apps.membership.models import Membership
 
 from .models import Package
-from datetime import datetime
 
 FIREWORKS_TIMEOUT_SECONDS = 30
 RESIDENT_MATCH_CONFIDENCE_THRESHOLD = 0.7
@@ -55,7 +55,9 @@ LABEL_EXTRACTION_RESPONSE_SCHEMA = {
 def _resident_full_name(membership: Membership) -> str:
     user = membership.user
     full_name = f"{user.first_name} {user.last_name}".strip()
-    return full_name or user.get_username() or user.email or f"Residente {membership.pk}"
+    return (
+        full_name or user.get_username() or user.email or f"Residente {membership.pk}"
+    )
 
 
 def _normalise_text(value: str) -> str:
@@ -130,10 +132,14 @@ def _resolve_name_candidates(
 
 
 def _student_membership_queryset(residence, *, active_only: bool = True):
-    queryset = Membership.objects.filter(
-        residence=residence,
-        role__name__iexact="Student",
-    ).select_related("user", "bedroom").order_by("id")
+    queryset = (
+        Membership.objects.filter(
+            residence=residence,
+            role__name__iexact="Student",
+        )
+        .select_related("user", "bedroom")
+        .order_by("id")
+    )
     if active_only:
         queryset = queryset.filter(is_active=True)
     return queryset
@@ -199,18 +205,17 @@ def create_package(data: dict[str, Any], residence, created_by) -> Package:
 
 
 def _handle_package_status_transitions(
-    package: Package,
-    previous_status: str,
-    previous_resident_id: int,
-    now: datetime
+    package: Package, previous_status: str, previous_resident_id: int, now: datetime
 ) -> None:
     """Maneja los efectos secundarios de los cambios de estado y residente."""
     resident_changed = package.resident_id != previous_resident_id
 
     if resident_changed and previous_status == Package.Status.DELIVERED:
-        raise ValidationError({
-            "resident_id": "Cannot reassign delivered package; revert status before changing resident."
-        })
+        raise ValidationError(
+            {
+                "resident_id": "Cannot reassign delivered package; revert status before changing resident."
+            }
+        )
 
     if package.status == Package.Status.DELIVERED:
         if previous_status != Package.Status.DELIVERED or package.delivered_at is None:
@@ -220,8 +225,11 @@ def _handle_package_status_transitions(
     if previous_status == Package.Status.DELIVERED:
         package.delivered_at = None
 
-    transitioned_to_received = (package.status == Package.Status.RECEIVED and previous_status != Package.Status.RECEIVED)
-    
+    transitioned_to_received = (
+        package.status == Package.Status.RECEIVED
+        and previous_status != Package.Status.RECEIVED
+    )
+
     if resident_changed or transitioned_to_received:
         package.resident_viewed_at = None
         package.resident_notified_at = now
@@ -249,7 +257,7 @@ def update_package(package: Package, data: dict[str, Any], residence) -> Package
         package=package,
         previous_status=previous_status,
         previous_resident_id=previous_resident_id,
-        now=timezone.now()
+        now=timezone.now(),
     )
 
     package.save()
@@ -272,18 +280,26 @@ def get_resident_packages_queryset(membership: Membership, residence):
 
 
 def unread_packages_count(membership: Membership, residence) -> int:
-    return get_resident_packages_queryset(membership, residence).filter(
-        status=Package.Status.RECEIVED,
-        resident_viewed_at__isnull=True,
-    ).count()
+    return (
+        get_resident_packages_queryset(membership, residence)
+        .filter(
+            status=Package.Status.RECEIVED,
+            resident_viewed_at__isnull=True,
+        )
+        .count()
+    )
 
 
 def mark_packages_as_viewed(membership: Membership, residence) -> int:
     now = timezone.now()
-    return get_resident_packages_queryset(membership, residence).filter(
-        status=Package.Status.RECEIVED,
-        resident_viewed_at__isnull=True,
-    ).update(resident_viewed_at=now)
+    return (
+        get_resident_packages_queryset(membership, residence)
+        .filter(
+            status=Package.Status.RECEIVED,
+            resident_viewed_at__isnull=True,
+        )
+        .update(resident_viewed_at=now)
+    )
 
 
 def build_delivery_qr_token(membership: Membership, residence) -> dict[str, Any]:
@@ -375,20 +391,20 @@ def _coerce_confidence(value: Any) -> float:
 
 
 def _filter_memberships_by_location(
-    candidates: list[Membership], 
-    room: str, 
-    building: str
+    candidates: list[Membership], room: str, building: str
 ) -> list[Membership]:
     """Filtra una lista de candidatos por habitación y edificio si están presentes."""
     filtered = candidates
     if room:
         filtered = [
-            m for m in filtered
+            m
+            for m in filtered
             if m.bedroom and m.bedroom.numero.lower() == room.lower()
         ]
     if building and filtered:
         building_filtered = [
-            m for m in filtered
+            m
+            for m in filtered
             if (m.bedroom.edificio or "").lower() == building.lower()
         ]
         if building_filtered:
@@ -400,7 +416,7 @@ def _build_match_response(
     resident_id: int | None,
     reason: str,
     candidates: list[Membership],
-    confidence: float
+    confidence: float,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """Estandariza el formato de retorno de las coincidencias."""
     return (
@@ -415,46 +431,61 @@ def _resolve_resident_match(
     residence,
     confidence: float,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    
-    memberships = list(_student_membership_queryset(residence).filter(bedroom__isnull=False))
+
+    memberships = list(
+        _student_membership_queryset(residence).filter(bedroom__isnull=False)
+    )
     room = (suggested_fields.get("room") or "").strip()
     building = (suggested_fields.get("building") or "").strip()
     recipient_name = suggested_fields.get("recipient_name", "")
 
-    name_matches, name_reason, name_score = _resolve_name_candidates(memberships, recipient_name)
-    
+    name_matches, name_reason, name_score = _resolve_name_candidates(
+        memberships, recipient_name
+    )
+
     if name_matches:
         if len(name_matches) == 1:
-            return _build_match_response(name_matches[0].id, name_reason, [], name_score)
+            return _build_match_response(
+                name_matches[0].id, name_reason, [], name_score
+            )
 
         narrowed_matches = _filter_memberships_by_location(name_matches, room, building)
         if len(narrowed_matches) == 1:
             return _build_match_response(
-                narrowed_matches[0].id, 
-                "name_room_disambiguated_match", 
-                [], 
-                max(name_score, confidence)
+                narrowed_matches[0].id,
+                "name_room_disambiguated_match",
+                [],
+                max(name_score, confidence),
             )
-            
-        return _build_match_response(None, "ambiguous_name_match", name_matches, name_score)
+
+        return _build_match_response(
+            None, "ambiguous_name_match", name_matches, name_score
+        )
 
     if not room:
         return _build_match_response(None, "no_match", [], confidence)
 
     room_matches = _filter_memberships_by_location(memberships, room, building)
-    
+
     if len(room_matches) == 1 and confidence >= RESIDENT_MATCH_CONFIDENCE_THRESHOLD:
-        return _build_match_response(room_matches[0].id, "unique_room_match", [], confidence)
-        
+        return _build_match_response(
+            room_matches[0].id, "unique_room_match", [], confidence
+        )
+
     if len(room_matches) == 1:
         return _build_match_response(None, "low_confidence", room_matches, confidence)
-        
+
     if len(room_matches) > 1:
-        return _build_match_response(None, "ambiguous_room_match", room_matches, confidence)
+        return _build_match_response(
+            None, "ambiguous_room_match", room_matches, confidence
+        )
 
     return _build_match_response(None, "no_match", [], confidence)
 
-def _call_fireworks_label_reader(*, image_bytes: bytes, content_type: str) -> dict[str, Any]:
+
+def _call_fireworks_label_reader(
+    *, image_bytes: bytes, content_type: str
+) -> dict[str, Any]:
     api_key = getattr(settings, "FIREWORKS_API_KEY", "")
     model = getattr(settings, "FIREWORKS_LABEL_MODEL", "")
     base_url = getattr(
@@ -466,7 +497,9 @@ def _call_fireworks_label_reader(*, image_bytes: bytes, content_type: str) -> di
     if not api_key or not model:
         raise LabelAIError("Fireworks AI no está configurado.")
 
-    schema_text = json.dumps(LABEL_EXTRACTION_RESPONSE_SCHEMA["schema"], ensure_ascii=False)
+    schema_text = json.dumps(
+        LABEL_EXTRACTION_RESPONSE_SCHEMA["schema"], ensure_ascii=False
+    )
 
     payload = {
         "model": model,
@@ -528,18 +561,20 @@ def _call_fireworks_label_reader(*, image_bytes: bytes, content_type: str) -> di
 
     try:
         body = response.json()
-    except (json.JSONDecodeError, ValueError) as exc:
-        raise LabelAIError("La respuesta de Fireworks AI no es un JSON válido.") from exc
+    except ValueError as exc:
+        raise LabelAIError(
+            "La respuesta de Fireworks AI no es un JSON válido."
+        ) from exc
     try:
         content = body["choices"][0]["message"]["content"]
     except (KeyError, IndexError, TypeError) as exc:
-        raise LabelAIError("La respuesta de Fireworks AI no tiene el formato esperado.") from exc
+        raise LabelAIError(
+            "La respuesta de Fireworks AI no tiene el formato esperado."
+        ) from exc
 
     if isinstance(content, list):
         content = "".join(
-            item.get("text", "")
-            for item in content
-            if isinstance(item, dict)
+            item.get("text", "") for item in content if isinstance(item, dict)
         )
 
     parsed = _extract_json_payload(str(content))
@@ -565,7 +600,9 @@ def _extract_json_payload(content: str) -> dict[str, Any]:
         try:
             return json.loads(text[start : end + 1])
         except json.JSONDecodeError as exc:
-            raise LabelAIError("No se pudo interpretar el JSON devuelto por Fireworks AI.") from exc
+            raise LabelAIError(
+                "No se pudo interpretar el JSON devuelto por Fireworks AI."
+            ) from exc
 
 
 def _decode_delivery_qr_token(qr_token: str) -> dict[str, Any]:

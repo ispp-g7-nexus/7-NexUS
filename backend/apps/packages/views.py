@@ -12,8 +12,8 @@ from apps.residents.permissions import IsResidenceAdmin
 from .models import Package
 from .serializers import (
     LabelPreviewInputSerializer,
-    PackageDeliverByQrSerializer,
     PackageCreateSerializer,
+    PackageDeliverByQrSerializer,
     PackageReadSerializer,
     PackageUpdateSerializer,
 )
@@ -30,6 +30,8 @@ from .services import (
     update_package,
 )
 
+ERROR_NO_RESIDENCE = "No se ha determinado la residencia."
+
 
 class PackageAdminViewSet(viewsets.ModelViewSet):
     permission_classes = [IsResidenceAdmin]
@@ -39,7 +41,7 @@ class PackageAdminViewSet(viewsets.ModelViewSet):
     def _get_residence(self):
         residence = getattr(self.request, "residence", None)
         if not residence:
-            raise ValidationError({"detail": "No se ha determinado la residencia."})
+            raise ValidationError({"detail": ERROR_NO_RESIDENCE})
         return residence
 
     def get_queryset(self):
@@ -59,9 +61,15 @@ class PackageAdminViewSet(viewsets.ModelViewSet):
             try:
                 queryset = queryset.filter(resident_id=int(resident_id))
             except ValueError as exc:
-                raise ValidationError({"resident_id": "resident_id debe ser un entero."}) from exc
+                raise ValidationError(
+                    {"resident_id": "resident_id debe ser un entero."}
+                ) from exc
 
-        search = (self.request.query_params.get("search") or self.request.query_params.get("q") or "").strip()
+        search = (
+            self.request.query_params.get("search")
+            or self.request.query_params.get("q")
+            or ""
+        ).strip()
         if search:
             queryset = queryset.filter(
                 Q(resident_name_snapshot__icontains=search)
@@ -135,7 +143,7 @@ class PackageLabelPreviewView(APIView):
     def post(self, request):
         residence = getattr(request, "residence", None)
         if not residence:
-            raise ValidationError({"detail": "No se ha determinado la residencia."})
+            raise ValidationError({"detail": ERROR_NO_RESIDENCE})
 
         serializer = LabelPreviewInputSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -160,7 +168,7 @@ class ResidentPackageBaseView(APIView):
     def get_membership(self, request):
         residence = getattr(request, "residence", None)
         if not residence:
-            raise ValidationError({"detail": "No se ha determinado la residencia."})
+            raise ValidationError({"detail": ERROR_NO_RESIDENCE})
 
         membership = get_resident_membership_for_user(request.user, residence)
         if membership is None:
