@@ -36,6 +36,22 @@ export function DashboardPage() {
         loadSession();
     }, [navigate]);
 
+    // Polling de sesión: si el admin elimina la cuenta, el residente es expulsado
+    // en el siguiente ciclo (máx. 30 s) sin necesidad de ninguna acción extra.
+    useEffect(() => {
+        if (!role) return;
+
+        const interval = setInterval(async () => {
+            try {
+                await authService.me();
+            } catch {
+                // devuelve 401 (usuario desactivado / sesión inválida).
+            }
+        }, 30_000);
+
+        return () => clearInterval(interval);
+    }, [role]);
+
     const handleLogout = () => {
         localStorage.removeItem('userRole');
         authService.logout().catch(() => null);
