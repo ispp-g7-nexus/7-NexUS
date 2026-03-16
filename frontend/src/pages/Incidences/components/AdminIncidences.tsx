@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Clock, Wrench, ChevronRight, CheckCircle2, MapPin, MessageSquare } from 'lucide-react';
+import { Clock, Wrench, ChevronRight, CheckCircle2, MapPin, MessageSquare, Plus } from 'lucide-react';
 import { IncidenceService, Incidence, IncidenceStatus } from '../../../services/incidences';
+import { Dialog, DialogContent, DialogTitle } from '../../../components/ui/dialog';
+import { IncidenceForm } from './IncidenceForm';
 
 // --- COMPONENTE MODAL ---
 const ManageIncidenceModal = ({
@@ -45,7 +47,7 @@ const ManageIncidenceModal = ({
   return (
     <div className={UI_CLASSES.modalOverlay}>
       <div className={UI_CLASSES.modalContainer}>
-        <button type="button" aria-label="Cerrar modal" onClick={onClose} className={UI_CLASSES.modalCloseBtn}> 
+        <button type="button" aria-label="Cerrar modal" onClick={onClose} className={UI_CLASSES.modalCloseBtn}>
         </button>
 
         <div className={UI_CLASSES.modalPadding}>
@@ -97,6 +99,7 @@ const ManageIncidenceModal = ({
 export const AdminIncidences = () => {
   const [incidences, setIncidences] = useState<Incidence[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isFormOpen, setIsFormOpen] = useState(false); 
   const [search, setSearch] = useState('');
   const [filterLocation, setFilterLocation] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -129,7 +132,7 @@ export const AdminIncidences = () => {
   return (
     <div className={UI_CLASSES.mainLayout}>
       <main className={UI_CLASSES.mainContent}>
-        
+
         {/* Filtros */}
         <div className={UI_CLASSES.filterGrid}>
           <div className="relative col-span-1 sm:col-span-2">
@@ -218,6 +221,24 @@ export const AdminIncidences = () => {
           <ManageIncidenceModal incidence={selectedIncidence} onClose={() => setSelectedIncidence(null)} onRefresh={loadData} />
         )}
       </main>
+      {/* Botón flotante para que el Admin también pueda crear */}
+      <button
+        onClick={() => setIsFormOpen(true)}
+        className="fixed bottom-24 right-6 w-14 h-14 bg-[#1B4D1C] hover:bg-[#2d6b30] text-white rounded-full shadow-2xl flex items-center justify-center z-50 transition-transform active:scale-95"
+      >
+        <Plus size={32} strokeWidth={3} />
+      </button>
+
+      {/* El componente del formulario (tienes que importarlo) */}
+      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+        <DialogContent className="max-w-[90vw] sm:max-w-[425px] rounded-[32px] p-0 border-none overflow-hidden">
+          <DialogTitle className="sr-only">Nueva Incidencia</DialogTitle>
+          <IncidenceForm
+            onSuccess={() => { loadData(); setIsFormOpen(false); }}
+            onClose={() => setIsFormOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
@@ -261,23 +282,23 @@ const UI_CLASSES = {
   modalTitle: "text-xl font-bold text-slate-800",
   modalSubtitle: "text-slate-400 text-sm font-normal",
   modalIndicator: "w-2 h-2 rounded-full bg-blue-500",
-  
+
   // Formularios
   label: "text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block ml-1",
   select: "w-full bg-slate-50 border-none rounded-2xl h-14 px-5 font-medium text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer",
   input: "w-full bg-slate-50 border-none rounded-2xl h-14 px-5 font-medium text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500",
   textarea: "w-full bg-slate-50 border-none rounded-2xl min-h-[100px] p-5 text-sm font-normal outline-none resize-none focus:ring-2 focus:ring-emerald-500",
-  
+
   // Filtros
   filterGrid: "mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3",
   filterInput: "w-full pl-3 pr-3 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 font-normal",
   filterSelect: "w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white font-normal text-slate-600",
-  
+
   // Botones
   btnPrimary: "flex-1 h-14 rounded-2xl bg-[#5B7C5C] hover:bg-[#4A664B] text-white font-bold shadow-md disabled:opacity-50 transition-all active:scale-95",
   btnSecondary: "flex-1 h-14 rounded-2xl font-bold text-slate-500 bg-slate-50 hover:bg-slate-100 transition-colors",
   btnManage: "text-[#5B7C5C] font-bold text-sm flex items-center gap-1 hover:gap-2 transition-all",
-  
+
   // Tarjetas (Card)
   card: "bg-white rounded-[24px] p-6 shadow-sm border border-slate-100 mb-4 text-left",
   cardTitle: "font-bold text-xl text-slate-900 mb-1 leading-tight",
@@ -285,13 +306,13 @@ const UI_CLASSES = {
   cardDate: "flex items-center gap-1.5 text-slate-400 text-[11px] mt-1 uppercase font-medium tracking-wider",
   cardLocation: "flex items-center gap-1.5 text-orange-500 mb-4",
   avatar: "w-12 h-12 bg-green-50 text-green-700 rounded-full flex items-center justify-center font-bold text-lg border border-slate-100",
-  
+
   // Descripción y Notas
   descriptionBox: "bg-[#F8FAFB] p-4 rounded-2xl mb-6 border border-slate-50",
   descriptionText: "text-slate-600 text-sm leading-relaxed font-normal",
   adminNoteText: "block pt-2 border-t border-slate-200 mt-2 text-emerald-700",
   adminNoteLabel: "flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest mb-1 text-emerald-600",
-  
+
   // Badges
   priorityBadge: "text-[10px] font-bold px-3 py-1 rounded-full tracking-wider uppercase",
   statusBadge: "px-4 py-2 rounded-xl text-[11px] font-bold flex items-center gap-2",
