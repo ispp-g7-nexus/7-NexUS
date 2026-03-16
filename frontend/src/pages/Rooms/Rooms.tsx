@@ -244,10 +244,10 @@ export function Rooms() {
 
       {/* Toggle Lista / Mapa */}
       <div className="flex items-center justify-center gap-1 bg-gray-100 p-1 rounded-lg">
-        <button onClick={() => setViewLayout("list")} className={`flex items-center gap-1.5 px-4 py-1.5 rounded text-sm font-medium transition-all ${viewLayout === "list" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+        <button type="button" aria-pressed={viewLayout === "list"} onClick={() => setViewLayout("list")} className={`flex items-center gap-1.5 px-4 py-1.5 rounded text-sm font-medium transition-all ${viewLayout === "list" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
           <List className="w-4 h-4" />Lista
         </button>
-        <button onClick={() => setViewLayout("map")} className={`flex items-center gap-1.5 px-4 py-1.5 rounded text-sm font-medium transition-all ${viewLayout === "map" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+        <button type="button" aria-pressed={viewLayout === "map"} onClick={() => setViewLayout("map")} className={`flex items-center gap-1.5 px-4 py-1.5 rounded text-sm font-medium transition-all ${viewLayout === "map" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
           <Grid3x3 className="w-4 h-4" />Mapa
         </button>
       </div>
@@ -377,20 +377,7 @@ export function Rooms() {
                     {Object.entries(floors)
                       .sort(([a], [b]) => Number.parseInt(b) - Number.parseInt(a))
                       .map(([floor, floorRooms]) => (
-                        <div key={floor} className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <div className="bg-gray-100 px-2 py-1 rounded text-xs font-bold text-gray-600">
-                              {Number.parseInt(floor) === 0 ? "Planta baja" : `Planta ${floor}`}
-                            </div>
-                            <div className="flex-1 h-px bg-gray-200" />
-                            <span className="text-[11px] text-gray-400">{floorRooms.filter((r) => r.ocupantes_actuales > 0).length}/{floorRooms.length} ocupadas</span>
-                          </div>
-                          <div className="grid grid-cols-5 sm:grid-cols-8 gap-2">
-                            {floorRooms.map((room) => (
-                              <RoomMapCell key={room.id} room={room} onClick={() => setSelectedRoom(room)} />
-                            ))}
-                          </div>
-                        </div>
+                        <FloorRow key={floor} floor={floor} rooms={floorRooms} onSelectRoom={setSelectedRoom} />
                       ))}
                   </CardContent>
                 </Card>
@@ -549,6 +536,26 @@ export function Rooms() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function FloorRow({ floor, rooms, onSelectRoom }: { floor: string; rooms: Bedroom[]; onSelectRoom: (r: Bedroom) => void }) {
+  const occupied = rooms.filter((r) => r.ocupantes_actuales > 0).length;
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <div className="bg-gray-100 px-2 py-1 rounded text-xs font-bold text-gray-600">
+          {Number.parseInt(floor) === 0 ? "Planta baja" : `Planta ${floor}`}
+        </div>
+        <div className="flex-1 h-px bg-gray-200" />
+        <span className="text-[11px] text-gray-400">{occupied}/{rooms.length} ocupadas</span>
+      </div>
+      <div className="grid grid-cols-5 sm:grid-cols-8 gap-2">
+        {rooms.map((room) => (
+          <RoomMapCell key={room.id} room={room} onClick={() => onSelectRoom(room)} />
+        ))}
+      </div>
     </div>
   );
 }
