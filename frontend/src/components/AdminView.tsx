@@ -1,5 +1,5 @@
 import { AlertCircle, BarChart3, BedDouble, Bell, BookOpen, Briefcase, Calendar, Home, Layout, LayoutDashboard, LogOut, Menu, MessageSquare, Shield, User, UserCheck, Users, Utensils } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Events } from "../pages/Social/Events/Events";
 import { Residents } from "../pages/Residents/Residents";
 import logo from "../assets/logo.png";
@@ -9,7 +9,6 @@ import Rooms from "../pages/Rooms/Rooms";
 import { Staff } from "../pages/Staff/Staff";
 import { AdminAnnouncements } from "../pages/announcements/AdminAnnouncements";
 import { AdminProfile } from "./AdminProfile";
-import { authService } from "../services/auth";
 import { AdminReservations } from "./AdminReservations";
 import { AdminChats } from "../pages/Chats/AdminChats";
 import { AdminMenuView } from "../pages/Menu/AdminMenuView";
@@ -21,6 +20,7 @@ import { useAdminNotifications, type AdminNotificationSource } from "./useAdminN
 
 interface AdminViewProps {
     onLogout: () => void;
+    currentUser: { name: string; email: string } | null;
 }
 
 type AdminTab = "dashboard" | "rooms" | "students" | "incidences" | "reservations" | "kitchen" | "analytics" | "staff" | "announcements" | "visitors" | "events" | "roles" | "profile" | "chats";
@@ -57,22 +57,8 @@ const getTabByNotificationSource = (source: AdminNotificationSource): AdminTab =
     return "reservations";
 };
 
-export function AdminView({ onLogout }: AdminViewProps) {
+export function AdminView({ onLogout, currentUser }: AdminViewProps) {
     const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
-    const [currentUser, setCurrentUser] = useState<{ name: string; email: string } | null>(null);
-
-    useEffect(() => {
-        authService.me().then((session) => {
-            if (session.user) {
-                const { first_name, last_name, username, email } = session.user;
-                const name = (first_name || last_name)
-                    ? `${first_name ?? ''} ${last_name ?? ''}`.trim()
-                    : (username ?? '');
-                setCurrentUser({ name, email: email ?? '' });
-            }
-        }).catch(() => null);
-    }, []);
-
     const [reservationsSubTab, setReservationsSubTab] = useState("espacios");
     const {
         notifications,
