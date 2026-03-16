@@ -1,5 +1,5 @@
 import { AlertCircle, BarChart3, BedDouble, Bell, BookOpen, Briefcase, Calendar, Home, Layout, LayoutDashboard, LogOut, Menu, MessageSquare, Shield, User, UserCheck, Users, Utensils } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Events } from "../pages/Social/Events/Events";
 import { Residents } from "../pages/Residents/Residents";
 import logo from "../assets/logo.png";
@@ -9,6 +9,7 @@ import Rooms from "../pages/Rooms/Rooms";
 import { Staff } from "../pages/Staff/Staff";
 import { AdminAnnouncements } from "../pages/announcements/AdminAnnouncements";
 import { AdminProfile } from "./AdminProfile";
+import { authService } from "../services/auth";
 import { AdminReservations } from "./AdminReservations";
 import { AdminChats } from "../pages/Chats/AdminChats";
 import { AdminMenuView } from "../pages/Menu/AdminMenuView";
@@ -58,6 +59,20 @@ const getTabByNotificationSource = (source: AdminNotificationSource): AdminTab =
 
 export function AdminView({ onLogout }: AdminViewProps) {
     const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
+    const [currentUser, setCurrentUser] = useState<{ name: string; email: string } | null>(null);
+
+    useEffect(() => {
+        authService.me().then((session) => {
+            if (session.user) {
+                const { first_name, last_name, username, email } = session.user;
+                const name = (first_name || last_name)
+                    ? `${first_name ?? ''} ${last_name ?? ''}`.trim()
+                    : (username ?? '');
+                setCurrentUser({ name, email: email ?? '' });
+            }
+        }).catch(() => null);
+    }, []);
+
     const [reservationsSubTab, setReservationsSubTab] = useState("espacios");
     const {
         notifications,
@@ -317,6 +332,17 @@ export function AdminView({ onLogout }: AdminViewProps) {
                                     ))}
                                 </div>
                                 <div className="pt-6 border-t mt-auto shrink-0">
+                                    {currentUser && (
+                                        <div className="mb-4 flex items-center gap-3 px-1">
+                                            <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                                                <User className="w-5 h-5 text-green-700" />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-medium text-gray-900 truncate">{currentUser.name}</p>
+                                                <p className="text-xs text-gray-500 truncate">{currentUser.email}</p>
+                                            </div>
+                                        </div>
+                                    )}
                                     <Button variant="outline" className="w-full justify-start text-red-600" onClick={onLogout}>
                                         <LogOut className="w-4 h-4 mr-2" /> Cerrar Sesión
                                     </Button>
