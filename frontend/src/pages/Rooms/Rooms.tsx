@@ -126,46 +126,37 @@ export function Rooms() {
     return list;
   }, [rooms, search, filter]);
 
-  const roomsByBuildingAndFloor = useMemo(() => {
-    const organized: Record<string, Record<number, Bedroom[]>> = {};
-
-    for (const room of filteredRooms) {
-      const b = room.edificio ?? "—";
-      const f: number = room.planta ?? 0;
-      if (!organized[b]) organized[b] = {};
-      if (!organized[b][f]) organized[b][f] = [];
-      organized[b][f].push(room);
-    }
-
-    for (const floors of Object.values(organized)) {
-      for (const floorRooms of Object.values(floors)) {
-        floorRooms.sort((a, b) => a.numero.localeCompare(b.numero));
-      }
-    }
-
-    return organized;
-  }, [filteredRooms]);
+  const roomsByBuildingAndFloor = useMemo(() => groupByBuildingAndFloor(filteredRooms), [filteredRooms]);
 
   const onChange = (k: string, v: any) => {
     setForm((prev) => ({ ...prev, [k]: v }));
     validateField(k, v);
   };
 
+  const saveOneBedroom = async (payload: object) => {
+    if (isEditing && editingId) {
+      const res = await updateBedroom(editingId, payload);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { detail?: string }).detail || `Error ${res.status}`);
+      }
+    } else {
+      const res = await createBedroom(payload);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { detail?: string }).detail || `Error ${res.status}`);
+      }
+    }
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     const fieldsToValidate = ["numero", "edificio", "planta", "unidades"];
-    let valid = true;
-
-    fieldsToValidate.forEach((field) => {
-      if (!validateField(field, form[field as keyof typeof form])) {
-        valid = false;
-      }
-    });
-
+    const valid = fieldsToValidate.every((field) => validateField(field, form[field as keyof typeof form]));
     if (!valid) return;
 
-    const base = Number.parseInt(form.numero.replace(/\D/g, "")) || 0;
-    const prefix = form.numero.replace(/\d/g, "");
+    const base = Number.parseInt(form.numero.replaceAll(/\D/g, "")) || 0;
+    const prefix = form.numero.replaceAll(/\d/g, "");
 
     const payloadBase = {
       planta: form.planta ? Number.parseInt(form.planta) : null,
@@ -177,22 +168,8 @@ export function Rooms() {
     try {
       for (let i = 0; i < form.unidades; i++) {
         const numero = form.unidades > 1 ? `${prefix}${base + i}` : form.numero;
-        const payload = { ...payloadBase, numero };
-        if (isEditing && editingId) {
-          const res = await updateBedroom(editingId, payload);
-          if (!res.ok) {
-            const body = await res.json().catch(() => ({}));
-            throw new Error((body as { detail?: string }).detail || `Error ${res.status}`);
-          }
-        } else {
-          const res = await createBedroom(payload);
-          if (!res.ok) {
-            const body = await res.json().catch(() => ({}));
-            throw new Error((body as { detail?: string }).detail || `Error ${res.status}`);
-          }
-        }
+        await saveOneBedroom({ ...payloadBase, numero });
       }
-
       toast.success(isEditing ? "Habitación actualizada." : "Habitación(es) creada(s).");
       setIsModalOpen(false);
       fetchRooms();
@@ -217,6 +194,8 @@ export function Rooms() {
   };
 
   if (loading) return <div className="p-10">Cargando...</div>;
+
+  const selectedRoomState = selectedRoom ? getRoomState(selectedRoom.ocupantes_actuales, selectedRoom.capacidad_maxima) : null;
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
@@ -411,19 +390,7 @@ export function Rooms() {
               </div>
               <div className="col-span-2 bg-gray-50 p-3 rounded-xl border border-gray-100">
                 <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1">Estado</p>
-                <Badge className={
-                  selectedRoom.ocupantes_actuales >= selectedRoom.capacidad_maxima
-                    ? "bg-red-100 text-red-700 border-0"
-                    : selectedRoom.ocupantes_actuales > 0
-                      ? "bg-yellow-100 text-yellow-700 border-0"
-                      : "bg-green-100 text-green-700 border-0"
-                }>
-                  {selectedRoom.ocupantes_actuales >= selectedRoom.capacidad_maxima
-                    ? "Completa"
-                    : selectedRoom.ocupantes_actuales > 0
-                      ? "Parcial"
-                      : "Libre"}
-                </Badge>
+                <Badge className={selectedRoomState!.badgeClass}>{selectedRoomState!.label}</Badge>
               </div>
             </div>
             <Button className="w-full mt-4" variant="outline" onClick={() => {
@@ -540,7 +507,35 @@ export function Rooms() {
   );
 }
 
-function FloorRow({ floor, rooms, onSelectRoom }: { floor: string; rooms: Bedroom[]; onSelectRoom: (r: Bedroom) => void }) {
+function groupByBuildingAndFloor(rooms: Bedroom[]): Record<string, Record<number, Bedroom[]>> {
+  const organized: Record<string, Record<number, Bedroom[]>> = {};
+  for (const room of rooms) {
+    const b = room.edificio ?? "—";
+    const f = room.planta ?? 0;
+    (organized[b] ??= {})[f] ??= [];
+    organized[b][f].push(room);
+  }
+  for (const floors of Object.values(organized)) {
+    for (const floorRooms of Object.values(floors)) {
+      floorRooms.sort((a, b) => a.numero.localeCompare(b.numero));
+    }
+  }
+  return organized;
+}
+
+function getRoomState(ocupantes: number, capacidad: number) {
+  const isFull = ocupantes >= capacidad;
+  const isPartial = ocupantes > 0 && !isFull;
+  return {
+    label: isFull ? "Completa" : isPartial ? "Parcial" : "Libre",
+    badgeClass: isFull ? "bg-red-100 text-red-700 border-0" : isPartial ? "bg-yellow-100 text-yellow-700 border-0" : "bg-green-100 text-green-700 border-0",
+    cellClass: isFull ? "bg-red-50 border-red-400 hover:bg-red-100" : isPartial ? "bg-yellow-50 border-yellow-400 hover:bg-yellow-100" : "bg-green-50 border-green-400 hover:bg-green-100",
+    iconClass: isFull ? "text-red-500" : isPartial ? "text-yellow-600" : "text-green-600",
+    textClass: isFull ? "text-red-700" : isPartial ? "text-yellow-700" : "text-green-700",
+  };
+}
+
+function FloorRow({ floor, rooms, onSelectRoom }: Readonly<{ floor: string; rooms: Bedroom[]; onSelectRoom: (r: Bedroom) => void }>) {
   const occupied = rooms.filter((r) => r.ocupantes_actuales > 0).length;
   return (
     <div className="space-y-2">
@@ -561,16 +556,7 @@ function FloorRow({ floor, rooms, onSelectRoom }: { floor: string; rooms: Bedroo
 }
 
 function RoomMapCell({ room, onClick }: { room: Bedroom; onClick: () => void }) {
-  const isFull = room.ocupantes_actuales >= room.capacidad_maxima;
-  const isPartial = room.ocupantes_actuales > 0 && !isFull;
-  const label = isFull ? "Completa" : isPartial ? "Parcial" : "Libre";
-  const cellClass = isFull
-    ? "bg-red-50 border-red-400 hover:bg-red-100"
-    : isPartial
-      ? "bg-yellow-50 border-yellow-400 hover:bg-yellow-100"
-      : "bg-green-50 border-green-400 hover:bg-green-100";
-  const iconClass = isFull ? "text-red-500" : isPartial ? "text-yellow-600" : "text-green-600";
-  const textClass = isFull ? "text-red-700" : isPartial ? "text-yellow-700" : "text-green-700";
+  const { label, cellClass, iconClass, textClass } = getRoomState(room.ocupantes_actuales, room.capacidad_maxima);
 
   return (
     <motion.button
@@ -587,7 +573,8 @@ function RoomMapCell({ room, onClick }: { room: Bedroom; onClick: () => void }) 
   );
 }
 
-function Stat({ title, value }: any) {
+interface StatProps { title: string; value: React.ReactNode }
+function Stat({ title, value }: StatProps) {
   return (
     <Card>
       <CardHeader>
