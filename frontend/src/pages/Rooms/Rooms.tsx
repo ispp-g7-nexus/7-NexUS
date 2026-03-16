@@ -7,13 +7,6 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 
 import { Input } from "../../components/ui/input";
-import {
-  Select1,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../../components/ui/select";
 import { Button } from "../../components/ui/button";
 import {
   Card,
@@ -22,14 +15,6 @@ import {
   CardTitle,
 } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from "../../components/ui/dialog";
 import { Label } from "../../components/ui/label";
 
 export function Rooms() {
@@ -38,7 +23,7 @@ export function Rooms() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("todos");
   const [viewLayout, setViewLayout] = useState<"list" | "map">("list");
-  const [selectedRoom, setSelectedRoom] = useState<any | null>(null);
+  const [selectedRoom, setSelectedRoom] = useState<Bedroom | null>(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -46,46 +31,42 @@ export function Rooms() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const validateField = (name: string, value: any) => {
-  let error = "";
+    let error = "";
 
-  switch (name) {
-    case "numero":
-      if (!value.trim()) error = "El número es obligatorio";
-      else if (value.trim().length > 50)
-        error = "Máximo 50 caracteres";
-      break;
+    switch (name) {
+      case "numero":
+        if (!value.trim()) error = "El número es obligatorio";
+        else if (value.trim().length > 50)
+          error = "Máximo 50 caracteres";
+        break;
 
-    case "edificio":
-      if (!value.trim()) error = "El edificio es obligatorio";
-      else if (value && value.trim().length > 100)
-        error = "Máximo 100 caracteres";
-      break;
+      case "edificio":
+        if (!value.trim()) error = "El edificio es obligatorio";
+        else if (value && value.trim().length > 100)
+          error = "Máximo 100 caracteres";
+        break;
 
-    case "planta":
-      if (value) {
-        const num = parseInt(value);
-        if (isNaN(num)) error = "Debe ser un número";
-        else if (num < -5 || num > 200)
-          error = "La planta debe estar entre -5 y 200";
-      }
-      break;
+      case "planta":
+        if (value) {
+          const num = Number.parseInt(value);
+          if (isNaN(num)) error = "Debe ser un número";
+          else if (num < -5 || num > 200)
+            error = "La planta debe estar entre -5 y 200";
+        }
+        break;
 
-    case "unidades":
-      if (!isEditing) {
-        const num = parseInt(value);
-        if (isNaN(num) || num < 1)
-          error = "Debe ser al menos 1";
-      }
-      break;
+      case "unidades":
+        if (!isEditing) {
+          const num = Number.parseInt(value);
+          if (isNaN(num) || num < 1)
+            error = "Debe ser al menos 1";
+        }
+        break;
     }
 
-    setErrors((prev) => ({
-        ...prev,
-        [name]: error,
-    }));
-
+    setErrors((prev) => ({ ...prev, [name]: error }));
     return !error;
-    };
+  };
 
   const [form, setForm] = useState({
     numero: "",
@@ -97,6 +78,16 @@ export function Rooms() {
 
   useEffect(() => {
     fetchRooms();
+  }, []);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setIsModalOpen(false);
+      setSelectedRoom(null);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
 
   const fetchRooms = async () => {
@@ -136,19 +127,22 @@ export function Rooms() {
   }, [rooms, search, filter]);
 
   const roomsByBuildingAndFloor = useMemo(() => {
-    const organized: Record<string, Record<number, any[]>> = {};
-    filteredRooms.forEach((room) => {
+    const organized: Record<string, Record<number, Bedroom[]>> = {};
+
+    for (const room of filteredRooms) {
       const b = room.edificio ?? "—";
-      const f = room.planta ?? 0;
+      const f: number = room.planta ?? 0;
       if (!organized[b]) organized[b] = {};
       if (!organized[b][f]) organized[b][f] = [];
       organized[b][f].push(room);
-    });
-    Object.keys(organized).forEach((b) => {
-      Object.keys(organized[b]).forEach((f) => {
-        organized[b][parseInt(f)].sort((a: any, b: any) => a.numero.localeCompare(b.numero));
-      });
-    });
+    }
+
+    for (const floors of Object.values(organized)) {
+      for (const floorRooms of Object.values(floors)) {
+        floorRooms.sort((a, b) => a.numero.localeCompare(b.numero));
+      }
+    }
+
     return organized;
   }, [filteredRooms]);
 
@@ -163,18 +157,18 @@ export function Rooms() {
     let valid = true;
 
     fieldsToValidate.forEach((field) => {
-        if (!validateField(field, form[field as keyof typeof form])) {
+      if (!validateField(field, form[field as keyof typeof form])) {
         valid = false;
-        }
+      }
     });
 
     if (!valid) return;
 
-    const base = parseInt(form.numero.replace(/\D/g, "")) || 0;
+    const base = Number.parseInt(form.numero.replace(/\D/g, "")) || 0;
     const prefix = form.numero.replace(/\d/g, "");
 
     const payloadBase = {
-      planta: form.planta ? parseInt(form.planta) : null,
+      planta: form.planta ? Number.parseInt(form.planta) : null,
       edificio: form.edificio,
       tipo: form.tipo,
       capacidad_maxima: form.tipo === "Individual" ? 1 : form.tipo === "Doble" ? 2 : 3,
@@ -182,11 +176,8 @@ export function Rooms() {
 
     try {
       for (let i = 0; i < form.unidades; i++) {
-        const numero =
-          form.unidades > 1 ? `${prefix}${base + i}` : form.numero;
-
+        const numero = form.unidades > 1 ? `${prefix}${base + i}` : form.numero;
         const payload = { ...payloadBase, numero };
-
         if (isEditing && editingId) {
           const res = await updateBedroom(editingId, payload);
           if (!res.ok) {
@@ -274,16 +265,15 @@ export function Rooms() {
             />
           </div>
 
-          <Select1 value={filter} onValueChange={setFilter}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filtro" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos</SelectItem>
-              <SelectItem value="ocupadas">Ocupadas</SelectItem>
-              <SelectItem value="libres">Libres</SelectItem>
-            </SelectContent>
-          </Select1>
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            className="w-[180px] h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="todos">Todos</option>
+            <option value="ocupadas">Ocupadas</option>
+            <option value="libres">Libres</option>
+          </select>
         </CardContent>
       </Card>
 
@@ -293,7 +283,7 @@ export function Rooms() {
           {filteredRooms.map((r) => (
             <Card
               key={r.id}
-              className={`hover:shadow-md transition ${!r.is_active ? 'border-destructive/30 bg-destructive/5' : 'bg-card'} `}
+              className={`hover:shadow-md transition ${r.ocupantes_actuales > 0 ? 'border-destructive/30 bg-destructive/5' : 'bg-card'}`}
             >
               <CardContent className="flex justify-between items-center p-4">
                 <div>
@@ -371,7 +361,8 @@ export function Rooms() {
         <div className="space-y-4">
           <div className="flex items-center gap-4 text-sm text-gray-600">
             <span className="flex items-center gap-1.5"><span className="w-4 h-4 rounded border-2 border-green-400 bg-green-50 inline-block" />Libre</span>
-            <span className="flex items-center gap-1.5"><span className="w-4 h-4 rounded border-2 border-red-400 bg-red-50 inline-block" />Ocupada</span>
+            <span className="flex items-center gap-1.5"><span className="w-4 h-4 rounded border-2 border-yellow-400 bg-yellow-50 inline-block" />Parcial</span>
+            <span className="flex items-center gap-1.5"><span className="w-4 h-4 rounded border-2 border-red-400 bg-red-50 inline-block" />Completa</span>
           </div>
           {Object.entries(roomsByBuildingAndFloor)
             .sort(([a], [b]) => a.localeCompare(b))
@@ -384,29 +375,19 @@ export function Rooms() {
                   </div>
                   <CardContent className="p-3 space-y-4">
                     {Object.entries(floors)
-                      .sort(([a], [b]) => parseInt(b) - parseInt(a))
+                      .sort(([a], [b]) => Number.parseInt(b) - Number.parseInt(a))
                       .map(([floor, floorRooms]) => (
                         <div key={floor} className="space-y-2">
                           <div className="flex items-center gap-2">
                             <div className="bg-gray-100 px-2 py-1 rounded text-xs font-bold text-gray-600">
-                              {parseInt(floor) === 0 ? "Planta baja" : `Planta ${floor}`}
+                              {Number.parseInt(floor) === 0 ? "Planta baja" : `Planta ${floor}`}
                             </div>
                             <div className="flex-1 h-px bg-gray-200" />
-                            <span className="text-[11px] text-gray-400">{(floorRooms as any[]).filter((r: any) => !r.is_active).length}/{(floorRooms as any[]).length} ocupadas</span>
+                            <span className="text-[11px] text-gray-400">{floorRooms.filter((r) => r.ocupantes_actuales > 0).length}/{floorRooms.length} ocupadas</span>
                           </div>
                           <div className="grid grid-cols-5 sm:grid-cols-8 gap-2">
-                            {(floorRooms as any[]).map((room) => (
-                              <motion.button
-                                key={room.id}
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() => setSelectedRoom(room)}
-                                title={`Hab. ${room.numero} — ${!room.is_active ? "Ocupada" : "Libre"}`}
-                                className={`relative aspect-square rounded-lg border-2 flex flex-col items-center justify-center p-1.5 transition-all ${!room.is_active ? "bg-red-50 border-red-400 hover:bg-red-100" : "bg-green-50 border-green-400 hover:bg-green-100"}`}
-                              >
-                                <Bed className={`w-4 h-4 mb-0.5 ${!room.is_active ? "text-red-500" : "text-green-600"}`} />
-                                <span className={`text-[9px] font-bold leading-tight text-center ${!room.is_active ? "text-red-700" : "text-green-700"}`}>{room.numero}</span>
-                              </motion.button>
+                            {floorRooms.map((room) => (
+                              <RoomMapCell key={room.id} room={room} onClick={() => setSelectedRoom(room)} />
                             ))}
                           </div>
                         </div>
@@ -419,147 +400,183 @@ export function Rooms() {
       )}
 
       {/* Detalle habitación (mapa) */}
-      <Dialog open={!!selectedRoom} onOpenChange={(open) => !open && setSelectedRoom(null)}>
-        <DialogContent className="max-w-sm rounded-2xl">
-          {selectedRoom && (
-            <>
-              <DialogHeader>
-                <div className="flex items-center gap-3 mb-1">
-                  <div className={`p-2 rounded-xl ${!selectedRoom.is_active ? "bg-red-100" : "bg-green-100"}`}>
-                    <Bed className={`w-5 h-5 ${!selectedRoom.is_active ? "text-red-600" : "text-green-600"}`} />
-                  </div>
-                  <div>
-                    <DialogTitle className="text-lg leading-tight">Habitación {selectedRoom.numero}</DialogTitle>
-                    <DialogDescription>Edificio {selectedRoom.edificio} · Planta {selectedRoom.planta ?? "—"}</DialogDescription>
-                  </div>
-                </div>
-              </DialogHeader>
-              <div className="grid grid-cols-2 gap-3 py-2">
-                <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                  <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1">Tipo</p>
-                  <p className="text-sm font-semibold">{selectedRoom.tipo}</p>
-                </div>
-                <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                  <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1">Capacidad</p>
-                  <p className="text-sm font-semibold">{selectedRoom.capacidad_maxima} persona{selectedRoom.capacidad_maxima !== 1 ? "s" : ""}</p>
-                </div>
-                <div className="col-span-2 bg-gray-50 p-3 rounded-xl border border-gray-100">
-                  <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1">Estado</p>
-                  <Badge className={!selectedRoom.is_active ? "bg-red-100 text-red-700 border-0" : "bg-green-100 text-green-700 border-0"}>{!selectedRoom.is_active ? "Ocupada" : "Libre"}</Badge>
-                </div>
+      {selectedRoom && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/50" onClick={() => setSelectedRoom(null)} />
+          <div className="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <div className={`p-2 rounded-xl ${selectedRoom.ocupantes_actuales > 0 ? "bg-red-100" : "bg-green-100"}`}>
+                <Bed className={`w-5 h-5 ${selectedRoom.ocupantes_actuales > 0 ? "text-red-600" : "text-green-600"}`} />
               </div>
-              <DialogFooter>
-                <Button className="w-full" variant="outline" onClick={() => { setSelectedRoom(null); setEditingId(selectedRoom.id); setForm({ numero: selectedRoom.numero, edificio: selectedRoom.edificio, planta: selectedRoom.planta, tipo: selectedRoom.tipo, unidades: 1 }); setIsEditing(true); setIsModalOpen(true); }}>
-                  <Edit2 className="w-4 h-4 mr-2" />Editar habitación
-                </Button>
-              </DialogFooter>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+              <div>
+                <h2 className="text-lg font-semibold leading-tight">Habitación {selectedRoom.numero}</h2>
+                <p className="text-sm text-muted-foreground">Edificio {selectedRoom.edificio} · Planta {selectedRoom.planta ?? "—"}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 py-2">
+              <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1">Tipo</p>
+                <p className="text-sm font-semibold">{selectedRoom.tipo}</p>
+              </div>
+              <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1">Ocupación</p>
+                <p className="text-sm font-semibold">{selectedRoom.ocupantes_actuales}/{selectedRoom.capacidad_maxima} ocupantes</p>
+              </div>
+              <div className="col-span-2 bg-gray-50 p-3 rounded-xl border border-gray-100">
+                <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1">Estado</p>
+                <Badge className={
+                  selectedRoom.ocupantes_actuales >= selectedRoom.capacidad_maxima
+                    ? "bg-red-100 text-red-700 border-0"
+                    : selectedRoom.ocupantes_actuales > 0
+                      ? "bg-yellow-100 text-yellow-700 border-0"
+                      : "bg-green-100 text-green-700 border-0"
+                }>
+                  {selectedRoom.ocupantes_actuales >= selectedRoom.capacidad_maxima
+                    ? "Completa"
+                    : selectedRoom.ocupantes_actuales > 0
+                      ? "Parcial"
+                      : "Libre"}
+                </Badge>
+              </div>
+            </div>
+            <Button className="w-full mt-4" variant="outline" onClick={() => {
+              setSelectedRoom(null);
+              setEditingId(selectedRoom.id);
+              setForm({
+                numero: selectedRoom.numero,
+                edificio: selectedRoom.edificio,
+                planta: selectedRoom.planta != null ? String(selectedRoom.planta) : "",
+                tipo: selectedRoom.tipo,
+                unidades: 1,
+              });
+              setErrors({});
+              setIsEditing(true);
+              setIsModalOpen(true);
+            }}>
+              <Edit2 className="w-4 h-4 mr-2" />Editar habitación
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Modal */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/50" onClick={() => setIsModalOpen(false)} />
+          <div className="relative bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
+            <h2 className="text-lg font-semibold mb-4">
               {isEditing ? "Editar habitación" : "Nueva habitación"}
-            </DialogTitle>
-          </DialogHeader>
-          {errors.general && (
-            <div className="bg-destructive/10 text-destructive p-3 rounded-md">
+            </h2>
+            {errors.general && (
+              <div className="bg-destructive/10 text-destructive p-3 rounded-md">
                 {errors.general}
-            </div>
-          )}
+              </div>
+            )}
 
-          <form onSubmit={handleSave} className="space-y-4">
-            <div>
-              <Label>Número</Label>
+            <form onSubmit={handleSave} className="space-y-4">
+              <div>
+                <Label>Número</Label>
                 <Input
                   value={form.numero}
                   onChange={(e) => onChange("numero", (e.target as HTMLInputElement).value)}
                 />
                 {errors.numero && (
-                    <p className="text-sm text-destructive mt-1">
-                    {errors.numero}
-                    </p>
+                  <p className="text-sm text-destructive mt-1">{errors.numero}</p>
                 )}
-            </div>
+              </div>
 
-            <div>
-              <Label>Edificio</Label>
+              <div>
+                <Label>Edificio</Label>
                 <Input
                   value={form.edificio}
                   onChange={(e) => onChange("edificio", (e.target as HTMLInputElement).value)}
                 />
                 {errors.edificio && (
-                    <p className="text-sm text-destructive mt-1">
-                    {errors.edificio}
-                    </p>
-                )}
-            </div>
-
-            <div>
-              <Label>Planta</Label>
-              <Input
-                value={form.planta}
-                onChange={(e) => onChange("planta", (e.target as HTMLInputElement).value)}
-              />
-                {errors.planta && (
-                    <p className="text-sm text-destructive mt-1">
-                    {errors.planta}
-                    </p>
-                )}
-            </div>
-
-            <div>
-              <Label>Tipo</Label>
-              <Select1
-                value={form.tipo}
-                onValueChange={(v) => onChange("tipo", v)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Individual">Individual</SelectItem>
-                  <SelectItem value="Doble">Doble</SelectItem>
-                  <SelectItem value="Triple">Triple</SelectItem>
-                </SelectContent>
-              </Select1>
-            </div>
-
-            {!isEditing && (
-              <div>
-                <Label>Unidades</Label>
-                <Input
-                  type="number"
-                  value={String(form.unidades)}
-                  onChange={(e) => onChange("unidades", parseInt((e.target as HTMLInputElement).value || '1'))}
-                />
-                {errors.unidades && (
-                    <p className="text-sm text-destructive mt-1">
-                    {errors.unidades}
-                    </p>
+                  <p className="text-sm text-destructive mt-1">{errors.edificio}</p>
                 )}
               </div>
-            )}
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                disabled={Object.values(errors).some((e) => e)}
-              >
-                Guardar
-            </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+              <div>
+                <Label>Planta</Label>
+                <Input
+                  value={form.planta}
+                  onChange={(e) => onChange("planta", (e.target as HTMLInputElement).value)}
+                />
+                {errors.planta && (
+                  <p className="text-sm text-destructive mt-1">{errors.planta}</p>
+                )}
+              </div>
+
+              <div>
+                <Label>Tipo</Label>
+                <select
+                  value={form.tipo}
+                  onChange={(e) => onChange("tipo", e.target.value)}
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="Individual">Individual</option>
+                  <option value="Doble">Doble</option>
+                  <option value="Triple">Triple</option>
+                </select>
+              </div>
+
+              {!isEditing && (
+                <div>
+                  <Label>Unidades</Label>
+                  <Input
+                    type="number"
+                    value={String(form.unidades)}
+                    onChange={(e) => onChange("unidades", Number.parseInt((e.target as HTMLInputElement).value || '1'))}
+                  />
+                  {errors.unidades && (
+                    <p className="text-sm text-destructive mt-1">{errors.unidades}</p>
+                  )}
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={Object.values(errors).some((e) => e)}
+                >
+                  Guardar
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+function RoomMapCell({ room, onClick }: { room: Bedroom; onClick: () => void }) {
+  const isFull = room.ocupantes_actuales >= room.capacidad_maxima;
+  const isPartial = room.ocupantes_actuales > 0 && !isFull;
+  const label = isFull ? "Completa" : isPartial ? "Parcial" : "Libre";
+  const cellClass = isFull
+    ? "bg-red-50 border-red-400 hover:bg-red-100"
+    : isPartial
+      ? "bg-yellow-50 border-yellow-400 hover:bg-yellow-100"
+      : "bg-green-50 border-green-400 hover:bg-green-100";
+  const iconClass = isFull ? "text-red-500" : isPartial ? "text-yellow-600" : "text-green-600";
+  const textClass = isFull ? "text-red-700" : isPartial ? "text-yellow-700" : "text-green-700";
+
+  return (
+    <motion.button
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+      onClick={onClick}
+      aria-label={`Hab. ${room.numero} — ${label}`}
+      title={`Hab. ${room.numero} — ${label}`}
+      className={`relative aspect-square rounded-lg border-2 flex flex-col items-center justify-center p-1.5 transition-all ${cellClass}`}
+    >
+      <Bed className={`w-4 h-4 mb-0.5 ${iconClass}`} />
+      <span className={`text-[9px] font-bold leading-tight text-center ${textClass}`}>{room.numero}</span>
+    </motion.button>
   );
 }
 
