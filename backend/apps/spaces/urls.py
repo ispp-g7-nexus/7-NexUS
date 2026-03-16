@@ -9,6 +9,7 @@ from .views import (
     AdminSpaceListCreateView,
     AdminSpaceDetailView,
     AdminSpaceReservationsView,
+    AdminSpaceNotificationsView,
 )
 
 urlpatterns = [
@@ -23,4 +24,5 @@ urlpatterns = [
     path("admin/spaces/", AdminSpaceListCreateView.as_view(), name="admin-space-list-create"),
     path("admin/spaces/<int:space_id>/", AdminSpaceDetailView.as_view(), name="admin-space-detail"),
     path("admin/spaces/<int:space_id>/reservations/", AdminSpaceReservationsView.as_view(), name="admin-space-reservations"),
+    path("admin/spaces/notifications/", AdminSpaceNotificationsView.as_view(), name="admin-space-notifications"),
 ]

@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { listBedrooms, createBedroom, updateBedroom, deleteBedroom } from "../../services/bedrooms";
+import { listBedrooms, createBedroom, updateBedroom, deleteBedroom, type Bedroom } from "../../services/bedrooms";
 import "../../index.css";
 import roomSvg from "../../assets/room.svg";
 import { Plus, Edit2, Trash2, Search as SearchIcon, Bed, Building2, Grid3x3, List } from "lucide-react";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 
 import { Input } from "../../components/ui/input";
 import {
@@ -32,7 +33,7 @@ import {
 import { Label } from "../../components/ui/label";
 
 export function Rooms() {
-  const [rooms, setRooms] = useState<any[]>([]);
+  const [rooms, setRooms] = useState<Bedroom[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("todos");
@@ -101,16 +102,18 @@ export function Rooms() {
   const fetchRooms = async () => {
     setLoading(true);
     try {
-      const res = await listBedrooms();
-      const data = await res.json();
+      const data = await listBedrooms();
       setRooms(data);
+    } catch (err) {
+      console.error(err);
+      toast.error("Error al cargar las habitaciones.");
     } finally {
       setLoading(false);
     }
   };
 
   const stats = useMemo(() => {
-    const ocupadas = rooms.filter((r) => !r.is_active).length;
+    const ocupadas = rooms.filter((r) => r.ocupantes_actuales > 0).length;
     return {
       total: rooms.length,
       ocupadas,
@@ -121,8 +124,8 @@ export function Rooms() {
   const filteredRooms = useMemo(() => {
     let list = [...rooms];
 
-    if (filter === "ocupadas") list = list.filter((r) => !r.is_active);
-    if (filter === "libres") list = list.filter((r) => r.is_active);
+    if (filter === "ocupadas") list = list.filter((r) => r.ocupantes_actuales > 0);
+    if (filter === "libres") list = list.filter((r) => r.ocupantes_actuales === 0);
 
     if (search)
       list = list.filter((r) =>
@@ -177,21 +180,36 @@ export function Rooms() {
       capacidad_maxima: form.tipo === "Individual" ? 1 : form.tipo === "Doble" ? 2 : 3,
     };
 
-    for (let i = 0; i < form.unidades; i++) {
-      const numero =
-        form.unidades > 1 ? `${prefix}${base + i}` : form.numero;
+    try {
+      for (let i = 0; i < form.unidades; i++) {
+        const numero =
+          form.unidades > 1 ? `${prefix}${base + i}` : form.numero;
 
-      const payload = { ...payloadBase, numero };
+        const payload = { ...payloadBase, numero };
 
-      if (isEditing && editingId) {
-        await updateBedroom(editingId, payload);
-      } else {
-        await createBedroom(payload);
+        if (isEditing && editingId) {
+          const res = await updateBedroom(editingId, payload);
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            throw new Error((body as { detail?: string }).detail || `Error ${res.status}`);
+          }
+        } else {
+          const res = await createBedroom(payload);
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            throw new Error((body as { detail?: string }).detail || `Error ${res.status}`);
+          }
+        }
       }
-    }
 
-    setIsModalOpen(false);
-    fetchRooms();
+      toast.success(isEditing ? "Habitación actualizada." : "Habitación(es) creada(s).");
+      setIsModalOpen(false);
+      fetchRooms();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Error al guardar la habitación.";
+      setErrors((prev) => ({ ...prev, general: message }));
+      toast.error(message);
+    }
   };
 
   const openCreate = () => {
@@ -202,6 +220,7 @@ export function Rooms() {
       tipo: "Individual",
       unidades: 1,
     });
+    setErrors({});
     setIsEditing(false);
     setIsModalOpen(true);
   };
@@ -279,13 +298,19 @@ export function Rooms() {
               <CardContent className="flex justify-between items-center p-4">
                 <div>
                   <h3 className="font-semibold flex items-center gap-2">
-                    <Bed className="w-5 h-5 text-muted-foreground" /> {r.numero}-{r.edificio}{console.log(r)}
+                    <Bed className="w-5 h-5 text-muted-foreground" /> {r.numero}-{r.edificio}
                   </h3>
-                  <p className="text-sm text-muted-foreground">Planta {r.planta ?? "-"} · {r.tipo}</p>
+                  <p className="text-sm text-muted-foreground">Planta {r.planta ?? "-"} · {r.tipo} · {r.ocupantes_actuales}/{r.capacidad_maxima} ocupantes</p>
                 </div>
 
                 <div className="flex gap-3 items-center">
-                  <Badge variant={!r.is_active ? "default" : "secondary"}>{!r.is_active ? "Ocupada" : "Libre"}</Badge>
+                  <Badge variant={r.ocupantes_actuales > 0 ? "default" : "secondary"}>
+                    {r.ocupantes_actuales >= r.capacidad_maxima
+                      ? "Completa"
+                      : r.ocupantes_actuales > 0
+                        ? "Parcial"
+                        : "Libre"}
+                  </Badge>
 
                   <Button
                     variant="outline"
@@ -294,10 +319,11 @@ export function Rooms() {
                       setForm({
                         numero: r.numero,
                         edificio: r.edificio,
-                        planta: r.planta,
+                        planta: r.planta != null ? String(r.planta) : "",
                         tipo: r.tipo,
                         unidades: 1,
                       });
+                      setErrors({});
                       setIsEditing(true);
                       setIsModalOpen(true);
                     }}
@@ -310,11 +336,24 @@ export function Rooms() {
                     onClick={async () => {
                       if (!confirm("¿Eliminar habitación?")) return;
                       try {
-                        await deleteBedroom(r.id);
-                        fetchRooms();
+                        const res = await deleteBedroom(r.id);
+                        if (res.ok) {
+                          toast.success("Habitación eliminada correctamente.");
+                          fetchRooms();
+                        } else {
+                          const body = await res.json().catch(() => ({}));
+                          const detail = (body as { detail?: string }).detail;
+                          if (res.status === 409) {
+                            toast.error(detail || "No se puede eliminar: tiene residentes asignados.");
+                          } else if (res.status === 404) {
+                            toast.error("La habitación no existe.");
+                          } else {
+                            toast.error(detail || `Error ${res.status} al eliminar la habitación.`);
+                          }
+                        }
                       } catch (err) {
                         console.error(err);
-                        alert("Error al eliminar");
+                        toast.error("Error de conexión al eliminar la habitación.");
                       }
                     }}
                   >

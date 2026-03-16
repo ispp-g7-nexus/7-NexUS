@@ -79,8 +79,8 @@ def _is_admin_for_residence(user, residence: Residence) -> bool:
         user=user,
         is_active=True,
     ).filter(
-        Q(role=Membership.Role.RESIDENCE_ADMIN, residence=residence)
-        | Q(role=Membership.Role.PORTFOLIO_ADMIN)
+        Q(role__name__iexact="residence_admin", residence=residence)
+        | Q(role__name__iexact="portfolio_admin")
     ).exists()
 
 
@@ -506,3 +506,37 @@ class AdminSpaceReservationsView(AdminRequiredMixin, AuthenticatedView):
             qs = qs.filter(status=status_filter)
 
         return JsonResponse([_serialize_reservation(r) for r in qs], safe=False)
+
+
+class AdminSpaceNotificationsView(AdminRequiredMixin, AuthenticatedView):
+    NOTIFICATION_LIMIT = 8
+
+    def get(self, request):
+        residence = _validate_residence(request)
+        if not residence:
+            return JsonResponse({"detail": "No residence context."}, status=400)
+
+        now = timezone.now()
+        reservations = (
+            SpaceReservation.objects.filter(
+                residence=residence,
+                status=SpaceReservation.Status.ACTIVE,
+                end_time__gt=now,
+            )
+            .exclude(user=request.user)
+            .select_related("space", "user")
+            .order_by("-created_at")[: self.NOTIFICATION_LIMIT]
+        )
+
+        data = [
+            {
+                "id": reservation.id,
+                "title": f"Nueva reserva en {reservation.space.name}",
+                "message": f"{reservation.user.first_name or reservation.user.email} ha realizado una reserva.",
+                "created_at": reservation.created_at.isoformat(),
+                "end_time": reservation.end_time.isoformat(),
+            }
+            for reservation in reservations
+        ]
+
+        return JsonResponse(data, safe=False)

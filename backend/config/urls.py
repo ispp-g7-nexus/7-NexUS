@@ -47,6 +47,7 @@ urlpatterns = [
     path("api/incidences/", include("apps.incidences.urls")),
     path("api/membership/", include("apps.membership.urls")),
     path('api/', include('apps.announcements.urls')),
+    path("api/", include("apps.packages.urls")),
     path("api/", include("apps.spaces.urls")),
 ]
 

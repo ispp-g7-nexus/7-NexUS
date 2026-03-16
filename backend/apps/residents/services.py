@@ -1,9 +1,48 @@
 from django.contrib.auth import get_user_model
+from rest_framework.exceptions import ValidationError
 
 from apps.membership.models import Membership, Role
 from apps.common.services import process_password_reset_request
 
 UserModel = get_user_model()
+
+
+def _sync_user_active_status(user) -> None:
+    """Activa o desactiva el usuario según si mantiene memberships activas."""
+    has_active_memberships = Membership.objects.filter(user=user, is_active=True).exists()
+    if user.is_active != has_active_memberships:
+        user.is_active = has_active_memberships
+        user.save(update_fields=["is_active"])
+
+
+def _get_bedroom(bedroom_id: int, residence, exclude_membership_id: int | None = None):
+    """Valida que la habitación exista, pertenezca a la residencia y tenga capacidad.
+
+    exclude_membership_id: ID de la Membership del residente que se está editando,
+    para no contarlo como ocupante al calcular la capacidad disponible.
+    """
+    from apps.bedrooms.models import Bedroom
+
+    try:
+        # Fix #1: rechazar habitaciones desactivadas
+        bedroom = Bedroom.objects.get(id=bedroom_id, residence=residence, is_active=True)
+    except Bedroom.DoesNotExist:
+        raise ValidationError(
+            {"bedroom_id": "La habitación no existe, no pertenece a esta residencia o está desactivada."}
+        )
+
+    # Fix #2: solo contar ocupantes con rol Student para no bloquear huecos por otros roles
+    ocupantes_qs = bedroom.residents.filter(is_active=True, role__name="Student")
+    if exclude_membership_id is not None:
+        ocupantes_qs = ocupantes_qs.exclude(id=exclude_membership_id)
+
+    if ocupantes_qs.count() >= bedroom.capacidad_maxima:
+        raise ValidationError(
+            {"bedroom_id": f"La habitación '{bedroom.numero}' ya está al completo "
+                           f"({bedroom.capacidad_maxima}/{bedroom.capacidad_maxima} ocupantes)."}
+        )
+
+    return bedroom
 
 
 def _get_student_role() -> Role:
@@ -28,12 +67,19 @@ def create_resident(data: dict, residence, request) -> dict:
     3. Si se proporcionó contraseña, la establece; si no, envía un correo de
        restablecimiento para que el residente configure la suya.
     4. Crea la Membership con rol Student en la residencia, si no existe ya.
+    5. Si se proporcionó bedroom_id, valida y asigna la habitación.
 
     Retorna un dict con { 'created': bool, 'email': str }.
     """
     email = data["email"].lower()
     user = UserModel.objects.filter(email__iexact=email).first()
     created = False
+
+    # Validar habitación antes de crear/buscar el usuario para fallar pronto
+    bedroom = None
+    bedroom_id = data.get("bedroom_id")
+    if bedroom_id is not None:
+        bedroom = _get_bedroom(bedroom_id, residence)
 
     if not user:
         base_username = email.split("@", 1)[0][:30]
@@ -63,15 +109,29 @@ def create_resident(data: dict, residence, request) -> dict:
 
     student_role = _get_student_role()
 
-    if not Membership.objects.filter(
+    existing_membership = Membership.objects.filter(
         user=user, role=student_role, residence=residence
-    ).exists():
+    ).first()
+
+    if existing_membership is None:
         Membership.objects.create(
             user=user,
             role=student_role,
             residence=residence,
             is_active=True,
+            bedroom=bedroom,
         )
+    else:
+        # Fix #3: reactivar Membership inactiva (residente dado de baja y re-registrado)
+        # y actualizar habitación si se proporcionó
+        update_fields = {"is_active": True}
+        if bedroom is not None:
+            update_fields["bedroom"] = bedroom
+        for attr, val in update_fields.items():
+            setattr(existing_membership, attr, val)
+        existing_membership.save()
+
+    _sync_user_active_status(user)
 
     passwd = data.get("password")
     if passwd:
@@ -90,21 +150,19 @@ def create_resident(data: dict, residence, request) -> dict:
 def _membership_to_dict(membership) -> dict:
     """Convierte User + Membership en un dict con los campos del residente.
 
-    Los campos room, building y check_in_date se reservan para cuando el
-    modelo Membership los incorpore; por ahora se devuelven como vacíos
-    para que el serializer de lectura no falle.
+    Los campos room y building se obtienen de la habitación asignada (FK bedroom).
     """
     user = membership.user
     full_name = f"{user.first_name} {user.last_name}".strip() or user.username
+    bedroom = membership.bedroom  # ya resuelto gracias a select_related
     return {
         "id": membership.id,
         "full_name": full_name,
         "email": user.email,
         "is_active": membership.is_active,
-        # Estos campos no existen todavía en el modelo; se devuelven vacíos
-        # para que ResidentReadSerializer no genere errores de tipo.
-        "room": getattr(membership, "room", "") or "",
-        "building": getattr(membership, "building", "") or "",
+        "bedroom_id": bedroom.id if bedroom else None,
+        "room": bedroom.numero if bedroom else "",
+        "building": bedroom.edificio if bedroom else "",
         "check_in_date": getattr(membership, "check_in_date", None),
         "created_at": membership.created_at,
     }
@@ -114,7 +172,7 @@ def list_residents(residence) -> list:
     """Devuelve todos los residentes (User+Membership) de una residencia."""
     memberships = (
         Membership.objects.filter(role__name="Student", residence=residence)
-        .select_related("user", "role")
+        .select_related("user", "role", "bedroom")
         .order_by("created_at")
     )
     return [_membership_to_dict(m) for m in memberships]
@@ -123,7 +181,7 @@ def list_residents(residence) -> list:
 def get_resident(membership_id: int, residence):
     """Devuelve un residente por el ID de su Membership, o None si no existe."""
     try:
-        membership = Membership.objects.select_related("user", "role").get(
+        membership = Membership.objects.select_related("user", "role", "bedroom").get(
             id=membership_id, role__name="Student", residence=residence
         )
     except Membership.DoesNotExist:
@@ -133,11 +191,11 @@ def get_resident(membership_id: int, residence):
 
 def update_resident(membership_id: int, data: dict, residence) -> dict | None:
     """
-    Actualiza los datos de un residente (email, full_name, is_active).
+    Actualiza los datos de un residente (email, full_name, is_active, bedroom).
     Retorna el dict actualizado o None si no existe.
     """
     try:
-        membership = Membership.objects.select_related("user", "role").get(
+        membership = Membership.objects.select_related("user", "role", "bedroom").get(
             id=membership_id, role__name="Student", residence=residence
         )
     except Membership.DoesNotExist:
@@ -155,25 +213,53 @@ def update_resident(membership_id: int, data: dict, residence) -> dict | None:
 
     user.save()
 
+    membership_dirty = False
+
     if "is_active" in data:
         membership.is_active = data["is_active"]
+        membership_dirty = True
+
+    if "bedroom_id" in data:
+        if data["bedroom_id"] is None:
+            # Desasignar habitación explícitamente
+            membership.bedroom = None
+        else:
+            # Excluir al propio residente del conteo de capacidad
+            membership.bedroom = _get_bedroom(
+                data["bedroom_id"], residence, exclude_membership_id=membership.id
+            )
+        membership_dirty = True
+
+    if membership_dirty:
         membership.save()
+
+    if "is_active" in data:
+        _sync_user_active_status(user)
 
     return _membership_to_dict(membership)
 
 
 def delete_resident(membership_id: int, residence) -> bool:
     """
-    Soft-delete: desactiva la Membership del residente.
-    Retorna True si se desactivó, False si no existía.
+    Hard-delete: elimina físicamente la Membership del residente.
+    Si el usuario se queda sin memberships, elimina también su cuenta.
+    Devuelve True si se eliminó, False si no existía.
     """
     try:
-        membership = Membership.objects.get(
+        membership = Membership.objects.select_related("user").get(
             id=membership_id, role__name="Student", residence=residence
         )
     except Membership.DoesNotExist:
         return False
 
-    membership.is_active = False
-    membership.save()
+    user = membership.user
+
+    membership.delete()
+
+    has_other_memberships = Membership.objects.filter(user=user).exists()
+    if not has_other_memberships:
+        user.delete()
+    else:
+        _sync_user_active_status(user)
+
     return True

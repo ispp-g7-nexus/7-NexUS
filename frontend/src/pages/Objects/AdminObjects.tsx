@@ -1,5 +1,5 @@
 import { Plus, RefreshCw, Package } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "../../components/ui/button";
@@ -9,6 +9,8 @@ import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
 import { objectsService, ObjectItem, ObjectRental } from "../../services/objects";
+
+const OBJECT_NAME_REGEX = /^[\p{L}\p{N} _().,-]+$/u;
 
 function ObjectCard({
   object,
@@ -27,12 +29,12 @@ function ObjectCard({
             <h3 className="text-base font-semibold text-foreground truncate">{object.name}</h3>
             <span
               className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
-                object.availability
+                object.can_rent
                   ? "bg-emerald-100 text-emerald-700"
                   : "bg-slate-200 text-slate-600"
               }`}
             >
-              {object.availability ? "Disponible" : "No disponible"}
+              {object.can_rent ? "Disponible" : "No disponible"}
             </span>
           </div>
           {object.description && (
@@ -82,6 +84,7 @@ function ObjectCard({
 export function AdminObjects() {
   const [objects, setObjects] = useState<ObjectItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const objectsRequestIdRef = useRef(0);
 
   // Create form
   const [formOpen, setFormOpen] = useState(false);
@@ -99,34 +102,45 @@ export function AdminObjects() {
   const [selectedObject, setSelectedObject] = useState<ObjectItem | null>(null);
   const [rentals, setRentals] = useState<ObjectRental[]>([]);
   const [loadingRentals, setLoadingRentals] = useState(false);
+  const getErrorMessage = (err: unknown, fallback: string) =>
+    err instanceof Error && err.message ? err.message : fallback;
 
-  const loadObjects = async () => {
-    setLoading(true);
+  const loadObjects = useCallback(async (options?: { silent?: boolean }) => {
+    const requestId = ++objectsRequestIdRef.current;
+    const silent = options?.silent ?? false;
+    if (!silent) {
+      setLoading(true);
+    }
+
     try {
       const data = await objectsService.getObjects();
-      setObjects(data);
-    } catch (err: any) {
-      toast.error(err.message || "Error al cargar objetos");
+      if (requestId === objectsRequestIdRef.current) {
+        setObjects(data);
+      }
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Error al cargar objetos"));
     } finally {
-      setLoading(false);
+      if (!silent && requestId === objectsRequestIdRef.current) {
+        setLoading(false);
+      }
     }
-  };
+  }, []);
 
   const loadRentals = async (objectId: number) => {
     setLoadingRentals(true);
     try {
       const data = await objectsService.getObjectRentals(objectId);
       setRentals(data);
-    } catch (err: any) {
-      toast.error(err.message || "Error al cargar préstamos");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Error al cargar préstamos"));
     } finally {
       setLoadingRentals(false);
     }
   };
 
   useEffect(() => {
-    loadObjects();
-  }, []);
+    void loadObjects();
+  }, [loadObjects]);
 
   const handleOpenForm = () => {
     setFormData({ name: "", description: "", location: "", tags: "", image_url: "" });
@@ -140,11 +154,21 @@ export function AdminObjects() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const trimmedName = formData.name.trim();
+    if (!trimmedName) {
+      toast.error("El nombre del objeto es obligatorio");
+      return;
+    }
+    if (!OBJECT_NAME_REGEX.test(trimmedName)) {
+      toast.error("El nombre contiene caracteres no válidos");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
       await objectsService.createObject({
-        name: formData.name,
+        name: trimmedName,
         description: formData.description || undefined,
         location: formData.location || undefined,
         tags: formData.tags || undefined,
@@ -152,9 +176,9 @@ export function AdminObjects() {
       });
       toast.success("Objeto creado exitosamente");
       handleCloseForm();
-      loadObjects();
-    } catch (err: any) {
-      toast.error(err.message || "Error al crear objeto");
+      await loadObjects();
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Error al crear objeto"));
     } finally {
       setSubmitting(false);
     }
@@ -163,12 +187,20 @@ export function AdminObjects() {
   const handleDelete = async (object: ObjectItem) => {
     if (!confirm(`¿Estás seguro de eliminar "${object.name}"?`)) return;
 
+    setObjects((prev) => prev.filter((item) => item.id !== object.id));
+    if (selectedObject?.id === object.id) {
+      setRentalsOpen(false);
+      setSelectedObject(null);
+      setRentals([]);
+    }
+
     try {
       await objectsService.deleteObject(object.id);
       toast.success("Objeto eliminado");
-      loadObjects();
-    } catch (err: any) {
-      toast.error(err.message || "Error al eliminar objeto");
+      await loadObjects({ silent: true });
+    } catch (err: unknown) {
+      await loadObjects({ silent: true });
+      toast.error(getErrorMessage(err, "Error al eliminar objeto"));
     }
   };
 
@@ -192,7 +224,7 @@ export function AdminObjects() {
             <Button
               type="button"
               variant="outline"
-              onClick={loadObjects}
+              onClick={() => void loadObjects()}
               disabled={loading}
             >
               <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />

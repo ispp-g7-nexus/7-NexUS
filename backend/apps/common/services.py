@@ -12,7 +12,7 @@ from django.utils.encoding import force_bytes, force_str
 from django.utils.html import strip_tags
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from rest_framework import authentication
-from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.exceptions import APIException, AuthenticationFailed
 
 from apps.membership.models import Membership
 
@@ -66,9 +66,14 @@ def has_access_for_portal(user, portal: str, residence):
     return False
 
 
-def build_access_token(user, tenant, residence):
+def build_access_token(user, tenant, residence, remember_me=False):
     now = timezone.now()
-    lifetime_seconds = int(getattr(settings, "JWT_ACCESS_TOKEN_LIFETIME_SECONDS", 3600))
+
+    if remember_me:
+        lifetime_seconds = 60 * 60 * 24 * 30
+    else:
+        lifetime_seconds = 60 * 60 * 24
+
     expires_at = now + timedelta(seconds=lifetime_seconds)
 
     roles = list(
@@ -90,7 +95,7 @@ def build_access_token(user, tenant, residence):
         "exp": int(expires_at.timestamp()),
     }
 
-    if settings.JWT_AUDIENCE:
+    if getattr(settings, "JWT_AUDIENCE", None):
         payload["aud"] = settings.JWT_AUDIENCE
 
     token = jwt.encode(
@@ -101,6 +106,12 @@ def build_access_token(user, tenant, residence):
 
 logger = logging.getLogger(__name__)
 UserModel = get_user_model()
+
+
+class SMTPServerError(APIException):
+    status_code = 500
+    default_detail = "El email no se pudo enviar debido a un error interno. Por favor, inténtalo de nuevo más tarde."
+    default_code = "smtp_error"
 
 
 def process_password_reset_request(email: str, request):
@@ -119,6 +130,7 @@ def process_password_reset_request(email: str, request):
             "password_reset_email.html", {"reset_link": reset_link}
         )
         plain_message = strip_tags(html_message)
+
         try:
             send_mail(
                 subject="Recuperación de contraseña en NexUS",
@@ -130,9 +142,21 @@ def process_password_reset_request(email: str, request):
                 recipient_list=[user.email],
                 fail_silently=False,
             )
-            logger.info(f"Correo de recuperación enviado a: {user.email}")
+            return (
+                True,
+                "Si el email está registrado, recibirás un correo con las instrucciones.",
+            )
+
         except Exception as e:
-            logger.error(f"Error al enviar correo SMTP a {user.email}: {e}")
+            logger.exception(
+                "Error al enviar correo SMTP en recuperación de contraseña"
+            )
+            raise SMTPServerError() from e
+
+    return (
+        True,
+        "Si el email está registrado, recibirás un correo con las instrucciones.",
+    )
 
 
 def process_password_reset_confirm(uid: str, token: str, new_password: str):
@@ -184,6 +208,9 @@ class CustomJWTAuthentication(authentication.BaseAuthentication):
             user = UserModel.objects.get(pk=payload.get("user_id"))
         except UserModel.DoesNotExist:
             raise AuthenticationFailed("El usuario del token no existe.")
+
+        if not user.is_active:
+            raise AuthenticationFailed("El usuario está desactivado.")
 
         residence_id = payload.get("residence_id")
         if residence_id and getattr(request, "residence", None) is None:
