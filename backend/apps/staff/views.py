@@ -1,7 +1,8 @@
 from django.contrib.auth import get_user_model
 from rest_framework import status, viewsets
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-
+from django.db import transaction
 from apps.membership.models import Membership, Role
 from .models import Staff
 from .serializers import StaffCreateSerializer, StaffReadSerializer, StaffUpdateSerializer
@@ -43,6 +44,8 @@ class StaffViewSet(viewsets.ModelViewSet):
 
     queryset = Staff.objects.select_related("user").all()
 
+    permission_classes = [IsAuthenticated]
+    
     def get_serializer_class(self):
         if self.action == "create":
             return StaffCreateSerializer
@@ -135,11 +138,19 @@ class StaffViewSet(viewsets.ModelViewSet):
         out = StaffReadSerializer(staff)
         return Response(out.data)
 
-    def destroy(self, request, *args, **kwargs):
+    def destroy(self, request):
         """Elimina el perfil de staff y el usuario asociado."""
         
+        usuario_actual = request.user
         staff = self.get_object()
-        user = staff.user
-        staff.delete()
-        user.delete()
+        
+        if usuario_actual == staff.user:
+            return Response(
+                {"detail": "No puedes eliminar tu propio perfil de staff."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        with transaction.atomic():
+            user = staff.user
+            staff.delete()
+            user.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

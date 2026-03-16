@@ -42,7 +42,7 @@ function StatCard({
 }
 
 export function Staff() {
-  const { staff, loading, isUnauthorized, createStaff, updateStaff, deleteStaff } = useStaff();
+  const { staff, loading, isUnauthorized, currentUserEmail, createStaff, updateStaff, deleteStaff } = useStaff();
 
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("all");
@@ -196,6 +196,7 @@ export function Staff() {
               member={member}
               onEdit={setEditingMember}
               onDelete={setDeletingMember}
+              isCurrentUser={currentUserEmail === member.email}
             />
           ))}
         </div>

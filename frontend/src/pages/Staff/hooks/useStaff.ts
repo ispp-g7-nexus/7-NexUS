@@ -6,11 +6,13 @@ import {
   type StaffPayload,
   staffService,
 } from "../../../services/staff";
+import { authService } from "../../../services/auth";
 
 export interface UseStaffReturn {
   staff: StaffMember[];
   loading: boolean;
   isUnauthorized: boolean;
+  currentUserEmail: string | null;
   refresh: () => Promise<void>;
   createStaff: (payload: StaffPayload) => Promise<boolean>;
   updateStaff: (id: number, payload: Partial<StaffPayload>) => Promise<boolean>;
@@ -21,12 +23,22 @@ export function useStaff(): UseStaffReturn {
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [isUnauthorized, setIsUnauthorized] = useState(false);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await staffService.list();
-      setStaff(data);
+      const [staffData, userData] = await Promise.all([
+        staffService.list(),
+        authService.me().catch(() => null)
+      ]);
+
+      setStaff(staffData);
+      
+      // Ajusta 'userData.user.email' según la estructura de tu API
+      if (userData?.user?.email) {
+        setCurrentUserEmail(userData.user.email);
+      }
       setIsUnauthorized(false);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -86,5 +98,5 @@ export function useStaff(): UseStaffReturn {
     }
   }, []);
 
-  return { staff, loading, isUnauthorized, refresh, createStaff, updateStaff, deleteStaff };
+  return { staff, loading, isUnauthorized, currentUserEmail, refresh, createStaff, updateStaff, deleteStaff };
 }
