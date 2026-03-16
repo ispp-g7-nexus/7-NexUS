@@ -17,6 +17,29 @@ import {
 import { Badge } from "../../components/ui/badge";
 import { Label } from "../../components/ui/label";
 
+function validateNumero(v: string): string {
+  if (!v.trim()) return "El número es obligatorio";
+  if (v.trim().length > 50) return "Máximo 50 caracteres";
+  return "";
+}
+function validateEdificio(v: string): string {
+  if (!v.trim()) return "El edificio es obligatorio";
+  if (v.trim().length > 100) return "Máximo 100 caracteres";
+  return "";
+}
+function validatePlanta(v: string): string {
+  if (!v) return "";
+  const n = Number.parseInt(v);
+  if (isNaN(n)) return "Debe ser un número";
+  if (n < -5 || n > 200) return "La planta debe estar entre -5 y 200";
+  return "";
+}
+function validateUnidades(v: string, isEditing: boolean): string {
+  if (isEditing) return "";
+  const n = Number.parseInt(v);
+  return isNaN(n) || n < 1 ? "Debe ser al menos 1" : "";
+}
+
 export function Rooms() {
   const [rooms, setRooms] = useState<Bedroom[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,40 +53,15 @@ export function Rooms() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const validateField = (name: string, value: any) => {
-    let error = "";
-
-    switch (name) {
-      case "numero":
-        if (!value.trim()) error = "El número es obligatorio";
-        else if (value.trim().length > 50)
-          error = "Máximo 50 caracteres";
-        break;
-
-      case "edificio":
-        if (!value.trim()) error = "El edificio es obligatorio";
-        else if (value && value.trim().length > 100)
-          error = "Máximo 100 caracteres";
-        break;
-
-      case "planta":
-        if (value) {
-          const num = Number.parseInt(value);
-          if (isNaN(num)) error = "Debe ser un número";
-          else if (num < -5 || num > 200)
-            error = "La planta debe estar entre -5 y 200";
-        }
-        break;
-
-      case "unidades":
-        if (!isEditing) {
-          const num = Number.parseInt(value);
-          if (isNaN(num) || num < 1)
-            error = "Debe ser al menos 1";
-        }
-        break;
-    }
-
+  const validateField = (name: string, value: string | number): boolean => {
+    const v = String(value);
+    const validators: Record<string, () => string> = {
+      numero:    () => validateNumero(v),
+      edificio:  () => validateEdificio(v),
+      planta:    () => validatePlanta(v),
+      unidades:  () => validateUnidades(v, isEditing),
+    };
+    const error = validators[name]?.() ?? "";
     setErrors((prev) => ({ ...prev, [name]: error }));
     return !error;
   };
@@ -128,7 +126,7 @@ export function Rooms() {
 
   const roomsByBuildingAndFloor = useMemo(() => groupByBuildingAndFloor(filteredRooms), [filteredRooms]);
 
-  const onChange = (k: string, v: any) => {
+  const onChange = (k: string, v: string | number) => {
     setForm((prev) => ({ ...prev, [k]: v }));
     validateField(k, v);
   };
@@ -155,8 +153,8 @@ export function Rooms() {
     const valid = fieldsToValidate.every((field) => validateField(field, form[field as keyof typeof form]));
     if (!valid) return;
 
-    const base = Number.parseInt(form.numero.replaceAll(/\D/g, "")) || 0;
-    const prefix = form.numero.replaceAll(/\d/g, "");
+    const base = Number.parseInt(form.numero.replace(/\D/g, "")) || 0;
+    const prefix = form.numero.replace(/\d/g, "");
 
     const payloadBase = {
       planta: form.planta ? Number.parseInt(form.planta) : null,
@@ -194,8 +192,6 @@ export function Rooms() {
   };
 
   if (loading) return <div className="p-10">Cargando...</div>;
-
-  const selectedRoomState = selectedRoom ? getRoomState(selectedRoom.ocupantes_actuales, selectedRoom.capacidad_maxima) : null;
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
@@ -368,7 +364,7 @@ export function Rooms() {
       {/* Detalle habitación (mapa) */}
       {selectedRoom && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/50" onClick={() => setSelectedRoom(null)} />
+          <div role="button" tabIndex={-1} aria-label="Cerrar detalle" className="fixed inset-0 bg-black/50" onClick={() => setSelectedRoom(null)} onKeyDown={(e) => { if (e.key === "Escape" || e.key === "Enter") setSelectedRoom(null); }} />
           <div className="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
             <div className="flex items-center gap-3 mb-4">
               <div className={`p-2 rounded-xl ${selectedRoom.ocupantes_actuales > 0 ? "bg-red-100" : "bg-green-100"}`}>
@@ -390,7 +386,7 @@ export function Rooms() {
               </div>
               <div className="col-span-2 bg-gray-50 p-3 rounded-xl border border-gray-100">
                 <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1">Estado</p>
-                <Badge className={selectedRoomState!.badgeClass}>{selectedRoomState!.label}</Badge>
+                <Badge className={getRoomState(selectedRoom.ocupantes_actuales, selectedRoom.capacidad_maxima).badgeClass}>{getRoomState(selectedRoom.ocupantes_actuales, selectedRoom.capacidad_maxima).label}</Badge>
               </div>
             </div>
             <Button className="w-full mt-4" variant="outline" onClick={() => {
@@ -399,7 +395,7 @@ export function Rooms() {
               setForm({
                 numero: selectedRoom.numero,
                 edificio: selectedRoom.edificio,
-                planta: selectedRoom.planta != null ? String(selectedRoom.planta) : "",
+                planta: selectedRoom.planta === null ? "" : String(selectedRoom.planta),
                 tipo: selectedRoom.tipo,
                 unidades: 1,
               });
@@ -416,7 +412,7 @@ export function Rooms() {
       {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/50" onClick={() => setIsModalOpen(false)} />
+          <div role="button" tabIndex={-1} aria-label="Cerrar modal" className="fixed inset-0 bg-black/50" onClick={() => setIsModalOpen(false)} onKeyDown={(e) => { if (e.key === "Escape" || e.key === "Enter") setIsModalOpen(false); }} />
           <div className="relative bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
             <h2 className="text-lg font-semibold mb-4">
               {isEditing ? "Editar habitación" : "Nueva habitación"}
@@ -512,7 +508,8 @@ function groupByBuildingAndFloor(rooms: Bedroom[]): Record<string, Record<number
   for (const room of rooms) {
     const b = room.edificio ?? "—";
     const f = room.planta ?? 0;
-    (organized[b] ??= {})[f] ??= [];
+    organized[b] ??= {};
+    organized[b][f] ??= [];
     organized[b][f].push(room);
   }
   for (const floors of Object.values(organized)) {
@@ -523,16 +520,16 @@ function groupByBuildingAndFloor(rooms: Bedroom[]): Record<string, Record<number
   return organized;
 }
 
+const ROOM_STATES = {
+  full:    { label: "Completa", badgeClass: "bg-red-100 text-red-700 border-0",    cellClass: "bg-red-50 border-red-400 hover:bg-red-100",       iconClass: "text-red-500",    textClass: "text-red-700" },
+  partial: { label: "Parcial",  badgeClass: "bg-yellow-100 text-yellow-700 border-0", cellClass: "bg-yellow-50 border-yellow-400 hover:bg-yellow-100", iconClass: "text-yellow-600", textClass: "text-yellow-700" },
+  free:    { label: "Libre",    badgeClass: "bg-green-100 text-green-700 border-0", cellClass: "bg-green-50 border-green-400 hover:bg-green-100",  iconClass: "text-green-600",  textClass: "text-green-700" },
+} as const;
+
 function getRoomState(ocupantes: number, capacidad: number) {
-  const isFull = ocupantes >= capacidad;
-  const isPartial = ocupantes > 0 && !isFull;
-  return {
-    label: isFull ? "Completa" : isPartial ? "Parcial" : "Libre",
-    badgeClass: isFull ? "bg-red-100 text-red-700 border-0" : isPartial ? "bg-yellow-100 text-yellow-700 border-0" : "bg-green-100 text-green-700 border-0",
-    cellClass: isFull ? "bg-red-50 border-red-400 hover:bg-red-100" : isPartial ? "bg-yellow-50 border-yellow-400 hover:bg-yellow-100" : "bg-green-50 border-green-400 hover:bg-green-100",
-    iconClass: isFull ? "text-red-500" : isPartial ? "text-yellow-600" : "text-green-600",
-    textClass: isFull ? "text-red-700" : isPartial ? "text-yellow-700" : "text-green-700",
-  };
+  if (ocupantes >= capacidad) return ROOM_STATES.full;
+  if (ocupantes > 0) return ROOM_STATES.partial;
+  return ROOM_STATES.free;
 }
 
 function FloorRow({ floor, rooms, onSelectRoom }: Readonly<{ floor: string; rooms: Bedroom[]; onSelectRoom: (r: Bedroom) => void }>) {
@@ -555,7 +552,7 @@ function FloorRow({ floor, rooms, onSelectRoom }: Readonly<{ floor: string; room
   );
 }
 
-function RoomMapCell({ room, onClick }: { room: Bedroom; onClick: () => void }) {
+function RoomMapCell({ room, onClick }: Readonly<{ room: Bedroom; onClick: () => void }>) {
   const { label, cellClass, iconClass, textClass } = getRoomState(room.ocupantes_actuales, room.capacidad_maxima);
 
   return (
@@ -574,7 +571,7 @@ function RoomMapCell({ room, onClick }: { room: Bedroom; onClick: () => void }) 
 }
 
 interface StatProps { title: string; value: React.ReactNode }
-function Stat({ title, value }: StatProps) {
+function Stat({ title, value }: Readonly<StatProps>) {
   return (
     <Card>
       <CardHeader>
