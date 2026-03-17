@@ -9,19 +9,22 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 export type SimplePackage = {
   id: number;
   sender?: string;
+  resident_name?: string;
   tracking?: string;
   date?: string;
   status?: string;
   location?: string;
+  is_unread?: boolean;
 };
 
 interface StudentPackagesProps {
   packages: SimplePackage[];
   onShowQr?: () => void;
   onMarkViewed?: () => void;
+  qrData?: { token: string; expires_at?: string; resident_name?: string } | null;
 }
 
-export function StudentPackages({ packages = [], onShowQr }: StudentPackagesProps) {
+export function StudentPackages({ packages = [], onShowQr, qrData }: StudentPackagesProps) {
   const pendingPackages = packages.filter((p) => p.status !== "DELIVERED");
   const historyPackages = packages.filter((p) => p.status === "DELIVERED");
 
@@ -38,20 +41,26 @@ export function StudentPackages({ packages = [], onShowQr }: StudentPackagesProp
       <Dialog>
         <DialogTrigger asChild>
           <Button className="w-full bg-foreground text-background shadow-lg" onClick={onShowQr}>
-            <QrCode className="w-5 h-5 mr-2" /> Mostrar código QR de recogida
+            <QrCode className="w-5 h-5 mr-2" /> Mostrar código de recogida
           </Button>
         </DialogTrigger>
         <DialogContent className="sm:max-w-xs text-center">
           <DialogHeader>
             <DialogTitle className="text-center">Tu Código de Recogida</DialogTitle>
-            <DialogDescription className="text-center">Muestra este QR en recepción</DialogDescription>
+            <DialogDescription className="text-center">Muestra este código en recepción</DialogDescription>
           </DialogHeader>
           <div className="flex justify-center py-6">
-            <div className="bg-card p-4 rounded-xl border-2 border-dashed border-border">
-              <QrCode className="w-32 h-32 text-foreground" />
+            <div className="bg-muted p-6 rounded-xl border-2 border-dashed border-border w-full flex items-center justify-center min-h-[120px]">
+              {qrData?.token ? (
+                <span className="text-2xl font-mono font-semibold text-foreground tracking-wide select-all">
+                  {qrData.token}
+                </span>
+              ) : (
+                <span className="text-sm text-muted-foreground">Generando código...</span>
+              )}
             </div>
           </div>
-          <p className="text-xs text-muted-foreground font-mono">PIN: 8392</p>
+          {qrData?.resident_name && <p className="text-sm font-medium">{qrData.resident_name}</p>}
         </DialogContent>
       </Dialog>
 
@@ -64,7 +73,7 @@ export function StudentPackages({ packages = [], onShowQr }: StudentPackagesProp
         <TabsContent value="pending" className="space-y-3">
           {pendingPackages.length > 0 ? (
             pendingPackages.map((p) => (
-              <DeliveryCard key={p.id} sender={p.sender} tracking={p.tracking} date={p.date} status={p.status} location={p.location} />
+              <DeliveryCard key={p.id} sender={p.sender} tracking={p.tracking} date={p.date} status={p.status} location={p.location} is_unread={p.is_unread} />
             ))
           ) : (
             <div className="p-6 bg-card rounded-xl text-center text-sm text-muted-foreground">No tienes paquetes pendientes.</div>
@@ -74,7 +83,7 @@ export function StudentPackages({ packages = [], onShowQr }: StudentPackagesProp
         <TabsContent value="history" className="space-y-3">
           {historyPackages.length > 0 ? (
             historyPackages.map((p) => (
-              <DeliveryCard key={p.id} sender={p.sender} tracking={p.tracking} date={p.date} status={p.status} location={undefined} />
+              <DeliveryCard key={p.id} sender={p.sender} tracking={p.tracking} date={p.date} status={p.status} location={undefined} is_unread={p.is_unread} />
             ))
           ) : (
             <div className="p-6 bg-card rounded-xl text-center text-sm text-muted-foreground">Aún no hay historial de paquetes.</div>
@@ -85,7 +94,7 @@ export function StudentPackages({ packages = [], onShowQr }: StudentPackagesProp
   );
 }
 
-function DeliveryCard({ sender, tracking, date, status, location }) {
+function DeliveryCard({ sender, tracking, date, status, location, is_unread }) {
   const isReady = status && status !== 'DELIVERED';
 
   return (
@@ -94,7 +103,12 @@ function DeliveryCard({ sender, tracking, date, status, location }) {
         <div className={`w-1.5 ${isReady ? "bg-chart-2" : "bg-border"}`} />
         <div className="p-4 flex-1">
           <div className="flex justify-between items-start mb-1">
-            <h3 className="font-bold text-card-foreground">{sender}</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-card-foreground">{sender}</h3>
+              {is_unread && (
+                <Badge className="bg-red-600 text-white text-xs py-0.5 px-2">Nuevo</Badge>
+              )}
+            </div>
             {isReady ? (
               <Badge className="bg-accent/10 text-accent hover:bg-accent/10 border-none shadow-none">Recoger</Badge>
             ) : (

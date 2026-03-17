@@ -6,21 +6,13 @@ import { toast } from "sonner";
 export function PackagesPage() {
   const [packages, setPackages] = useState<SimplePackage[]>([]);
   const [loading, setLoading] = useState(false);
+  const [qrData, setQrData] = useState<{ token: string; expires_at?: string; resident_name?: string } | null>(null);
 
   const loadPackages = async () => {
     setLoading(true);
     try {
       const data = await packagesService.getMyPackages();
-      // Map backend shape into SimplePackage minimal shape
-      const items = (data || []).map((p) => ({
-        id: p.id,
-        sender: p.carrier || p.resident_name || "Remitente",
-        tracking: p.tracking_number,
-        date: p.received_at ? new Date(p.received_at).toLocaleString() : undefined,
-        status: p.status,
-        location: p.building || undefined,
-      }));
-      setPackages(items);
+      setPackages(data || []);
     } catch (err) {
       console.error(err);
       toast.error(err?.message || "Error cargando paquetes");
@@ -56,9 +48,8 @@ export function PackagesPage() {
   const handleShowQr = async () => {
     try {
       const qr = await packagesService.getDeliveryQr();
-      // TODO: show real QR. For now just toast
+      setQrData(qr);
       toast.success("QR obtenido");
-      console.log(qr);
     } catch (err) {
       toast.error(err?.message || "Error obteniendo QR");
     }
@@ -66,7 +57,7 @@ export function PackagesPage() {
 
   return (
     <div className="h-full">
-      <StudentPackages packages={packages} onShowQr={handleShowQr} />
+      <StudentPackages packages={packages} onShowQr={handleShowQr} qrData={qrData} />
       {loading && <div className="fixed bottom-24 left-1/2 -translate-x-1/2">Cargando...</div>}
     </div>
   );
