@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { fetchWithAuth, API_URL } from "../../../utils/api";
 import { EventForm } from "./components/EventForm";
 import { EventDetails } from "./components/EventDetails";
@@ -83,15 +84,15 @@ export function Events() {
             }
 
             if (response.ok) {
-                alert("¡Te has apuntado al evento!");
+                toast.success("¡Te has apuntado al evento!");
                 fetchEvents();
             } else {
                 const data = await response.json();
-                alert(data.detail || "Error al apuntarse al evento");
+                toast.error(data.detail || "Error al apuntarse al evento");
             }
         } catch (error) {
             console.error("Error joining event:", error);
-            alert("Error de conexión");
+            toast.error("Error de conexión");
         }
     };
 
@@ -107,15 +108,15 @@ export function Events() {
             }
 
             if (response.ok) {
-                alert("Te has desapuntado del evento.");
+                toast.success("Te has desapuntado del evento.");
                 fetchEvents();
             } else {
                 const data = await response.json();
-                alert(data.detail || "Error al cancelar la asistencia");
+                toast.error(data.detail || "Error al cancelar la asistencia");
             }
         } catch (error) {
             console.error("Error leaving event:", error);
-            alert("Error de conexión");
+            toast.error("Error de conexión");
         }
     };
 
@@ -145,7 +146,7 @@ export function Events() {
             }
 
             if (response.ok) {
-                alert(isEditingEvent ? "Evento guardado con éxito." : "Evento creado con éxito.");
+                toast.success(isEditingEvent ? "Evento guardado con éxito." : "Evento creado con éxito.");
                 setIsCreateEventOpen(false);
                 setIsEditingEvent(false);
                 setEditingEventId(null);
@@ -155,41 +156,48 @@ export function Events() {
                 fetchEvents();
             } else {
                 const data = await response.json();
-                alert(`Error: ${JSON.stringify(data.detail || data)}`);
+                toast.error(`Error: ${JSON.stringify(data.detail || data)}`);
             }
         } catch (error) {
             console.error("Error saving event:", error);
-            alert("Error de conexión al guardar el evento");
+            toast.error("Error de conexión al guardar el evento");
         }
     };
 
     const handleDeleteEvent = async (eventId: number) => {
-        if (!window.confirm("¿Estás seguro de que quieres eliminar este evento?")) {
-            return;
-        }
+        toast("¿Estás seguro de que quieres eliminar este evento?", {
+            action: {
+                label: "Eliminar",
+                onClick: async () => {
+                    try {
+                        const response = await fetchWithAuth(`${API_URL}${eventId}/`, {
+                            method: 'DELETE',
+                        });
 
-        try {
-            const response = await fetchWithAuth(`${API_URL}${eventId}/`, {
-                method: 'DELETE',
-            });
+                        if (response.status === 401 || response.status === 403) {
+                            setIsUnauthorized(true);
+                            return;
+                        }
 
-            if (response.status === 401 || response.status === 403) {
-                setIsUnauthorized(true);
-                return;
-            }
-
-            if (response.ok || response.status === 204) {
-                alert("Evento eliminado con éxito.");
-                fetchEvents();
-                setSelectedEvent(null);
-            } else {
-                const data = await response.json();
-                alert(`Error al eliminar: ${JSON.stringify(data.detail || data)}`);
-            }
-        } catch (error) {
-            console.error("Error deleting event:", error);
-            alert("Error de conexión al eliminar el evento");
-        }
+                        if (response.ok || response.status === 204) {
+                            toast.success("Evento eliminado con éxito.");
+                            fetchEvents();
+                            setSelectedEvent(null);
+                        } else {
+                            const data = await response.json();
+                            toast.error(`Error al eliminar: ${JSON.stringify(data.detail || data)}`);
+                        }
+                    } catch (error) {
+                        console.error("Error deleting event:", error);
+                        toast.error("Error de conexión al eliminar el evento");
+                    }
+                },
+            },
+            cancel: {
+                label: "Cancelar",
+                onClick: () => {},
+            },
+        });
     };
 
     const now = new Date();

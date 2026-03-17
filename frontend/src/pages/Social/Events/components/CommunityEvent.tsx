@@ -12,6 +12,7 @@ export function CommunityEvent({
     onClick,
 }: any) {
     const displayTag = tags ? tags.split(',')[0].trim() : null;
+    const isAdmin = localStorage.getItem('userRole') === 'admin';
 
     return (
         <div
@@ -46,7 +47,7 @@ export function CommunityEvent({
                                 Finalizado
                             </button>
                         </div>
-                    ) : isJoined ? (
+                    ) : isAdmin ? null : isJoined ? (
                         <div className="flex gap-2 w-full sm:w-auto">
                             <button className="flex-1 sm:flex-none bg-muted text-muted-foreground border border-border px-4 py-2 rounded-lg font-medium text-sm flex items-center justify-center gap-1.5 cursor-default" disabled>
                                 ✓ Apuntado
