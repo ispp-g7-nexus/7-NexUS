@@ -65,6 +65,16 @@ class Membership(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    # Habitación asignada al residente. PROTECT impide eliminar una habitación
+    # que tenga residentes asignados; el servicio lo convierte en error 409.
+    bedroom = models.ForeignKey(
+        "bedrooms.Bedroom",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="residents",
+        verbose_name="Habitación Asignada",
+    )
 
     class Meta:
         ordering = ["user_id", "role"]

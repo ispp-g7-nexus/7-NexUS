@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { AlertTriangle, Plus } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { AnnouncementCard } from "../../components/announcement/AnnouncementCard";
@@ -18,6 +18,8 @@ const CATEGORY_OPTIONS: { value: AnnouncementCategory; label: string }[] = [
   { value: "EVENT", label: "Evento" },
   { value: "GENERAL", label: "General" },
 ];
+
+const ANNOUNCEMENTS_POLL_MS = 2000;
 
 const EMPTY_ANNOUNCEMENT_FORM = {
   title: "",
@@ -61,10 +63,6 @@ export function AdminAnnouncements() {
     thisMonth: 0,
   });
 
-  useEffect(() => {
-    loadAnnouncements();
-  }, [selectedCategory]);
-
   const todayDate = getLocalDateString();
 
   const isPastDate = (dateValue: string) => {
@@ -74,8 +72,10 @@ export function AdminAnnouncements() {
     return normalizedDate < todayDate;
   };
 
-  const loadAnnouncements = async () => {
-    setLoading(true);
+  const loadAnnouncements = useCallback(async (silent = false) => {
+    if (!silent) {
+      setLoading(true);
+    }
     setError(null);
     try {
       const data = await announcementService.getAnnouncementsByCategory(selectedCategory);
@@ -85,9 +85,21 @@ export function AdminAnnouncements() {
       setError("Error al cargar los avisos");
       console.error(err);
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
-  };
+  }, [selectedCategory]);
+
+  useEffect(() => {
+    loadAnnouncements(false);
+
+    const intervalId = window.setInterval(() => {
+      loadAnnouncements(true);
+    }, ANNOUNCEMENTS_POLL_MS);
+
+    return () => window.clearInterval(intervalId);
+  }, [loadAnnouncements]);
 
   const calculateStats = (data: AnnouncementList[]) => {
     const now = new Date();

@@ -64,6 +64,7 @@ export function EventDetails({
                     {selectedEvent.can_edit && (
                         <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
                             <button
+                                type="button"
                                 className="btn-secondary"
                                 style={{ flex: 1 }}
                                 onClick={() => onEditEvent(selectedEvent)}
@@ -71,9 +72,12 @@ export function EventDetails({
                                 Editar
                             </button>
                             <button
+                                type="button"
                                 className="btn-secondary"
                                 style={{ flex: 1, color: 'hsl(var(--destructive))', borderColor: 'hsl(var(--destructive))' }}
-                                onClick={async () => {
+                                onClick={async (event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
                                     await handleDeleteEvent(selectedEvent.id);
                                 }}
                             >

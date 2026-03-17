@@ -6,8 +6,12 @@ import { Profile } from "./Profile/Profile";
 
 type Tab = "eventos" | "chat" | "matches" | "perfil";
 
-export function SocialHub() {
-  const [activeTab, setActiveTab] = useState<Tab>("perfil");
+interface SocialHubProps {
+  initialTab?: Tab;
+}
+
+export function SocialHub({ initialTab = "perfil" }: SocialHubProps) {
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
 
   return (
     <div className="flex flex-col w-full">
