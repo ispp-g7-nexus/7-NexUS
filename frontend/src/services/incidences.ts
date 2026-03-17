@@ -1,10 +1,10 @@
 import { fetchWithAuth } from '../utils/api';
 
-// --- INTERFACES DE DATOS (Matching con tu Backend) ---
+// --- INTERFACES DE DATOS (Sincronizadas con Django) ---
 
-export type IncidenceStatus = 'pending' | 'reviewing' | 'in_progress' | 'resolved' ;
+export type IncidenceStatus = 'pending' | 'reviewing' | 'in_progress' | 'resolved';
 export type PriorityLevel = 'low' | 'high';
-export type LocationType = 'habitacion' | 'baño'  | 'cocina' | 'comedor' | 'exterior' | 'salas_comunes';
+export type LocationType = 'habitacion' | 'baño' | 'cocina' | 'comedor' | 'exterior' | 'salas_comunes';
 
 export interface Incidence {
   id: number;
@@ -14,16 +14,20 @@ export interface Incidence {
   room_number: string | null;
   status: IncidenceStatus;
   priority: PriorityLevel;
-  student: number; // ID del usuario
-  student_name?: string; // Si tu serializer devuelve el nombre
-  assigned_technician: string | null;
+  student: number; 
+  student_name?: string; 
+  
+  assigned_staff: number | null;       
+  assigned_staff_name?: string;          
+  assigned_staff_job?: string;
+  assigned_external_name?: string;        
+
   admin_notes: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
 }
 
-// Interfaz para el historial (IncidenceUpdate)
 export interface IncidenceUpdate {
   id: number;
   incidence: number;
@@ -38,15 +42,15 @@ export interface CreateIncidenceDTO {
   title: string;
   description: string;
   location_type: LocationType;
-  room_number?: string;
-  priority: PriorityLevel;
+  room_number?: string | null;
+  priority?: PriorityLevel; 
 }
 
 export interface UpdateIncidenceDTO {
   status?: IncidenceStatus;
-  assigned_technician?: string;
+  assigned_staff?: number | null;
+  assigned_external_name?: string; 
   admin_notes?: string;
-  // Si tu serializer crea un IncidenceUpdate automáticamente al recibir un comentario:
   quick_comment?: string; 
 }
 
@@ -70,7 +74,7 @@ export const IncidenceService = {
   },
 
   /**
-   * Actualizar estado, técnico o notas (Vista Admin)
+   * Actualizar estado, personal asignado o notas
    */
   update: async (id: number, data: UpdateIncidenceDTO): Promise<Incidence> => {
     const response = await fetchWithAuth(`/api/incidences/${id}/`, {
@@ -100,7 +104,7 @@ export const IncidenceService = {
   },
 
   /**
-   * Obtener el historial de una incidencia específica
+   * Obtener el historial de actualizaciones
    */
   getUpdates: async (incidenceId: number): Promise<IncidenceUpdate[]> => {
     const response = await fetchWithAuth(`/api/incidences/${incidenceId}/updates/`);
