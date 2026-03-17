@@ -83,6 +83,9 @@ class BedroomCreateView(AdminRequiredView):
 
 class BedroomRetrieveView(AdminRequiredView):
 	def get(self, request, bedroom_id):
+		if not hasattr(request, "residence") or not request.residence:
+			return JsonResponse({"detail": "No residence context."}, status=400)
+
 		queryset = BedroomListView._with_active_student_residents(
 			Bedroom.objects.filter(residence=request.residence)
 		)
