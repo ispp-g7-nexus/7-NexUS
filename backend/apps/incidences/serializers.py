@@ -16,7 +16,7 @@ class IncidenceSerializer(serializers.ModelSerializer):
         model = Incidence
         fields = [
             'id', 'title', 'description', 'location_type', 'room_number', 
-            'status', 'priority', 'updates', 'admin_notes', 'created_at', 'is_mine'
+            'status', 'priority', 'updates', 'admin_notes', 'img', 'created_at', 'is_mine'
         ]
         read_only_fields = ['id', 'created_at', 'is_mine']
 

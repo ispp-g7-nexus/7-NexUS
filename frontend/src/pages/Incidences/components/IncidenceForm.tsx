@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
-import { AlertTriangle, Info } from "lucide-react"
+import { AlertTriangle, Camera, Info, X } from "lucide-react"
 import { Button } from "../../../components/ui/button"
 import { Input } from "../../../components/ui/input"
 import { Label } from "../../../components/ui/label"
@@ -19,6 +19,19 @@ export function IncidenceForm({ onSuccess, onClose }: IncidenceFormProps) {
   const [loading, setLoading] = useState(false)
   const [locationType, setLocationType] = useState<string>("")
   const [urgent, setUrgent] = useState<boolean>(false)
+  const [base64Image, setBase64Image] = useState<string | null>(null) 
+
+  //Convertir imagen a Base64
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setBase64Image(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -30,6 +43,7 @@ export function IncidenceForm({ onSuccess, onClose }: IncidenceFormProps) {
       description: formData.get("description") as string,
       location_type: locationType as LocationType,
       priority: (urgent ? "high" : "low") as 'low' | 'high',
+      img: base64Image,
     }
 
     try {
@@ -46,7 +60,6 @@ export function IncidenceForm({ onSuccess, onClose }: IncidenceFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className={UI_CLASSES.form}>
-      {/* Header del Formulario */}
       <div className={UI_CLASSES.header}>
         <h2 className={UI_CLASSES.title}>Nueva Incidencia</h2>
         <DialogDescription className={UI_CLASSES.description}>
@@ -54,9 +67,7 @@ export function IncidenceForm({ onSuccess, onClose }: IncidenceFormProps) {
         </DialogDescription>
       </div>
 
-      {/* Cuerpo Scrollable */}
       <div className={UI_CLASSES.body}>
-        {/* Título */}
         <div className="space-y-1.5">
           <Label htmlFor="title" className={UI_CLASSES.label}>¿Qué sucede?</Label>
           <Input 
@@ -68,7 +79,6 @@ export function IncidenceForm({ onSuccess, onClose }: IncidenceFormProps) {
           />
         </div>
 
-        {/* Área / Ubicación */}
         <div className="space-y-1.5">
           <Label className={UI_CLASSES.label}>Área</Label>
           <Select onValueChange={setLocationType} required>
@@ -95,7 +105,6 @@ export function IncidenceForm({ onSuccess, onClose }: IncidenceFormProps) {
           )}
         </div>
 
-        {/* Descripción */}
         <div className="space-y-1.5">
           <Label htmlFor="description" className={UI_CLASSES.label}>Descripción detallada</Label>
           <textarea 
@@ -107,7 +116,33 @@ export function IncidenceForm({ onSuccess, onClose }: IncidenceFormProps) {
           />
         </div>
         
-        {/* Checkbox Urgencia */}
+        <div className="space-y-2">
+          <Label className={UI_CLASSES.label}>Adjuntar Foto (Opcional)</Label>
+          {!base64Image ? (
+            <label className={UI_CLASSES.imageUploadPlaceholder}>
+              <Camera className="w-6 h-6 mb-1 opacity-40" />
+              <span className="text-xs font-medium opacity-60">Subir foto</span>
+              <input 
+                type="file" 
+                accept="image/*" 
+                onChange={handleImageChange} 
+                className="hidden" 
+              />
+            </label>
+          ) : (
+            <div className="relative w-full h-40 rounded-2xl overflow-hidden border-2 border-green-100">
+              <img src={base64Image} alt="Preview" className="w-full h-full object-cover" />
+              <button 
+                type="button"
+                onClick={() => setBase64Image(null)}
+                className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full shadow-lg"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          )}
+        </div>
+        
         <div className={UI_CLASSES.urgentBox}>
           <Checkbox
             id="urgent"
@@ -125,7 +160,6 @@ export function IncidenceForm({ onSuccess, onClose }: IncidenceFormProps) {
         </div>
       </div>
 
-      {/* Footer / Botón */}
       <div className={UI_CLASSES.footer}>
         <Button 
           type="submit" 
@@ -155,4 +189,5 @@ const UI_CLASSES = {
   textarea: "w-full bg-gray-50 border-none rounded-2xl min-h-[100px] p-4 focus-visible:ring-[#82D14C] resize-none text-sm font-normal",
   infoBox: "flex items-center gap-2 mt-2 ml-1 text-[#1B4D1C] bg-green-50 p-3 rounded-xl border border-green-100",
   urgentBox: "flex items-center space-x-3 p-4 bg-orange-50/50 rounded-2xl border border-orange-100",
+  imageUploadPlaceholder: "flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
 };
