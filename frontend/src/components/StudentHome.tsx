@@ -356,7 +356,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
         const loadUnread = async () => {
             try {
                 const data = await packagesService.getUnreadCount();
-                if (mounted) setUnreadPackages(data?.count || 0);
+                if (mounted) setUnreadPackages(data || 0);
             } catch (err) {
                 if (mounted) setUnreadPackages(0);
             }
