@@ -196,7 +196,7 @@ export function Staff() {
               member={member}
               onEdit={setEditingMember}
               onDelete={setDeletingMember}
-              isCurrentUser={currentUserEmail === member.email}
+              isCurrentUser={currentUserEmail?.toLowerCase() === member.email.toLowerCase()}
             />
           ))}
         </div>

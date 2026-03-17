@@ -41,11 +41,7 @@ class StaffViewSet(viewsets.ModelViewSet):
     PATCH  /staff/{id}/   → actualizar parcial
     DELETE /staff/{id}/   → eliminar
     """
-
     queryset = Staff.objects.select_related("user").all()
-
-    permission_classes = [IsAuthenticated]
-    
     def get_serializer_class(self):
         if self.action == "create":
             return StaffCreateSerializer
@@ -81,6 +77,7 @@ class StaffViewSet(viewsets.ModelViewSet):
             last_name=last_name,
             is_active=True,
         )
+
         passwd = data.get("password")
         if passwd:
             user.set_password(passwd)
@@ -138,12 +135,12 @@ class StaffViewSet(viewsets.ModelViewSet):
         out = StaffReadSerializer(staff)
         return Response(out.data)
 
-    def destroy(self, request):
+    def destroy(self, request, *args, **kwargs):
         """Elimina el perfil de staff y el usuario asociado."""
-        
+
         usuario_actual = request.user
         staff = self.get_object()
-        
+
         if usuario_actual == staff.user:
             return Response(
                 {"detail": "No puedes eliminar tu propio perfil de staff."},

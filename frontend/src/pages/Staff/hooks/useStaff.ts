@@ -34,10 +34,8 @@ export function useStaff(): UseStaffReturn {
       ]);
 
       setStaff(staffData);
-      
-      // Ajusta 'userData.user.email' según la estructura de tu API
       if (userData?.user?.email) {
-        setCurrentUserEmail(userData.user.email);
+        setCurrentUserEmail(userData.user.email.toLowerCase());
       }
       setIsUnauthorized(false);
     } catch (err: unknown) {

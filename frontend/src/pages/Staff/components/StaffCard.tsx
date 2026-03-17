@@ -33,7 +33,7 @@ const STATUS_VARIANT: Record<StaffStatus, "success" | "muted" | "warning"> = {
   holidays: "warning",
 };
 
-export function StaffCard({ member, isCurrentUser, onEdit, onDelete }: StaffCardProps) {
+export function StaffCard({ member, isCurrentUser, onEdit, onDelete }: Readonly<StaffCardProps>) {
   const { full_name, job_title, department, email, location, schedule, status, role_name } = member;
   
   return (
@@ -86,7 +86,8 @@ export function StaffCard({ member, isCurrentUser, onEdit, onDelete }: StaffCard
               onClick={() => onDelete(member)}
             >
               <Trash2 className="w-4 h-4" />
-            </Button>)}
+            </Button>
+            )}
           </div>
         </div>
 
