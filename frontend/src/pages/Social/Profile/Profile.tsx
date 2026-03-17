@@ -136,12 +136,13 @@ export function Profile() {
   const handleLogout = async () => {
   try {
     await authService.logout();
+  } catch (error) {
+    console.error("Error en logout remoto:", error);
+    toast.error("No se pudo cerrar sesión en servidor; se cerrará sesión local.");
+  } finally {
     localStorage.clear();
     sessionStorage.clear();
-    globalThis.location.assign('/');
-  } catch (error) {
-    console.error("Error en logout:", error);
-    toast.error("No se pudo cerrar la sesión de forma segura.");
+    globalThis.location.assign("/");
   }
 };
 
