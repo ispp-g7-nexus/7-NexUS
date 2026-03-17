@@ -209,6 +209,9 @@ class CustomJWTAuthentication(authentication.BaseAuthentication):
         except UserModel.DoesNotExist:
             raise AuthenticationFailed("El usuario del token no existe.")
 
+        if not user.is_active:
+            raise AuthenticationFailed("El usuario está desactivado.")
+
         residence_id = payload.get("residence_id")
         if residence_id and getattr(request, "residence", None) is None:
             from apps.residences.models import Residence
