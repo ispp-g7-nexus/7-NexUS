@@ -52,7 +52,7 @@ export function StudentPackages({ packages = [], onShowQr, qrData }: StudentPack
           <div className="flex justify-center py-6">
             <div className="bg-muted p-6 rounded-xl border-2 border-dashed border-border w-full flex items-center justify-center min-h-[120px]">
               {qrData?.token ? (
-                <span className="text-2xl font-mono font-semibold text-foreground tracking-wide select-all">
+                <span className="text font-mono font-semibold text-foreground break-all">
                   {qrData.token}
                 </span>
               ) : (
