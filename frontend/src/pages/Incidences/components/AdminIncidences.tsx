@@ -3,8 +3,8 @@ import { Clock, Wrench, ChevronRight, CheckCircle2, MapPin, MessageSquare, Plus 
 import { IncidenceService, Incidence, IncidenceStatus } from '../../../services/incidences';
 import { Dialog, DialogContent, DialogTitle } from '../../../components/ui/dialog';
 import { IncidenceForm } from './IncidenceForm';
+import { useStaff } from '../../Staff/hooks/useStaff';
 
-// --- COMPONENTE MODAL ---
 const ManageIncidenceModal = ({
   incidence,
   onClose,
@@ -12,19 +12,25 @@ const ManageIncidenceModal = ({
 }: {
   incidence: Incidence,
   onClose: () => void,
-  onRefresh: () => void
+  onRefresh: () => void,
+  isAdmin?: boolean
 }) => {
+  const { staff, loading: loadingStaff } = useStaff();
+
   const [status, setStatus] = useState(incidence.status);
-  const [technician, setTechnician] = useState(incidence.assigned_technician || '');
+  const [staffId, setStaffId] = useState<number | string>(incidence.assigned_staff || '');
+  const [externalName, setExternalName] = useState(incidence.assigned_external_name || '');
   const [note, setNote] = useState(incidence.admin_notes || '');
   const [saving, setSaving] = useState(false);
+
 
   const handleSave = async () => {
     setSaving(true);
     try {
       await IncidenceService.update(incidence.id, {
         status: status as IncidenceStatus,
-        assigned_technician: technician,
+        assigned_staff: staffId ? Number(staffId) : null,
+        assigned_external_name: staffId ? "" : externalName,
         admin_notes: note,
         quick_comment:
           note.trim() && note.trim() !== (incidence.admin_notes || "").trim()
@@ -71,11 +77,60 @@ const ManageIncidenceModal = ({
                 <option value="resolved">Resuelto</option>
               </select>
             </div>
-
+            {/* Asignación de personal */}
             <div>
-              <label className={UI_CLASSES.label}>Asignar Técnico</label>
-              <input type="text" value={technician} onChange={(e) => setTechnician(e.target.value)} placeholder="Nombre del técnico..." className={UI_CLASSES.input} />
+              <label className={UI_CLASSES.label}>Asignar Personal Responsable</label>
+              <select
+                value={staffId === "" && externalName !== "" ? "external_placeholder" : staffId}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "external_placeholder") {
+                    setStaffId(""); // Limpiamos el staff
+                  } else {
+                    setStaffId(val);
+                    setExternalName(""); // Si elige a alguien real, limpiamos el nombre externo
+                  }
+                }}
+                className={UI_CLASSES.select}
+                disabled={loadingStaff}
+              >
+                <option value="">{loadingStaff ? "Cargando..." : "Sin asignar"}</option>
+
+
+                {staff.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.full_name} — {member.job_title}
+                  </option>
+                ))}
+
+                <option value="external_placeholder" className="font-bold text-grey-600">
+                  + Asignar Personal Externo / Otro
+                </option>
+              </select>
             </div>
+
+            {/* CAMPO DE TEXTO PARA EXTERNOS */}
+            {(staffId === "" && (externalName !== "" || staffId === "")) && (
+              <div className="mt-4 animate-in slide-in-from-top-2 duration-200">
+                <label className={UI_CLASSES.label}>Nombre del Técnico o Empresa Externa</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Ej: Cerrajeros urgentes, Paco el electricista..."
+                    value={externalName}
+                    onChange={(e) => setExternalName(e.target.value)}
+                    className={UI_CLASSES.input}
+                    autoFocus
+                  />
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                    <Wrench size={16} className="text-slate-300" />
+                  </div>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-2 ml-1 italic">
+                  Escribe el nombre de la persona o empresa que realizará el trabajo.
+                </p>
+              </div>
+            )}
 
             <div>
               <label className={UI_CLASSES.label}>Nueva Nota / Comentario</label>
@@ -95,7 +150,6 @@ const ManageIncidenceModal = ({
   );
 };
 
-// --- VISTA PRINCIPAL ---
 export const AdminIncidences = () => {
   const [incidences, setIncidences] = useState<Incidence[]>([]);
   const [loading, setLoading] = useState(true);
@@ -198,15 +252,28 @@ export const AdminIncidences = () => {
               </div>
 
               <div className="flex justify-between items-center pt-2">
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <span className={`${STATUS_STYLES[inc.status]?.bg} ${STATUS_STYLES[inc.status]?.text} ${UI_CLASSES.statusBadge}`}>
                     {STATUS_STYLES[inc.status]?.icon}
                     {STATUS_STYLES[inc.status]?.label}
                   </span>
-                  {inc.assigned_technician && (
-                    <span className={UI_CLASSES.technicianBadge}>
-                      <Wrench size={13} /> {inc.assigned_technician}
-                    </span>
+                  {(inc.assigned_staff_name || inc.assigned_external_name) && (
+                    <div className="flex flex-col">
+                      <span className={`${UI_CLASSES.technicianBadge} ${inc.assigned_external_name && !inc.assigned_staff_name ? 'border-grey-100 bg-grey-50/30' : ''}`}>
+                        <Wrench size={13} className={inc.assigned_external_name && !inc.assigned_staff_name ? 'text-grey-500' : ''} />
+
+                        {inc.assigned_staff_name ? (
+                          // Caso Interno
+                          `${inc.assigned_staff_name} - ${inc.assigned_staff_job}`
+                        ) : (
+                          // Caso Externo
+                          <span className="flex items-center gap-1">
+                            {inc.assigned_external_name}
+                            <span className="text-[9px] bg-red-100 text-red-600 px-1 rounded font-bold uppercase ml-1">Ext</span>
+                          </span>
+                        )}
+                      </span>
+                    </div>
                   )}
                 </div>
                 <button onClick={() => setSelectedIncidence(inc)} className={UI_CLASSES.btnManage}>
@@ -234,6 +301,7 @@ export const AdminIncidences = () => {
         <DialogContent className="max-w-[90vw] sm:max-w-[425px] rounded-[32px] p-0 border-none overflow-hidden">
           <DialogTitle className="sr-only">Nueva Incidencia</DialogTitle>
           <IncidenceForm
+            isAdmin={true}
             onSuccess={() => { loadData(); setIsFormOpen(false); }}
             onClose={() => setIsFormOpen(false)}
           />
@@ -244,8 +312,6 @@ export const AdminIncidences = () => {
 };
 
 export default AdminIncidences;
-
-// --- CONFIGURACIÓN DE ESTILOS Y MAPEOS ---
 
 const LOCATION_LABELS: Record<string, string> = {
   habitacion: 'Habitación',
@@ -269,12 +335,9 @@ const STATUS_STYLES: Record<string, { label: string; bg: string; text: string; i
 };
 
 const UI_CLASSES = {
-  // Layout Principal
   mainLayout: "bg-slate-100 min-h-screen flex flex-col",
   mainContent: "flex-1 overflow-y-auto p-4 space-y-4 pb-32",
   loadingText: "text-center text-gray-400 mt-10 font-medium tracking-widest uppercase",
-
-  // Modal
   modalOverlay: "fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4",
   modalContainer: "bg-white w-full max-w-lg rounded-[32px] overflow-hidden shadow-xl relative animate-in fade-in zoom-in duration-200",
   modalCloseBtn: "absolute right-6 top-6 p-2 hover:bg-gray-100 rounded-full transition-colors",
