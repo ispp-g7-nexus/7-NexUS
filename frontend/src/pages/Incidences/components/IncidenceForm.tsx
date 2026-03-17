@@ -9,16 +9,21 @@ import { Checkbox } from "../../../components/ui/checkbox"
 import { Select, SelectContent, SelectTrigger, SelectItem, SelectValue } from "../../../components/ui/select2"
 import { DialogDescription } from "../../../components/ui/dialog"
 import { IncidenceService, type LocationType } from "../../../services/incidences"
+import { useStaff } from "../../Staff/hooks/useStaff"
 
 interface IncidenceFormProps {
   onSuccess: () => void
   onClose: () => void
+  isAdmin?: boolean
 }
 
-export function IncidenceForm({ onSuccess, onClose }: IncidenceFormProps) {
+export function IncidenceForm({ onSuccess, onClose, isAdmin = false }: IncidenceFormProps) {
+  const { staff = [], loading: loadingStaff } = isAdmin ? useStaff() : { staff: [], loading: false };
   const [loading, setLoading] = useState(false)
   const [locationType, setLocationType] = useState<string>("")
   const [urgent, setUrgent] = useState<boolean>(false)
+  const [staffId, setStaffId] = useState("")
+  const [externalName, setExternalName] = useState("")
   const [base64Image, setBase64Image] = useState<string | null>(null) 
 
   //Convertir imagen a Base64
@@ -36,13 +41,15 @@ export function IncidenceForm({ onSuccess, onClose }: IncidenceFormProps) {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setLoading(true)
-    
+
     const formData = new FormData(e.currentTarget)
     const payload = {
       title: formData.get("title") as string,
       description: formData.get("description") as string,
       location_type: locationType as LocationType,
       priority: (urgent ? "high" : "low") as 'low' | 'high',
+      assigned_staff: isAdmin && staffId && staffId !== "external" && staffId !== "none" ? Number(staffId) : null,
+      assigned_external_name: isAdmin && staffId === "external" ? externalName : "",
       img: base64Image,
     }
 
@@ -70,12 +77,12 @@ export function IncidenceForm({ onSuccess, onClose }: IncidenceFormProps) {
       <div className={UI_CLASSES.body}>
         <div className="space-y-1.5">
           <Label htmlFor="title" className={UI_CLASSES.label}>¿Qué sucede?</Label>
-          <Input 
-            id="title" 
-            name="title" 
-            placeholder="Ej: Fuga de agua o bombilla fundida" 
-            required 
-            className={UI_CLASSES.input} 
+          <Input
+            id="title"
+            name="title"
+            placeholder="Ej: Fuga de agua o bombilla fundida"
+            required
+            className={UI_CLASSES.input}
           />
         </div>
 
@@ -86,7 +93,9 @@ export function IncidenceForm({ onSuccess, onClose }: IncidenceFormProps) {
               <SelectValue placeholder="Selecciona el área" />
             </SelectTrigger>
             <SelectContent className="rounded-2xl shadow-xl">
-              <SelectItem value="habitacion">Mi Habitación</SelectItem>
+              {!isAdmin && (
+                <SelectItem value="habitacion">Mi Habitación</SelectItem>
+              )}
               <SelectItem value="baño">Baño Común</SelectItem>
               <SelectItem value="cocina">Cocina</SelectItem>
               <SelectItem value="comedor">Comedor</SelectItem>
@@ -94,7 +103,7 @@ export function IncidenceForm({ onSuccess, onClose }: IncidenceFormProps) {
               <SelectItem value="exterior">Zonas Exteriores</SelectItem>
             </SelectContent>
           </Select>
-          
+
           {locationType === "habitacion" && (
             <div className={UI_CLASSES.infoBox}>
               <Info className="w-4 h-4" />
@@ -107,15 +116,33 @@ export function IncidenceForm({ onSuccess, onClose }: IncidenceFormProps) {
 
         <div className="space-y-1.5">
           <Label htmlFor="description" className={UI_CLASSES.label}>Descripción detallada</Label>
-          <textarea 
-            id="description" 
-            name="description" 
-            placeholder="Cuéntanos más detalles del problema..." 
+          <textarea
+            id="description"
+            name="description"
+            placeholder="Cuéntanos más detalles del problema..."
             required
-            className={UI_CLASSES.textarea} 
+            className={UI_CLASSES.textarea}
           />
         </div>
-        
+
+        {/*Si es administrador*/}
+        {isAdmin && (
+          <div className="space-y-4 pt-2 border-t border-gray-100">
+            <Label className={UI_CLASSES.label}>Asignar Responsable</Label>
+            <Select onValueChange={setStaffId}>
+              <SelectTrigger className={UI_CLASSES.selectTrigger}><SelectValue placeholder={loadingStaff ? "Cargando..." : "Sin asignar"} /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Dejar sin asignar</SelectItem>
+                {staff.map((m: any) => <SelectItem key={m.id} value={String(m.id)}>{m.full_name}</SelectItem>)}
+                <SelectItem value="external" className="text-emerald-600 font-bold">+ Externo</SelectItem>
+              </SelectContent>
+            </Select>
+            {staffId === "external" && (
+              <Input value={externalName} onChange={(e) => setExternalName(e.target.value)} placeholder="Nombre empresa" className={UI_CLASSES.input} required />
+            )}
+          </div>
+        )}
+
         <div className="space-y-2">
           <Label className={UI_CLASSES.label}>Adjuntar Foto (Opcional)</Label>
           {!base64Image ? (
@@ -161,8 +188,8 @@ export function IncidenceForm({ onSuccess, onClose }: IncidenceFormProps) {
       </div>
 
       <div className={UI_CLASSES.footer}>
-        <Button 
-          type="submit" 
+        <Button
+          type="submit"
           disabled={loading}
           variant="nexus"
           size="xl"

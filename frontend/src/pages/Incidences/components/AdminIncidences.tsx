@@ -72,6 +72,8 @@ const IncidenceSelect = ({
   );
 };
 
+import { useStaff } from '../../Staff/hooks/useStaff';
+
 const ManageIncidenceModal = ({
   incidence,
   onClose,
@@ -79,12 +81,17 @@ const ManageIncidenceModal = ({
 }: {
   incidence: AdminIncidence,
   onClose: () => void,
-  onRefresh: () => void
+  onRefresh: () => void,
+  isAdmin?: boolean
 }) => {
+  const { staff, loading: loadingStaff } = useStaff();
+
   const [status, setStatus] = useState(incidence.status);
-  const [technician, setTechnician] = useState(incidence.assigned_technician || '');
+  const [staffId, setStaffId] = useState<number | string>(incidence.assigned_staff || '');
+  const [externalName, setExternalName] = useState(incidence.assigned_external_name || '');
   const [newComment, setNewComment] = useState('');
   const [saving, setSaving] = useState(false);
+
 
   const handleSave = async () => {
     if (saving) return;
@@ -92,7 +99,8 @@ const ManageIncidenceModal = ({
     try {
       await IncidenceService.update(incidence.id, {
         status: status as IncidenceStatus,
-        assigned_technician: technician,
+        assigned_staff: staffId ? Number(staffId) : null,
+        assigned_external_name: staffId ? "" : externalName,
         quick_comment: newComment.trim() || undefined
       });
       onRefresh();
@@ -144,8 +152,36 @@ const ManageIncidenceModal = ({
                 <input type="text" value={technician} onChange={(e) => setTechnician(e.target.value)} placeholder="Nombre..." className={UI_CLASSES.input} />
               </div>
             </div>
-
+            {/* Asignación de personal */}
             <div>
+              <label className={UI_CLASSES.label}>Asignar Personal Responsable</label>
+              <select
+                value={staffId === "" && externalName !== "" ? "external_placeholder" : staffId}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "external_placeholder") {
+                    setStaffId(""); // Limpiamos el staff
+                  } else {
+                    setStaffId(val);
+                    setExternalName(""); // Si elige a alguien real, limpiamos el nombre externo
+                  }
+                }}
+                className={UI_CLASSES.select}
+                disabled={loadingStaff}
+              >
+                <option value="">{loadingStaff ? "Cargando..." : "Sin asignar"}</option>
+
+
+                {staff.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.full_name} — {member.job_title}
+                  </option>
+                ))}
+
+                <option value="external_placeholder" className="font-bold text-grey-600">
+                  + Asignar Personal Externo / Otro
+                </option>
+              </select>
               <label className={UI_CLASSES.label}>Historial de actualizaciones</label>
               <div className={UI_CLASSES.historyScrollArea}>
                 {incidence.updates && incidence.updates.length > 0 ? (
@@ -165,6 +201,29 @@ const ManageIncidenceModal = ({
                 )}
               </div>
             </div>
+
+            {/* CAMPO DE TEXTO PARA EXTERNOS */}
+            {(staffId === "" && (externalName !== "" || staffId === "")) && (
+              <div className="mt-4 animate-in slide-in-from-top-2 duration-200">
+                <label className={UI_CLASSES.label}>Nombre del Técnico o Empresa Externa</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Ej: Cerrajeros urgentes, Paco el electricista..."
+                    value={externalName}
+                    onChange={(e) => setExternalName(e.target.value)}
+                    className={UI_CLASSES.input}
+                    autoFocus
+                  />
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                    <Wrench size={16} className="text-slate-300" />
+                  </div>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-2 ml-1 italic">
+                  Escribe el nombre de la persona o empresa que realizará el trabajo.
+                </p>
+              </div>
+            )}
 
             <div>
               <label className={UI_CLASSES.label}>Añadir nuevo mensaje</label>
@@ -268,6 +327,46 @@ export const AdminIncidences = () => {
                     <div className={UI_CLASSES.descriptionBox}>
                       <p className="italic text-slate-500 line-clamp-2">"{inc.description}"</p>
                     </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center pt-2">
+                <div className="flex flex-wrap gap-2">
+                  <span className={`${STATUS_STYLES[inc.status]?.bg} ${STATUS_STYLES[inc.status]?.text} ${UI_CLASSES.statusBadge}`}>
+                    {STATUS_STYLES[inc.status]?.icon}
+                    {STATUS_STYLES[inc.status]?.label}
+                  </span>
+                  {(inc.assigned_staff_name || inc.assigned_external_name) && (
+                    <div className="flex flex-col">
+                      <span className={`${UI_CLASSES.technicianBadge} ${inc.assigned_external_name && !inc.assigned_staff_name ? 'border-grey-100 bg-grey-50/30' : ''}`}>
+                        <Wrench size={13} className={inc.assigned_external_name && !inc.assigned_staff_name ? 'text-grey-500' : ''} />
+
+                        {inc.assigned_staff_name ? (
+                          // Caso Interno
+                          `${inc.assigned_staff_name} - ${inc.assigned_staff_job}`
+                        ) : (
+                          // Caso Externo
+                          <span className="flex items-center gap-1">
+                            {inc.assigned_external_name}
+                            <span className="text-[9px] bg-red-100 text-red-600 px-1 rounded font-bold uppercase ml-1">Ext</span>
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <button onClick={() => setSelectedIncidence(inc)} className={UI_CLASSES.btnManage}>
+                  Gestionar <ChevronRight size={18} />
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+
+        {selectedIncidence && (
+          <ManageIncidenceModal incidence={selectedIncidence} onClose={() => setSelectedIncidence(null)} onRefresh={loadData} />
+        )}
                     <div className="flex justify-between items-center mt-auto pt-4">
                       <span className={`${STATUS_STYLES[inc.status]?.bg} ${STATUS_STYLES[inc.status]?.text} ${UI_CLASSES.statusBadge}`}>
                         {STATUS_STYLES[inc.status]?.label}
@@ -288,7 +387,11 @@ export const AdminIncidences = () => {
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="max-w-[90vw] sm:max-w-[425px] rounded-[32px] p-0 border-none overflow-hidden">
           <DialogTitle className="sr-only">Nueva Incidencia</DialogTitle>
-          <IncidenceForm onSuccess={() => { loadData(); setIsFormOpen(false); }} onClose={() => setIsFormOpen(false)} />
+          <IncidenceForm
+            isAdmin={true}
+            onSuccess={() => { loadData(); setIsFormOpen(false); }}
+            onClose={() => setIsFormOpen(false)}
+          />
         </DialogContent>
       </Dialog>
     </div>
@@ -297,13 +400,25 @@ export const AdminIncidences = () => {
 
 export default AdminIncidences;
 
-const LOCATION_LABELS: Record<string, string> = { habitacion: 'Habitación', baño: 'Baño Común', cocina: 'Cocina', comedor: 'Comedor', exterior: 'Zonas Exteriores', salas_comunes: 'Salas Comunes' };
-const PRIORITY_LABELS: Record<string, string> = { low: 'Baja', high: 'Urgente' };
-const STATUS_STYLES: Record<string, any> = {
-  pending: { label: 'Pendiente', bg: 'bg-slate-100', text: 'text-slate-600' },
-  reviewing: { label: 'En revisión', bg: 'bg-orange-100', text: 'text-orange-600' },
-  in_progress: { label: 'En proceso', bg: 'bg-blue-100', text: 'text-blue-600' },
-  resolved: { label: 'Resuelto', bg: 'bg-green-100', text: 'text-green-600' },
+const LOCATION_LABELS: Record<string, string> = {
+  habitacion: 'Habitación',
+  baño: 'Baño Común',
+  cocina: 'Cocina',
+  comedor: 'Comedor',
+  exterior: 'Zonas Exteriores',
+  salas_comunes: 'Salas Comunes',
+};
+
+const PRIORITY_LABELS: Record<string, string> = {
+  low: 'BAJA',
+  high: 'URGENTE',
+};
+
+const STATUS_STYLES: Record<string, { label: string; bg: string; text: string; icon: any }> = {
+  pending: { label: 'Pendiente', bg: 'bg-slate-50', text: 'text-slate-600', icon: <Clock size={14} /> },
+  reviewing: { label: 'En revisión', bg: 'bg-orange-50', text: 'text-orange-600', icon: <Clock size={14} /> },
+  in_progress: { label: 'En proceso', bg: 'bg-blue-50', text: 'text-blue-600', icon: <Wrench size={14} /> },
+  resolved: { label: 'Resuelto', bg: 'bg-green-50', text: 'text-green-600', icon: <CheckCircle2 size={14} /> },
 };
 
 const UI_CLASSES = {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Clock, Plus, Bell, MapPin, User, MessageSquare, ChevronRight } from "lucide-react";
+import { Clock, Plus, Bell, MapPin, User, Wrench, MessageSquare, ChevronRight } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent } from "../../../components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "../../../components/ui/dialog";
@@ -52,6 +52,9 @@ type Incidence = {
   status: "pending" | "reviewing" | "in_progress" | "resolved";
   priority: "low" | "high";
   created_at: string;
+  assigned_staff_name?: string;
+  assigned_staff_job?: string;
+  assigned_external_name?: string;
   is_mine: boolean;
   img?: string;
 };
@@ -142,6 +145,10 @@ export default function StudentIncidences() {
       const response = await fetchWithAuth(`${API_URL_INCIDENCES}notifications/`);
       if (!response.ok) return;
       const data = await response.json();
+      let nextNotifications: IncidenceNotification[] = Array.isArray(data.results) ? data.results : [];
+
+      const lastReadAt = getLastReadNotificationsAt();
+      nextNotifications = nextNotifications.filter((n) => Date.parse(n.created_at) > lastReadAt);
       let nextNotifications = Array.isArray(data.results) ? data.results : [];
       if (markAsRead && nextNotifications.length > 0) {
         saveLastReadNotificationsAt(nextNotifications[0].created_at);
@@ -155,8 +162,14 @@ export default function StudentIncidences() {
     try {
       setLoading(true);
       const response = await fetchWithAuth(API_URL_INCIDENCES);
-      if (response.ok) setIncidences(await response.json());
-    } catch (error) { console.error(error); } finally { setLoading(false); }
+      if (response.ok) {
+        setIncidences(await response.json());
+      }
+    } catch (error) {
+      console.error("Error cargando incidencias:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -164,7 +177,11 @@ export default function StudentIncidences() {
     loadNotifications();
     const interval = setInterval(() => loadNotifications(false, true), 15000);
     return () => clearInterval(interval);
-  }, [loadNotifications]);
+  }, [isNotificationsOpen, loadNotifications]);
+
+  useEffect(() => {
+    if (isNotificationsOpen) loadNotifications(true);
+  }, [isNotificationsOpen, loadNotifications]);
 
   const formatUpdateText = (text: string) => {
     if (!text) return '';
@@ -265,12 +282,13 @@ export default function StudentIncidences() {
                       <div className="p-5 flex-1 flex flex-col justify-between">
                         <div>
                           <div className="flex justify-between items-start mb-2">
-                            <div className="max-w-[70%]">
+                            <div className="max-w-[70%] text-left">
                               <h3 className={UI_CLASSES.cardTitle}>{inc.title}</h3>
                               {inc.is_mine && <span className="text-[9px] font-black text-[#1B4D1C] uppercase tracking-wider">Tu reporte</span>}
                             </div>
                             <span className={`${UI_CLASSES.statusBadge} ${currentStatus.colorClass}`}>{currentStatus.label}</span>
                           </div>
+
                           <div className={UI_CLASSES.cardLocationRow}>
                             <MapPin size={14} className="text-slate-400" />
                             <span className="text-[11px] font-semibold text-slate-500">
@@ -278,27 +296,59 @@ export default function StudentIncidences() {
                             </span>
                           </div>
                         </div>
-                        <div className="flex justify-between items-center mt-6">
+
+                        <div className="flex justify-between items-center mb-3 mt-6">
                           <div className={UI_CLASSES.cardDateRow}>
                             <Clock size={12} />
                             <span>{new Date(inc.created_at).toLocaleDateString()}</span>
                           </div>
+                    </div>
+
+                    <div className="flex justify-between items-center pt-3 border-t border-slate-50">
+                      <div>
+                        {(inc.assigned_staff_name || inc.assigned_external_name) ? (
+                          <span className={UI_CLASSES.technicianBadge}>
+                            <Wrench size={12} className="text-[#1B4D1C]" />
+                            {inc.assigned_staff_name ? (
+                              `${inc.assigned_staff_name} - ${inc.assigned_staff_job}`
+                            ) : (
+                              <span className={UI_CLASSES.technicianBadge}>
+                                {inc.assigned_external_name}
+                                <span className="text-[9px] bg-slate-200 px-1 rounded text-slate-500 font-bold uppercase">Ext</span>
+                              </span>
+                            )}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-slate-300 italic ml-1">Pendiente de asignar</span>
+                        )}
+                      </div>
                           <Button variant="outline" onClick={async () => {
                             const res = await fetchWithAuth(`${API_URL_INCIDENCES}${inc.id}/`);
-                            if (res.ok) { setSelectedDetails(await res.json()); setIsNotesOpen(true); }
-                          }} className={UI_CLASSES.btnNotes}> Detalles </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </div>
+                            if (!res.ok) throw new Error(`Error ${res.status}`);
+                            const data = await res.json();
+                            setSelectedDetails(data);
+                            setIsNotesOpen(true);
+                          } catch (error) {
+                            console.error("Error cargando detalles:", error);
+                          }
+                        }}
+                        className={UI_CLASSES.btnNotes}
+                      >
+                        Ver notas
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })
+        }
       </main>
 
-      <button onClick={() => setIsFormOpen(true)} className={UI_CLASSES.btnFloating}><Plus size={32} strokeWidth={3} /></button>
+      <button onClick={() => setIsFormOpen(true)} className={UI_CLASSES.btnFloating}>
+        <Plus size={32} strokeWidth={3} />
+      </button>
+
 
       {/* MODAL DETALLES */}
       <Dialog open={isNotesOpen} onOpenChange={(open) => { if (!open) setIsNotesOpen(false); }}>
@@ -419,4 +469,5 @@ const UI_CLASSES = {
   adminNoteLabel: "text-[9px] font-black uppercase text-[#3A7A1C] tracking-[0.2em] mb-1 block",
   adminNoteText: "text-xs font-bold text-[#1B4D1C] leading-relaxed italic",
   loadingText: "text-center text-slate-400 mt-20 text-sm font-bold animate-pulse",
+  technicianBadge: "bg-slate-50 text-slate-500 px-3 py-2 rounded-xl text-[11px] font-medium flex items-center gap-1.5 border border-slate-100 inline-flex",
 };
