@@ -22,7 +22,7 @@ const ManageIncidenceModal = ({
   const [externalName, setExternalName] = useState(incidence.assigned_external_name || '');
   const [note, setNote] = useState(incidence.admin_notes || '');
   const [saving, setSaving] = useState(false);
-  const isAdmin =true;
+
 
   const handleSave = async () => {
     setSaving(true);
