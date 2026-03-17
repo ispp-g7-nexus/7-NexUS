@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import StudentPackages, { SimplePackage } from "../../components/StudentPackages";
+import StudentPackages, { SimplePackage } from "./StudentPackages";
 import { packagesService } from "../../services/packages";
 import { toast } from "sonner";
 

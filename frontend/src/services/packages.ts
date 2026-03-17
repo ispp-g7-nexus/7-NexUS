@@ -1,60 +1,48 @@
-// src/services/packages.ts
 import { API_URL } from "./api";
 
 const PACKAGES_URL = `${API_URL}/packages`;
 
-async function buildApiError(response: Response, fallbackMessage: string): Promise<Error> {
-  try {
-    const contentType = response.headers.get("content-type") || "";
-
-    if (contentType.includes("application/json")) {
-      const payload = await response.json();
-      const detail = typeof payload?.detail === "string" ? payload.detail : "";
-      return new Error(detail || `${fallbackMessage} (HTTP ${response.status})`);
-    }
-
-    const rawText = (await response.text()).trim();
-    if (rawText && !rawText.startsWith("<")) {
-      return new Error(rawText);
-    }
-  } catch {
-    // Fall back to a generic message when body parsing fails.
-  }
-
-  return new Error(`${fallbackMessage} (HTTP ${response.status})`);
-}
-
+// --- Tipos de la API (Lo que viene del servidor) ---
 export interface PackageItem {
   id: number;
-  resident_id: number;
   resident_name: string;
-  room?: string;
   building?: string;
   carrier?: string;
   tracking_number?: string;
-  notes?: string;
   status: string;
   received_at?: string;
-  delivered_at?: string | null;
-  created_at?: string;
-  updated_at?: string;
-  is_unread?: boolean;
 }
 
+// --- Tipo de la UI (Lo que tu Front entiende) ---
+export type SimplePackage = {
+  id: number;
+  sender: string;
+  tracking: string;
+  date: string;
+  status: string;
+  location?: string;
+};
+
+// Transformador privado: Convierte "suciedad" de API en "pureza" de UI
+const mapToSimplePackage = (p: PackageItem): SimplePackage => ({
+  id: p.id,
+  sender: p.carrier || p.resident_name || "Remitente desconocido",
+  tracking: p.tracking_number || "S/N",
+  date: p.received_at ? new Date(p.received_at).toLocaleDateString() : "Sin fecha",
+  status: p.status,
+  location: p.building,
+});
+
 export const packagesService = {
-  getMyPackages: async (status?: string): Promise<PackageItem[]> => {
-    const url = status ? `${PACKAGES_URL}/me/?status=${encodeURIComponent(status)}` : `${PACKAGES_URL}/me/`;
-    const response = await fetch(url, {
+  getMyPackages: async (): Promise<SimplePackage[]> => {
+    const response = await fetch(`${PACKAGES_URL}/me/`, {
       method: 'GET',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' }
     });
-
-    if (!response.ok) {
-      throw await buildApiError(response, 'Error al obtener paquetes');
-    }
-
-    return response.json();
+    if (!response.ok) throw new Error("Error al obtener paquetes");
+    const data: PackageItem[] = await response.json();
+    return data.map(mapToSimplePackage);
   },
 
   getDeliveryQr: async (): Promise<{ token: string }> => {
@@ -63,40 +51,15 @@ export const packagesService = {
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' }
     });
-
-    if (!response.ok) {
-      throw await buildApiError(response, 'Error al obtener QR');
-    }
-
+    if (!response.ok) throw new Error("Error al obtener QR");
     return response.json();
   },
 
-  getUnreadCount: async (): Promise<{ count: number }> => {
-    const response = await fetch(`${PACKAGES_URL}/me/unread_count/`, {
-      method: 'GET',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' }
-    });
-
-    if (!response.ok) {
-      throw await buildApiError(response, 'Error al obtener contador de paquetes no leídos');
-    }
-
-    return response.json();
-  },
-
-  markAsViewed: async (): Promise<{ marked_count: number }> => {
-    const response = await fetch(`${PACKAGES_URL}/me/mark_as_viewed/`, {
+  markAsViewed: async () => {
+    await fetch(`${PACKAGES_URL}/me/mark_as_viewed/`, {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({})
     });
-
-    if (!response.ok) {
-      throw await buildApiError(response, 'Error al marcar paquetes como vistos');
-    }
-
-    return response.json();
   }
 };

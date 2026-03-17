@@ -1,10 +1,10 @@
 import { Clock, QrCode, Search, MapPin } from "lucide-react";
-import { Card, CardContent } from "./ui/card";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Badge } from "./ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "./ui/dialog";
+import { Card, CardContent } from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Badge } from "../../components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "../../components/ui/dialog";
 
 export type SimplePackage = {
   id: number;
@@ -21,7 +21,10 @@ interface StudentPackagesProps {
   onMarkViewed?: () => void;
 }
 
-export function StudentPackages({ packages, onShowQr }: StudentPackagesProps) {
+export function StudentPackages({ packages = [], onShowQr }: StudentPackagesProps) {
+  const pendingPackages = packages.filter((p) => p.status !== "DELIVERED");
+  const historyPackages = packages.filter((p) => p.status === "DELIVERED");
+
   return (
     <div className="p-4 space-y-6 min-h-full bg-background pb-20">
       <div className="flex items-center justify-between">
@@ -59,15 +62,23 @@ export function StudentPackages({ packages, onShowQr }: StudentPackagesProps) {
         </TabsList>
 
         <TabsContent value="pending" className="space-y-3">
-          {packages.filter(p => p.status !== 'DELIVERED').map(p => (
-            <DeliveryCard key={p.id} sender={p.sender} tracking={p.tracking} date={p.date} status={p.status} location={p.location} />
-          ))}
+          {pendingPackages.length > 0 ? (
+            pendingPackages.map((p) => (
+              <DeliveryCard key={p.id} sender={p.sender} tracking={p.tracking} date={p.date} status={p.status} location={p.location} />
+            ))
+          ) : (
+            <div className="p-6 bg-card rounded-xl text-center text-sm text-muted-foreground">No tienes paquetes pendientes.</div>
+          )}
         </TabsContent>
 
         <TabsContent value="history" className="space-y-3">
-          {packages.filter(p => p.status === 'DELIVERED').map(p => (
-            <DeliveryCard key={p.id} sender={p.sender} tracking={p.tracking} date={p.date} status={p.status} location={undefined} />
-          ))}
+          {historyPackages.length > 0 ? (
+            historyPackages.map((p) => (
+              <DeliveryCard key={p.id} sender={p.sender} tracking={p.tracking} date={p.date} status={p.status} location={undefined} />
+            ))
+          ) : (
+            <div className="p-6 bg-card rounded-xl text-center text-sm text-muted-foreground">Aún no hay historial de paquetes.</div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
