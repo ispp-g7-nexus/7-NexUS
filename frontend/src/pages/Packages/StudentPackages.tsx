@@ -110,7 +110,7 @@ function DeliveryCard({ sender, tracking, date, status, location, is_unread }) {
               )}
             </div>
             {isReady ? (
-              <Badge className="bg-accent/10 text-accent hover:bg-accent/10 border-none shadow-none">Recoger</Badge>
+              <Badge className="bg-accent/10 text-accent hover:bg-accent/10 border-none shadow-none">Listo para recoger</Badge>
             ) : (
               <Badge variant="outline" className="text-muted-foreground border-border">Entregado</Badge>
             )}
