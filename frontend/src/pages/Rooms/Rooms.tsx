@@ -1,8 +1,15 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { listBedrooms, createBedroom, updateBedroom, deleteBedroom, type Bedroom } from "../../services/bedrooms";
+import {
+  listBedrooms,
+  createBedroom,
+  updateBedroom,
+  deleteBedroom,
+  type Bedroom,
+  type BedroomResident,
+} from "../../services/bedrooms";
 import "../../index.css";
 import roomSvg from "../../assets/room.svg";
-import { Plus, Edit2, Trash2, Search as SearchIcon, Bed, Building2, Grid3x3, List } from "lucide-react";
+import { Plus, Edit2, Trash2, Search as SearchIcon, Bed, Building2, Grid3x3, List, Users } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 
@@ -253,58 +260,68 @@ export function Rooms() {
       </Card>
 
       {/* Lista */}
-      {viewLayout === "list" && (
-        <div className="grid gap-4">
-          {filteredRooms.map((r) => (
-            <Card
-              key={r.id}
-              className={`hover:shadow-md transition ${r.ocupantes_actuales > 0 ? 'border-destructive/30 bg-destructive/5' : 'bg-card'}`}
-            >
-              <CardContent className="flex justify-between items-center p-4">
-                <div>
-                  <h3 className="font-semibold flex items-center gap-2">
-                    <Bed className="w-5 h-5 text-muted-foreground" /> {r.numero}-{r.edificio}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">Planta {r.planta ?? "-"} · {r.tipo} · {r.ocupantes_actuales}/{r.capacidad_maxima} ocupantes</p>
+      <div className="grid gap-4">
+        {filteredRooms.map((r) => (
+          <Card
+            key={r.id}
+            className={`hover:shadow-md transition ${!r.is_active ? 'border-destructive/30 bg-destructive/5' : 'bg-card'} `}
+          >
+            <CardContent className="flex justify-between items-start gap-4 p-4">
+              <div className="min-w-0 flex-1">
+                <h3 className="font-semibold flex items-center gap-2">
+                  <Bed className="w-5 h-5 text-muted-foreground" /> {r.numero}-{r.edificio}
+                </h3>
+                <p className="text-sm text-muted-foreground">Planta {r.planta ?? "-"} · {r.tipo} · {r.ocupantes_actuales}/{r.capacidad_maxima} ocupantes</p>
+                <div className="mt-2 flex items-start gap-2 min-w-0">
+                  <Users className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                  <ResidentsInlineList residents={r.residentes} />
                 </div>
+              </div>
 
-                <div className="flex gap-3 items-center">
-                  <Badge variant={r.ocupantes_actuales > 0 ? "default" : "secondary"}>
-                    {r.ocupantes_actuales >= r.capacidad_maxima
-                      ? "Completa"
-                      : r.ocupantes_actuales > 0
-                        ? "Parcial"
-                        : "Libre"}
-                  </Badge>
+              <div className="flex gap-3 items-center shrink-0">
+                <Badge variant={r.ocupantes_actuales > 0 ? "default" : "secondary"}>
+                  {r.ocupantes_actuales >= r.capacidad_maxima
+                    ? "Completa"
+                    : r.ocupantes_actuales > 0
+                      ? "Parcial"
+                      : "Libre"}
+                </Badge>
 
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setEditingId(r.id);
-                      setForm({
-                        numero: r.numero,
-                        edificio: r.edificio,
-                        planta: r.planta != null ? String(r.planta) : "",
-                        tipo: r.tipo,
-                        unidades: 1,
-                      });
-                      setErrors({});
-                      setIsEditing(true);
-                      setIsModalOpen(true);
-                    }}
-                  >
-                    <Edit2 className="w-4 h-4 mr-2" />Editar
-                  </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setEditingId(r.id);
+                    setForm({
+                      numero: r.numero,
+                      edificio: r.edificio,
+                      planta: r.planta != null ? String(r.planta) : "",
+                      tipo: r.tipo,
+                      unidades: 1,
+                    });
+                    setErrors({});
+                    setIsEditing(true);
+                    setIsModalOpen(true);
+                  }}
+                >
+                  <Edit2 className="w-4 h-4 mr-2" />Editar
+                </Button>
 
-                  <Button
-                    variant="destructive"
-                    onClick={async () => {
-                      if (!confirm("¿Eliminar habitación?")) return;
-                      try {
-                        const res = await deleteBedroom(r.id);
-                        if (res.ok) {
-                          toast.success("Habitación eliminada correctamente.");
-                          fetchRooms();
+                <Button
+                  variant="destructive"
+                  onClick={async () => {
+                    if (!confirm("¿Eliminar habitación?")) return;
+                    try {
+                      const res = await deleteBedroom(r.id);
+                      if (res.ok) {
+                        toast.success("Habitación eliminada correctamente.");
+                        fetchRooms();
+                      } else {
+                        const body = await res.json().catch(() => ({}));
+                        const detail = (body as { detail?: string }).detail;
+                        if (res.status === 409) {
+                          toast.error(detail || "No se puede eliminar: tiene residentes asignados.");
+                        } else if (res.status === 404) {
+                          toast.error("La habitación no existe.");
                         } else {
                           const body = await res.json().catch(() => ({}));
                           const detail = (body as { detail?: string }).detail;
@@ -583,6 +600,39 @@ function Stat({ title, value }: Readonly<StatProps>) {
         <p className="text-2xl font-bold">{value}</p>
       </CardContent>
     </Card>
+  );
+}
+
+function ResidentsInlineList({ residents }: { residents: BedroomResident[] }) {
+  if (residents.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">Sin residentes asignados</p>
+    );
+  }
+
+  if (residents.length === 1) {
+    return (
+      <p
+        className="text-sm text-foreground truncate"
+        title={residents[0].full_name}
+      >
+        {residents[0].full_name}
+      </p>
+    );
+  }
+
+  return (
+    <ul className="min-w-0 space-y-0.5">
+      {residents.map((resident) => (
+        <li
+          key={resident.id}
+          className="text-sm text-foreground truncate"
+          title={resident.full_name}
+        >
+          {resident.full_name}
+        </li>
+      ))}
+    </ul>
   );
 }
 

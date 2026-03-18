@@ -12,6 +12,7 @@ import { AdminProfile } from "./AdminProfile";
 import { AdminReservations } from "./AdminReservations";
 import { AdminChats } from "../pages/Chats/AdminChats";
 import { AdminMenuView } from "../pages/Menu/AdminMenuView";
+import { AdminGuestPassPolicyPage } from "../pages/Visitors/AdminGuestPassPolicy";
 import { StatCard } from "./statCard";
 import { Button } from "./ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
@@ -85,6 +86,7 @@ export function AdminView({ onLogout }: AdminViewProps) {
         { id: "reservations", label: "Recursos & Reservas", icon: <BookOpen className="w-5 h-5" /> },
         { id: "roles", label: "Roles", icon: <Shield className="w-5 h-5" /> },
         { id: "announcements", label: "Avisos", icon: <Bell className="w-5 h-5" /> },
+        { id: "visitors", label: "Visitantes", icon: <UserCheck className="w-5 h-5" /> },
     ];
 
     const metricsData = [
@@ -137,6 +139,12 @@ export function AdminView({ onLogout }: AdminViewProps) {
                 return (
                     <div className="p-4">
                         <AdminAnnouncements />
+                    </div>
+                );
+            case "visitors":
+                return (
+                    <div className="p-4">
+                        <AdminGuestPassPolicyPage />
                     </div>
                 );
 
