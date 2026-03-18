@@ -52,8 +52,14 @@ class GuestPass(models.Model):
     class Meta:
         ordering = ["valid_until", "-created_at"]
         indexes = [
-            models.Index(fields=["residence", "resident", "status"]),
-            models.Index(fields=["residence", "status", "valid_until"]),
+            models.Index(
+                fields=["residence", "resident", "status"],
+                name="guests_gues_residen_2d6238_idx",
+            ),
+            models.Index(
+                fields=["residence", "status", "valid_until"],
+                name="guests_gues_residen_67d52f_idx",
+            ),
         ]
         constraints = [
             models.UniqueConstraint(
