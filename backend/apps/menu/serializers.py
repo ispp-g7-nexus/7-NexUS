@@ -1,3 +1,4 @@
+import datetime
 from rest_framework import serializers
 from .models import MenuWeek, MenuDay, Meal
 
@@ -98,21 +99,44 @@ class MenuWeekListSerializer(serializers.ModelSerializer):
 
 class MenuWeekCreateSerializer(serializers.ModelSerializer):
 
+    week_start = serializers.DateField(required=True)
+
     class Meta:
         model = MenuWeek
-        fields = ['week_start', 'week_end']
+        fields = ['week_start']
 
-    def validate(self, data):
-        if data['week_start'] >= data['week_end']:
-            raise serializers.ValidationError(
-                "La fecha de inicio debe ser anterior a la fecha de fin."
-            )
-        return data
+    def validate(self, attrs):
+        base_date = attrs.get('week_start')
+        if not base_date:
+            raise serializers.ValidationError({"week_start": "Debe proporcionar una fecha."})
+
+        monday = base_date - datetime.timedelta(days=base_date.weekday())
+        sunday = monday + datetime.timedelta(days=6)
+
+        attrs['week_start'] = monday
+        attrs['week_end'] = sunday
+
+        request = self.context.get('request')
+        tenant = getattr(request, 'tenant', None)
+        
+        if not tenant and request:
+            from apps.tenants.models import Domain
+            host = request.get_host().split(':')[0].lower()
+            domain = Domain.objects.filter(domain=host).select_related('tenant').first()
+            if domain:
+                tenant = domain.tenant
+
+        if tenant:
+            if MenuWeek.objects.filter(residence=tenant, week_start=monday).exists():
+                raise serializers.ValidationError(
+                    "Ya has creado un menú para la semana del " + monday.strftime("%d/%m") + " al " + sunday.strftime("%d/%m") + "."
+                )
+
+        return attrs
 
     def to_internal_value(self, data):
         converted = {}
         converted['week_start'] = data.get('weekStart') or data.get('week_start')
-        converted['week_end'] = data.get('weekEnd') or data.get('week_end')
         return super().to_internal_value(converted)
 
 

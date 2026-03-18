@@ -283,75 +283,57 @@ interface NewWeekModalProps {
 }
 
 const NewWeekModal = ({ isOpen, onClose, onSave, isSaving }: NewWeekModalProps) => {
-  const [weekStart, setWeekStart] = useState('');
-  const [weekEnd, setWeekEnd] = useState('');
+  const [selectedDate, setSelectedDate] = useState('');
 
   useEffect(() => {
     if (isOpen) {
       const today = new Date();
-      const dayOfWeek = today.getDay();
-      const nextMonday = new Date(today);
-      const daysUntilMonday = dayOfWeek === 0 ? 1 : (8 - dayOfWeek);
-      nextMonday.setDate(today.getDate() + daysUntilMonday);
-
-      const nextFriday = new Date(nextMonday);
-      nextFriday.setDate(nextMonday.getDate() + 4);
-
-      setWeekStart(nextMonday.toISOString().split('T')[0]);
-      setWeekEnd(nextFriday.toISOString().split('T')[0]);
+      setSelectedDate(today.toISOString().split('T')[0]);
     }
   }, [isOpen]);
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-lg max-w-md w-full mx-4">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70] animate-in fade-in duration-200">
+      <div className="bg-white rounded-xl shadow-lg max-w-sm w-full mx-4 animate-in zoom-in-95 duration-200">
+        <div className="flex items-center justify-between p-6 border-b border-gray-100">
           <h2 className="text-xl font-semibold text-gray-900">
             Crear nueva semana
           </h2>
-          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-md">
-            <X className="w-5 h-5" />
+          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-md transition-colors">
+            <X className="w-5 h-5 text-gray-500" />
           </button>
         </div>
 
         <div className="p-6 space-y-4">
+          <p className="text-sm text-gray-500 leading-relaxed">
+            Selecciona <strong>cualquier día de la semana</strong> que desees crear. El sistema construirá automáticamente la semana empezando desde el lunes.
+          </p>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Fecha de inicio (Lunes)
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Semana a crear (Día de referencia)
             </label>
             <input
               type="date"
-              value={weekStart}
-              onChange={(e) => setWeekStart(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Fecha de fin (Viernes/Domingo)
-            </label>
-            <input
-              type="date"
-              value={weekEnd}
-              onChange={(e) => setWeekEnd(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
             />
           </div>
         </div>
 
-        <div className="flex gap-3 p-6 border-t border-gray-200">
+        <div className="flex gap-3 p-6 border-t border-gray-100 bg-gray-50/50 rounded-b-xl">
           <button
             onClick={onClose}
             disabled={isSaving}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-white transition-colors disabled:opacity-50"
           >
             Cancelar
           </button>
           <button
-            onClick={() => onSave(weekStart, weekEnd)}
-            disabled={isSaving || !weekStart || !weekEnd}
+            onClick={() => onSave(selectedDate, selectedDate)}
+            disabled={isSaving || !selectedDate}
             className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
@@ -443,7 +425,7 @@ export function AdminMenuView() {
     title: string;
     message: string;
     action: () => void;
-  }>({ isOpen: false, title: '', message: '', action: () => {} });
+  }>({ isOpen: false, title: '', message: '', action: () => { } });
 
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => setToast({ message, type });
 
@@ -612,7 +594,7 @@ export function AdminMenuView() {
 
   const handleDeleteWeek = async () => {
     if (!menuWeek?.id) return;
-    
+
     confirmAction(
       'Eliminar semana completa',
       '¿Estás seguro de que quieres eliminar esta semana completa? Se borrarán todas las comidas y los días.',
@@ -620,10 +602,10 @@ export function AdminMenuView() {
         setIsSaving(true);
         try {
           await menuService.deleteWeek(menuWeek.id!);
-          
+
           const updatedWeeks = allWeeks.filter(w => w.id !== menuWeek.id);
           setAllWeeks(updatedWeeks);
-          
+
           if (updatedWeeks.length > 0) {
             await loadWeekDetail(updatedWeeks[0].id!);
           } else {
@@ -694,7 +676,7 @@ export function AdminMenuView() {
           onConfirm={confirmConfig.action}
           onCancel={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
         />
-        
+
         {toast && (
           <Toast
             message={toast.message}
@@ -778,11 +760,10 @@ export function AdminMenuView() {
             <button
               onClick={handleTogglePublish}
               disabled={isSaving}
-              className={`px-4 py-2 rounded-lg transition-colors font-medium flex items-center gap-2 ${
-                menuWeek.isPublished 
-                  ? 'bg-yellow-50 text-yellow-700 border border-yellow-200 hover:bg-yellow-100' 
+              className={`px-4 py-2 rounded-lg transition-colors font-medium flex items-center gap-2 ${menuWeek.isPublished
+                  ? 'bg-yellow-50 text-yellow-700 border border-yellow-200 hover:bg-yellow-100'
                   : 'bg-blue-600 text-white hover:bg-blue-700'
-              }`}
+                }`}
             >
               <span className="hidden sm:inline">
                 {menuWeek.isPublished ? 'Ocultar' : 'Publicar'}
@@ -868,7 +849,7 @@ export function AdminMenuView() {
         onConfirm={confirmConfig.action}
         onCancel={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
       />
-      
+
       {/* Toast Notification */}
       {toast && (
         <Toast
