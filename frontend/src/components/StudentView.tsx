@@ -13,6 +13,8 @@ import StudentIncidences from "../pages/Incidences/components/StudentIncidences"
 import { MyMatchesPage } from "../pages/Matching/MyMatchesPage";
 import announcementService from "../services/announcement.service";
 import { StudentReservations } from "./StudentReservations";
+import { chatsService, type ChatRealtimeEvent } from "../services/chats";
+import { authService } from "../services/auth";
 
 interface StudentViewProps {
     onLogout: () => void;
@@ -21,8 +23,78 @@ interface StudentViewProps {
 export function StudentView({ onLogout }: StudentViewProps) {
     const [activeTab, setActiveTab] = useState<StudentTab>("home");
     const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
+    const [unreadChatNotifications, setUnreadChatNotifications] = useState(0);
+    const [currentUserEmail, setCurrentUserEmail] = useState("");
+    const [chatRealtimeStatus, setChatRealtimeStatus] = useState<"connecting" | "connected" | "reconnecting">("connecting");
+    const [chatRealtimeTick, setChatRealtimeTick] = useState(0);
+    const [chatRealtimeEvent, setChatRealtimeEvent] = useState<ChatRealtimeEvent | null>(null);
+    const [isCommunityChatActive, setIsCommunityChatActive] = useState(false);
     const previousUnreadCount = useRef<number | null>(null);
     const markAsViewedTimeoutRef = useRef<number | null>(null);
+
+    useEffect(() => {
+        authService.me().then((session) => {
+            if (session.user?.email) {
+                setCurrentUserEmail(session.user.email);
+            }
+        }).catch(() => { });
+    }, []);
+
+    useEffect(() => {
+        setChatRealtimeStatus("connecting");
+        const source = chatsService.subscribeToEvents((evt) => {
+            if (evt.event === "group_created" || evt.event === "group_updated" || evt.event === "group_deleted") {
+                setChatRealtimeEvent(evt);
+                setChatRealtimeTick((prev) => prev + 1);
+                return;
+            }
+
+            if (evt.event !== "group_message_created" && evt.event !== "private_message_created") {
+                return;
+            }
+
+            const senderEmail = String(evt.payload?.sender_email ?? "");
+            const senderName = String(evt.payload?.sender_name ?? "Residente");
+            if (!senderEmail || senderEmail === currentUserEmail) return;
+
+            setChatRealtimeEvent(evt);
+            setChatRealtimeTick((prev) => prev + 1);
+
+            const isViewingChats = activeTab === "community" && isCommunityChatActive;
+            if (!isViewingChats) {
+                setUnreadChatNotifications((prev) => prev + 1);
+                toast.info("Tienes un mensaje nuevo", {
+                    description: `Mensaje de ${senderName} en chats.`,
+                });
+            }
+        });
+
+        source.onopen = () => {
+            console.info("[chat-sse][student] connected");
+            setChatRealtimeStatus("connected");
+        };
+
+        source.onerror = () => {
+            console.warn("[chat-sse][student] connection error; browser will retry");
+            setChatRealtimeStatus("reconnecting");
+        };
+
+        return () => {
+            source.close();
+        };
+    }, [activeTab, currentUserEmail, isCommunityChatActive]);
+
+    useEffect(() => {
+        if (activeTab !== "community") {
+            setIsCommunityChatActive(false);
+        }
+    }, [activeTab]);
+
+    useEffect(() => {
+        if (activeTab === "community" && isCommunityChatActive) {
+            setUnreadChatNotifications(0);
+        }
+    }, [activeTab, isCommunityChatActive]);
 
     useEffect(() => {
         const loadUnreadCount = async () => {
@@ -105,7 +177,13 @@ export function StudentView({ onLogout }: StudentViewProps) {
                 tabContent = <StudentReservations />;
                 break;
             case "community":
-                tabContent = <SocialHub />;
+                tabContent = (
+                    <SocialHub
+                        chatRealtimeTick={chatRealtimeTick}
+                        chatRealtimeEvent={chatRealtimeEvent}
+                        onChatTabActiveChange={setIsCommunityChatActive}
+                    />
+                );
                 break;
             case "matches":
                 tabContent = <MyMatchesPage />;
@@ -132,10 +210,21 @@ export function StudentView({ onLogout }: StudentViewProps) {
                 {renderContent()}
             </div>
 
+            <div className="fixed bottom-24 right-4 z-20">
+                <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium shadow-sm border ${
+                    chatRealtimeStatus === "connected"
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        : "bg-amber-50 text-amber-700 border-amber-200"
+                    }`}>
+                    <span className={`w-2 h-2 rounded-full ${chatRealtimeStatus === "connected" ? "bg-emerald-500" : "bg-amber-500"}`} />
+                    {chatRealtimeStatus === "connected" ? "Chat en vivo conectado" : "Chat en vivo reconectando"}
+                </div>
+            </div>
+
             <nav className="fixed bottom-0 left-0 right-0 bg-background border-t border-border px-6 py-2 pb-6 z-20 w-full shadow-[0_-4px_15px_rgba(0,0,0,0.02)]">
                 <div className="flex justify-between items-center">
                     <NavButton icon={<AlertCircle className="w-5 h-5" />} label="Incidencias" active={activeTab === "incidences"} onClick={() => setActiveTab("incidences")} />
-                    <NavButton icon={<User className="w-5 h-5" />} label="Social" active={activeTab === "community"} onClick={() => setActiveTab("community")} />
+                    <NavButton icon={<User className="w-5 h-5" />} label="Social" active={activeTab === "community"} onClick={() => setActiveTab("community")} showIndicator={unreadChatNotifications > 0} />
                     <div className="relative -top-5">
                         <motion.button whileTap={{ scale: 0.95 }} onClick={() => setActiveTab("home")} className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-colors ${activeTab === "home" ? "bg-secondary-brand text-white" : "bg-white text-slate-400 border border-slate-100"}`}>
                             <Home className="w-6 h-6" />

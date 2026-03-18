@@ -15,6 +15,7 @@ import {
     chatsService,
     type ChatGroup,
     type ChatGroupLabelItem,
+    type ChatRealtimeEvent,
     type ChatResident,
     type PrivateConversation,
     type PrivateMessage,
@@ -52,7 +53,15 @@ type ChatSubTab = "grupos" | "privados";
    Componente principal
    ══════════════════════════════════════════════════════════════ */
 
-export function StudentChats() {
+export function StudentChats({
+    enableRealtimeStream = true,
+    realtimeTick = 0,
+    realtimeEvent = null,
+}: {
+    readonly enableRealtimeStream?: boolean;
+    readonly realtimeTick?: number;
+    readonly realtimeEvent?: ChatRealtimeEvent | null;
+}) {
     const [subTab, setSubTab] = useState<ChatSubTab>("grupos");
 
     // ── Estado grupos ──
@@ -122,6 +131,20 @@ export function StudentChats() {
         ),
         [groups, searchTerm]);
 
+    useEffect(() => {
+        if (!selectedGroup) return;
+
+        const updated = groups.find((g) => g.id === selectedGroup.id);
+        if (!updated) {
+            setSelectedGroup(null);
+            setGroupMessages([]);
+            setGroupMsgText("");
+            return;
+        }
+
+        setSelectedGroup(updated);
+    }, [groups, selectedGroup]);
+
     const handleLeaveGroup = async () => {
         if (!selectedGroup) return;
         setLeaving(true);
@@ -153,6 +176,14 @@ export function StudentChats() {
             setLoadingGroupMsgs(false);
         }
     };
+
+    const loadSelectedGroupMessages = useCallback(async (groupId: number) => {
+        try {
+            setGroupMessages(await chatsService.listGroupMessages(groupId));
+        } catch {
+            // Silencioso: es una recarga reactiva por evento.
+        }
+    }, []);
 
     useEffect(() => {
         groupMessagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -189,6 +220,12 @@ export function StudentChats() {
         if (subTab === "privados") loadConversations();
     }, [subTab, loadConversations]);
 
+    useEffect(() => {
+        if (subTab === "grupos") {
+            void loadGroups();
+        }
+    }, [subTab, loadGroups]);
+
     const filteredConvs = useMemo(() =>
         conversations.filter((c) =>
             c.other_user.full_name.toLowerCase().includes(convSearch.toLowerCase()),
@@ -213,6 +250,118 @@ export function StudentChats() {
             setLoadingMsgs(false);
         }
     };
+
+    const loadActiveConversationMessages = useCallback(async (conversationId: number) => {
+        try {
+            setMessages(await chatsService.listMessages(conversationId));
+        } catch {
+            // Silencioso: es una recarga reactiva por evento.
+        }
+    }, []);
+
+    const applyGroupMessageEvent = useCallback((evt: ChatRealtimeEvent) => {
+        if (!selectedGroup) return;
+
+        const groupId = Number(evt.payload?.group_id ?? -1);
+        if (groupId !== selectedGroup.id) return;
+
+        const incoming = evt.payload?.message as GroupMessage | undefined;
+        if (!incoming || typeof incoming.id !== "number") {
+            void loadSelectedGroupMessages(selectedGroup.id);
+            return;
+        }
+
+        setGroupMessages((prev) => (prev.some((m) => m.id === incoming.id) ? prev : [...prev, incoming]));
+    }, [loadSelectedGroupMessages, selectedGroup]);
+
+    const applyPrivateMessageEvent = useCallback((evt: ChatRealtimeEvent) => {
+        const conversationId = Number(evt.payload?.conversation_id ?? -1);
+        if (conversationId <= 0) return;
+
+        const incoming = evt.payload?.message as PrivateMessage | undefined;
+        const senderEmail = String(evt.payload?.sender_email ?? "");
+        const isMine = senderEmail !== "" && senderEmail === currentUserEmail;
+
+        setConversations((prev) => {
+            const idx = prev.findIndex((c) => c.id === conversationId);
+            if (idx === -1) {
+                if (subTab === "privados") {
+                    void loadConversations();
+                }
+                return prev;
+            }
+
+            const curr = prev[idx];
+            const unread = activeConv?.id === conversationId ? 0 : (isMine ? curr.unread_count : curr.unread_count + 1);
+            const nextConv: PrivateConversation = {
+                ...curr,
+                unread_count: unread,
+                last_message: incoming
+                    ? {
+                        content: incoming.content,
+                        created_at: incoming.created_at,
+                        is_mine: isMine,
+                    }
+                    : curr.last_message,
+                updated_at: incoming?.created_at ?? curr.updated_at,
+            };
+
+            const next = [...prev];
+            next.splice(idx, 1);
+            return [nextConv, ...next];
+        });
+
+        if (activeConv?.id !== conversationId) return;
+
+        if (!incoming || typeof incoming.id !== "number") {
+            void loadActiveConversationMessages(activeConv.id);
+            return;
+        }
+
+        setMessages((prev) => (prev.some((m) => m.id === incoming.id) ? prev : [...prev, incoming]));
+    }, [activeConv, currentUserEmail, loadActiveConversationMessages, loadConversations, subTab]);
+
+    useEffect(() => {
+        if (!enableRealtimeStream) return;
+
+        const source = chatsService.subscribeToEvents((evt: ChatRealtimeEvent) => {
+            if (evt.event === "group_created" || evt.event === "group_updated" || evt.event === "group_deleted") {
+                void loadGroups();
+                return;
+            }
+
+            if (evt.event === "group_message_created" && selectedGroup) {
+                applyGroupMessageEvent(evt);
+                return;
+            }
+
+            if (evt.event === "private_message_created") {
+                applyPrivateMessageEvent(evt);
+            }
+        });
+
+        return () => {
+            source.close();
+        };
+    }, [applyGroupMessageEvent, applyPrivateMessageEvent, enableRealtimeStream, loadGroups, selectedGroup]);
+
+    useEffect(() => {
+        if (realtimeTick <= 0 || !realtimeEvent) return;
+
+        if (realtimeEvent.event === "group_created" || realtimeEvent.event === "group_updated" || realtimeEvent.event === "group_deleted") {
+            void loadGroups();
+            return;
+        }
+
+        if (realtimeEvent.event === "group_message_created") {
+            applyGroupMessageEvent(realtimeEvent);
+            return;
+        }
+
+        if (realtimeEvent.event === "private_message_created") {
+            applyPrivateMessageEvent(realtimeEvent);
+        }
+    }, [applyGroupMessageEvent, applyPrivateMessageEvent, loadGroups, realtimeEvent, realtimeTick]);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -357,6 +506,7 @@ export function StudentChats() {
             color: "bg-amber-100 text-amber-800",
             icon: <Tag className="w-3 h-3" />,
         };
+        const canInteractInGroup = selectedGroup.current_user_can_interact !== false;
         return (
             <div className="flex flex-col h-[calc(100vh-220px)]">
                 {/* Cabecera del Grupo */}
@@ -378,12 +528,18 @@ export function StudentChats() {
                             </span>
                         </div>
                     </div>
-                    {selectedGroup.can_members_leave && (
+                    {(selectedGroup.can_members_leave || !canInteractInGroup) && (
                         <Button variant="ghost" className="text-red-600 hover:bg-red-50 hover:text-red-700 shrink-0" onClick={() => setShowLeaveDialog(true)}>
                             <LogOut className="w-4 h-4 text-red-600" />
                         </Button>
                     )}
                 </div>
+
+                {!canInteractInGroup && (
+                    <div className="mt-3 mb-1 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                        Has sido removido de este grupo. Puedes leer mensajes históricos, pero no puedes interactuar.
+                    </div>
+                )}
 
                 {/* Mensajes del Grupo */}
                 <div className="flex-1 overflow-y-auto py-4 space-y-3">
@@ -420,17 +576,18 @@ export function StudentChats() {
                 {/* Input del Grupo */}
                 <div className="flex items-center gap-2 pt-3 border-t border-gray-200 shrink-0">
                     <Input
-                        placeholder="Escribe un mensaje al grupo…"
+                        placeholder={canInteractInGroup ? "Escribe un mensaje al grupo…" : "No puedes enviar mensajes en este grupo"}
                         value={groupMsgText}
                         onChange={(e) => setGroupMsgText(e.target.value)}
                         onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendGroupMessage(); } }}
                         className="flex-1"
+                        disabled={!canInteractInGroup}
                     />
                     <Button
                         size="icon"
                         className="bg-green-600 hover:bg-green-700 shrink-0 w-10 h-10"
                         onClick={handleSendGroupMessage}
-                        disabled={sendingGroupMsg || !groupMsgText.trim()}
+                        disabled={!canInteractInGroup || sendingGroupMsg || !groupMsgText.trim()}
                     >
                         <Send className="w-4 h-4 ml-0.5" />
                     </Button>
@@ -439,15 +596,15 @@ export function StudentChats() {
                 <Dialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>
                     <DialogContent>
                         <DialogHeader>
-                            <DialogTitle>¿Abandonar grupo?</DialogTitle>
+                            <DialogTitle>¿Salir del grupo?</DialogTitle>
                             <DialogDescription>
-                                Estás a punto de abandonar <strong>{selectedGroup.name}</strong>. No podrás volver a unirte por tu cuenta.
+                                Vas a salir de <strong>{selectedGroup.name}</strong>. No podrás volver a unirte por tu cuenta.
                             </DialogDescription>
                         </DialogHeader>
                         <DialogFooter>
                             <Button variant="outline" onClick={() => setShowLeaveDialog(false)}>Cancelar</Button>
                             <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={handleLeaveGroup} disabled={leaving}>
-                                {leaving ? "Saliendo…" : "Sí, abandonar"}
+                                {leaving ? "Saliendo…" : "Sí, salir"}
                             </Button>
                         </DialogFooter>
                     </DialogContent>

@@ -13,7 +13,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "../../components/ui/dialog";
-import { chatsService, type ChatGroup, type GroupMessage, type ChatGroupLabelItem, type UpsertChatGroupPayload } from "../../services/chats";
+import { chatsService, type ChatGroup, type GroupMessage, type ChatGroupLabelItem, type ChatRealtimeEvent, type UpsertChatGroupPayload } from "../../services/chats";
 
 // Helper
 function timeAgo(iso: string): string {
@@ -57,7 +57,17 @@ const typeConfig: Record<string, { label: string; color: string; icon: ReactElem
     }
 };
 
-export function AdminChats({ onChatsChange }: { readonly onChatsChange?: () => void }) {
+export function AdminChats({
+    onChatsCountChange,
+    enableRealtimeStream = true,
+    realtimeTick = 0,
+    realtimeEvent = null,
+}: {
+    readonly onChatsCountChange?: (count: number) => void;
+    readonly enableRealtimeStream?: boolean;
+    readonly realtimeTick?: number;
+    readonly realtimeEvent?: ChatRealtimeEvent | null;
+}) {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedType, setSelectedType] = useState<string>("all");
     const [groups, setGroups] = useState<ChatGroup[]>([]);
@@ -120,27 +130,111 @@ export function AdminChats({ onChatsChange }: { readonly onChatsChange?: () => v
         }).catch(() => { });
     }, []);
 
-    // Polling and Scroll for Chat Room
+    useEffect(() => {
+        onChatsCountChange?.(groups.length);
+    }, [groups, onChatsCountChange]);
+
+    const fetchGroupMessages = async (groupId: number) => {
+        try {
+            const msgs = await chatsService.listGroupMessages(groupId);
+            setGroupMessages(msgs);
+        } catch (err: unknown) {
+            console.error("Failed fetching group messages:", err);
+        }
+    };
+
+    const applyGroupMessageEvent = (evt: ChatRealtimeEvent) => {
+        if (!chattingGroup) return;
+        const payloadGroupId = Number(evt.payload?.group_id ?? -1);
+        if (payloadGroupId !== chattingGroup.id) return;
+
+        const incoming = evt.payload?.message as GroupMessage | undefined;
+        if (!incoming || typeof incoming.id !== "number") {
+            void fetchGroupMessages(chattingGroup.id);
+            return;
+        }
+
+        setGroupMessages((prev) => (prev.some((m) => m.id === incoming.id) ? prev : [...prev, incoming]));
+    };
+
+    const applyRealtimeGroupUpsert = (rawGroup: unknown) => {
+        const incoming = rawGroup as ChatGroup | undefined;
+        if (!incoming || typeof incoming.id !== "number") return;
+
+        setGroups((prev) => {
+            const idx = prev.findIndex((g) => g.id === incoming.id);
+            if (idx === -1) {
+                return [...prev, incoming].sort((a, b) => a.name.localeCompare(b.name));
+            }
+
+            const next = [...prev];
+            next[idx] = incoming;
+            return next.sort((a, b) => a.name.localeCompare(b.name));
+        });
+
+        setEditingGroup((prev) => (prev?.id === incoming.id ? incoming : prev));
+        setChattingGroup((prev) => (prev?.id === incoming.id ? incoming : prev));
+    };
+
+    useEffect(() => {
+        if (!enableRealtimeStream) return;
+
+        const source = chatsService.subscribeToEvents((evt: ChatRealtimeEvent) => {
+            if (evt.event === "group_created" || evt.event === "group_updated") {
+                applyRealtimeGroupUpsert(evt.payload?.group);
+                return;
+            }
+
+            if (evt.event === "group_deleted") {
+                const groupId = Number(evt.payload?.group_id ?? -1);
+                if (groupId > 0) {
+                    setGroups((prev) => prev.filter((g) => g.id !== groupId));
+                    setEditingGroup((prev) => (prev?.id === groupId ? null : prev));
+                    setChattingGroup((prev) => (prev?.id === groupId ? null : prev));
+                }
+                return;
+            }
+
+            if (evt.event === "group_message_created" && chattingGroup) {
+                applyGroupMessageEvent(evt);
+            }
+        });
+
+        source.onerror = () => {
+            // EventSource reintenta automaticamente; no hacemos polling de respaldo.
+        };
+
+        return () => {
+            source.close();
+        };
+    }, [chattingGroup, enableRealtimeStream]);
+
+    // Carga mensajes al entrar al grupo y cuando la pestaña recupera foco
     useEffect(() => {
         if (!chattingGroup) return;
 
         let isMounted = true;
         const fetchMsgs = async () => {
-            try {
-                const msgs = await chatsService.listGroupMessages(chattingGroup.id);
-                if (isMounted) setGroupMessages(msgs);
-            } catch (err: unknown) {
-                console.error("Failed fetching group messages:", err);
-            }
+            if (!isMounted) return;
+            await fetchGroupMessages(chattingGroup.id);
         };
 
         setLoadingGroupMsgs(true);
         fetchMsgs().finally(() => { if (isMounted) setLoadingGroupMsgs(false); });
 
-        const interval = setInterval(fetchMsgs, 5000);
+        const handleVisibilityOrFocus = () => {
+            if (document.visibilityState === "visible") {
+                void fetchMsgs();
+            }
+        };
+
+        window.addEventListener("focus", handleVisibilityOrFocus);
+        document.addEventListener("visibilitychange", handleVisibilityOrFocus);
+
         return () => {
             isMounted = false;
-            clearInterval(interval);
+            window.removeEventListener("focus", handleVisibilityOrFocus);
+            document.removeEventListener("visibilitychange", handleVisibilityOrFocus);
         };
     }, [chattingGroup]);
 
@@ -149,6 +243,16 @@ export function AdminChats({ onChatsChange }: { readonly onChatsChange?: () => v
             messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
         }
     }, [groupMessages]);
+
+    useEffect(() => {
+        if (!chattingGroup) return;
+        if (realtimeTick <= 0) return;
+        if (realtimeEvent?.event === "group_message_created") {
+            applyGroupMessageEvent(realtimeEvent);
+            return;
+        }
+        void fetchGroupMessages(chattingGroup.id);
+    }, [realtimeEvent, realtimeTick, chattingGroup]);
 
     const handleSendGroupMessage = async () => {
         if (!groupMsgText.trim() || !chattingGroup) return;
@@ -190,8 +294,6 @@ export function AdminChats({ onChatsChange }: { readonly onChatsChange?: () => v
             await chatsService.deleteGroup(groupId);
             setGroups((prev) => prev.filter((group) => group.id !== groupId));
             toast.success("Grupo eliminado correctamente.");
-            // Actualizar contador del dashboard
-            onChatsChange?.();
         } catch (err: unknown) {
             toast.error(err instanceof Error ? err.message : "No se pudo eliminar el grupo.");
         }
@@ -214,8 +316,6 @@ export function AdminChats({ onChatsChange }: { readonly onChatsChange?: () => v
             setCreateForm(EMPTY_GROUP_FORM);
             setIsCreateOpen(false);
             toast.success("Grupo creado correctamente.");
-            // Actualizar contador del dashboard
-            onChatsChange?.();
         } catch (err: unknown) {
             toast.error(err instanceof Error ? err.message : "No se pudo crear el grupo.");
         } finally {

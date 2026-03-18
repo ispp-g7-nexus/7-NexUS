@@ -72,8 +72,9 @@ class ChatMemberSerializer(serializers.ModelSerializer):
 
 class ChatGroupSerializer(serializers.ModelSerializer):
     members = serializers.SerializerMethodField()
-    members_list = ChatMemberSerializer(source="memberships", many=True, read_only=True)
+    members_list = serializers.SerializerMethodField()
     created_by_email = serializers.SerializerMethodField()
+    current_user_can_interact = serializers.SerializerMethodField()
 
     class Meta:
         model = ChatGroup
@@ -86,16 +87,40 @@ class ChatGroupSerializer(serializers.ModelSerializer):
             "members",
             "members_list",
             "created_by_email",
+            "current_user_can_interact",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "members", "members_list", "created_by_email", "created_at", "updated_at"]
+        read_only_fields = ["id", "members", "members_list", "created_by_email", "current_user_can_interact", "created_at", "updated_at"]
 
     def get_members(self, obj):
-        return obj.memberships.count()
+        return obj.memberships.filter(can_interact=True).count()
+
+    def get_members_list(self, obj):
+        active_members = obj.memberships.filter(can_interact=True)
+        return ChatMemberSerializer(active_members, many=True).data
         
     def get_created_by_email(self, obj):
         return obj.created_by.email if obj.created_by else None
+
+    def get_current_user_can_interact(self, obj):
+        request = self.context.get("request")
+        if not request or not getattr(request, "user", None) or not request.user.is_authenticated:
+            return True
+
+        residence = getattr(request, "residence", None)
+        membership = Membership.objects.filter(
+            user=request.user,
+            residence=residence,
+            is_active=True,
+        ).first()
+        if not membership:
+            return False
+
+        relation = obj.memberships.filter(membership=membership).first()
+        if not relation:
+            return False
+        return relation.can_interact
 
 
 class ChatGroupCreateUpdateSerializer(serializers.ModelSerializer):

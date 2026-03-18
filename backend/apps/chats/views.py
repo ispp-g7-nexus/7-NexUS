@@ -1,14 +1,19 @@
 from django.db.models import Prefetch, Q
+from django.http import StreamingHttpResponse
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.renderers import BaseRenderer
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.generics import ListAPIView
+from rest_framework.views import APIView
 from rest_framework.response import Response
 
 from apps.membership.models import Membership
 
 from .models import ChatGroup, ChatGroupMember, ChatGroupLabel, GroupMessage, PrivateConversation, PrivateMessage
 from .permissions import IsAuthenticatedResident, IsResidenceAdmin
+from .realtime import publish_chat_event, stream_chat_events
 from .serializers import (
 	AddChatMemberSerializer,
 	ChatGroupCreateUpdateSerializer,
@@ -26,6 +31,22 @@ from .serializers import (
 # Constantes para mensajes duplicados
 NO_MEMBERSHIP_MESSAGE = "No tienes membresía activa."
 CONVERSATION_NOT_FOUND_MESSAGE = "Conversación no encontrada."
+
+
+class ServerSentEventsRenderer(BaseRenderer):
+	"""Permite que DRF negocie correctamente respuestas text/event-stream."""
+
+	media_type = "text/event-stream"
+	format = "sse"
+	charset = "utf-8"
+	render_style = "text"
+
+	def render(self, data, accepted_media_type=None, renderer_context=None):
+		if data is None:
+			return b""
+		if isinstance(data, bytes):
+			return data
+		return str(data).encode(self.charset)
 
 
 class ChatGroupViewSet(viewsets.ModelViewSet):
@@ -72,6 +93,13 @@ class ChatGroupViewSet(viewsets.ModelViewSet):
 
 		group = self.get_queryset().get(id=write_serializer.instance.id)
 		read_serializer = ChatGroupSerializer(group)
+		residence = getattr(request, "residence", None)
+		if residence:
+			publish_chat_event(
+				residence.id,
+				"group_created",
+				{"group": read_serializer.data},
+			)
 		return Response(read_serializer.data, status=status.HTTP_201_CREATED)
 
 	def update(self, request, *args, **kwargs):
@@ -83,7 +111,27 @@ class ChatGroupViewSet(viewsets.ModelViewSet):
 
 		refreshed = self.get_queryset().get(id=instance.id)
 		read_serializer = ChatGroupSerializer(refreshed)
+		residence = getattr(request, "residence", None)
+		if residence:
+			publish_chat_event(
+				residence.id,
+				"group_updated",
+				{"group": read_serializer.data},
+			)
 		return Response(read_serializer.data)
+
+	def destroy(self, request, *args, **kwargs):
+		instance = self.get_object()
+		group_id = instance.id
+		residence = getattr(request, "residence", None)
+		self.perform_destroy(instance)
+		if residence:
+			publish_chat_event(
+				residence.id,
+				"group_deleted",
+				{"group_id": group_id},
+			)
+		return Response(status=status.HTTP_204_NO_CONTENT)
 
 	def partial_update(self, request, *args, **kwargs):
 		kwargs["partial"] = True
@@ -96,13 +144,26 @@ class ChatGroupViewSet(viewsets.ModelViewSet):
 		serializer.is_valid(raise_exception=True)
 
 		membership = serializer.context["target_membership"]
-		_, created = ChatGroupMember.objects.get_or_create(
+		member, created = ChatGroupMember.objects.get_or_create(
 			group=group,
 			membership=membership,
-			defaults={"is_admin": serializer.validated_data["is_admin"]},
+			defaults={"is_admin": serializer.validated_data["is_admin"], "can_interact": True},
 		)
 		if not created:
-			raise ValidationError({"detail": "Ese usuario ya pertenece al grupo."})
+			if member.can_interact:
+				raise ValidationError({"detail": "Ese usuario ya pertenece al grupo."})
+
+			member.can_interact = True
+			member.is_admin = serializer.validated_data["is_admin"]
+			member.save(update_fields=["can_interact", "is_admin"])
+
+		residence = getattr(request, "residence", None)
+		if residence:
+			publish_chat_event(
+				residence.id,
+				"group_updated",
+				{"group": ChatGroupSerializer(self.get_queryset().get(id=group.id)).data},
+			)
 
 		return Response(
 			ChatGroupSerializer(self.get_queryset().get(id=group.id)).data,
@@ -122,6 +183,14 @@ class ChatGroupViewSet(viewsets.ModelViewSet):
 		member.is_admin = serializer.validated_data["is_admin"]
 		member.save(update_fields=["is_admin"])
 
+		residence = getattr(request, "residence", None)
+		if residence:
+			publish_chat_event(
+				residence.id,
+				"group_updated",
+				{"group": ChatGroupSerializer(self.get_queryset().get(id=group.id)).data},
+			)
+
 		return Response(ChatGroupSerializer(self.get_queryset().get(id=group.id)).data)
 
 	@update_member.mapping.delete
@@ -131,7 +200,16 @@ class ChatGroupViewSet(viewsets.ModelViewSet):
 		if not member:
 			raise NotFound("Miembro no encontrado.")
 
-		member.delete()
+		member.can_interact = False
+		member.is_admin = False
+		member.save(update_fields=["can_interact", "is_admin"])
+		residence = getattr(request, "residence", None)
+		if residence:
+			publish_chat_event(
+				residence.id,
+				"group_updated",
+				{"group": ChatGroupSerializer(self.get_queryset().get(id=group.id)).data},
+			)
 		return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -202,9 +280,16 @@ class MyGroupsViewSet(viewsets.ReadOnlyModelViewSet):
 			raise NotFound("Grupo no encontrado.")
 
 		if not group.can_members_leave:
-			raise ValidationError(
-				{"detail": "No puedes abandonar este grupo."}
-			)
+			chat_member_for_rule = ChatGroupMember.objects.filter(
+				group=group,
+				membership=membership,
+			).first()
+			if not chat_member_for_rule:
+				raise NotFound("No eres miembro de este grupo.")
+			if chat_member_for_rule.can_interact:
+				raise ValidationError(
+					{"detail": "No puedes abandonar este grupo."}
+				)
 
 		chat_member = ChatGroupMember.objects.filter(
 			group=group,
@@ -214,6 +299,12 @@ class MyGroupsViewSet(viewsets.ReadOnlyModelViewSet):
 			raise NotFound("No eres miembro de este grupo.")
 
 		chat_member.delete()
+		if residence:
+			publish_chat_event(
+				residence.id,
+				"group_updated",
+				{"group_id": group.id},
+			)
 		return Response(status=status.HTTP_204_NO_CONTENT)
 
 	@action(detail=True, methods=["get", "post"], url_path="messages")
@@ -239,6 +330,10 @@ class MyGroupsViewSet(viewsets.ReadOnlyModelViewSet):
 			msgs = group.messages.select_related("sender__user").order_by("created_at")
 			return Response(GroupMessageSerializer(msgs, many=True).data)
 
+		chat_member = ChatGroupMember.objects.filter(group=group, membership=membership).first()
+		if not chat_member or not chat_member.can_interact:
+			raise ValidationError({"detail": "No puedes interactuar en este grupo. Solo puedes abandonarlo."})
+
 		# POST — enviar mensaje
 		ser = SendMessageSerializer(data=request.data)
 		ser.is_valid(raise_exception=True)
@@ -248,8 +343,22 @@ class MyGroupsViewSet(viewsets.ReadOnlyModelViewSet):
 			sender=membership,
 			content=ser.validated_data["content"],
 		)
+		serialized_msg = GroupMessageSerializer(msg).data
+		if residence:
+			publish_chat_event(
+				residence.id,
+				"group_message_created",
+				{
+					"group_id": group.id,
+					"group_name": group.name,
+					"message_id": msg.id,
+					"sender_email": membership.user.email,
+					"sender_name": membership.user.get_full_name().strip() or membership.user.email,
+					"message": serialized_msg,
+				},
+			)
 		return Response(
-			GroupMessageSerializer(msg).data,
+			serialized_msg,
 			status=status.HTTP_201_CREATED,
 		)
 
@@ -361,11 +470,26 @@ class PrivateConversationViewSet(viewsets.ViewSet):
 			sender=my,
 			content=ser.validated_data["content"],
 		)
+		serialized_msg = PrivateMessageSerializer(msg).data
 		# Actualizar timestamp de la conversación
 		conv.save(update_fields=["updated_at"])
 
+		residence = getattr(request, "residence", None)
+		if residence:
+			publish_chat_event(
+				residence.id,
+				"private_message_created",
+				{
+					"conversation_id": conv.id,
+					"message_id": msg.id,
+					"sender_email": my.user.email,
+					"sender_name": my.user.get_full_name().strip() or my.user.email,
+					"message": serialized_msg,
+				},
+			)
+
 		return Response(
-			PrivateMessageSerializer(msg).data,
+			serialized_msg,
 			status=status.HTTP_201_CREATED,
 		)
 
@@ -391,3 +515,31 @@ class ResidentListForChatView(ListAPIView):
 			.select_related("user")
 			.order_by("user__first_name", "user__last_name")
 		)
+
+
+class ChatEventsStreamView(APIView):
+	"""Stream SSE de eventos de chat para la residencia actual."""
+
+	permission_classes = [IsAuthenticated]
+	renderer_classes = [ServerSentEventsRenderer]
+
+	def get(self, request):
+		residence = getattr(request, "residence", None)
+		if not residence:
+			raise ValidationError({"detail": "No se ha determinado la residencia."})
+
+		has_membership = Membership.objects.filter(
+			user=request.user,
+			residence=residence,
+			is_active=True,
+		).exists()
+		if not has_membership:
+			raise ValidationError({"detail": "No tienes membresia activa."})
+
+		response = StreamingHttpResponse(
+			stream_chat_events(residence.id),
+			content_type="text/event-stream",
+		)
+		response["Cache-Control"] = "no-cache"
+		response["X-Accel-Buffering"] = "no"
+		return response

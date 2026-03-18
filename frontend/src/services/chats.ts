@@ -5,6 +5,7 @@ const CHAT_LABELS_URL = "/api/chats/labels/";
 const MY_GROUPS_URL = "/api/chats/my-groups/";
 const CONVERSATIONS_URL = "/api/chats/conversations/";
 const CHAT_RESIDENTS_URL = "/api/chats/residents/";
+const CHAT_EVENTS_WS_PATH = "/ws/chats/events";
 
 // Eliminado tipo alias redundante - usar string directamente
 
@@ -23,6 +24,7 @@ export interface ChatGroup {
   description: string;
   label: string;
   can_members_leave: boolean;
+  current_user_can_interact?: boolean;
   members: number;
   members_list: ChatMember[];
   created_by_email?: string;
@@ -64,6 +66,63 @@ async function handleResponse<T>(res: Response): Promise<T> {
 }
 
 export const chatsService = {
+  subscribeToEvents: (onEvent: (event: ChatRealtimeEvent) => void): ChatEventsConnection => {
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const wsUrl = `${protocol}//${window.location.host}${CHAT_EVENTS_WS_PATH}`;
+    let socket: WebSocket | null = null;
+    let manuallyClosed = false;
+    let reconnectTimer: number | null = null;
+
+    const connect = () => {
+      socket = new WebSocket(wsUrl);
+
+      socket.onopen = () => {
+        connection.onopen?.();
+      };
+
+      socket.onerror = () => {
+        connection.onerror?.();
+      };
+
+      socket.onclose = () => {
+        if (manuallyClosed) return;
+        if (reconnectTimer !== null) {
+          window.clearTimeout(reconnectTimer);
+        }
+        reconnectTimer = window.setTimeout(() => {
+          reconnectTimer = null;
+          connect();
+        }, 2000);
+      };
+
+      socket.onmessage = (evt) => {
+        try {
+          const parsed = JSON.parse(String(evt.data)) as ChatRealtimeEvent;
+          onEvent(parsed);
+        } catch {
+          // Ignorar payloads malformados para no romper la conexion.
+        }
+      };
+    };
+
+    const connection: ChatEventsConnection = {
+      close: () => {
+        manuallyClosed = true;
+        if (reconnectTimer !== null) {
+          window.clearTimeout(reconnectTimer);
+          reconnectTimer = null;
+        }
+        socket?.close();
+      },
+      onopen: null,
+      onerror: null,
+    };
+
+    connect();
+
+    return connection;
+  },
+
   listGroups: async (): Promise<ChatGroup[]> => {
     const res = await fetchWithAuth(CHAT_GROUPS_URL);
     return handleResponse<ChatGroup[]>(res);
@@ -247,4 +306,16 @@ export interface ChatGroupLabelItem {
   id: number;
   name: string;
   created_at: string;
+}
+
+export interface ChatRealtimeEvent {
+  event: string;
+  payload?: Record<string, unknown>;
+  ts?: number;
+}
+
+export interface ChatEventsConnection {
+  close: () => void;
+  onopen: null | (() => void);
+  onerror: null | (() => void);
 }

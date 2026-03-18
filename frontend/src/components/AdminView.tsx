@@ -1,6 +1,8 @@
 import { AlertCircle, BarChart3, BedDouble, Bell, BookOpen, Briefcase, Calendar, Home, Layout, LayoutDashboard, LogOut, Menu, MessageSquare, Shield, User, UserCheck, Users, Utensils } from "lucide-react";
 import { useState, useEffect } from "react";
-import { chatsService } from "../services/chats";
+import { toast } from "sonner";
+import { chatsService, type ChatRealtimeEvent } from "../services/chats";
+import { authService } from "../services/auth";
 import { Events } from "../pages/Social/Events/Events";
 import { Residents } from "../pages/Residents/Residents";
 import logo from "../assets/logo.png";
@@ -27,6 +29,10 @@ export function AdminView({ onLogout }: AdminViewProps) {
     const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
     const [notifications] = useState([{ id: 1, title: "Nueva reserva", message: "Sala reservada", time: "Hace 5 min", read: false }]);
     const [totalChats, setTotalChats] = useState<number>(0);
+    const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
+    const [unreadChatNotifications, setUnreadChatNotifications] = useState<number>(0);
+    const [chatRealtimeTick, setChatRealtimeTick] = useState<number>(0);
+    const [chatRealtimeEvent, setChatRealtimeEvent] = useState<ChatRealtimeEvent | null>(null);
 
     const loadChatsCount = async () => {
         try {
@@ -43,10 +49,59 @@ export function AdminView({ onLogout }: AdminViewProps) {
         loadChatsCount();
     }, []);
 
-    // Actualizar conteo cuando se visite la sección de chats
     useEffect(() => {
-        if (activeTab === 'chats') {
-            loadChatsCount();
+        authService.me().then((session) => {
+            if (session.user?.email) {
+                setCurrentUserEmail(session.user.email);
+            }
+        }).catch(() => { });
+    }, []);
+
+    useEffect(() => {
+        const source = chatsService.subscribeToEvents((evt) => {
+            if (evt.event === "group_created") {
+                void loadChatsCount();
+                return;
+            }
+
+            if (evt.event === "group_deleted") {
+                void loadChatsCount();
+                return;
+            }
+
+            if (evt.event === "group_message_created" || evt.event === "private_message_created") {
+                setChatRealtimeEvent(evt);
+                setChatRealtimeTick((prev) => prev + 1);
+
+                const senderEmail = String(evt.payload?.sender_email ?? "");
+                const senderName = String(evt.payload?.sender_name ?? "Residente");
+                if (!senderEmail || senderEmail === currentUserEmail) return;
+
+                if (activeTab !== "chats") {
+                    setUnreadChatNotifications((prev) => prev + 1);
+                    toast.info("Nuevo mensaje de chat", {
+                        description: `Mensaje de ${senderName}`,
+                    });
+                }
+            }
+        });
+
+        source.onopen = () => {
+            console.info("[chat-sse][admin] connected");
+        };
+
+        source.onerror = () => {
+            console.warn("[chat-sse][admin] connection error; browser will retry");
+        };
+
+        return () => {
+            source.close();
+        };
+    }, [activeTab, currentUserEmail]);
+
+    useEffect(() => {
+        if (activeTab === "chats") {
+            setUnreadChatNotifications(0);
         }
     }, [activeTab]);
 
@@ -69,7 +124,7 @@ export function AdminView({ onLogout }: AdminViewProps) {
         { label: 'Incidencias',     value: '12',  trend: '-15%',   icon: AlertCircle,theme: 'red'    as const, onClick: () => setActiveTab('incidences')   },
         { label: 'Visitantes',      value: '23',  trend: '+12%',   icon: UserCheck,  theme: 'purple' as const, onClick: () => setActiveTab('visitors')     },
         { label: 'Espacios Comunes',value: '8',   trend: '+2',     icon: Layout,     theme: 'orange' as const, onClick: () => setActiveTab('reservations') },
-        { label: 'Chats',           value: totalChats.toString(),   trend: '', icon: MessageSquare, theme: 'blue' as const, onClick: () => setActiveTab('chats')        },
+        { label: 'Chats',           value: unreadChatNotifications > 0 ? `${totalChats} (+${unreadChatNotifications})` : totalChats.toString(),   trend: '', icon: MessageSquare, theme: 'blue' as const, onClick: () => setActiveTab('chats')        },
         { label: 'Menú Comedor',    value: 'Ver', trend: 'Hoy',    icon: Utensils,   theme: 'blue'   as const, onClick: () => setActiveTab('kitchen')      },
         { label: 'Estadísticas',    value: 'Ver', trend: '+5%',    icon: BarChart3,  theme: 'green'  as const, onClick: () => setActiveTab('analytics')    },
         { label: 'Personal',        value: '42',  trend: 'Estable',icon: Briefcase,  theme: 'purple' as const, onClick: () => setActiveTab('staff')        },
@@ -161,7 +216,7 @@ export function AdminView({ onLogout }: AdminViewProps) {
             case "chats":
                 return (
                     <div className="p-4">
-                        <AdminChats onChatsChange={loadChatsCount} />
+                        <AdminChats onChatsCountChange={setTotalChats} enableRealtimeStream={false} realtimeTick={chatRealtimeTick} realtimeEvent={chatRealtimeEvent} />
                     </div>
                 );
 
