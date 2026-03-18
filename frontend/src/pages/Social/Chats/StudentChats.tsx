@@ -14,7 +14,6 @@ import {
 import {
     chatsService,
     type ChatGroup,
-    type ChatGroupLabelItem,
     type ChatRealtimeEvent,
     type ChatResident,
     type PrivateConversation,
