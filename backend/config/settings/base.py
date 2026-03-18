@@ -54,6 +54,7 @@ TENANT_APPS = [
     "apps.onboarding",
     "apps.objects",
     "apps.packages",
+    "apps.guests",
 ]
 
 if MATCHING_ENABLED:
