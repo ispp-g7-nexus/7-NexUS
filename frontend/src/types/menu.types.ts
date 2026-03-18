@@ -3,9 +3,10 @@ export interface Meal {
   name: string;
   description?: string;
   type: 'breakfast' | 'lunch' | 'dinner' | 'snack';
-  allergens?: string[];
+  isGlutenFree?: boolean;
   isVegetarian?: boolean;
   isVegan?: boolean;
+  imageUrl?: string;
 }
 
 export interface MenuDay {

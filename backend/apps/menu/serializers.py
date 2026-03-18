@@ -12,16 +12,20 @@ class MealSerializer(serializers.ModelSerializer):
             'name',
             'description',
             'type',
-            'allergens',
+            'is_gluten_free',
             'is_vegetarian',
             'is_vegan',
+            'image_url',
         ]
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
         # Convertir nombres de campos al formato camelCase del frontend
+        data['isGlutenFree'] = data.pop('is_gluten_free')
         data['isVegetarian'] = data.pop('is_vegetarian')
         data['isVegan'] = data.pop('is_vegan')
+        if 'image_url' in data:
+            data['imageUrl'] = data.pop('image_url')
         # Convertir id a string para consistencia con el frontend
         data['id'] = str(data['id'])
         return data
@@ -148,15 +152,20 @@ class MealCreateSerializer(serializers.ModelSerializer):
             'name',
             'description',
             'type',
-            'allergens',
+            'is_gluten_free',
             'is_vegetarian',
             'is_vegan',
+            'image_url',
         ]
 
     def to_internal_value(self, data):
         converted = dict(data)
+        if 'isGlutenFree' in converted:
+            converted['is_gluten_free'] = converted.pop('isGlutenFree')
         if 'isVegetarian' in converted:
             converted['is_vegetarian'] = converted.pop('isVegetarian')
         if 'isVegan' in converted:
             converted['is_vegan'] = converted.pop('isVegan')
+        if 'imageUrl' in converted:
+            converted['image_url'] = converted.pop('imageUrl')
         return super().to_internal_value(converted)

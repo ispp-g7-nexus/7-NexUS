@@ -40,21 +40,29 @@ const getMealTypeIcon = (type: Meal['type']): JSX.Element => {
 
 const MealCard = ({ meal }: { meal: Meal }) => {
   return (
-    <div className={`border rounded-lg p-4 ${getMealTypeColor(meal.type)}`}>
+    <div className={`border rounded-xl p-4 overflow-hidden shadow-sm transition-all hover:shadow-md relative ${getMealTypeColor(meal.type)}`}>
+      {meal.imageUrl && (
+        <div className="w-full h-40 mb-3 -mt-4 -mx-4 w-[calc(100%+2rem)] border-b border-black/5 relative group">
+          <img src={meal.imageUrl} alt={meal.name} className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
+        </div>
+      )}
       <div className="flex items-start justify-between mb-2">
-        <div className="flex items-center gap-2">
-          {getMealTypeIcon(meal.type)}
-          <div>
-            <p className="font-semibold text-gray-900">{meal.name}</p>
+        <div className="flex items-center gap-3 flex-1">
+          <div className={`shrink-0 ${meal.imageUrl ? '-mt-8 p-1.5 bg-white/90 backdrop-blur rounded-lg shadow-sm border border-white/50 z-10 relative' : ''}`}>
+            {getMealTypeIcon(meal.type)}
+          </div>
+          <div className="flex-1">
+            <p className="font-semibold text-gray-900 leading-tight">{meal.name}</p>
             {meal.description && (
-              <p className="text-sm text-gray-600">{meal.description}</p>
+              <p className="text-sm text-gray-600 mt-0.5">{meal.description}</p>
             )}
           </div>
         </div>
       </div>
 
-      {(meal.allergens || meal.isVegetarian || meal.isVegan) && (
-        <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-current border-opacity-20">
+      {(meal.isGlutenFree || meal.isVegetarian || meal.isVegan) && (
+        <div className={`flex flex-wrap gap-2 mt-3 pt-3 border-t border-current border-opacity-20 ${meal.imageUrl ? 'relative z-10' : ''}`}>
           {meal.isVegetarian && (
             <span className="inline-flex items-center gap-1 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
               <Leaf className="w-3 h-3" />
@@ -67,9 +75,10 @@ const MealCard = ({ meal }: { meal: Meal }) => {
               Vegano
             </span>
           )}
-          {meal.allergens && meal.allergens.length > 0 && (
-            <span className="inline-flex items-center gap-1 text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">
-              ⚠️ Alérgenos: {meal.allergens.join(', ')}
+          {meal.isGlutenFree && (
+            <span className="inline-flex items-center gap-1 text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full">
+              <span className="text-xs">🌾</span>
+              Sin Gluten
             </span>
           )}
         </div>
@@ -221,8 +230,8 @@ export function ResidentMenuView() {
               <span>Las opciones veganas están indicadas</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-lg">⚠️</span>
-              <span>Los alérgenos comunes están listados</span>
+              <span className="text-lg">🌾</span>
+              <span>Las opciones sin gluten están identificadas</span>
             </div>
           </div>
         </div>

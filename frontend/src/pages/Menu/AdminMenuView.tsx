@@ -48,10 +48,18 @@ interface MealCardAdminProps {
 
 const MealCardAdmin = ({ meal, onEdit, onDelete }: MealCardAdminProps) => {
   return (
-    <div className={`border rounded-lg p-4 ${getMealTypeColor(meal.type)}`}>
+    <div className={`border rounded-xl p-4 overflow-hidden shadow-sm transition-all hover:shadow-md relative ${getMealTypeColor(meal.type)}`}>
+      {meal.imageUrl && (
+        <div className="w-full h-40 mb-3 -mt-4 -mx-4 w-[calc(100%+2rem)] border-b border-black/5 relative group">
+          <img src={meal.imageUrl} alt={meal.name} className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
+        </div>
+      )}
       <div className="flex items-start justify-between mb-2">
-        <div className="flex items-center gap-2 flex-1">
-          {getMealTypeIcon(meal.type)}
+        <div className="flex items-center gap-3 flex-1">
+          <div className={`shrink-0 ${meal.imageUrl ? '-mt-8 p-1.5 bg-white/90 backdrop-blur rounded-lg shadow-sm border border-white/50 z-10 relative' : ''}`}>
+             {getMealTypeIcon(meal.type)}
+          </div>
           <div className="flex-1">
             <p className="font-semibold text-gray-900">{meal.name}</p>
             {meal.description && (
@@ -59,7 +67,7 @@ const MealCardAdmin = ({ meal, onEdit, onDelete }: MealCardAdminProps) => {
             )}
           </div>
         </div>
-        <div className="flex gap-2 ml-4">
+        <div className={`flex gap-2 ml-4 shrink-0 ${meal.imageUrl ? '-mt-8 z-10 relative' : ''}`}>
           <button
             onClick={() => onEdit(meal)}
             className="p-1.5 hover:bg-blue-100 rounded-md text-blue-600 transition-colors"
@@ -77,7 +85,7 @@ const MealCardAdmin = ({ meal, onEdit, onDelete }: MealCardAdminProps) => {
         </div>
       </div>
 
-      {(meal.allergens || meal.isVegetarian || meal.isVegan) && (
+      {(meal.isGlutenFree || meal.isVegetarian || meal.isVegan) && (
         <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-current border-opacity-20">
           {meal.isVegetarian && (
             <span className="inline-flex items-center gap-1 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
@@ -91,9 +99,10 @@ const MealCardAdmin = ({ meal, onEdit, onDelete }: MealCardAdminProps) => {
               Vegano
             </span>
           )}
-          {meal.allergens && meal.allergens.length > 0 && (
-            <span className="inline-flex items-center gap-1 text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">
-              ⚠️ Alérgenos: {meal.allergens.join(', ')}
+          {meal.isGlutenFree && (
+            <span className="inline-flex items-center gap-1 text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full">
+              <span className="text-xs">🌾</span>
+              Sin Gluten
             </span>
           )}
         </div>
@@ -126,14 +135,14 @@ interface EditMealModalProps {
 
 const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditMealModalProps) => {
   const [formData, setFormData] = useState<Meal>(
-    meal || { name: '', type: 'lunch', description: '', allergens: [], isVegetarian: false, isVegan: false }
+    meal || { name: '', type: 'lunch', description: '', isGlutenFree: false, isVegetarian: false, isVegan: false }
   );
 
   // Reseteamos el form cuando se abre el modal con nuevos datos
   useEffect(() => {
     if (isOpen) {
       setFormData(
-        meal || { name: '', type: 'lunch', description: '', allergens: [], isVegetarian: false, isVegan: false }
+        meal || { name: '', type: 'lunch', description: '', isGlutenFree: false, isVegetarian: false, isVegan: false }
       );
     }
   }, [isOpen, meal]);
@@ -206,22 +215,39 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
             />
           </div>
 
-          {/* Alérgenos */}
+
+          {/* Imagen URL */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Alérgenos (separados por comas)
+              URL de imagen (Opcional)
             </label>
             <input
-              type="text"
-              value={formData.allergens?.join(', ') || ''}
-              onChange={(e) => handleChange('allergens', e.target.value.split(',').map(a => a.trim()).filter(Boolean))}
-              placeholder="Ej: Gluten, Maní, Leche"
+              type="url"
+              value={formData.imageUrl || ''}
+              onChange={(e) => handleChange('imageUrl', e.target.value)}
+              placeholder="Ej: https://ejemplo.com/plato.jpg"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+            {formData.imageUrl && (
+              <div className="mt-3 h-32 rounded-lg border border-gray-200 overflow-hidden bg-gray-100 flex items-center justify-center">
+                <img 
+                  src={formData.imageUrl} 
+                  alt="Vista previa" 
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                    const parent = e.currentTarget.parentElement;
+                    if (parent) {
+                      parent.innerHTML = '<span class="text-xs text-red-500 font-medium">No se puede cargar la imagen</span>';
+                    }
+                  }}
+                />
+              </div>
+            )}
           </div>
 
           {/* Opciones dietéticas */}
-          <div className="space-y-2">
+          <div className="space-y-2 pt-2 border-t border-gray-100">
             <label className="block text-sm font-medium text-gray-700">
               Opciones dietéticas
             </label>
@@ -243,6 +269,15 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
                   className="w-4 h-4 rounded"
                 />
                 <span className="text-sm text-gray-700">Vegano</span>
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={formData.isGlutenFree || false}
+                  onChange={(e) => handleChange('isGlutenFree', e.target.checked)}
+                  className="w-4 h-4 rounded"
+                />
+                <span className="text-sm text-gray-700">Sin Gluten</span>
               </label>
             </div>
           </div>

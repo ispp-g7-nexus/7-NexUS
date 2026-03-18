@@ -129,10 +129,9 @@ class Meal(models.Model):
         default=MealType.LUNCH
     )
 
-    allergens = models.JSONField(
-        "Alérgenos",
-        default=list,
-        blank=True
+    is_gluten_free = models.BooleanField(
+        "Sin gluten",
+        default=False
     )
 
     is_vegetarian = models.BooleanField(
@@ -143,6 +142,13 @@ class Meal(models.Model):
     is_vegan = models.BooleanField(
         "Vegano",
         default=False
+    )
+
+    image_url = models.URLField(
+        "URL de la imagen",
+        max_length=5000,
+        blank=True,
+        null=True
     )
 
     created_at = models.DateTimeField(
