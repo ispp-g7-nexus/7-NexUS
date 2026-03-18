@@ -100,9 +100,9 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
             const updated = await chatsService.updateMemberRole(currentGroup.id, memberId, false);
             setCurrentGroup(updated);
             onGroupUpdated(updated);
-            toast.success("Rol de administrador removido correctamente.");
+            toast.success("Rol de administrador eliminado correctamente.");
         } catch (err: unknown) {
-            toast.error(err instanceof Error ? err.message : "No se pudo remover el rol de administrador.");
+            toast.error(err instanceof Error ? err.message : "No se pudo eliminar el rol de administrador.");
         }
     };
 

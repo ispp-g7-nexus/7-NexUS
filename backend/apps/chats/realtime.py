@@ -71,7 +71,7 @@ def publish_chat_event(residence_id: int, event: str, payload: dict | None = Non
 
 
 def stream_chat_events(residence_id: int, keepalive_seconds: int = 20) -> Generator[str, None, None]:
-	local_queue = _subscribe_local(residence_id)
+	local_queue: Queue[str] | None = None
 	pubsub = None
 	client = None
 	try:
@@ -81,17 +81,20 @@ def stream_chat_events(residence_id: int, keepalive_seconds: int = 20) -> Genera
 			pubsub.subscribe(_channel_name(residence_id))
 		except redis.RedisError:
 			pubsub = None
+			# Fallback local si Redis no esta disponible.
+			local_queue = _subscribe_local(residence_id)
 
 		# Sugerencia de reconexion para el navegador.
 		yield "retry: 5000\n\n"
 
 		last_ping = time.monotonic()
 		while True:
-			try:
-				local_data = local_queue.get(timeout=1.0)
-				yield f"data: {local_data}\n\n"
-			except Empty:
-				pass
+			if local_queue is not None:
+				try:
+					local_data = local_queue.get(timeout=1.0)
+					yield f"data: {local_data}\n\n"
+				except Empty:
+					pass
 
 			if pubsub is not None:
 				message = pubsub.get_message(timeout=0.01)
@@ -106,6 +109,7 @@ def stream_chat_events(residence_id: int, keepalive_seconds: int = 20) -> Genera
 	except GeneratorExit:
 		return
 	finally:
-		_unsubscribe_local(residence_id, local_queue)
+		if local_queue is not None:
+			_unsubscribe_local(residence_id, local_queue)
 		if pubsub is not None:
 			pubsub.close()

@@ -93,12 +93,9 @@ export function AdminView({ onLogout }: AdminViewProps) {
 
     useEffect(() => {
         const source = chatsService.subscribeToEvents((evt) => {
-            if (evt.event === "group_created") {
-                void loadChatsCount();
-                return;
-            }
-
-            if (evt.event === "group_deleted") {
+            if (evt.event === "group_created" || evt.event === "group_updated" || evt.event === "group_deleted") {
+                setChatRealtimeEvent(evt);
+                setChatRealtimeTick((prev) => prev + 1);
                 void loadChatsCount();
                 return;
             }

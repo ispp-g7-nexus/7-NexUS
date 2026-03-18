@@ -58,6 +58,7 @@ class ChatGroupMember(models.Model):
 	)
 	is_admin = models.BooleanField(default=False)
 	can_interact = models.BooleanField(default=True)
+	interaction_disabled_at = models.DateTimeField(null=True, blank=True)
 	joined_at = models.DateTimeField(auto_now_add=True)
 
 	class Meta:

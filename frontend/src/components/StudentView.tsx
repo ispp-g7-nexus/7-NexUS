@@ -30,7 +30,6 @@ export function StudentView({ onLogout }: StudentViewProps) {
     const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
     const [unreadChatNotifications, setUnreadChatNotifications] = useState(0);
     const [currentUserEmail, setCurrentUserEmail] = useState("");
-    const [chatRealtimeStatus, setChatRealtimeStatus] = useState<"connecting" | "connected" | "reconnecting">("connecting");
     const [chatRealtimeTick, setChatRealtimeTick] = useState(0);
     const [chatRealtimeEvent, setChatRealtimeEvent] = useState<ChatRealtimeEvent | null>(null);
     const [isCommunityChatActive, setIsCommunityChatActive] = useState(false);
@@ -46,7 +45,6 @@ export function StudentView({ onLogout }: StudentViewProps) {
     }, []);
 
     useEffect(() => {
-        setChatRealtimeStatus("connecting");
         const source = chatsService.subscribeToEvents((evt) => {
             if (evt.event === "group_created" || evt.event === "group_updated" || evt.event === "group_deleted") {
                 setChatRealtimeEvent(evt);
@@ -76,12 +74,10 @@ export function StudentView({ onLogout }: StudentViewProps) {
 
         source.onopen = () => {
             console.info("[chat-sse][student] connected");
-            setChatRealtimeStatus("connected");
         };
 
         source.onerror = () => {
             console.warn("[chat-sse][student] connection error; browser will retry");
-            setChatRealtimeStatus("reconnecting");
         };
 
         return () => {
@@ -229,17 +225,6 @@ export function StudentView({ onLogout }: StudentViewProps) {
         <div className="min-h-screen flex flex-col w-full bg-background relative">
             <div className="flex-1 overflow-y-auto pb-20">
                 {renderContent()}
-            </div>
-
-            <div className="fixed bottom-24 right-4 z-20">
-                <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium shadow-sm border ${
-                    chatRealtimeStatus === "connected"
-                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                        : "bg-amber-50 text-amber-700 border-amber-200"
-                    }`}>
-                    <span className={`w-2 h-2 rounded-full ${chatRealtimeStatus === "connected" ? "bg-emerald-500" : "bg-amber-500"}`} />
-                    {chatRealtimeStatus === "connected" ? "Chat en vivo conectado" : "Chat en vivo reconectando"}
-                </div>
             </div>
 
             <nav className="fixed bottom-0 left-0 right-0 bg-background border-t border-border px-6 py-2 pb-6 z-20 w-full shadow-[0_-4px_15px_rgba(0,0,0,0.02)]">

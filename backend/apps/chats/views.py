@@ -1,5 +1,8 @@
+import json
+
 from django.db.models import Prefetch, Q
 from django.http import StreamingHttpResponse
+from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.renderers import BaseRenderer
@@ -155,7 +158,8 @@ class ChatGroupViewSet(viewsets.ModelViewSet):
 
 			member.can_interact = True
 			member.is_admin = serializer.validated_data["is_admin"]
-			member.save(update_fields=["can_interact", "is_admin"])
+			member.interaction_disabled_at = None
+			member.save(update_fields=["can_interact", "is_admin", "interaction_disabled_at"])
 
 		residence = getattr(request, "residence", None)
 		if residence:
@@ -202,7 +206,8 @@ class ChatGroupViewSet(viewsets.ModelViewSet):
 
 		member.can_interact = False
 		member.is_admin = False
-		member.save(update_fields=["can_interact", "is_admin"])
+		member.interaction_disabled_at = timezone.now()
+		member.save(update_fields=["can_interact", "is_admin", "interaction_disabled_at"])
 		residence = getattr(request, "residence", None)
 		if residence:
 			publish_chat_event(
@@ -326,12 +331,20 @@ class MyGroupsViewSet(viewsets.ReadOnlyModelViewSet):
 		if not group:
 			raise NotFound("Grupo no encontrado o no eres miembro.")
 
+		chat_member = ChatGroupMember.objects.filter(group=group, membership=membership).first()
+		if not chat_member:
+			raise NotFound("Grupo no encontrado o no eres miembro.")
+
 		if request.method == "GET":
 			msgs = group.messages.select_related("sender__user").order_by("created_at")
+			if not chat_member.can_interact:
+				if chat_member.interaction_disabled_at is None:
+					chat_member.interaction_disabled_at = timezone.now()
+					chat_member.save(update_fields=["interaction_disabled_at"])
+				msgs = msgs.filter(created_at__lte=chat_member.interaction_disabled_at)
 			return Response(GroupMessageSerializer(msgs, many=True).data)
 
-		chat_member = ChatGroupMember.objects.filter(group=group, membership=membership).first()
-		if not chat_member or not chat_member.can_interact:
+		if not chat_member.can_interact:
 			raise ValidationError({"detail": "No puedes interactuar en este grupo. Solo puedes abandonarlo."})
 
 		# POST — enviar mensaje
@@ -523,21 +536,52 @@ class ChatEventsStreamView(APIView):
 	permission_classes = [IsAuthenticated]
 	renderer_classes = [ServerSentEventsRenderer]
 
+	def _stream_events_for_membership(self, residence_id: int, membership_id: int):
+		for chunk in stream_chat_events(residence_id):
+			if not chunk.startswith("data: "):
+				yield chunk
+				continue
+
+			raw_payload = chunk[6:].strip()
+			try:
+				event_data = json.loads(raw_payload)
+			except (TypeError, json.JSONDecodeError):
+				yield chunk
+				continue
+
+			if event_data.get("event") != "group_message_created":
+				yield chunk
+				continue
+
+			payload = event_data.get("payload") or {}
+			try:
+				group_id = int(payload.get("group_id"))
+			except (TypeError, ValueError):
+				continue
+
+			can_receive = ChatGroupMember.objects.filter(
+				group_id=group_id,
+				membership_id=membership_id,
+				can_interact=True,
+			).exists()
+			if can_receive:
+				yield chunk
+
 	def get(self, request):
 		residence = getattr(request, "residence", None)
 		if not residence:
 			raise ValidationError({"detail": "No se ha determinado la residencia."})
 
-		has_membership = Membership.objects.filter(
+		membership = Membership.objects.filter(
 			user=request.user,
 			residence=residence,
 			is_active=True,
-		).exists()
-		if not has_membership:
+		).first()
+		if not membership:
 			raise ValidationError({"detail": "No tienes membresia activa."})
 
 		response = StreamingHttpResponse(
-			stream_chat_events(residence.id),
+			self._stream_events_for_membership(residence.id, membership.id),
 			content_type="text/event-stream",
 		)
 		response["Cache-Control"] = "no-cache"

@@ -36,6 +36,22 @@ function timeAgo(iso: string): string {
     return `hace ${days}d`;
 }
 
+function dedupeGroupMessages(messages: GroupMessage[]): GroupMessage[] {
+    const byId = new Map<number, GroupMessage>();
+    for (const msg of messages) {
+        const id = Number(msg.id);
+        if (!Number.isFinite(id)) continue;
+        byId.set(id, msg);
+    }
+    return Array.from(byId.values()).sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+    );
+}
+
+function appendUniqueGroupMessage(messages: GroupMessage[], incoming: GroupMessage): GroupMessage[] {
+    return dedupeGroupMessages([...messages, incoming]);
+}
+
 /* ── Config etiquetas ───────────────────────────────────────── */
 
 const labelConfig: Record<string, { label: string; color: string; icon: ReactElement }> = {
@@ -169,7 +185,7 @@ export function StudentChats({
         setGroupMessages([]);
         setLoadingGroupMsgs(true);
         try {
-            setGroupMessages(await chatsService.listGroupMessages(group.id));
+            setGroupMessages(dedupeGroupMessages(await chatsService.listGroupMessages(group.id)));
         } catch {
             toast.error("No se pudieron cargar los mensajes del grupo.");
         } finally {
@@ -179,7 +195,7 @@ export function StudentChats({
 
     const loadSelectedGroupMessages = useCallback(async (groupId: number) => {
         try {
-            setGroupMessages(await chatsService.listGroupMessages(groupId));
+            setGroupMessages(dedupeGroupMessages(await chatsService.listGroupMessages(groupId)));
         } catch {
             // Silencioso: es una recarga reactiva por evento.
         }
@@ -194,7 +210,7 @@ export function StudentChats({
         setSendingGroupMsg(true);
         try {
             const newMsg = await chatsService.sendGroupMessage(selectedGroup.id, groupMsgText.trim());
-            setGroupMessages((prev) => [...prev, newMsg]);
+            setGroupMessages((prev) => appendUniqueGroupMessage(prev, newMsg));
             setGroupMsgText("");
         } catch (err: unknown) {
             toast.error(err instanceof Error ? err.message : "No se pudo enviar el mensaje.");
@@ -261,6 +277,7 @@ export function StudentChats({
 
     const applyGroupMessageEvent = useCallback((evt: ChatRealtimeEvent) => {
         if (!selectedGroup) return;
+        if (selectedGroup.current_user_can_interact === false) return;
 
         const groupId = Number(evt.payload?.group_id ?? -1);
         if (groupId !== selectedGroup.id) return;
@@ -271,7 +288,7 @@ export function StudentChats({
             return;
         }
 
-        setGroupMessages((prev) => (prev.some((m) => m.id === incoming.id) ? prev : [...prev, incoming]));
+        setGroupMessages((prev) => appendUniqueGroupMessage(prev, incoming));
     }, [loadSelectedGroupMessages, selectedGroup]);
 
     const applyPrivateMessageEvent = useCallback((evt: ChatRealtimeEvent) => {
@@ -537,7 +554,7 @@ export function StudentChats({
 
                 {!canInteractInGroup && (
                     <div className="mt-3 mb-1 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                        Has sido removido de este grupo. Puedes leer mensajes históricos, pero no puedes interactuar.
+                        Has sido eliminado de este grupo. Puedes leer mensajes históricos, pero no puedes interactuar.
                     </div>
                 )}
 

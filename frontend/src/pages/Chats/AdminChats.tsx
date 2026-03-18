@@ -27,6 +27,40 @@ function timeAgo(iso: string): string {
     return `hace ${days}d`;
 }
 
+function dedupeGroupMessages(messages: GroupMessage[]): GroupMessage[] {
+    const byId = new Map<number, GroupMessage>();
+    for (const msg of messages) {
+        const id = Number(msg.id);
+        if (!Number.isFinite(id)) continue;
+        byId.set(id, msg);
+    }
+    return Array.from(byId.values()).sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+    );
+}
+
+function appendUniqueGroupMessage(messages: GroupMessage[], incoming: GroupMessage): GroupMessage[] {
+    return dedupeGroupMessages([...messages, incoming]);
+}
+
+function normalizeGroupId(groupId: unknown): number {
+    return Number(groupId);
+}
+
+function upsertGroup(groups: ChatGroup[], incoming: ChatGroup): ChatGroup[] {
+    const incomingId = normalizeGroupId(incoming.id);
+    if (!Number.isFinite(incomingId)) {
+        return groups;
+    }
+
+    const idx = groups.findIndex((g) => normalizeGroupId(g.id) === incomingId);
+    const next = idx === -1
+        ? [...groups, incoming]
+        : groups.map((g, i) => (i === idx ? incoming : g));
+
+    return next.sort((a, b) => a.name.localeCompare(b.name));
+}
+
 const EMPTY_GROUP_FORM: UpsertChatGroupPayload = {
     name: "",
     description: "",
@@ -137,7 +171,7 @@ export function AdminChats({
     const fetchGroupMessages = async (groupId: number) => {
         try {
             const msgs = await chatsService.listGroupMessages(groupId);
-            setGroupMessages(msgs);
+            setGroupMessages(dedupeGroupMessages(msgs));
         } catch (err: unknown) {
             console.error("Failed fetching group messages:", err);
         }
@@ -154,26 +188,20 @@ export function AdminChats({
             return;
         }
 
-        setGroupMessages((prev) => (prev.some((m) => m.id === incoming.id) ? prev : [...prev, incoming]));
+        setGroupMessages((prev) => appendUniqueGroupMessage(prev, incoming));
     };
 
     const applyRealtimeGroupUpsert = (rawGroup: unknown) => {
         const incoming = rawGroup as ChatGroup | undefined;
-        if (!incoming || typeof incoming.id !== "number") return;
+        if (!incoming) return;
 
-        setGroups((prev) => {
-            const idx = prev.findIndex((g) => g.id === incoming.id);
-            if (idx === -1) {
-                return [...prev, incoming].sort((a, b) => a.name.localeCompare(b.name));
-            }
+        const incomingId = normalizeGroupId(incoming.id);
+        if (!Number.isFinite(incomingId)) return;
 
-            const next = [...prev];
-            next[idx] = incoming;
-            return next.sort((a, b) => a.name.localeCompare(b.name));
-        });
+        setGroups((prev) => upsertGroup(prev, incoming));
 
-        setEditingGroup((prev) => (prev?.id === incoming.id ? incoming : prev));
-        setChattingGroup((prev) => (prev?.id === incoming.id ? incoming : prev));
+        setEditingGroup((prev) => (prev && normalizeGroupId(prev.id) === incomingId ? incoming : prev));
+        setChattingGroup((prev) => (prev && normalizeGroupId(prev.id) === incomingId ? incoming : prev));
     };
 
     useEffect(() => {
@@ -188,9 +216,9 @@ export function AdminChats({
             if (evt.event === "group_deleted") {
                 const groupId = Number(evt.payload?.group_id ?? -1);
                 if (groupId > 0) {
-                    setGroups((prev) => prev.filter((g) => g.id !== groupId));
-                    setEditingGroup((prev) => (prev?.id === groupId ? null : prev));
-                    setChattingGroup((prev) => (prev?.id === groupId ? null : prev));
+                    setGroups((prev) => prev.filter((g) => normalizeGroupId(g.id) !== groupId));
+                    setEditingGroup((prev) => (prev && normalizeGroupId(prev.id) === groupId ? null : prev));
+                    setChattingGroup((prev) => (prev && normalizeGroupId(prev.id) === groupId ? null : prev));
                 }
                 return;
             }
@@ -245,13 +273,38 @@ export function AdminChats({
     }, [groupMessages]);
 
     useEffect(() => {
-        if (!chattingGroup) return;
-        if (realtimeTick <= 0) return;
-        if (realtimeEvent?.event === "group_message_created") {
+        if (realtimeTick <= 0 || !realtimeEvent) return;
+
+        if (realtimeEvent.event === "group_created" || realtimeEvent.event === "group_updated") {
+            const incomingGroup = realtimeEvent.payload?.group;
+            if (incomingGroup) {
+                applyRealtimeGroupUpsert(incomingGroup);
+            } else {
+                void refreshGroups();
+            }
+            return;
+        }
+
+        if (realtimeEvent.event === "group_deleted") {
+            const groupId = Number(realtimeEvent.payload?.group_id ?? -1);
+            if (groupId > 0) {
+                setGroups((prev) => prev.filter((g) => normalizeGroupId(g.id) !== groupId));
+                setEditingGroup((prev) => (prev && normalizeGroupId(prev.id) === groupId ? null : prev));
+                setChattingGroup((prev) => (prev && normalizeGroupId(prev.id) === groupId ? null : prev));
+            } else {
+                void refreshGroups();
+            }
+            return;
+        }
+
+        if (realtimeEvent.event === "group_message_created" && chattingGroup) {
             applyGroupMessageEvent(realtimeEvent);
             return;
         }
-        void fetchGroupMessages(chattingGroup.id);
+
+        if (chattingGroup) {
+            void fetchGroupMessages(chattingGroup.id);
+        }
     }, [realtimeEvent, realtimeTick, chattingGroup]);
 
     const handleSendGroupMessage = async () => {
@@ -259,7 +312,7 @@ export function AdminChats({
         setSendingGroupMsg(true);
         try {
             const newMsg = await chatsService.sendGroupMessage(chattingGroup.id, groupMsgText.trim());
-            setGroupMessages(prev => [...prev, newMsg]);
+            setGroupMessages((prev) => appendUniqueGroupMessage(prev, newMsg));
             setGroupMsgText("");
         } catch (err: unknown) {
             toast.error(err instanceof Error ? err.message : "Error al enviar el mensaje.");
@@ -312,7 +365,7 @@ export function AdminChats({
                 name: createForm.name.trim(),
                 description: createForm.description.trim(),
             });
-            setGroups((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
+            setGroups((prev) => upsertGroup(prev, created));
             setCreateForm(EMPTY_GROUP_FORM);
             setIsCreateOpen(false);
             toast.success("Grupo creado correctamente.");
