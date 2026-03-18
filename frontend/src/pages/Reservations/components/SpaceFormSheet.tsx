@@ -17,6 +17,7 @@ const EMPTY_FORM: CreateSpacePayload = {
   capacity: 1,
   open_time: "08:00",
   close_time: "22:00",
+  reservation_interval_minutes: 60,
   is_active: true,
 };
 
@@ -39,6 +40,7 @@ export function SpaceFormSheet({
               capacity: space.capacity,
               open_time: space.open_time.slice(0, 5),
               close_time: space.close_time.slice(0, 5),
+              reservation_interval_minutes: space.reservation_interval_minutes,
               is_active: space.is_active,
             }
           : EMPTY_FORM,
@@ -136,7 +138,17 @@ export function SpaceFormSheet({
                 />
               </div>
             </div>
-
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Intervalo de reserva(minutos) *</label>
+              <input
+                required
+                type="number"
+                min={1}
+                value={form.reservation_interval_minutes}
+                onChange={(e) => set("reservation_interval_minutes", parseInt(e.target.value) || 1)}
+                className="border-input bg-background focus-visible:ring-ring/50 w-full rounded-md border px-3 py-2 text-sm outline-none focus-visible:ring-[3px]"
+              />
+            </div>
             <div className="flex items-center gap-3">
               <input
                 id="is_active"

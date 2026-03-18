@@ -28,6 +28,8 @@ def _serialize_space(space: CommonSpace) -> dict:
         "is_active": space.is_active,
         "open_time": space.open_time.strftime("%H:%M:%S"),
         "close_time": space.close_time.strftime("%H:%M:%S"),
+        "reservation_interval_minutes": space.reservation_interval_minutes,
+
     }
 
 
@@ -382,6 +384,7 @@ class AdminSpaceListCreateView(AdminRequiredMixin, AuthenticatedView):
         capacity = payload.get("capacity", 1)
         open_time = str(payload.get("open_time", "")).strip()
         close_time = str(payload.get("close_time", "")).strip()
+        interval = payload.get("reservation_interval_minutes", 60)
         is_active = payload.get("is_active", True)
 
         if not name or not open_time or not close_time:
@@ -402,6 +405,13 @@ class AdminSpaceListCreateView(AdminRequiredMixin, AuthenticatedView):
         except ValueError:
             return JsonResponse({"detail": "Formato de hora inválido. Usa HH:MM o HH:MM:SS."}, status=400)
 
+        try:
+            interval = int(interval)
+            if interval < 1:
+                raise ValueError
+        except (ValueError, TypeError):
+            return JsonResponse({"detail": "El intervalo de reserva debe ser un entero positivo."}, status=400)
+
         if ct <= ot:
             return JsonResponse({"detail": "close_time debe ser posterior a open_time."}, status=400)
 
@@ -416,6 +426,7 @@ class AdminSpaceListCreateView(AdminRequiredMixin, AuthenticatedView):
             open_time=ot,
             close_time=ct,
             is_active=is_active,
+            reservation_interval_minutes=interval,
         )
         return JsonResponse(_serialize_space(space), status=201)
 
@@ -470,6 +481,15 @@ class AdminSpaceDetailView(AdminRequiredMixin, AuthenticatedView):
 
         if space.close_time <= space.open_time:
             return JsonResponse({"detail": "close_time debe ser posterior a open_time."}, status=400)
+
+        if "reservation_interval_minutes" in payload:
+            try:
+                interval = int(payload["reservation_interval_minutes"])
+                if interval < 1:
+                    raise ValueError
+                space.reservation_interval_minutes = interval
+            except (ValueError, TypeError):
+                return JsonResponse({"detail": "reservation_interval_minutes debe ser un entero positivo."}, status=400)
 
         space.save()
         return JsonResponse(_serialize_space(space))
