@@ -58,7 +58,7 @@ const MealCardAdmin = ({ meal, onEdit, onDelete }: MealCardAdminProps) => {
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-3 flex-1">
           <div className={`shrink-0 ${meal.imageUrl ? '-mt-8 p-1.5 bg-white/90 backdrop-blur rounded-lg shadow-sm border border-white/50 z-10 relative' : ''}`}>
-             {getMealTypeIcon(meal.type)}
+            {getMealTypeIcon(meal.type)}
           </div>
           <div className="flex-1">
             <p className="font-semibold text-gray-900">{meal.name}</p>
@@ -230,9 +230,9 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
             />
             {formData.imageUrl && (
               <div className="mt-3 h-32 rounded-lg border border-gray-200 overflow-hidden bg-gray-100 flex items-center justify-center">
-                <img 
-                  src={formData.imageUrl} 
-                  alt="Vista previa" 
+                <img
+                  src={formData.imageUrl}
+                  alt="Vista previa"
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = 'none';
@@ -673,10 +673,10 @@ export function AdminMenuView() {
     return (
       <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="mb-8 flex items-center justify-between">
+          <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h1 className="text-4xl font-serif text-gray-900 mb-2">
-                Gestión del Menú del Comedor
+                Gestión del Menú
               </h1>
               <p className="text-gray-600">
                 {error || 'No hay menús semanales creados aún'}
@@ -684,7 +684,7 @@ export function AdminMenuView() {
             </div>
             <button
               onClick={() => setIsNewWeekModalOpen(true)}
-              className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center gap-2"
+              className="px-5 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors font-medium flex items-center gap-2 shadow-sm"
             >
               <Plus className="w-5 h-5" />
               Nueva Semana
@@ -731,86 +731,73 @@ export function AdminMenuView() {
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-serif text-gray-900 mb-2">
-              Gestión del Menú del Comedor
+        <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div className="flex flex-col gap-3">
+            <h1 className="text-4xl font-serif text-gray-900 mb-1">
+              Gestión del Menú
             </h1>
-            <div className="flex items-center gap-4">
-              <p className="text-gray-600">
-                Administra el menú de la semana del{' '}
-                {new Date(menuWeek.weekStart + 'T00:00:00').toLocaleDateString('es-ES', {
-                  day: 'numeric',
-                  month: 'long',
-                })}{' '}
-                al{' '}
-                {new Date(menuWeek.weekEnd + 'T00:00:00').toLocaleDateString('es-ES', {
-                  day: 'numeric',
-                  month: 'long',
-                })}
-              </p>
-              {/* Navegación entre semanas */}
-              {allWeeks.length > 1 && (
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => handleNavigateWeek('prev')}
-                    disabled={!canGoPrev}
-                    className="p-1.5 rounded-md hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                    title="Semana anterior"
-                  >
-                    <ChevronLeft className="w-5 h-5 text-gray-600" />
-                  </button>
-                  <button
-                    onClick={() => handleNavigateWeek('next')}
-                    disabled={!canGoNext}
-                    className="p-1.5 rounded-md hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                    title="Semana siguiente"
-                  >
-                    <ChevronRight className="w-5 h-5 text-gray-600" />
-                  </button>
-                </div>
-              )}
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-3 bg-white p-2 px-4 rounded-2xl shadow-sm border border-gray-100">
+                <button
+                  onClick={() => handleNavigateWeek('prev')}
+                  disabled={!canGoPrev}
+                  className="p-1.5 rounded-full hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronLeft className="w-5 h-5 text-gray-700" />
+                </button>
+                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight whitespace-nowrap">
+                  {new Date(menuWeek.weekStart + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                  {' - '}
+                  {new Date(menuWeek.weekEnd + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                </h2>
+                <button
+                  onClick={() => handleNavigateWeek('next')}
+                  disabled={!canGoNext}
+                  className="p-1.5 rounded-full hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronRight className="w-5 h-5 text-gray-700" />
+                </button>
+              </div>
+
+              {/* Status indicator inline */}
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border bg-white ${menuWeek.isPublished ? 'border-green-200 text-green-700 shadow-[0_0_10px_rgba(34,197,94,0.1)]' : 'border-orange-200 text-orange-700'}`}>
+                <div className={`w-2.5 h-2.5 rounded-full ${menuWeek.isPublished ? 'bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]' : 'bg-orange-500'}`} />
+                <span className="text-sm font-medium">{menuWeek.isPublished ? 'Publicado' : 'Borrador'}</span>
+              </div>
             </div>
-            {menuWeek.isPublished && (
-              <span className="inline-flex items-center mt-2 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                Publicado a residentes
-              </span>
-            )}
-            {!menuWeek.isPublished && (
-              <span className="inline-flex items-center mt-2 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                Borrador (Oculto a residentes)
-              </span>
-            )}
           </div>
-          <div className="flex gap-2">
+
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
+            {/* Toggle Publish */}
+            <div className="flex items-center gap-3 bg-white px-4 py-2.5 rounded-xl border border-gray-200 shadow-sm" title={menuWeek.isPublished ? 'Ocultar a residentes' : 'Publicar a residentes'}>
+              <span className="text-sm font-medium text-gray-700 hidden sm:inline">Público</span>
+              <button
+                onClick={handleTogglePublish}
+                disabled={isSaving}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 ${menuWeek.isPublished ? 'bg-green-500' : 'bg-gray-300'}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${menuWeek.isPublished ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
+
+            <div className="w-px h-8 bg-gray-200 hidden sm:block mx-1" />
+
             <button
               onClick={handleDeleteWeek}
               disabled={isSaving}
-              className="px-4 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors font-medium flex items-center gap-2"
+              className="p-2.5 text-red-600 bg-red-50/50 border border-red-100 rounded-xl hover:bg-red-50 hover:border-red-200 transition-colors disabled:opacity-50"
               title="Eliminar semana completa"
             >
               <Trash2 className="w-5 h-5" />
-              <span className="hidden sm:inline">Eliminar</span>
             </button>
-            <button
-              onClick={handleTogglePublish}
-              disabled={isSaving}
-              className={`px-4 py-2 rounded-lg transition-colors font-medium flex items-center gap-2 ${menuWeek.isPublished
-                  ? 'bg-yellow-50 text-yellow-700 border border-yellow-200 hover:bg-yellow-100'
-                  : 'bg-blue-600 text-white hover:bg-blue-700'
-                }`}
-            >
-              <span className="hidden sm:inline">
-                {menuWeek.isPublished ? 'Ocultar' : 'Publicar'}
-              </span>
-            </button>
+
             <button
               onClick={() => setIsNewWeekModalOpen(true)}
               disabled={isSaving}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center gap-2"
+              className="px-5 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors font-medium flex items-center gap-2 shadow-sm disabled:opacity-50"
             >
               <Plus className="w-5 h-5" />
-              <span className="hidden sm:inline">Nueva Semana</span>
+              Nueva Semana
             </button>
           </div>
         </div>
