@@ -1,10 +1,9 @@
-import { Clock, Edit2, Plus, Trash2, Leaf, Flame, X } from "lucide-react";
-import { useState } from "react";
+import { Clock, Edit2, Plus, Trash2, Leaf, Flame, X, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
 import { MenuWeek, MenuDay, Meal } from "../../types/menu.types";
-
-interface AdminMenuViewProps {
-  menuWeek?: MenuWeek;
-}
+import menuService from "../../services/menu.service";
+import { Toast } from "../../components/ui/Toast";
+import { ConfirmModal } from "../../components/ui/ConfirmModal";
 
 const getMealTypeLabel = (type: Meal['type']): string => {
   switch (type) {
@@ -118,15 +117,26 @@ const MEAL_TYPES: MealTypeOption[] = [
 interface EditMealModalProps {
   meal?: Meal;
   dayDate?: string;
+  dayId?: string;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (meal: Meal) => void;
+  onSave: (meal: Meal, dayId: string) => void;
+  isSaving?: boolean;
 }
 
-const EditMealModal = ({ meal, isOpen, onClose, onSave }: EditMealModalProps) => {
+const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditMealModalProps) => {
   const [formData, setFormData] = useState<Meal>(
     meal || { name: '', type: 'lunch', description: '', allergens: [], isVegetarian: false, isVegan: false }
   );
+
+  // Reseteamos el form cuando se abre el modal con nuevos datos
+  useEffect(() => {
+    if (isOpen) {
+      setFormData(
+        meal || { name: '', type: 'lunch', description: '', allergens: [], isVegetarian: false, isVegan: false }
+      );
+    }
+  }, [isOpen, meal]);
 
   if (!isOpen) return null;
 
@@ -242,18 +252,110 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave }: EditMealModalProps) =>
         <div className="flex gap-3 p-6 border-t border-gray-200">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+            disabled={isSaving}
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
           >
             Cancelar
           </button>
           <button
             onClick={() => {
-              onSave(formData);
-              onClose();
+              if (dayId) {
+                onSave(formData, dayId);
+              }
             }}
-            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+            disabled={isSaving || !formData.name.trim()}
+            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
           >
+            {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
             Guardar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+interface NewWeekModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (weekStart: string, weekEnd: string) => void;
+  isSaving?: boolean;
+}
+
+const NewWeekModal = ({ isOpen, onClose, onSave, isSaving }: NewWeekModalProps) => {
+  const [weekStart, setWeekStart] = useState('');
+  const [weekEnd, setWeekEnd] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      const today = new Date();
+      const dayOfWeek = today.getDay();
+      const nextMonday = new Date(today);
+      const daysUntilMonday = dayOfWeek === 0 ? 1 : (8 - dayOfWeek);
+      nextMonday.setDate(today.getDate() + daysUntilMonday);
+
+      const nextFriday = new Date(nextMonday);
+      nextFriday.setDate(nextMonday.getDate() + 4);
+
+      setWeekStart(nextMonday.toISOString().split('T')[0]);
+      setWeekEnd(nextFriday.toISOString().split('T')[0]);
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl shadow-lg max-w-md w-full mx-4">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-900">
+            Crear nueva semana
+          </h2>
+          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-md">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Fecha de inicio (Lunes)
+            </label>
+            <input
+              type="date"
+              value={weekStart}
+              onChange={(e) => setWeekStart(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Fecha de fin (Viernes/Domingo)
+            </label>
+            <input
+              type="date"
+              value={weekEnd}
+              onChange={(e) => setWeekEnd(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-3 p-6 border-t border-gray-200">
+          <button
+            onClick={onClose}
+            disabled={isSaving}
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={() => onSave(weekStart, weekEnd)}
+            disabled={isSaving || !weekStart || !weekEnd}
+            className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+            Crear semana
           </button>
         </div>
       </div>
@@ -263,13 +365,13 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave }: EditMealModalProps) =>
 
 interface DayMenuCardAdminProps {
   day: MenuDay;
-  onAddMeal: (dayDate: string) => void;
-  onEditMeal: (meal: Meal) => void;
+  onAddMeal: (dayDate: string, dayId: string) => void;
+  onEditMeal: (meal: Meal, dayId: string) => void;
   onDeleteMeal: (mealId?: string) => void;
 }
 
 const DayMenuCardAdmin = ({ day, onAddMeal, onEditMeal, onDeleteMeal }: DayMenuCardAdminProps) => {
-  const dayDate = new Date(day.date);
+  const dayDate = new Date(day.date + 'T00:00:00');
   const dayName = dayDate.toLocaleDateString('es-ES', { weekday: 'long' });
   const formattedDate = dayDate.toLocaleDateString('es-ES', {
     day: 'numeric',
@@ -286,7 +388,7 @@ const DayMenuCardAdmin = ({ day, onAddMeal, onEditMeal, onDeleteMeal }: DayMenuC
           <p className="text-sm text-green-50">{formattedDate}</p>
         </div>
         <button
-          onClick={() => onAddMeal(day.date)}
+          onClick={() => onAddMeal(day.date, day.id || '')}
           className="flex items-center gap-2 px-3 py-2 bg-white text-green-700 rounded-lg hover:bg-green-50 transition-colors font-medium"
           title="Agregar comida"
         >
@@ -306,7 +408,7 @@ const DayMenuCardAdmin = ({ day, onAddMeal, onEditMeal, onDeleteMeal }: DayMenuC
               </div>
               <MealCardAdmin
                 meal={meal}
-                onEdit={onEditMeal}
+                onEdit={(m) => onEditMeal(m, day.id || '')}
                 onDelete={onDeleteMeal}
               />
             </div>
@@ -322,145 +424,291 @@ const DayMenuCardAdmin = ({ day, onAddMeal, onEditMeal, onDeleteMeal }: DayMenuC
   );
 };
 
-export function AdminMenuView({ menuWeek }: AdminMenuViewProps) {
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [selectedMeal, setSelectedMeal] = useState<Meal | undefined>();
-  const [editingDayDate, setEditingDayDate] = useState<string>('');
+export function AdminMenuView() {
+  const [menuWeek, setMenuWeek] = useState<MenuWeek | null>(null);
+  const [allWeeks, setAllWeeks] = useState<MenuWeek[]>([]);
+  const [selectedWeekId, setSelectedWeekId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const mockMenuWeek: MenuWeek = menuWeek || {
-    weekStart: '2026-03-09',
-    weekEnd: '2026-03-15',
-    days: [
-      {
-        day: 'lunes',
-        date: '2026-03-09',
-        meals: [
-          {
-            name: 'Café con tostadas',
-            type: 'breakfast',
-            isVegetarian: true,
-          },
-          {
-            name: 'Arroz con pollo',
-            description: 'Acompañado de ensalada fresca',
-            type: 'lunch',
-          },
-          {
-            name: 'Sopa de verduras',
-            type: 'dinner',
-            isVegetarian: true,
-            isVegan: true,
-          },
-        ],
-      },
-      {
-        day: 'martes',
-        date: '2026-03-10',
-        meals: [
-          {
-            name: 'Zumo de naranja y cereales',
-            type: 'breakfast',
-            isVegetarian: true,
-            isVegan: true,
-          },
-          {
-            name: 'Pasta a la boloñesa',
-            type: 'lunch',
-            allergens: ['Gluten', 'Huevo'],
-          },
-          {
-            name: 'Hamburguesas caseras',
-            type: 'dinner',
-          },
-        ],
-      },
-      {
-        day: 'miércoles',
-        date: '2026-03-11',
-        meals: [
-          {
-            name: 'Tostadas con mermelada',
-            type: 'breakfast',
-            isVegetarian: true,
-          },
-          {
-            name: 'Caldereta de res',
-            type: 'lunch',
-          },
-          {
-            name: 'Pizza Margarita',
-            type: 'dinner',
-            isVegetarian: true,
-          },
-        ],
-      },
-      {
-        day: 'jueves',
-        date: '2026-03-12',
-        meals: [
-          {
-            name: 'Yogur con granola',
-            type: 'breakfast',
-            isVegetarian: true,
-          },
-          {
-            name: 'Cuscús con verduras',
-            type: 'lunch',
-            isVegetarian: true,
-            isVegan: true,
-          },
-          {
-            name: 'Pollo al horno con papas',
-            type: 'dinner',
-          },
-        ],
-      },
-      {
-        day: 'viernes',
-        date: '2026-03-13',
-        meals: [
-          {
-            name: 'Desayuno completo',
-            description: 'Huevos, jamón, pan',
-            type: 'breakfast',
-          },
-          {
-            name: 'Paella de mariscos',
-            type: 'lunch',
-          },
-          {
-            name: 'Filete de pescado',
-            type: 'dinner',
-          },
-        ],
-      },
-    ],
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isNewWeekModalOpen, setIsNewWeekModalOpen] = useState(false);
+  const [selectedMeal, setSelectedMeal] = useState<Meal | undefined>();
+  const [editingDayId, setEditingDayId] = useState<string>('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const [confirmConfig, setConfirmConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    action: () => void;
+  }>({ isOpen: false, title: '', message: '', action: () => {} });
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => setToast({ message, type });
+
+  const confirmAction = (title: string, message: string, action: () => void) => {
+    setConfirmConfig({ isOpen: true, title, message, action });
   };
 
-  const week = menuWeek || mockMenuWeek;
+  const loadWeeks = useCallback(async () => {
+    try {
+      const weeks = await menuService.listWeeks();
+      setAllWeeks(weeks);
+      return weeks;
+    } catch {
+      return [];
+    }
+  }, []);
 
-  const handleAddMeal = (dayDate: string) => {
-    setEditingDayDate(dayDate);
+  const loadWeekDetail = useCallback(async (weekId: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const week = await menuService.getWeek(weekId);
+      setMenuWeek(week);
+      setSelectedWeekId(weekId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al cargar el menú');
+      setMenuWeek(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const init = async () => {
+      setLoading(true);
+      try {
+        const currentWeek = await menuService.getCurrentWeek();
+        setMenuWeek(currentWeek);
+        setSelectedWeekId(currentWeek.id || null);
+        setError(null);
+      } catch {
+        try {
+          const weeks = await menuService.listWeeks();
+          setAllWeeks(weeks);
+          if (weeks.length > 0) {
+            const firstWeek = await menuService.getWeek(weeks[0].id!);
+            setMenuWeek(firstWeek);
+            setSelectedWeekId(weeks[0].id || null);
+          } else {
+            setError(null);
+            setMenuWeek(null);
+          }
+        } catch {
+          setError(null);
+          setMenuWeek(null);
+        }
+      } finally {
+        setLoading(false);
+      }
+      await loadWeeks();
+    };
+    init();
+  }, [loadWeeks]);
+
+  const handleAddMeal = (_dayDate: string, dayId: string) => {
+    setEditingDayId(dayId);
     setSelectedMeal(undefined);
     setIsEditModalOpen(true);
   };
 
-  const handleEditMeal = (meal: Meal) => {
+  const handleEditMeal = (meal: Meal, dayId: string) => {
     setSelectedMeal(meal);
+    setEditingDayId(dayId);
     setIsEditModalOpen(true);
   };
 
-  const handleDeleteMeal = (mealId?: string) => {
-    // Esta función solo es visual, la lógica se implementará después
-    console.log('Eliminar comida:', mealId);
-    alert('Eliminar comida: ' + (mealId || 'Nueva comida'));
+  const handleDeleteMeal = async (mealId?: string) => {
+    if (!mealId) return;
+
+    confirmAction(
+      'Eliminar comida',
+      '¿Estás seguro de que quieres eliminar esta comida?',
+      async () => {
+        try {
+          await menuService.deleteMeal(mealId);
+          if (selectedWeekId) {
+            await loadWeekDetail(selectedWeekId);
+          }
+          showToast('Comida eliminada correctamente', 'success');
+        } catch (err) {
+          showToast('Error al eliminar: ' + (err instanceof Error ? err.message : 'Error desconocido'), 'error');
+        } finally {
+          setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+        }
+      }
+    );
   };
 
-  const handleSaveMeal = (meal: Meal) => {
-    // Esta función solo es visual, la lógica se implementará después
-    console.log('Guardar comida:', meal);
-    alert('Comida guardada: ' + meal.name);
+  const handleSaveMeal = async (meal: Meal, dayId: string) => {
+    setIsSaving(true);
+    try {
+      if (meal.id) {
+        await menuService.updateMeal(meal.id, meal);
+      } else {
+        await menuService.createMeal(dayId, meal);
+      }
+      setIsEditModalOpen(false);
+      showToast(meal.id ? 'Comida actualizada' : 'Comida agregada', 'success');
+      if (selectedWeekId) {
+        await loadWeekDetail(selectedWeekId);
+      }
+    } catch (err) {
+      showToast('Error al guardar: ' + (err instanceof Error ? err.message : 'Error desconocido'), 'error');
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  const handleCreateWeek = async (weekStart: string, weekEnd: string) => {
+    setIsSaving(true);
+    try {
+      const newWeek = await menuService.createWeek(weekStart, weekEnd);
+      setIsNewWeekModalOpen(false);
+      setMenuWeek(newWeek);
+      setSelectedWeekId(newWeek.id || null);
+      showToast('Semana creada correctamente', 'success');
+      await loadWeeks();
+    } catch (err) {
+      showToast('Error al crear semana: ' + (err instanceof Error ? err.message : 'Error desconocido'), 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleNavigateWeek = async (direction: 'prev' | 'next') => {
+    if (!selectedWeekId || allWeeks.length === 0) return;
+
+    const currentIndex = allWeeks.findIndex(w => w.id === selectedWeekId);
+    if (currentIndex === -1) return;
+
+    const newIndex = direction === 'prev' ? currentIndex + 1 : currentIndex - 1;
+    if (newIndex < 0 || newIndex >= allWeeks.length) return;
+
+    const targetWeek = allWeeks[newIndex];
+    if (targetWeek.id) {
+      await loadWeekDetail(targetWeek.id);
+    }
+  };
+
+  const handleTogglePublish = async () => {
+    if (!menuWeek?.id) return;
+    setIsSaving(true);
+    try {
+      const updated = await menuService.updateWeek(menuWeek.id, {
+        isPublished: !menuWeek.isPublished
+      });
+      setMenuWeek(updated);
+      showToast(updated.isPublished ? 'Menú publicado' : 'Menú oculto a residentes', 'success');
+      await loadWeeks();
+    } catch (err) {
+      showToast('Error al actualizar estado: ' + (err instanceof Error ? err.message : 'Error desconocido'), 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteWeek = async () => {
+    if (!menuWeek?.id) return;
+    
+    confirmAction(
+      'Eliminar semana completa',
+      '¿Estás seguro de que quieres eliminar esta semana completa? Se borrarán todas las comidas y los días.',
+      async () => {
+        setIsSaving(true);
+        try {
+          await menuService.deleteWeek(menuWeek.id!);
+          
+          const updatedWeeks = allWeeks.filter(w => w.id !== menuWeek.id);
+          setAllWeeks(updatedWeeks);
+          
+          if (updatedWeeks.length > 0) {
+            await loadWeekDetail(updatedWeeks[0].id!);
+          } else {
+            setMenuWeek(null);
+            setSelectedWeekId(null);
+          }
+          showToast('Semana eliminada correctamente', 'success');
+        } catch (err) {
+          showToast('Error al eliminar semana: ' + (err instanceof Error ? err.message : 'Error desconocido'), 'error');
+        } finally {
+          setIsSaving(false);
+          setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+        }
+      }
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-green-600 mx-auto mb-4" />
+          <p className="text-gray-500">Cargando menú...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!menuWeek) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="mb-8 flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-serif text-gray-900 mb-2">
+                Gestión del Menú del Comedor
+              </h1>
+              <p className="text-gray-600">
+                {error || 'No hay menús semanales creados aún'}
+              </p>
+            </div>
+            <button
+              onClick={() => setIsNewWeekModalOpen(true)}
+              className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center gap-2"
+            >
+              <Plus className="w-5 h-5" />
+              Nueva Semana
+            </button>
+          </div>
+
+          <div className="col-span-full text-center py-16 text-gray-400">
+            <p className="text-lg mb-4">No hay menú disponible</p>
+            <p className="text-sm">Usa el botón "Nueva Semana" para crear el primer menú</p>
+          </div>
+        </div>
+
+        <NewWeekModal
+          isOpen={isNewWeekModalOpen}
+          onClose={() => setIsNewWeekModalOpen(false)}
+          onSave={handleCreateWeek}
+          isSaving={isSaving}
+        />
+
+        <ConfirmModal
+          isOpen={confirmConfig.isOpen}
+          title={confirmConfig.title}
+          message={confirmConfig.message}
+          onConfirm={confirmConfig.action}
+          onCancel={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
+        />
+        
+        {toast && (
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast(null)}
+          />
+        )}
+      </div>
+    );
+  }
+
+  const currentIndex = allWeeks.findIndex(w => w.id === selectedWeekId);
+  const canGoPrev = currentIndex < allWeeks.length - 1;
+  const canGoNext = currentIndex > 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
@@ -471,29 +719,90 @@ export function AdminMenuView({ menuWeek }: AdminMenuViewProps) {
             <h1 className="text-4xl font-serif text-gray-900 mb-2">
               Gestión del Menú del Comedor
             </h1>
-            <p className="text-gray-600">
-              Administra el menú de la semana del{' '}
-              {new Date(week.weekStart).toLocaleDateString('es-ES', {
-                day: 'numeric',
-                month: 'long',
-              })}{' '}
-              al{' '}
-              {new Date(week.weekEnd).toLocaleDateString('es-ES', {
-                day: 'numeric',
-                month: 'long',
-              })}
-            </p>
+            <div className="flex items-center gap-4">
+              <p className="text-gray-600">
+                Administra el menú de la semana del{' '}
+                {new Date(menuWeek.weekStart + 'T00:00:00').toLocaleDateString('es-ES', {
+                  day: 'numeric',
+                  month: 'long',
+                })}{' '}
+                al{' '}
+                {new Date(menuWeek.weekEnd + 'T00:00:00').toLocaleDateString('es-ES', {
+                  day: 'numeric',
+                  month: 'long',
+                })}
+              </p>
+              {/* Navegación entre semanas */}
+              {allWeeks.length > 1 && (
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => handleNavigateWeek('prev')}
+                    disabled={!canGoPrev}
+                    className="p-1.5 rounded-md hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    title="Semana anterior"
+                  >
+                    <ChevronLeft className="w-5 h-5 text-gray-600" />
+                  </button>
+                  <button
+                    onClick={() => handleNavigateWeek('next')}
+                    disabled={!canGoNext}
+                    className="p-1.5 rounded-md hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    title="Semana siguiente"
+                  >
+                    <ChevronRight className="w-5 h-5 text-gray-600" />
+                  </button>
+                </div>
+              )}
+            </div>
+            {menuWeek.isPublished && (
+              <span className="inline-flex items-center mt-2 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                Publicado a residentes
+              </span>
+            )}
+            {!menuWeek.isPublished && (
+              <span className="inline-flex items-center mt-2 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                Borrador (Oculto a residentes)
+              </span>
+            )}
           </div>
-          <button className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center gap-2">
-            <Plus className="w-5 h-5" />
-            Nueva Semana
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={handleDeleteWeek}
+              disabled={isSaving}
+              className="px-4 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors font-medium flex items-center gap-2"
+              title="Eliminar semana completa"
+            >
+              <Trash2 className="w-5 h-5" />
+              <span className="hidden sm:inline">Eliminar</span>
+            </button>
+            <button
+              onClick={handleTogglePublish}
+              disabled={isSaving}
+              className={`px-4 py-2 rounded-lg transition-colors font-medium flex items-center gap-2 ${
+                menuWeek.isPublished 
+                  ? 'bg-yellow-50 text-yellow-700 border border-yellow-200 hover:bg-yellow-100' 
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+            >
+              <span className="hidden sm:inline">
+                {menuWeek.isPublished ? 'Ocultar' : 'Publicar'}
+              </span>
+            </button>
+            <button
+              onClick={() => setIsNewWeekModalOpen(true)}
+              disabled={isSaving}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center gap-2"
+            >
+              <Plus className="w-5 h-5" />
+              <span className="hidden sm:inline">Nueva Semana</span>
+            </button>
+          </div>
         </div>
 
         {/* Menu Days Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {week.days && week.days.length > 0 ? (
-            week.days.map((day, index) => (
+          {menuWeek.days && menuWeek.days.length > 0 ? (
+            menuWeek.days.map((day, index) => (
               <DayMenuCardAdmin
                 key={day.id || index}
                 day={day}
@@ -536,11 +845,38 @@ export function AdminMenuView({ menuWeek }: AdminMenuViewProps) {
       {/* Edit Meal Modal */}
       <EditMealModal
         meal={selectedMeal}
-        dayDate={editingDayDate}
+        dayId={editingDayId}
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         onSave={handleSaveMeal}
+        isSaving={isSaving}
       />
+
+      {/* New Week Modal */}
+      <NewWeekModal
+        isOpen={isNewWeekModalOpen}
+        onClose={() => setIsNewWeekModalOpen(false)}
+        onSave={handleCreateWeek}
+        isSaving={isSaving}
+      />
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirmConfig.isOpen}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        onConfirm={confirmConfig.action}
+        onCancel={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
+      />
+      
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }

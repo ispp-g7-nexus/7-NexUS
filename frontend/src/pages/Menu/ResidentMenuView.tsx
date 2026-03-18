@@ -1,9 +1,7 @@
-import { Clock, Flame, Leaf } from "lucide-react";
+import { Clock, Flame, Leaf, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
 import { MenuWeek, MenuDay, Meal } from "../../types/menu.types";
-
-interface ResidentMenuViewProps {
-  menuWeek?: MenuWeek;
-}
+import menuService from "../../services/menu.service";
 
 const getMealTypeLabel = (type: Meal['type']): string => {
   switch (type) {
@@ -81,7 +79,7 @@ const MealCard = ({ meal }: { meal: Meal }) => {
 };
 
 const DayMenuCard = ({ day }: { day: MenuDay }) => {
-  const dayDate = new Date(day.date);
+  const dayDate = new Date(day.date + 'T00:00:00');
   const dayName = dayDate.toLocaleDateString('es-ES', { weekday: 'long' });
   const formattedDate = dayDate.toLocaleDateString('es-ES', {
     day: 'numeric',
@@ -119,118 +117,61 @@ const DayMenuCard = ({ day }: { day: MenuDay }) => {
   );
 };
 
-export function ResidentMenuView({ menuWeek }: ResidentMenuViewProps) {
-  const mockMenuWeek: MenuWeek = menuWeek || {
-    weekStart: '2026-03-09',
-    weekEnd: '2026-03-15',
-    days: [
-      {
-        day: 'lunes',
-        date: '2026-03-09',
-        meals: [
-          {
-            name: 'Café con tostadas',
-            type: 'breakfast',
-            isVegetarian: true,
-          },
-          {
-            name: 'Arroz con pollo',
-            description: 'Acompañado de ensalada fresca',
-            type: 'lunch',
-          },
-          {
-            name: 'Sopa de verduras',
-            type: 'dinner',
-            isVegetarian: true,
-            isVegan: true,
-          },
-        ],
-      },
-      {
-        day: 'martes',
-        date: '2026-03-10',
-        meals: [
-          {
-            name: 'Zumo de naranja y cereales',
-            type: 'breakfast',
-            isVegetarian: true,
-            isVegan: true,
-          },
-          {
-            name: 'Pasta a la boloñesa',
-            type: 'lunch',
-            allergens: ['Gluten', 'Huevo'],
-          },
-          {
-            name: 'Hamburguesas caseras',
-            type: 'dinner',
-          },
-        ],
-      },
-      {
-        day: 'miércoles',
-        date: '2026-03-11',
-        meals: [
-          {
-            name: 'Tostadas con mermelada',
-            type: 'breakfast',
-            isVegetarian: true,
-          },
-          {
-            name: 'Caldereta de res',
-            type: 'lunch',
-          },
-          {
-            name: 'Pizza Margarita',
-            type: 'dinner',
-            isVegetarian: true,
-          },
-        ],
-      },
-      {
-        day: 'jueves',
-        date: '2026-03-12',
-        meals: [
-          {
-            name: 'Yogur con granola',
-            type: 'breakfast',
-            isVegetarian: true,
-          },
-          {
-            name: 'Cuscús con verduras',
-            type: 'lunch',
-            isVegetarian: true,
-            isVegan: true,
-          },
-          {
-            name: 'Pollo al horno con papas',
-            type: 'dinner',
-          },
-        ],
-      },
-      {
-        day: 'viernes',
-        date: '2026-03-13',
-        meals: [
-          {
-            name: 'Desayuno completo',
-            description: 'Huevos, jamón, pan',
-            type: 'breakfast',
-          },
-          {
-            name: 'Paella de mariscos',
-            type: 'lunch',
-          },
-          {
-            name: 'Filete de pescado',
-            type: 'dinner',
-          },
-        ],
-      },
-    ],
-  };
+export function ResidentMenuView() {
+  const [menuWeek, setMenuWeek] = useState<MenuWeek | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const week = menuWeek || mockMenuWeek;
+  useEffect(() => {
+    const loadMenu = async () => {
+      try {
+        setLoading(true);
+        const week = await menuService.getCurrentWeek();
+        setMenuWeek(week);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Error al cargar el menú');
+        setMenuWeek(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadMenu();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-green-600 mx-auto mb-4" />
+          <p className="text-gray-500">Cargando menú...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!menuWeek) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="mb-8">
+            <h1 className="text-4xl font-serif text-gray-900 mb-2">
+              Menú del Comedor
+            </h1>
+            <p className="text-gray-600">
+              {error || 'No hay menú disponible para esta semana'}
+            </p>
+          </div>
+
+          <div className="col-span-full text-center py-16 text-gray-400">
+            <p className="text-lg">No hay menú disponible para esta semana</p>
+            <p className="text-sm mt-2">El menú se actualizará cuando el personal lo publique</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
@@ -242,12 +183,12 @@ export function ResidentMenuView({ menuWeek }: ResidentMenuViewProps) {
           </h1>
           <p className="text-gray-600">
             Consulta el menú de la semana del{' '}
-            {new Date(week.weekStart).toLocaleDateString('es-ES', {
+            {new Date(menuWeek.weekStart + 'T00:00:00').toLocaleDateString('es-ES', {
               day: 'numeric',
               month: 'long',
             })}{' '}
             al{' '}
-            {new Date(week.weekEnd).toLocaleDateString('es-ES', {
+            {new Date(menuWeek.weekEnd + 'T00:00:00').toLocaleDateString('es-ES', {
               day: 'numeric',
               month: 'long',
             })}
@@ -256,8 +197,8 @@ export function ResidentMenuView({ menuWeek }: ResidentMenuViewProps) {
 
         {/* Menu Days Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {week.days && week.days.length > 0 ? (
-            week.days.map((day, index) => (
+          {menuWeek.days && menuWeek.days.length > 0 ? (
+            menuWeek.days.map((day, index) => (
               <DayMenuCard key={day.id || index} day={day} />
             ))
           ) : (

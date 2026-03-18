@@ -19,5 +19,6 @@ export interface MenuWeek {
   id?: string;
   weekStart: string; // YYYY-MM-DD format
   weekEnd: string; // YYYY-MM-DD format
+  isPublished?: boolean;
   days: MenuDay[];
 }

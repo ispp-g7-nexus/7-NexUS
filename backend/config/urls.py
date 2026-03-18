@@ -49,6 +49,7 @@ urlpatterns = [
     path('api/', include('apps.announcements.urls')),
     path("api/", include("apps.packages.urls")),
     path("api/", include("apps.spaces.urls")),
+    path("api/", include("apps.menu.urls")),
 ]
 
 if settings.MATCHING_ENABLED:
