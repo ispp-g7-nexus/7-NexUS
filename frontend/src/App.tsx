@@ -13,7 +13,6 @@ export default function App() {
   return (
     <Router>
       <Toaster position="top-center" richColors />
-
       <Routes>
         <Route path="/" element={<AuthPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
