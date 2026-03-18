@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 // Importamos la página de inicio y el tipo de las pestañas
 import { StudentHome, StudentTab } from "./StudentHome";
+import { PackagesPage } from "../pages/Packages/Packages";
 
 // Páginas / Servicios
 import { SocialHub } from "../pages/Social/SocialHub.tsx";
@@ -14,6 +15,7 @@ import { MyMatchesPage } from "../pages/Matching/MyMatchesPage";
 import { ResidentMenuView } from "../pages/Menu/ResidentMenuView";
 import announcementService from "../services/announcement.service";
 import { StudentReservations } from "./StudentReservations";
+import { ActiveGuestPassesPage } from "../pages/Visitors/ActiveGuestPasses";
 
 interface StudentViewProps {
     onLogout: () => void;
@@ -122,6 +124,12 @@ export function StudentView({ onLogout }: StudentViewProps) {
                 break;
             case "announcements":
                 tabContent = <StudentAnnouncements />;
+                break;
+            case "packages":
+                tabContent = <PackagesPage />;
+                break;
+            case "visitors":
+                tabContent = <ActiveGuestPassesPage />;
                 break;
             case "menu":
                 tabContent = <ResidentMenuView />;
