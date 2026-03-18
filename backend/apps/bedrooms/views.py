@@ -1,4 +1,5 @@
 import json
+from django.db.models import Prefetch
 from django.db import IntegrityError
 from django.http import JsonResponse
 from django.views import View
@@ -34,11 +35,24 @@ class AdminRequiredView(View):
 
 
 class BedroomListView(AdminRequiredView):
+	@staticmethod
+	def _with_active_student_residents(queryset):
+		active_student_residents = Prefetch(
+			"residents",
+			queryset=Membership.objects.filter(is_active=True, role__name="Student")
+			.select_related("user")
+			.order_by("user__first_name", "user__last_name", "user__username"),
+			to_attr="active_student_residents",
+		)
+		return queryset.prefetch_related(active_student_residents)
+
 	def get(self, request):
 		if not hasattr(request, "residence") or not request.residence:
 			return JsonResponse({"detail": "No residence context."}, status=400)
 
-		bedrooms = Bedroom.objects.filter(residence=request.residence)
+		bedrooms = self._with_active_student_residents(
+			Bedroom.objects.filter(residence=request.residence)
+		)
 		serializer = BedroomSerializer(bedrooms, many=True)
 		return JsonResponse(serializer.data, safe=False)
 
@@ -69,7 +83,13 @@ class BedroomCreateView(AdminRequiredView):
 
 class BedroomRetrieveView(AdminRequiredView):
 	def get(self, request, bedroom_id):
-		bedroom = get_object_or_404(Bedroom, id=bedroom_id, residence=request.residence)
+		if not hasattr(request, "residence") or not request.residence:
+			return JsonResponse({"detail": "No residence context."}, status=400)
+
+		queryset = BedroomListView._with_active_student_residents(
+			Bedroom.objects.filter(residence=request.residence)
+		)
+		bedroom = get_object_or_404(queryset, id=bedroom_id)
 		serializer = BedroomSerializer(bedroom)
 		return JsonResponse(serializer.data)
 

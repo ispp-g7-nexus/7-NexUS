@@ -94,8 +94,21 @@ def _compute_available_slots(
     window_start = timezone.make_aware(datetime.combine(target_date, space.open_time), tz)
     window_end = timezone.make_aware(datetime.combine(target_date, space.close_time), tz)
 
-    slots: list[dict[str, str]] = []
-    cursor = window_start
+    return _compute_slots_with_capacity(
+        reservations=reservations,
+        window_start=window_start,
+        window_end=window_end,
+        capacity=space.capacity,
+    )
+
+
+def _build_occupancy_events(
+    *,
+    reservations: list[SpaceReservation],
+    window_start: datetime,
+    window_end: datetime,
+) -> list[tuple[datetime, int]]:
+    events: list[tuple[datetime, int]] = []
 
     for reservation in reservations:
         interval_start = max(reservation.start_time, window_start)
@@ -104,17 +117,53 @@ def _compute_available_slots(
         if interval_end <= interval_start:
             continue
 
-        if interval_start > cursor:
+        events.append((interval_start, 1))
+        events.append((interval_end, -1))
+
+    # Cuando coincide la marca temporal, se procesan primero las salidas para que
+    # tramos adyacentes (fin==inicio) no se traten como solape.
+    events.sort(key=lambda item: (item[0], 0 if item[1] == -1 else 1))
+    return events
+
+
+def _compute_slots_with_capacity(
+    *,
+    reservations: list[SpaceReservation],
+    window_start: datetime,
+    window_end: datetime,
+    capacity: int,
+) -> list[dict[str, str]]:
+    effective_capacity = max(capacity, 1)
+    events = _build_occupancy_events(
+        reservations=reservations,
+        window_start=window_start,
+        window_end=window_end,
+    )
+
+    if not events:
+        return [
+            {
+                "start_time": window_start.isoformat(),
+                "end_time": window_end.isoformat(),
+            }
+        ]
+
+    slots: list[dict[str, str]] = []
+    cursor = window_start
+    occupancy = 0
+
+    for event_time, delta in events:
+        if cursor < event_time and occupancy < effective_capacity:
             slots.append(
                 {
                     "start_time": cursor.isoformat(),
-                    "end_time": interval_start.isoformat(),
+                    "end_time": event_time.isoformat(),
                 }
             )
-        if interval_end > cursor:
-            cursor = interval_end
+        occupancy += delta
+        cursor = event_time
 
-    if cursor < window_end:
+    if cursor < window_end and occupancy < effective_capacity:
         slots.append(
             {
                 "start_time": cursor.isoformat(),
@@ -123,6 +172,28 @@ def _compute_available_slots(
         )
 
     return slots
+
+
+def _is_capacity_reached(
+    *,
+    reservations: list[SpaceReservation],
+    interval_start: datetime,
+    interval_end: datetime,
+    capacity: int,
+) -> bool:
+    effective_capacity = max(capacity, 1)
+    occupancy = 0
+
+    for _, delta in _build_occupancy_events(
+        reservations=reservations,
+        window_start=interval_start,
+        window_end=interval_end,
+    ):
+        occupancy += delta
+        if occupancy >= effective_capacity:
+            return True
+
+    return False
 
 
 @method_decorator(csrf_exempt, name="dispatch")
@@ -266,16 +337,25 @@ class SpaceReservationCreateView(AuthenticatedView):
                     status=400,
                 )
 
-            overlaps_in_space = SpaceReservation.objects.select_for_update().filter(
-                residence=residence,
-                space=space,
-                status=SpaceReservation.Status.ACTIVE,
-                start_time__lt=end_time,
-                end_time__gt=start_time,
-            ).exists()
-            if overlaps_in_space:
+            overlaps_in_space = list(
+                SpaceReservation.objects.select_for_update()
+                .filter(
+                    residence=residence,
+                    space=space,
+                    status=SpaceReservation.Status.ACTIVE,
+                    start_time__lt=end_time,
+                    end_time__gt=start_time,
+                )
+                .only("id", "start_time", "end_time")
+            )
+            if _is_capacity_reached(
+                reservations=overlaps_in_space,
+                interval_start=start_time,
+                interval_end=end_time,
+                capacity=space.capacity,
+            ):
                 return JsonResponse(
-                    {"detail": "El espacio ya está reservado en esa franja horaria."},
+                    {"detail": "Se ha alcanzado el aforo máximo del espacio en esa franja horaria."},
                     status=400,
                 )
 
