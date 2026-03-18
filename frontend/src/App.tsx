@@ -22,7 +22,14 @@ function BackButton() {
     <div className="fixed top-4 left-4 z-[100]">
       <button
         type="button"
-        onClick={() => navigate(-1)}
+        onClick={() => {
+          if (window.history.length > 1) {
+            navigate(-1);
+          } else {
+            navigate('/dashboard');
+          }
+        }}
+        aria-label="Volver atrás"
         className="flex items-center justify-center w-9 h-9 bg-white/90 backdrop-blur-sm border border-gray-200 text-gray-600 rounded-full shadow-sm hover:bg-gray-50 transition-all active:scale-90"
       >
         <ChevronLeft size={20} />
