@@ -5,20 +5,25 @@ import { toast } from "sonner";
 
 // Importamos la página de inicio y el tipo de las pestañas
 import { StudentHome, StudentTab } from "./StudentHome";
+import { PackagesPage } from "../pages/Packages/Packages";
 
 // Páginas / Servicios
 import { SocialHub } from "../pages/Social/SocialHub.tsx";
 import { StudentAnnouncements } from "../pages/announcements/StudentAnnouncements";
 import StudentIncidences from "../pages/Incidences/components/StudentIncidences";
 import { MyMatchesPage } from "../pages/Matching/MyMatchesPage";
+import { ResidentMenuView } from "../pages/Menu/ResidentMenuView";
 import announcementService from "../services/announcement.service";
 import { StudentReservations } from "./StudentReservations";
 import { chatsService, type ChatRealtimeEvent } from "../services/chats";
 import { authService } from "../services/auth";
+import { ActiveGuestPassesPage } from "../pages/Visitors/ActiveGuestPasses";
 
 interface StudentViewProps {
     onLogout: () => void;
 }
+
+const HOME_INCIDENCES_SEEN_AT_KEY = "home-incidences-seen-at";
 
 export function StudentView({ onLogout }: StudentViewProps) {
     const [activeTab, setActiveTab] = useState<StudentTab>("home");
@@ -126,6 +131,10 @@ export function StudentView({ onLogout }: StudentViewProps) {
     }, [activeTab]);
 
     useEffect(() => {
+        if (activeTab === "incidences") {
+            window.localStorage.setItem(HOME_INCIDENCES_SEEN_AT_KEY, new Date().toISOString());
+        }
+
         if (activeTab !== "announcements") {
             if (markAsViewedTimeoutRef.current) {
                 window.clearTimeout(markAsViewedTimeoutRef.current);
@@ -185,11 +194,23 @@ export function StudentView({ onLogout }: StudentViewProps) {
                     />
                 );
                 break;
+            case "events":
+                tabContent = <SocialHub initialTab="eventos" />;
+                break;
             case "matches":
                 tabContent = <MyMatchesPage />;
                 break;
             case "announcements":
                 tabContent = <StudentAnnouncements />;
+                break;
+            case "packages":
+                tabContent = <PackagesPage />;
+                break;
+            case "visitors":
+                tabContent = <ActiveGuestPassesPage />;
+                break;
+            case "menu":
+                tabContent = <ResidentMenuView />;
                 break;
             default:
                 tabContent = <div className="p-8 text-center text-gray-500">Módulo en construcción</div>;

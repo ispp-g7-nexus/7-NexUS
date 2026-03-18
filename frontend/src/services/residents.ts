@@ -8,8 +8,9 @@ export interface Resident {
   full_name: string;
   email: string;
   is_active: boolean;
-  room: string;
-  building: string;
+  bedroom_id: number | null;
+  room: string;        // read-only, derivado de la habitación asignada
+  building: string;    // read-only, derivado de la habitación asignada
   check_in_date: string | null;
   created_at: string;
 }
@@ -18,8 +19,7 @@ export interface CreateResidentPayload {
   full_name: string;
   email: string;
   password?: string;
-  room: string;
-  building: string;
+  bedroom_id?: number | null;
   checkin_date?: string | null;
   is_active: boolean;
 }
@@ -27,8 +27,7 @@ export interface CreateResidentPayload {
 export interface UpdateResidentPayload {
   full_name?: string;
   email?: string;
-  room?: string;
-  building?: string;
+  bedroom_id?: number | null;
   check_in_date?: string | null;
   is_active?: boolean;
 }
@@ -43,6 +42,7 @@ function normalise(raw: Record<string, unknown>): Resident {
     full_name: (raw.full_name as string) ?? "",
     email: (raw.email as string) ?? "",
     is_active: (raw.is_active as boolean) ?? true,
+    bedroom_id: (raw.bedroom_id as number | null) ?? null,
     room: (raw.room as string) ?? "",
     building: (raw.building as string) ?? "",
     check_in_date: (raw.check_in_date as string | null) ?? null,

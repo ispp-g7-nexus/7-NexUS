@@ -6,20 +6,21 @@ class Incidence(models.Model):
         ('habitacion', 'Mi Habitación'),
         ('baño', 'Baño Común'),
         ('cocina', 'Cocina'),
-        ('zonas_comunes', 'Zonas Comunes'),
+        ('comedor', 'Comedor'),
+        ('exterior', 'Zonas Exteriores'),
+        ('salas_comunes', 'Salas Comunes'),
     ]
     
     STATUS_CHOICES = [
         ('pending', 'Pendiente'),      
-        ('reviewing', 'En revisión'), # Naranja
-        ('in_progress', 'En proceso'), # Azul
-        ('resolved', 'Resuelto'),      # Verde
+        ('reviewing', 'En revisión'), 
+        ('in_progress', 'En proceso'), 
+        ('resolved', 'Resuelto'),     
     ]
 
     PRIORITY_CHOICES = [
         ('low', 'BAJA'),
-        ('medium', 'MEDIA'),
-        ('high', 'ALTA'),
+        ('high', 'URGENTE'),
     ]
 
     title = models.CharField(max_length=150)
@@ -35,7 +36,29 @@ class Incidence(models.Model):
         related_name='incidences'
     )
     
-    assigned_technician = models.CharField(max_length=100, blank=True, null=True)
+    assigned_staff = models.ForeignKey(
+        'staff.Staff', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='incidences'
+    )
+
+
+    # En tu modelo Incidence
+    assigned_external_name = models.CharField(
+    max_length=100, 
+    null=True, 
+    blank=True, 
+    verbose_name="Personal externo u otro"
+)
+
+    @property
+    def assigned_staff_job(self):
+        if self.assigned_staff:
+            return self.assigned_staff.job_title
+        return None
+
     admin_notes = models.TextField(blank=True, null=True)
     is_active = models.BooleanField(default=True)
     
@@ -54,8 +77,8 @@ class IncidenceUpdate(models.Model):
         on_delete=models.CASCADE, 
         related_name='updates'
     )
-    author_name = models.CharField(max_length=50, default="Admin") # Quién escribe (Admin/Sistema)
-    text = models.TextField() # El comentario del historial
+    author_name = models.CharField(max_length=50, default="Admin") 
+    text = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

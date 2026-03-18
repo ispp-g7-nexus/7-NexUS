@@ -54,6 +54,8 @@ TENANT_APPS = [
     "apps.residents",
     "apps.onboarding",
     "apps.objects",
+    "apps.packages",
+    "apps.guests",
 ]
 
 if MATCHING_ENABLED:
@@ -164,6 +166,16 @@ JWT_ACCESS_TOKEN_LIFETIME_SECONDS = int(
 )
 JWT_COOKIE_SECURE = os.getenv("JWT_COOKIE_SECURE", "0") == "1"
 JWT_COOKIE_SAMESITE = os.getenv("JWT_COOKIE_SAMESITE", "Lax")
+
+FIREWORKS_API_KEY = os.getenv("FIREWORKS_API_KEY", "")
+FIREWORKS_LABEL_MODEL = os.getenv("FIREWORKS_LABEL_MODEL", "")
+FIREWORKS_BASE_URL = os.getenv(
+    "FIREWORKS_BASE_URL",
+    "https://api.fireworks.ai/inference/v1",
+)
+PACKAGE_QR_TOKEN_MAX_AGE_SECONDS = int(
+    os.getenv("PACKAGE_QR_TOKEN_MAX_AGE_SECONDS", "300")
+)
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ("apps.common.services.CustomJWTAuthentication",),

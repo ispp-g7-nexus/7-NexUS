@@ -48,7 +48,9 @@ urlpatterns = [
     path("api/membership/", include("apps.membership.urls")),
     path('api/', include('apps.announcements.urls')),
     path("api/", include("apps.chats.urls")),
+    path("api/", include("apps.packages.urls")),
     path("api/", include("apps.spaces.urls")),
+    path("api/", include("apps.guests.urls")),
 ]
 
 if settings.MATCHING_ENABLED:

@@ -8,7 +8,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ('chats', '0002_alter_chatgroup_label_groupmessage_and_more'),
         ('membership', '0001_initial'),
-        ('residences', '0004_studentprofile'),
+        ('residences', '0001_initial'),
     ]
 
     operations = [

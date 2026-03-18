@@ -40,6 +40,7 @@ class EventListView(AuthenticatedView):
                 'id': event.id,
                 'title': event.title,
                 'description': event.description,
+                'created_at': event.created_at.isoformat(),
                 'start_time': event.start_time.isoformat(),
                 'end_time': event.end_time.isoformat(),
                 'location': event.location,
@@ -190,6 +191,9 @@ class EventDetailView(AuthenticatedView):
 
 class EventJoinView(AuthenticatedView):
     def post(self, request, event_id):
+        if getattr(request.user, 'is_staff', False):
+            return JsonResponse({"detail": "Los administradores no pueden inscribirse en eventos."}, status=403)
+            
         event = get_object_or_404(Event, id=event_id, residence=request.residence)
         
         if not event.can_join():

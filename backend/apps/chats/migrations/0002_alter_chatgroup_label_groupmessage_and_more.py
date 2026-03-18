@@ -9,7 +9,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ('chats', '0001_initial'),
         ('membership', '0001_initial'),
-        ('residences', '0004_studentprofile'),
+        ('residences', '0001_initial'),
     ]
 
     operations = [

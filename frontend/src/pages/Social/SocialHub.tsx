@@ -12,12 +12,14 @@ export function SocialHub({
   onChatTabActiveChange,
   chatRealtimeTick = 0,
   chatRealtimeEvent = null,
+  initialTab = "perfil",
 }: {
   readonly onChatTabActiveChange?: (active: boolean) => void;
   readonly chatRealtimeTick?: number;
   readonly chatRealtimeEvent?: ChatRealtimeEvent | null;
+  readonly initialTab?: Tab;
 }) {
-  const [activeTab, setActiveTab] = useState<Tab>("perfil");
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
 
   useEffect(() => {
     onChatTabActiveChange?.(activeTab === "chat");
