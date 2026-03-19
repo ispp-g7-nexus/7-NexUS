@@ -128,6 +128,11 @@ export const chatsService = {
     return handleResponse<ChatGroup[]>(res);
   },
 
+  getGroup: async (id: number): Promise<ChatGroup> => {
+    const res = await fetchWithAuth(`${CHAT_GROUPS_URL}${id}/`);
+    return handleResponse<ChatGroup>(res);
+  },
+
   createGroup: async (payload: UpsertChatGroupPayload): Promise<ChatGroup> => {
     const res = await fetchWithAuth(CHAT_GROUPS_URL, {
       method: "POST",

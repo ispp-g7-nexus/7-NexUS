@@ -4,7 +4,7 @@ from apps.membership.models import Membership
 
 
 class IsResidenceAdmin(permissions.BasePermission):
-    """Permite acceso solo a miembros activos con un rol distinto de Student."""
+    """Permite acceso solo a miembros activos con rol Admin en la residencia actual."""
 
     message = "No tienes permisos para gestionar chats."
 
@@ -17,12 +17,12 @@ class IsResidenceAdmin(permissions.BasePermission):
         qs = Membership.objects.filter(
             user=request.user,
             is_active=True,
-        ).exclude(role__name__iexact="Student")
+            role__name__iexact="Admin",
+        )
 
         if residence:
             return qs.filter(residence=residence).exists()
 
-        
         return False
 
 
