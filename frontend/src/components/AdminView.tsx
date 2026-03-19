@@ -19,8 +19,8 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import { useAdminNotifications, type AdminNotificationSource } from "./useAdminNotifications";
 
 interface AdminViewProps {
-    onLogout: () => void;
-    currentUser: { name: string; email: string } | null;
+    readonly onLogout: () => void;
+    readonly currentUser: { name: string; email: string } | null;
 }
 
 type AdminTab = "dashboard" | "rooms" | "students" | "incidences" | "reservations" | "kitchen" | "analytics" | "staff" | "announcements" | "visitors" | "events" | "roles" | "profile" | "chats";
