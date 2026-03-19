@@ -268,7 +268,7 @@ class MyGroupsViewSet(viewsets.ReadOnlyModelViewSet):
 
 	@action(detail=True, methods=["post"], url_path="leave")
 	def leave(self, request, pk=None):
-		"""Permite al residente abandonar un grupo si can_members_leave es True."""
+		"""Permite al residente abandonar un grupo solo cuando can_members_leave es True."""
 		residence = getattr(request, "residence", None)
 		membership = request.user.memberships.filter(
 			residence=residence,
@@ -284,24 +284,15 @@ class MyGroupsViewSet(viewsets.ReadOnlyModelViewSet):
 		if not group:
 			raise NotFound("Grupo no encontrado.")
 
-		if not group.can_members_leave:
-			chat_member_for_rule = ChatGroupMember.objects.filter(
-				group=group,
-				membership=membership,
-			).first()
-			if not chat_member_for_rule:
-				raise NotFound("No eres miembro de este grupo.")
-			if chat_member_for_rule.can_interact:
-				raise ValidationError(
-					{"detail": "No puedes abandonar este grupo."}
-				)
-
 		chat_member = ChatGroupMember.objects.filter(
 			group=group,
 			membership=membership,
 		).first()
 		if not chat_member:
 			raise NotFound("No eres miembro de este grupo.")
+
+		if not group.can_members_leave:
+			raise ValidationError({"detail": "No puedes abandonar este grupo."})
 
 		chat_member.delete()
 		if residence:
@@ -345,7 +336,10 @@ class MyGroupsViewSet(viewsets.ReadOnlyModelViewSet):
 			return Response(GroupMessageSerializer(msgs, many=True).data)
 
 		if not chat_member.can_interact:
-			raise ValidationError({"detail": "No puedes interactuar en este grupo. Solo puedes abandonarlo."})
+			detail = "No puedes interactuar en este grupo."
+			if group.can_members_leave:
+				detail += " Solo puedes abandonarlo."
+			raise ValidationError({"detail": detail})
 
 		# POST — enviar mensaje
 		ser = SendMessageSerializer(data=request.data)
