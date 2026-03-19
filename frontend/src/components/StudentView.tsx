@@ -15,6 +15,8 @@ import { MyMatchesPage } from "../pages/Matching/MyMatchesPage";
 import { ResidentMenuView } from "../pages/Menu/ResidentMenuView";
 import announcementService from "../services/announcement.service";
 import { StudentReservations } from "./StudentReservations";
+import { chatsService, type ChatRealtimeEvent } from "../services/chats";
+import { authService } from "../services/auth";
 import { ActiveGuestPassesPage } from "../pages/Visitors/ActiveGuestPasses";
 
 interface StudentViewProps {
@@ -26,8 +28,74 @@ const HOME_INCIDENCES_SEEN_AT_KEY = "home-incidences-seen-at";
 export function StudentView({ onLogout }: StudentViewProps) {
     const [activeTab, setActiveTab] = useState<StudentTab>("home");
     const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
+    const [unreadChatNotifications, setUnreadChatNotifications] = useState(0);
+    const [currentUserEmail, setCurrentUserEmail] = useState("");
+    const [chatRealtimeTick, setChatRealtimeTick] = useState(0);
+    const [chatRealtimeEvent, setChatRealtimeEvent] = useState<ChatRealtimeEvent | null>(null);
+    const [isCommunityChatActive, setIsCommunityChatActive] = useState(false);
     const previousUnreadCount = useRef<number | null>(null);
     const markAsViewedTimeoutRef = useRef<number | null>(null);
+
+    useEffect(() => {
+        authService.me().then((session) => {
+            if (session.user?.email) {
+                setCurrentUserEmail(session.user.email);
+            }
+        }).catch(() => { });
+    }, []);
+
+    useEffect(() => {
+        const source = chatsService.subscribeToEvents((evt) => {
+            if (evt.event === "group_created" || evt.event === "group_updated" || evt.event === "group_deleted") {
+                setChatRealtimeEvent(evt);
+                setChatRealtimeTick((prev) => prev + 1);
+                return;
+            }
+
+            if (evt.event !== "group_message_created" && evt.event !== "private_message_created") {
+                return;
+            }
+
+            const senderEmail = String(evt.payload?.sender_email ?? "");
+            const senderName = String(evt.payload?.sender_name ?? "Residente");
+            if (!senderEmail || senderEmail === currentUserEmail) return;
+
+            setChatRealtimeEvent(evt);
+            setChatRealtimeTick((prev) => prev + 1);
+
+            const isViewingChats = activeTab === "community" && isCommunityChatActive;
+            if (!isViewingChats) {
+                setUnreadChatNotifications((prev) => prev + 1);
+                toast.info("Tienes un mensaje nuevo", {
+                    description: `Mensaje de ${senderName} en chats.`,
+                });
+            }
+        });
+
+        source.onopen = () => {
+            console.info("[chat-sse][student] connected");
+        };
+
+        source.onerror = () => {
+            console.warn("[chat-sse][student] connection error; browser will retry");
+        };
+
+        return () => {
+            source.close();
+        };
+    }, [activeTab, currentUserEmail, isCommunityChatActive]);
+
+    useEffect(() => {
+        if (activeTab !== "community") {
+            setIsCommunityChatActive(false);
+        }
+    }, [activeTab]);
+
+    useEffect(() => {
+        if (activeTab === "community" && isCommunityChatActive) {
+            setUnreadChatNotifications(0);
+        }
+    }, [activeTab, isCommunityChatActive]);
 
     useEffect(() => {
         const loadUnreadCount = async () => {
@@ -114,7 +182,13 @@ export function StudentView({ onLogout }: StudentViewProps) {
                 tabContent = <StudentReservations />;
                 break;
             case "community":
-                tabContent = <SocialHub />;
+                tabContent = (
+                    <SocialHub
+                        chatRealtimeTick={chatRealtimeTick}
+                        chatRealtimeEvent={chatRealtimeEvent}
+                        onChatTabActiveChange={setIsCommunityChatActive}
+                    />
+                );
                 break;
             case "events":
                 tabContent = <SocialHub initialTab="eventos" />;
@@ -156,7 +230,7 @@ export function StudentView({ onLogout }: StudentViewProps) {
             <nav className="fixed bottom-0 left-0 right-0 bg-background border-t border-border px-6 py-2 pb-6 z-20 w-full shadow-[0_-4px_15px_rgba(0,0,0,0.02)]">
                 <div className="flex justify-between items-center">
                     <NavButton icon={<AlertCircle className="w-5 h-5" />} label="Incidencias" active={activeTab === "incidences"} onClick={() => setActiveTab("incidences")} />
-                    <NavButton icon={<User className="w-5 h-5" />} label="Social" active={activeTab === "community" || activeTab === "events"} onClick={() => setActiveTab("community")} />
+                    <NavButton icon={<User className="w-5 h-5" />} label="Social" active={activeTab === "community"} onClick={() => setActiveTab("community")} showIndicator={unreadChatNotifications > 0} />
                     <div className="relative -top-5">
                         <motion.button whileTap={{ scale: 0.95 }} onClick={() => setActiveTab("home")} className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-colors ${activeTab === "home" ? "bg-secondary-brand text-white" : "bg-white text-slate-400 border border-slate-100"}`}>
                             <Home className="w-6 h-6" />

@@ -49,6 +49,7 @@ TENANT_APPS = [
     "apps.incidences",
     "apps.membership",
     "apps.announcements",
+    "apps.chats",
     "apps.spaces",
     "apps.residents",
     "apps.onboarding",
