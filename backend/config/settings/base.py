@@ -49,11 +49,13 @@ TENANT_APPS = [
     "apps.incidences",
     "apps.membership",
     "apps.announcements",
+    "apps.chats",
     "apps.spaces",
     "apps.residents",
     "apps.onboarding",
     "apps.objects",
     "apps.packages",
+    "apps.guests",
 ]
 
 if MATCHING_ENABLED:

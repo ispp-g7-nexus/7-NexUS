@@ -176,6 +176,7 @@ class Command(BaseCommand):
 
         with schema_context(client.schema_name):
             from apps.membership.models import Membership, Role
+            from apps.packages.models import Package
             from apps.residences.models import (
                 Residence,
                 ResidenceBranding,
@@ -290,11 +291,37 @@ class Command(BaseCommand):
                 defaults={"is_active": True},
             )
 
-            Membership.objects.update_or_create(
+            student_membership, _ = Membership.objects.update_or_create(
                 user=student_user,
                 role=student_role,
                 residence=residence,
                 defaults={"is_active": True},
+            )
+
+            Package.objects.update_or_create(
+                residence=residence,
+                tracking_number="TRK-DEMO-001",
+                defaults={
+                    "resident": student_membership,
+                    "resident_name_snapshot": f"{student_user.first_name} {student_user.last_name}",
+                    "room_snapshot": "101",
+                    "carrier": "Amazon",
+                    "notes": "Caja mediana",
+                    "status": Package.Status.RECEIVED,
+                },
+            )
+
+            Package.objects.update_or_create(
+                residence=residence,
+                tracking_number="TRK-DEMO-002",
+                defaults={
+                    "resident": student_membership,
+                    "resident_name_snapshot": f"{student_user.first_name} {student_user.last_name}",
+                    "room_snapshot": "101",
+                    "carrier": "Correos",
+                    "notes": "Sobre impreso",
+                    "status": Package.Status.RECEIVED,
+                },
             )
 
         self.stdout.write(self.style.SUCCESS("Seed demo aplicado correctamente."))
