@@ -280,6 +280,7 @@ export function AdminProfile() {
                         CERRAR SESIÓN
                     </button>
                 </div>
+                
             </form>
             </div>
         </div>
