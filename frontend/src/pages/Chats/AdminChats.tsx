@@ -61,6 +61,23 @@ function upsertGroup(groups: ChatGroup[], incoming: ChatGroup): ChatGroup[] {
     return next.sort((a, b) => a.name.localeCompare(b.name));
 }
 
+type UnreadCountsByGroup = Record<number, number>;
+
+function buildGroupMessageEventKey(evt: ChatRealtimeEvent): string | null {
+    const groupId = Number(evt.payload?.group_id ?? -1);
+    if (!Number.isFinite(groupId) || groupId <= 0) return null;
+
+    const payloadMessage = evt.payload?.message as Partial<GroupMessage> | undefined;
+    const messageId = Number(payloadMessage?.id ?? evt.payload?.message_id ?? -1);
+    if (Number.isFinite(messageId) && messageId > 0) {
+        return `${groupId}:${messageId}`;
+    }
+
+    const senderEmail = typeof evt.payload?.sender_email === "string" ? evt.payload.sender_email : "unknown";
+    const ts = typeof evt.ts === "number" ? evt.ts : Date.now();
+    return `${groupId}:fallback:${senderEmail}:${ts}`;
+}
+
 const EMPTY_GROUP_FORM: UpsertChatGroupPayload = {
     name: "",
     description: "",
@@ -119,13 +136,20 @@ export function AdminChats({
     const [loadingGroupMsgs, setLoadingGroupMsgs] = useState(false);
     const [groupMsgText, setGroupMsgText] = useState("");
     const [sendingGroupMsg, setSendingGroupMsg] = useState(false);
+    const [unreadCountsByGroup, setUnreadCountsByGroup] = useState<UnreadCountsByGroup>({});
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const processedGroupMessageEventKeysRef = useRef<Set<string>>(new Set());
 
     // ── Etiquetas personalizadas ──
     const [customLabels, setCustomLabels] = useState<ChatGroupLabelItem[]>([]);
     const [isLabelsOpen, setIsLabelsOpen] = useState(false);
     const [newLabelName, setNewLabelName] = useState("");
     const [creatingLabel, setCreatingLabel] = useState(false);
+
+    const unreadStorageKey = useMemo(() => {
+        if (!currentUserEmail) return null;
+        return `admin-chat-unread:${currentUserEmail.toLowerCase()}`;
+    }, [currentUserEmail]);
 
     const allLabelOptions = useMemo(() => {
         const predefined = [
@@ -165,6 +189,61 @@ export function AdminChats({
     }, []);
 
     useEffect(() => {
+        if (!unreadStorageKey) {
+            setUnreadCountsByGroup({});
+            return;
+        }
+
+        try {
+            const raw = localStorage.getItem(unreadStorageKey);
+            if (!raw) {
+                setUnreadCountsByGroup({});
+                return;
+            }
+
+            const parsed = JSON.parse(raw) as Record<string, unknown>;
+            const restored = Object.entries(parsed).reduce<UnreadCountsByGroup>((acc, [key, value]) => {
+                const groupId = Number(key);
+                const count = Number(value);
+                if (Number.isFinite(groupId) && groupId > 0 && Number.isFinite(count) && count > 0) {
+                    acc[groupId] = Math.floor(count);
+                }
+                return acc;
+            }, {});
+
+            setUnreadCountsByGroup(restored);
+        } catch {
+            setUnreadCountsByGroup({});
+        }
+    }, [unreadStorageKey]);
+
+    useEffect(() => {
+        if (!unreadStorageKey) return;
+        localStorage.setItem(unreadStorageKey, JSON.stringify(unreadCountsByGroup));
+    }, [unreadCountsByGroup, unreadStorageKey]);
+
+    useEffect(() => {
+        if (groups.length === 0) return;
+
+        const groupIds = new Set(groups.map((group) => group.id));
+        setUnreadCountsByGroup((prev) => {
+            const next = Object.entries(prev).reduce<UnreadCountsByGroup>((acc, [key, count]) => {
+                const groupId = Number(key);
+                if (groupIds.has(groupId) && count > 0) {
+                    acc[groupId] = count;
+                }
+                return acc;
+            }, {});
+
+            if (Object.keys(next).length === Object.keys(prev).length) {
+                return prev;
+            }
+
+            return next;
+        });
+    }, [groups]);
+
+    useEffect(() => {
         onChatsCountChange?.(groups.length);
     }, [groups, onChatsCountChange]);
 
@@ -172,6 +251,11 @@ export function AdminChats({
         try {
             const msgs = await chatsService.listGroupMessages(groupId);
             setGroupMessages(dedupeGroupMessages(msgs));
+            setUnreadCountsByGroup((prev) => {
+                if (!(groupId in prev)) return prev;
+                const { [groupId]: _ignored, ...rest } = prev;
+                return rest;
+            });
         } catch (err: unknown) {
             console.error("Failed fetching group messages:", err);
         }
@@ -204,6 +288,47 @@ export function AdminChats({
         setChattingGroup((prev) => (prev && normalizeGroupId(prev.id) === incomingId ? incoming : prev));
     };
 
+    const markGroupAsUnread = (groupId: number, senderEmail?: string) => {
+        if (!Number.isFinite(groupId) || groupId <= 0) return;
+        const normalizedSender = senderEmail?.trim().toLowerCase();
+        const normalizedCurrentUser = currentUserEmail.trim().toLowerCase();
+        if (normalizedSender && normalizedCurrentUser && normalizedSender === normalizedCurrentUser) return;
+        if (chattingGroup && normalizeGroupId(chattingGroup.id) === groupId) return;
+
+        setUnreadCountsByGroup((prev) => ({
+            ...prev,
+            [groupId]: (prev[groupId] ?? 0) + 1,
+        }));
+    };
+
+    const clearUnreadForGroup = (groupId: number) => {
+        setUnreadCountsByGroup((prev) => {
+            if (!(groupId in prev)) return prev;
+            const { [groupId]: _ignored, ...rest } = prev;
+            return rest;
+        });
+    };
+
+    const handleGroupMessageCreatedEvent = (evt: ChatRealtimeEvent) => {
+        const eventKey = buildGroupMessageEventKey(evt);
+        if (eventKey) {
+            if (processedGroupMessageEventKeysRef.current.has(eventKey)) {
+                return;
+            }
+            processedGroupMessageEventKeysRef.current.add(eventKey);
+
+            if (processedGroupMessageEventKeysRef.current.size > 1000) {
+                const keys = Array.from(processedGroupMessageEventKeysRef.current);
+                processedGroupMessageEventKeysRef.current = new Set(keys.slice(-500));
+            }
+        }
+
+        applyGroupMessageEvent(evt);
+        const groupId = Number(evt.payload?.group_id ?? -1);
+        const senderEmail = typeof evt.payload?.sender_email === "string" ? evt.payload.sender_email : undefined;
+        markGroupAsUnread(groupId, senderEmail);
+    };
+
     useEffect(() => {
         if (!enableRealtimeStream) return;
 
@@ -219,12 +344,13 @@ export function AdminChats({
                     setGroups((prev) => prev.filter((g) => normalizeGroupId(g.id) !== groupId));
                     setEditingGroup((prev) => (prev && normalizeGroupId(prev.id) === groupId ? null : prev));
                     setChattingGroup((prev) => (prev && normalizeGroupId(prev.id) === groupId ? null : prev));
+                    clearUnreadForGroup(groupId);
                 }
                 return;
             }
 
-            if (evt.event === "group_message_created" && chattingGroup) {
-                applyGroupMessageEvent(evt);
+            if (evt.event === "group_message_created") {
+                handleGroupMessageCreatedEvent(evt);
             }
         });
 
@@ -235,7 +361,7 @@ export function AdminChats({
         return () => {
             source.close();
         };
-    }, [chattingGroup, enableRealtimeStream]);
+    }, [chattingGroup, currentUserEmail, enableRealtimeStream]);
 
     // Carga mensajes al entrar al grupo y cuando la pestaña recupera foco
     useEffect(() => {
@@ -291,21 +417,22 @@ export function AdminChats({
                 setGroups((prev) => prev.filter((g) => normalizeGroupId(g.id) !== groupId));
                 setEditingGroup((prev) => (prev && normalizeGroupId(prev.id) === groupId ? null : prev));
                 setChattingGroup((prev) => (prev && normalizeGroupId(prev.id) === groupId ? null : prev));
+                clearUnreadForGroup(groupId);
             } else {
                 void refreshGroups();
             }
             return;
         }
 
-        if (realtimeEvent.event === "group_message_created" && chattingGroup) {
-            applyGroupMessageEvent(realtimeEvent);
+        if (realtimeEvent.event === "group_message_created") {
+            handleGroupMessageCreatedEvent(realtimeEvent);
             return;
         }
 
         if (chattingGroup) {
             void fetchGroupMessages(chattingGroup.id);
         }
-    }, [realtimeEvent, realtimeTick, chattingGroup]);
+    }, [realtimeEvent, realtimeTick, chattingGroup, currentUserEmail]);
 
     const handleSendGroupMessage = async () => {
         if (!groupMsgText.trim() || !chattingGroup) return;
@@ -572,6 +699,14 @@ export function AdminChats({
                                             <h4 className="font-medium text-gray-900 truncate">
                                                 {group.name}
                                             </h4>
+                                            {(unreadCountsByGroup[group.id] ?? 0) > 0 && (
+                                                <span
+                                                    className="inline-flex shrink-0 items-center justify-center min-w-5 h-5 px-1 rounded-full text-[10px] font-semibold bg-red-500 text-white"
+                                                    title="Mensajes nuevos sin leer"
+                                                >
+                                                    {(unreadCountsByGroup[group.id] ?? 0) > 99 ? "99+" : unreadCountsByGroup[group.id]}
+                                                </span>
+                                            )}
                                             <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${config.color}`}>
                                                 {config.icon}
                                                 {config.label}
@@ -594,6 +729,7 @@ export function AdminChats({
                                                 size="sm"
                                                 className="bg-green-600 hover:bg-green-700"
                                                 onClick={() => {
+                                                    clearUnreadForGroup(group.id);
                                                     setChattingGroup(group);
                                                     setGroupMessages([]);
                                                 }}

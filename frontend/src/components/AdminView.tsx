@@ -1,6 +1,5 @@
 import { AlertCircle, BarChart3, BedDouble, Bell, BookOpen, Briefcase, Calendar, Home, Layout, LayoutDashboard, LogOut, Menu, MessageSquare, Shield, User, UserCheck, Users, Utensils } from "lucide-react";
-import { useState, useEffect } from "react";
-import { toast } from "sonner";
+import { useEffect, useRef, useState } from "react";
 import { chatsService, type ChatRealtimeEvent } from "../services/chats";
 import { authService } from "../services/auth";
 import { Events } from "../pages/Social/Events/Events";
@@ -64,9 +63,41 @@ export function AdminView({ onLogout }: AdminViewProps) {
     const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
     const [totalChats, setTotalChats] = useState<number>(0);
     const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
-    const [unreadChatNotifications, setUnreadChatNotifications] = useState<number>(0);
+    const [unreadChatKeys, setUnreadChatKeys] = useState<Set<string>>(new Set());
     const [chatRealtimeTick, setChatRealtimeTick] = useState<number>(0);
     const [chatRealtimeEvent, setChatRealtimeEvent] = useState<ChatRealtimeEvent | null>(null);
+    const processedGroupMessageEventKeysRef = useRef<Set<string>>(new Set());
+
+    const unreadChatsCount = unreadChatKeys.size;
+
+    const persistUnreadGroupMessage = (groupId: number) => {
+        if (!currentUserEmail || !Number.isFinite(groupId) || groupId <= 0) return;
+
+        const storageKey = `admin-chat-unread:${currentUserEmail.trim().toLowerCase()}`;
+
+        try {
+            const raw = localStorage.getItem(storageKey);
+            const parsed = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
+            const previousCount = Number(parsed[String(groupId)] ?? 0);
+            const nextCount = Number.isFinite(previousCount) && previousCount > 0 ? previousCount + 1 : 1;
+            parsed[String(groupId)] = nextCount;
+            localStorage.setItem(storageKey, JSON.stringify(parsed));
+        } catch {
+        }
+    };
+
+    const buildGroupMessageEventKey = (evt: ChatRealtimeEvent): string | null => {
+        const groupId = Number(evt.payload?.group_id ?? -1);
+        if (!Number.isFinite(groupId) || groupId <= 0) return null;
+
+        const messagePayload = evt.payload?.message as { id?: number } | undefined;
+        const messageId = Number(messagePayload?.id ?? evt.payload?.message_id ?? -1);
+        if (Number.isFinite(messageId) && messageId > 0) {
+            return `${groupId}:${messageId}`;
+        }
+
+        return null;
+    };
 
     const loadChatsCount = async () => {
         try {
@@ -79,7 +110,6 @@ export function AdminView({ onLogout }: AdminViewProps) {
     };
 
     useEffect(() => {
-        // Cargar conteo inicial
         loadChatsCount();
     }, []);
 
@@ -101,18 +131,44 @@ export function AdminView({ onLogout }: AdminViewProps) {
             }
 
             if (evt.event === "group_message_created" || evt.event === "private_message_created") {
+                if (evt.event === "group_message_created") {
+                    const eventKey = buildGroupMessageEventKey(evt);
+                    if (eventKey) {
+                        if (processedGroupMessageEventKeysRef.current.has(eventKey)) {
+                            return;
+                        }
+                        processedGroupMessageEventKeysRef.current.add(eventKey);
+
+                        if (processedGroupMessageEventKeysRef.current.size > 1000) {
+                            const keys = Array.from(processedGroupMessageEventKeysRef.current);
+                            processedGroupMessageEventKeysRef.current = new Set(keys.slice(-500));
+                        }
+                    }
+                }
+
                 setChatRealtimeEvent(evt);
                 setChatRealtimeTick((prev) => prev + 1);
 
-                const senderEmail = String(evt.payload?.sender_email ?? "");
-                const senderName = String(evt.payload?.sender_name ?? "Residente");
-                if (!senderEmail || senderEmail === currentUserEmail) return;
+                const senderEmail = String(evt.payload?.sender_email ?? "").trim().toLowerCase();
+                if (!senderEmail || senderEmail === currentUserEmail.trim().toLowerCase()) return;
 
                 if (activeTab !== "chats") {
-                    setUnreadChatNotifications((prev) => prev + 1);
-                    toast.info("Nuevo mensaje de chat", {
-                        description: `Mensaje de ${senderName}`,
-                    });
+                    const chatKey = evt.event === "group_message_created"
+                        ? `group:${Number(evt.payload?.group_id ?? -1)}`
+                        : `private:${Number(evt.payload?.conversation_id ?? -1)}`;
+                    if (!chatKey.endsWith(":-1")) {
+                        setUnreadChatKeys((prev) => {
+                            if (prev.has(chatKey)) return prev;
+                            const next = new Set(prev);
+                            next.add(chatKey);
+                            return next;
+                        });
+                    }
+
+                    if (evt.event === "group_message_created") {
+                        const groupId = Number(evt.payload?.group_id ?? -1);
+                        persistUnreadGroupMessage(groupId);
+                    }
                 }
             }
         });
@@ -132,7 +188,7 @@ export function AdminView({ onLogout }: AdminViewProps) {
 
     useEffect(() => {
         if (activeTab === "chats") {
-            setUnreadChatNotifications(0);
+            setUnreadChatKeys(new Set());
         }
     }, [activeTab]);
     const [reservationsSubTab, setReservationsSubTab] = useState("espacios");
@@ -171,7 +227,15 @@ export function AdminView({ onLogout }: AdminViewProps) {
         { label: 'Incidencias',     value: '12',  trend: '-15%',   icon: AlertCircle,theme: 'red'    as const, onClick: () => setActiveTab('incidences')   },
         { label: 'Visitantes',      value: '23',  trend: '+12%',   icon: UserCheck,  theme: 'purple' as const, onClick: () => setActiveTab('visitors')     },
         { label: 'Espacios Comunes',value: '8',   trend: '+2',     icon: Layout,     theme: 'orange' as const, onClick: () => setActiveTab('reservations') },
-        { label: 'Chats',           value: unreadChatNotifications > 0 ? `${totalChats} (+${unreadChatNotifications})` : totalChats.toString(),   trend: '', icon: MessageSquare, theme: 'blue' as const, onClick: () => setActiveTab('chats')        },
+        {
+            label: 'Chats',
+            value: totalChats.toString(),
+            topBadgeText: unreadChatsCount > 0 ? '¡Tienes mensajes sin leer!' : undefined,
+            trend: '',
+            icon: MessageSquare,
+            theme: 'blue' as const,
+            onClick: () => setActiveTab('chats')
+        },
         { label: 'Menú Comedor',    value: 'Ver', trend: 'Hoy',    icon: Utensils,   theme: 'blue'   as const, onClick: () => setActiveTab('kitchen')      },
         { label: 'Estadísticas',    value: 'Ver', trend: '+5%',    icon: BarChart3,  theme: 'green'  as const, onClick: () => setActiveTab('analytics')    },
         { label: 'Personal',        value: '42',  trend: 'Estable',icon: Briefcase,  theme: 'purple' as const, onClick: () => setActiveTab('staff')        },
