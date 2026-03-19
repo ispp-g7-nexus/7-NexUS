@@ -51,7 +51,8 @@ function buildGroupMessageEventKey(evt: ChatRealtimeEvent): string | null {
     const groupId = Number(evt.payload?.group_id ?? -1);
     if (!Number.isFinite(groupId) || groupId <= 0) return null;
 
-    const messageId = Number(evt.payload?.message_id ?? evt.payload?.message?.id ?? -1);
+    const payloadMessage = evt.payload?.message as { id?: number } | undefined;
+    const messageId = Number(evt.payload?.message_id ?? payloadMessage?.id ?? -1);
     if (Number.isFinite(messageId) && messageId > 0) {
         return `${groupId}:${messageId}`;
     }
@@ -111,6 +112,23 @@ export function StudentView({ onLogout }: StudentViewProps) {
     const getSenderEmailFromEvent = (evt: ChatRealtimeEvent): string =>
         typeof evt.payload?.sender_email === "string" ? evt.payload.sender_email.trim().toLowerCase() : "";
 
+    const handleGroupLifecycleRealtimeEvent = (
+        evt: ChatRealtimeEvent,
+        isViewingGroupChats: boolean,
+    ): boolean => {
+        if (!isGroupLifecycleEvent(evt)) {
+            return false;
+        }
+
+        setChatRealtimeEvent(evt);
+        setChatRealtimeTick((prev) => prev + 1);
+        if (!isViewingGroupChats) {
+            setHasGroupChatNews(true);
+        }
+
+        return true;
+    };
+
     useEffect(() => {
         authService.me().then((session) => {
             if (session.user?.email) {
@@ -123,14 +141,8 @@ export function StudentView({ onLogout }: StudentViewProps) {
         const normalizedCurrentUserEmail = currentUserEmail.trim().toLowerCase();
 
         const source = chatsService.subscribeToEvents((evt) => {
-            if (isGroupLifecycleEvent(evt)) {
-                setChatRealtimeEvent(evt);
-                setChatRealtimeTick((prev) => prev + 1);
-
-                const isViewingGroupChats = activeTab === "community" && isCommunityChatActive && communityChatSubTab === "grupos";
-                if (!isViewingGroupChats) {
-                    setHasGroupChatNews(true);
-                }
+            const isViewingGroupChats = activeTab === "community" && isCommunityChatActive && communityChatSubTab === "grupos";
+            if (handleGroupLifecycleRealtimeEvent(evt, isViewingGroupChats)) {
                 return;
             }
 
@@ -148,7 +160,6 @@ export function StudentView({ onLogout }: StudentViewProps) {
             setChatRealtimeEvent(evt);
             setChatRealtimeTick((prev) => prev + 1);
 
-            const isViewingGroupChats = activeTab === "community" && isCommunityChatActive && communityChatSubTab === "grupos";
             const isViewingPrivateChats = activeTab === "community" && isCommunityChatActive && communityChatSubTab === "privados";
 
             if (evt.event === "group_message_created" && !isViewingGroupChats) {

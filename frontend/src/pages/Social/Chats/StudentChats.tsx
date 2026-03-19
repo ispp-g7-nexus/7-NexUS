@@ -1055,6 +1055,9 @@ export function StudentChats({
                                     icon: <Tag className="w-3 h-3" />,
                                 };
                                 const isFormerMember = group.current_user_can_interact === false;
+                                const unreadCount = unreadGroupCounts[group.id] ?? 0;
+                                const unreadBadgeText = unreadCount > 9 ? "9+" : String(unreadCount);
+                                const membersLabel = group.members === 1 ? "miembro" : "miembros";
                                 return (
                                     <button
                                         key={group.id}
@@ -1073,9 +1076,9 @@ export function StudentChats({
                                             }`}>
                                                 {group.name.charAt(0).toUpperCase()}
                                             </div>
-                                            {(unreadGroupCounts[group.id] ?? 0) > 0 && (
+                                            {unreadCount > 0 && (
                                                 <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                                                    {(unreadGroupCounts[group.id] ?? 0) > 9 ? "9+" : unreadGroupCounts[group.id]}
+                                                    {unreadBadgeText}
                                                 </span>
                                             )}
                                         </div>
@@ -1099,7 +1102,7 @@ export function StudentChats({
                                             )}
                                             <div className={`flex items-center gap-1 mt-0.5 text-[11px] ${isFormerMember ? "text-gray-500" : "text-gray-400"}`}>
                                                 <Users className="w-3 h-3" />
-                                                {group.members} {group.members === 1 ? "miembro" : "miembros"}
+                                                {group.members} {membersLabel}
                                             </div>
                                         </div>
                                     </button>

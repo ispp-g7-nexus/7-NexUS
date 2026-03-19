@@ -154,7 +154,8 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
             if (addedCount > 0) {
                 setCurrentGroup(updatedGroup);
                 onGroupUpdated(updatedGroup);
-                toast.success(`Se añadieron ${addedCount} residente${addedCount !== 1 ? "s" : ""} correctamente.`);
+                const residentSuffix = addedCount === 1 ? "" : "s";
+                toast.success(`Se añadieron ${addedCount} residente${residentSuffix} correctamente.`);
             } else {
                 toast.error("No se pudo añadir ningún residente.");
             }

@@ -381,9 +381,6 @@ export function AdminChats({
             if (evt.event === "group_deleted") {
                 const groupId = Number(evt.payload?.group_id ?? -1);
                 if (groupId > 0) {
-                    setGroups((prev) => prev.filter((g) => normalizeGroupId(g.id) !== groupId));
-                    setEditingGroup((prev) => (prev && normalizeGroupId(prev.id) === groupId ? null : prev));
-                    setChattingGroup((prev) => (prev && normalizeGroupId(prev.id) === groupId ? null : prev));
                     clearUnreadForGroup(groupId);
                     removeGroupLocally(groupId);
                 }
