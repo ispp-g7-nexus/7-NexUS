@@ -296,10 +296,22 @@ class MyGroupsViewSet(viewsets.ReadOnlyModelViewSet):
 
 		chat_member.delete()
 		if residence:
+			members_qs = ChatGroupMember.objects.select_related("membership__user")
+			updated_group = (
+				ChatGroup.objects.filter(id=group.id, residence=residence)
+				.prefetch_related(Prefetch("memberships", queryset=members_qs))
+				.first()
+			)
+			payload = {
+				"group_id": group.id,
+				"group": ChatGroupSerializer(updated_group).data,
+			} if updated_group else {
+				"group_id": group.id,
+			}
 			publish_chat_event(
 				residence.id,
 				"group_updated",
-				{"group_id": group.id},
+				payload,
 			)
 		return Response(status=status.HTTP_204_NO_CONTENT)
 
