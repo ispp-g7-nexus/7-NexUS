@@ -260,8 +260,9 @@ export function Rooms() {
       </Card>
 
       {/* Lista */}
-      <div className="grid gap-4">
-        {filteredRooms.map((r) => (
+      {viewLayout === "list" && (
+        <div className="grid gap-4">
+          {filteredRooms.map((r) => (
           <Card
             key={r.id}
             className={`hover:shadow-md transition ${!r.is_active ? 'border-destructive/30 bg-destructive/5' : 'bg-card'} `}
@@ -323,16 +324,9 @@ export function Rooms() {
                         } else if (res.status === 404) {
                           toast.error("La habitación no existe.");
                         } else {
-                          const body = await res.json().catch(() => ({}));
-                          const detail = (body as { detail?: string }).detail;
-                          if (res.status === 409) {
-                            toast.error(detail || "No se puede eliminar: tiene residentes asignados.");
-                          } else if (res.status === 404) {
-                            toast.error("La habitación no existe.");
-                          } else {
-                            toast.error(detail || `Error ${res.status} al eliminar la habitación.`);
-                          }
+                          toast.error(detail || `Error ${res.status} al eliminar la habitación.`);
                         }
+                      }
                       } catch (err) {
                         console.error(err);
                         toast.error("Error de conexión al eliminar la habitación.");

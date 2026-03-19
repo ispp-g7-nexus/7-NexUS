@@ -73,18 +73,20 @@ export const StatCard = ({ label, value, trend, icon: Icon, theme, onClick }: St
         <Icon size={20} strokeWidth={2} />
       </div>
 
-      {/* Trend pill */}
-      <span style={{
-        position: 'absolute', top: '18px', right: '18px',
-        display: 'flex', alignItems: 'center', gap: '3px',
-        fontSize: '11px', fontWeight: 700,
-        padding: '3px 9px', borderRadius: '999px',
-        background: isNegative ? '#fdeaea' : '#e8f7f1',
-        color: isNegative ? '#e05c5c' : '#2fa87a',
-      }}>
-        <TrendIcon size={11} strokeWidth={2.5} />
-        {trend}
-      </span>
+      {/* Trend pill - solo mostrar si hay trend */}
+      {trend && (
+        <span style={{
+          position: 'absolute', top: '18px', right: '18px',
+          display: 'flex', alignItems: 'center', gap: '3px',
+          fontSize: '11px', fontWeight: 700,
+          padding: '3px 9px', borderRadius: '999px',
+          background: isNegative ? '#fdeaea' : '#e8f7f1',
+          color: isNegative ? '#e05c5c' : '#2fa87a',
+        }}>
+          <TrendIcon size={11} strokeWidth={2.5} />
+          {trend}
+        </span>
+      )}
 
       {/* Valor */}
       <div style={{
