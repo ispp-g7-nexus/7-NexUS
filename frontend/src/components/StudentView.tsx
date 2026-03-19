@@ -37,12 +37,12 @@ function persistResidentUnreadGroupIncrement(email: string, groupId: number): vo
     if (!Number.isFinite(groupId) || groupId <= 0) return;
 
     try {
-        const raw = window.localStorage.getItem(storageKey);
+        const raw = globalThis.localStorage.getItem(storageKey);
         const parsed = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
         const previous = Number(parsed[String(groupId)] ?? 0);
         const nextValue = Number.isFinite(previous) && previous > 0 ? previous + 1 : 1;
         parsed[String(groupId)] = nextValue;
-        window.localStorage.setItem(storageKey, JSON.stringify(parsed));
+        globalThis.localStorage.setItem(storageKey, JSON.stringify(parsed));
     } catch {
     }
 }
@@ -56,7 +56,9 @@ function buildGroupMessageEventKey(evt: ChatRealtimeEvent): string | null {
         return `${groupId}:${messageId}`;
     }
 
-    const senderEmail = String(evt.payload?.sender_email ?? "").trim().toLowerCase();
+    const senderEmail = typeof evt.payload?.sender_email === "string"
+        ? evt.payload.sender_email.trim().toLowerCase()
+        : "";
     const ts = typeof evt.ts === "number" ? evt.ts : Date.now();
     return `${groupId}:fallback:${senderEmail || "unknown"}:${ts}`;
 }
@@ -77,6 +79,38 @@ export function StudentView({ onLogout }: StudentViewProps) {
 
     const hasAnyChatNews = hasGroupChatNews || hasPrivateChatNews;
 
+    const isGroupLifecycleEvent = (evt: ChatRealtimeEvent): boolean =>
+        evt.event === "group_created" || evt.event === "group_updated" || evt.event === "group_deleted";
+
+    const isIncomingMessageEvent = (evt: ChatRealtimeEvent): boolean =>
+        evt.event === "group_message_created" || evt.event === "private_message_created";
+
+    const shouldSkipDuplicateGroupMessageEvent = (evt: ChatRealtimeEvent): boolean => {
+        if (evt.event !== "group_message_created") {
+            return false;
+        }
+
+        const eventKey = buildGroupMessageEventKey(evt);
+        if (!eventKey) {
+            return false;
+        }
+
+        if (processedGroupMessageEventKeysRef.current.has(eventKey)) {
+            return true;
+        }
+
+        processedGroupMessageEventKeysRef.current.add(eventKey);
+        if (processedGroupMessageEventKeysRef.current.size > 1000) {
+            const recent = Array.from(processedGroupMessageEventKeysRef.current).slice(-500);
+            processedGroupMessageEventKeysRef.current = new Set(recent);
+        }
+
+        return false;
+    };
+
+    const getSenderEmailFromEvent = (evt: ChatRealtimeEvent): string =>
+        typeof evt.payload?.sender_email === "string" ? evt.payload.sender_email.trim().toLowerCase() : "";
+
     useEffect(() => {
         authService.me().then((session) => {
             if (session.user?.email) {
@@ -86,8 +120,10 @@ export function StudentView({ onLogout }: StudentViewProps) {
     }, []);
 
     useEffect(() => {
+        const normalizedCurrentUserEmail = currentUserEmail.trim().toLowerCase();
+
         const source = chatsService.subscribeToEvents((evt) => {
-            if (evt.event === "group_created" || evt.event === "group_updated" || evt.event === "group_deleted") {
+            if (isGroupLifecycleEvent(evt)) {
                 setChatRealtimeEvent(evt);
                 setChatRealtimeTick((prev) => prev + 1);
 
@@ -98,27 +134,16 @@ export function StudentView({ onLogout }: StudentViewProps) {
                 return;
             }
 
-            if (evt.event !== "group_message_created" && evt.event !== "private_message_created") {
+            if (!isIncomingMessageEvent(evt)) {
                 return;
             }
 
-            if (evt.event === "group_message_created") {
-                const eventKey = buildGroupMessageEventKey(evt);
-                if (eventKey) {
-                    if (processedGroupMessageEventKeysRef.current.has(eventKey)) {
-                        return;
-                    }
-
-                    processedGroupMessageEventKeysRef.current.add(eventKey);
-                    if (processedGroupMessageEventKeysRef.current.size > 1000) {
-                        const recent = Array.from(processedGroupMessageEventKeysRef.current).slice(-500);
-                        processedGroupMessageEventKeysRef.current = new Set(recent);
-                    }
-                }
+            if (shouldSkipDuplicateGroupMessageEvent(evt)) {
+                return;
             }
 
-            const senderEmail = String(evt.payload?.sender_email ?? "").trim().toLowerCase();
-            if (!senderEmail || senderEmail === currentUserEmail.trim().toLowerCase()) return;
+            const senderEmail = getSenderEmailFromEvent(evt);
+            if (!senderEmail || senderEmail === normalizedCurrentUserEmail) return;
 
             setChatRealtimeEvent(evt);
             setChatRealtimeTick((prev) => prev + 1);
@@ -187,18 +212,18 @@ export function StudentView({ onLogout }: StudentViewProps) {
 
         loadUnreadCount();
 
-        const intervalId = window.setInterval(loadUnreadCount, 15000);
-        return () => window.clearInterval(intervalId);
+        const intervalId = globalThis.setInterval(loadUnreadCount, 15000);
+        return () => globalThis.clearInterval(intervalId);
     }, [activeTab]);
 
     useEffect(() => {
         if (activeTab === "incidences") {
-            window.localStorage.setItem(HOME_INCIDENCES_SEEN_AT_KEY, new Date().toISOString());
+            globalThis.localStorage.setItem(HOME_INCIDENCES_SEEN_AT_KEY, new Date().toISOString());
         }
 
         if (activeTab !== "announcements") {
             if (markAsViewedTimeoutRef.current) {
-                window.clearTimeout(markAsViewedTimeoutRef.current);
+                globalThis.clearTimeout(markAsViewedTimeoutRef.current);
                 markAsViewedTimeoutRef.current = null;
             }
             return;
@@ -214,14 +239,14 @@ export function StudentView({ onLogout }: StudentViewProps) {
             }
         };
 
-        markAsViewedTimeoutRef.current = window.setTimeout(() => {
+        markAsViewedTimeoutRef.current = globalThis.setTimeout(() => {
             markAsViewed();
             markAsViewedTimeoutRef.current = null;
         }, 5000);
 
         return () => {
             if (markAsViewedTimeoutRef.current) {
-                window.clearTimeout(markAsViewedTimeoutRef.current);
+                globalThis.clearTimeout(markAsViewedTimeoutRef.current);
                 markAsViewedTimeoutRef.current = null;
             }
         };

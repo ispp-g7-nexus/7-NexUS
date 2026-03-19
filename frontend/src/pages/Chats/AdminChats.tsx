@@ -335,6 +335,7 @@ export function AdminChats({
         const groupId = Number(evt.payload?.group_id ?? -1);
         const senderEmail = typeof evt.payload?.sender_email === "string" ? evt.payload.sender_email : undefined;
         markGroupAsUnread(groupId, senderEmail);
+    };
     const removeGroupLocally = (groupId: number) => {
         setGroups((prev) => prev.filter((g) => normalizeGroupId(g.id) !== groupId));
         setEditingGroup((prev) => (prev && normalizeGroupId(prev.id) === groupId ? null : prev));

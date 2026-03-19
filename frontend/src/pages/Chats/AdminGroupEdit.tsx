@@ -6,7 +6,7 @@ import { Input } from "../../components/ui/input";
 import { ConfirmationModal } from "../../components/ui/ConfirmationModal";
 import { ResidentSelector } from "../../components/ResidentSelector";
 import { chatsService, type ChatGroup, type ChatGroupLabelItem } from "../../services/chats";
-import { residentsService, type Resident } from "../../services/residents";
+import { type Resident } from "../../services/residents";
 import { authService } from "../../services/auth";
 
 interface AdminGroupEditProps {
@@ -57,16 +57,11 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
 
     const normalizedMemberSearch = normalizeSearchValue(memberSearchTerm);
     
-    const filteredMembers = currentGroup.members_list.filter(member => {
-        if (!normalizedMemberSearch) {
-            return true;
-        }
-
-        return (
-            normalizeSearchValue(member.full_name).includes(normalizedMemberSearch) ||
-            normalizeSearchValue(member.email).includes(normalizedMemberSearch)
-        );
-    });
+    const filteredMembers = currentGroup.members_list.filter((member) =>
+        normalizedMemberSearch.length === 0
+        || normalizeSearchValue(member.full_name).includes(normalizedMemberSearch)
+        || normalizeSearchValue(member.email).includes(normalizedMemberSearch)
+    );
 
     const handleRemoveMember = async () => {
         if (!memberToDelete) return;

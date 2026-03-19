@@ -70,6 +70,48 @@ export function AdminView({ onLogout }: AdminViewProps) {
 
     const unreadChatsCount = unreadChatKeys.size;
 
+    const isGroupLifecycleEvent = (evt: ChatRealtimeEvent): boolean =>
+        evt.event === "group_created" || evt.event === "group_updated" || evt.event === "group_deleted";
+
+    const isIncomingMessageEvent = (evt: ChatRealtimeEvent): boolean =>
+        evt.event === "group_message_created" || evt.event === "private_message_created";
+
+    const shouldSkipRepeatedGroupMessageEvent = (evt: ChatRealtimeEvent): boolean => {
+        if (evt.event !== "group_message_created") {
+            return false;
+        }
+
+        const eventKey = buildGroupMessageEventKey(evt);
+        if (!eventKey) {
+            return false;
+        }
+
+        if (processedGroupMessageEventKeysRef.current.has(eventKey)) {
+            return true;
+        }
+
+        processedGroupMessageEventKeysRef.current.add(eventKey);
+        if (processedGroupMessageEventKeysRef.current.size > 1000) {
+            const keys = Array.from(processedGroupMessageEventKeysRef.current);
+            processedGroupMessageEventKeysRef.current = new Set(keys.slice(-500));
+        }
+
+        return false;
+    };
+
+    const getSenderEmailFromEvent = (evt: ChatRealtimeEvent): string =>
+        typeof evt.payload?.sender_email === "string" ? evt.payload.sender_email.trim().toLowerCase() : "";
+
+    const buildUnreadChatKey = (evt: ChatRealtimeEvent): string | null => {
+        if (evt.event === "group_message_created") {
+            const groupId = Number(evt.payload?.group_id ?? -1);
+            return Number.isFinite(groupId) && groupId > 0 ? `group:${groupId}` : null;
+        }
+
+        const conversationId = Number(evt.payload?.conversation_id ?? -1);
+        return Number.isFinite(conversationId) && conversationId > 0 ? `private:${conversationId}` : null;
+    };
+
     const persistUnreadGroupMessage = (groupId: number) => {
         if (!currentUserEmail || !Number.isFinite(groupId) || groupId <= 0) return;
 
@@ -122,54 +164,51 @@ export function AdminView({ onLogout }: AdminViewProps) {
     }, []);
 
     useEffect(() => {
+        const normalizedCurrentUserEmail = currentUserEmail.trim().toLowerCase();
+
         const source = chatsService.subscribeToEvents((evt) => {
-            if (evt.event === "group_created" || evt.event === "group_updated" || evt.event === "group_deleted") {
+            if (isGroupLifecycleEvent(evt)) {
                 setChatRealtimeEvent(evt);
                 setChatRealtimeTick((prev) => prev + 1);
-                void loadChatsCount();
+                loadChatsCount().catch(() => { });
                 return;
             }
 
-            if (evt.event === "group_message_created" || evt.event === "private_message_created") {
-                if (evt.event === "group_message_created") {
-                    const eventKey = buildGroupMessageEventKey(evt);
-                    if (eventKey) {
-                        if (processedGroupMessageEventKeysRef.current.has(eventKey)) {
-                            return;
-                        }
-                        processedGroupMessageEventKeysRef.current.add(eventKey);
+            if (!isIncomingMessageEvent(evt)) {
+                return;
+            }
 
-                        if (processedGroupMessageEventKeysRef.current.size > 1000) {
-                            const keys = Array.from(processedGroupMessageEventKeysRef.current);
-                            processedGroupMessageEventKeysRef.current = new Set(keys.slice(-500));
-                        }
-                    }
-                }
+            if (shouldSkipRepeatedGroupMessageEvent(evt)) {
+                return;
+            }
 
-                setChatRealtimeEvent(evt);
-                setChatRealtimeTick((prev) => prev + 1);
+            setChatRealtimeEvent(evt);
+            setChatRealtimeTick((prev) => prev + 1);
 
-                const senderEmail = String(evt.payload?.sender_email ?? "").trim().toLowerCase();
-                if (!senderEmail || senderEmail === currentUserEmail.trim().toLowerCase()) return;
+            const senderEmail = getSenderEmailFromEvent(evt);
+            if (!senderEmail || senderEmail === normalizedCurrentUserEmail) {
+                return;
+            }
 
-                if (activeTab !== "chats") {
-                    const chatKey = evt.event === "group_message_created"
-                        ? `group:${Number(evt.payload?.group_id ?? -1)}`
-                        : `private:${Number(evt.payload?.conversation_id ?? -1)}`;
-                    if (!chatKey.endsWith(":-1")) {
-                        setUnreadChatKeys((prev) => {
-                            if (prev.has(chatKey)) return prev;
-                            const next = new Set(prev);
-                            next.add(chatKey);
-                            return next;
-                        });
-                    }
+            if (activeTab === "chats") {
+                return;
+            }
 
-                    if (evt.event === "group_message_created") {
-                        const groupId = Number(evt.payload?.group_id ?? -1);
-                        persistUnreadGroupMessage(groupId);
-                    }
-                }
+            const chatKey = buildUnreadChatKey(evt);
+            if (!chatKey) {
+                return;
+            }
+
+            setUnreadChatKeys((prev) => {
+                if (prev.has(chatKey)) return prev;
+                const next = new Set(prev);
+                next.add(chatKey);
+                return next;
+            });
+
+            if (evt.event === "group_message_created") {
+                const groupId = Number(evt.payload?.group_id ?? -1);
+                persistUnreadGroupMessage(groupId);
             }
         });
 

@@ -250,7 +250,7 @@ export function StudentChats({
         if (!unreadGroupsStorageKey) return;
 
         try {
-            const raw = window.localStorage.getItem(unreadGroupsStorageKey);
+            const raw = globalThis.localStorage.getItem(unreadGroupsStorageKey);
             if (!raw) return;
 
             const parsed = JSON.parse(raw) as Record<string, unknown>;
@@ -283,11 +283,11 @@ export function StudentChats({
         if (!unreadGroupsStorageKey) return;
 
         if (Object.keys(unreadGroupCounts).length === 0) {
-            window.localStorage.removeItem(unreadGroupsStorageKey);
+            globalThis.localStorage.removeItem(unreadGroupsStorageKey);
             return;
         }
 
-        window.localStorage.setItem(unreadGroupsStorageKey, JSON.stringify(unreadGroupCounts));
+        globalThis.localStorage.setItem(unreadGroupsStorageKey, JSON.stringify(unreadGroupCounts));
     }, [unreadGroupCounts, unreadGroupsStorageKey]);
 
     const handleLeaveGroup = async () => {
@@ -377,7 +377,7 @@ export function StudentChats({
     }, []);
 
     useEffect(() => {
-        void loadConversations();
+        loadConversations().catch(() => { });
     }, [loadConversations]);
 
     useEffect(() => {
@@ -420,7 +420,7 @@ export function StudentChats({
 
     useEffect(() => {
         if (subTab === "grupos") {
-            void loadGroups();
+            loadGroups().catch(() => { });
         }
     }, [subTab, loadGroups]);
 
@@ -466,7 +466,7 @@ export function StudentChats({
 
         const incoming = evt.payload?.message as GroupMessage | undefined;
         if (!incoming || typeof incoming.id !== "number") {
-            void loadSelectedGroupMessages(selectedGroup.id);
+            loadSelectedGroupMessages(selectedGroup.id).catch(() => { });
             return;
         }
 
@@ -544,13 +544,16 @@ export function StudentChats({
             const idx = prev.findIndex((c) => c.id === conversationId);
             if (idx === -1) {
                 if (subTab === "privados") {
-                    void loadConversations();
+                    loadConversations().catch(() => { });
                 }
                 return prev;
             }
 
             const curr = prev[idx];
-            const unread = activeConv?.id === conversationId ? 0 : (isMine ? curr.unread_count : curr.unread_count + 1);
+            let unread = 0;
+            if (activeConv?.id !== conversationId) {
+                unread = isMine ? curr.unread_count : curr.unread_count + 1;
+            }
             const nextConv: PrivateConversation = {
                 ...curr,
                 unread_count: unread,
@@ -572,7 +575,7 @@ export function StudentChats({
         if (activeConv?.id !== conversationId) return;
 
         if (!incoming || typeof incoming.id !== "number") {
-            void loadActiveConversationMessages(activeConv.id);
+            loadActiveConversationMessages(activeConv.id).catch(() => { });
             return;
         }
 
@@ -584,7 +587,7 @@ export function StudentChats({
 
         const source = chatsService.subscribeToEvents((evt: ChatRealtimeEvent) => {
             if (evt.event === "group_created" || evt.event === "group_updated" || evt.event === "group_deleted") {
-                void loadGroups();
+                loadGroups().catch(() => { });
                 return;
             }
 
@@ -613,7 +616,7 @@ export function StudentChats({
         lastProcessedExternalRealtimeTickRef.current = realtimeTick;
 
         if (realtimeEvent.event === "group_created" || realtimeEvent.event === "group_updated" || realtimeEvent.event === "group_deleted") {
-            void loadGroups();
+            loadGroups().catch(() => { });
             return;
         }
 
@@ -1088,7 +1091,7 @@ export function StudentChats({
                                                     {cfg.icon} {cfg.label}
                                                 </span>
                                             </div>
-                                            {group.description && <p className={`text-xs truncate ${isFormerMember ? "text-gray-500" : "text-gray-500"}`}>{group.description}</p>}
+                                            {group.description && <p className="text-xs truncate text-gray-500">{group.description}</p>}
                                             {isFormerMember && (
                                                 <p className="text-[11px] text-gray-600 mt-0.5">
                                                     Ya no puedes enviar ni recibir mensajes en este grupo.

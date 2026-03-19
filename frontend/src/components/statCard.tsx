@@ -25,6 +25,15 @@ export const StatCard = ({ label, value, valueBadge, topBadgeText, trend, icon: 
   const isNegative = trend.startsWith('-');
   const isInfoTrend = /sin leer/i.test(trend);
   const TrendIcon = isNegative ? TrendingDown : TrendingUp;
+  let trendBackground = '#e8f7f1';
+  let trendColor = '#2fa87a';
+  if (isInfoTrend) {
+    trendBackground = '#eaf2ff';
+    trendColor = '#3b7dd8';
+  } else if (isNegative) {
+    trendBackground = '#fdeaea';
+    trendColor = '#e05c5c';
+  }
 
   const [hovered, setHovered] = React.useState(false);
 
@@ -100,8 +109,8 @@ export const StatCard = ({ label, value, valueBadge, topBadgeText, trend, icon: 
           display: 'flex', alignItems: 'center', gap: '3px',
           fontSize: '11px', fontWeight: 700,
           padding: '3px 9px', borderRadius: '999px',
-          background: isInfoTrend ? '#eaf2ff' : (isNegative ? '#fdeaea' : '#e8f7f1'),
-          color: isInfoTrend ? '#3b7dd8' : (isNegative ? '#e05c5c' : '#2fa87a'),
+          background: trendBackground,
+          color: trendColor,
         }}>
           {!isInfoTrend && <TrendIcon size={11} strokeWidth={2.5} />}
           {trend}
