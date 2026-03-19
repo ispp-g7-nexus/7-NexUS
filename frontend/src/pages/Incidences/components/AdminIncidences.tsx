@@ -6,9 +6,9 @@ import { IncidenceForm } from './IncidenceForm';
 import { useStaff } from '../../Staff/hooks/useStaff';
 import { Label } from "../../../components/ui/label";
 
-import { 
-  LOCATION_LABELS, IncidenceSelect, PRIORITY_LABELS, STATUS_CONFIG, 
-  applyIncidenceFilters, COMMON_UI_CLASSES, BaseIncidence 
+import {
+  LOCATION_LABELS, IncidenceSelect, PRIORITY_LABELS, STATUS_CONFIG,
+  applyIncidenceFilters, COMMON_UI_CLASSES, BaseIncidence
 } from './IncidenceShared';
 
 interface ManageModalProps {
@@ -25,8 +25,8 @@ const ManageIncidenceModal = ({ incidence, onClose, onRefresh }: ManageModalProp
   const [newComment, setNewComment] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const staffOptions = staff.reduce((acc, m) => ({ 
-    ...acc, [String(m.id)]: m.full_name 
+  const staffOptions = staff.reduce((acc, m) => ({
+    ...acc, [String(m.id)]: m.full_name
   }), { "external_placeholder": "+ Personal Externo" });
 
   const handleSave = async () => {
@@ -53,15 +53,24 @@ const ManageIncidenceModal = ({ incidence, onClose, onRefresh }: ManageModalProp
         <DialogDescription className="sr-only">Panel administrativo</DialogDescription>
         <div className="p-6 bg-white overflow-y-auto max-h-[85vh] space-y-6 pb-12 text-left">
           <p className="text-slate-500 text-sm font-medium">{incidence.title} • {locationDisplay}</p>
-          
+
           <div className="space-y-5">
-             {incidence.img && (
-                <section className="flex justify-center mb-2">
-                    <div className="rounded-[24px] overflow-hidden border max-w-[200px] bg-slate-50 cursor-zoom-in" onClick={() => window.open(incidence.img, '_blank')}>
-                        <img src={incidence.img} alt="Evidencia" className="w-full h-auto object-contain max-h-[160px]" />
-                    </div>
-                </section>
-             )}
+            {incidence.img && (
+              <section className="flex justify-center mb-2">
+                <button
+                  type="button"
+                  className="rounded-[24px] overflow-hidden border max-w-[200px] bg-slate-50 cursor-zoom-in"
+                  onClick={() => window.open(incidence.img, '_blank')}
+                  aria-label="Ver evidencia ampliada"
+                >
+                  <img
+                    src={incidence.img}
+                    alt="Evidencia"
+                    className="w-full h-auto object-contain max-h-[160px]"
+                  />
+                </button>
+              </section>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2"><Label className={UI_CLASSES.label}>Estado Actual</Label><IncidenceSelect value={status} onChange={(v: any) => setStatus(v)} options={STATUS_CONFIG} placeholder="Estado" /></div>
@@ -69,35 +78,35 @@ const ManageIncidenceModal = ({ incidence, onClose, onRefresh }: ManageModalProp
             </div>
 
             {staffId === "external_placeholder" && (
-                <div className="animate-in fade-in slide-in-from-top-1 space-y-2">
-                    <Label className={UI_CLASSES.label}>Nombre Técnico/Empresa Externa</Label>
-                    <input value={externalName} onChange={(e) => setExternalName(e.target.value)} placeholder="Ej: Cerrajero..." className={UI_CLASSES.input} />
-                </div>
+              <div className="animate-in fade-in slide-in-from-top-1 space-y-2">
+                <Label className={UI_CLASSES.label}>Nombre Técnico/Empresa Externa</Label>
+                <input value={externalName} onChange={(e) => setExternalName(e.target.value)} placeholder="Ej: Cerrajero..." className={UI_CLASSES.input} />
+              </div>
             )}
 
             <div className="space-y-2 text-left">
-                <Label className={UI_CLASSES.label}>Historial de actualizaciones</Label>
-                <div className={UI_CLASSES.historyScrollArea}>
-                    {incidence.updates && incidence.updates.length > 0 ? (
-                        incidence.updates.map((u) => (
-                            <div key={u.id} className={UI_CLASSES.historyBubble}>
-                                <div className="flex justify-between items-center mb-1">
-                                    <span className="text-[9px] font-black text-emerald-700 uppercase bg-emerald-50 px-1.5 py-0.5 rounded">{u.author_name || 'Admin'}</span>
-                                    <span className="text-[9px] text-slate-400 font-bold">{new Date(u.created_at).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
-                                </div>
-                                <p className="text-xs text-slate-600 leading-snug">{u.text}</p>
-                            </div>
-                        ))
-                    ) : <p className="text-center py-4 text-xs text-slate-400 italic">Sin mensajes previos.</p>}
-                </div>
+              <Label className={UI_CLASSES.label}>Historial de actualizaciones</Label>
+              <div className={UI_CLASSES.historyScrollArea}>
+                {incidence.updates && incidence.updates.length > 0 ? (
+                  incidence.updates.map((u) => (
+                    <div key={u.id} className={UI_CLASSES.historyBubble}>
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-[9px] font-black text-emerald-700 uppercase bg-emerald-50 px-1.5 py-0.5 rounded">{u.author_name || 'Admin'}</span>
+                        <span className="text-[9px] text-slate-400 font-bold">{new Date(u.created_at).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                      <p className="text-xs text-slate-600 leading-snug">{u.text}</p>
+                    </div>
+                  ))
+                ) : <p className="text-center py-4 text-xs text-slate-400 italic">Sin mensajes previos.</p>}
+              </div>
             </div>
 
             <div className="space-y-2 text-left">
-                <Label className={UI_CLASSES.label}>Mensaje para el residente</Label>
-                <div className="relative">
-                    <textarea value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="Escribe aquí..." className={UI_CLASSES.textarea} />
-                    <Send size={16} className="absolute right-3 bottom-3 text-slate-300 pointer-events-none" />
-                </div>
+              <Label className={UI_CLASSES.label}>Mensaje para el residente</Label>
+              <div className="relative">
+                <textarea value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="Escribe aquí..." className={UI_CLASSES.textarea} />
+                <Send size={16} className="absolute right-3 bottom-3 text-slate-300 pointer-events-none" />
+              </div>
             </div>
           </div>
           <div className="flex gap-3 mt-4 pt-4 border-t">
@@ -153,10 +162,10 @@ export const AdminIncidences = () => {
                         <h2 className={UI_CLASSES.cardTitle}>{inc.title}</h2>
                         <div className={UI_CLASSES.cardLocation}><MapPin size={14} /> {LOCATION_LABELS[inc.location_type]} {inc.room_number || ''}</div>
                         <div className="flex flex-wrap gap-2 mt-4">
-                            <span className={`${cfg.admin.bg} ${cfg.admin.text} ${UI_CLASSES.statusBadge}`}>{cfg.label}</span>
-                            {(inc.assigned_staff_name || inc.assigned_external_name) && (
-                                <span className={UI_CLASSES.technicianBadge}><Wrench size={13} /> {inc.assigned_staff_name || `${inc.assigned_external_name} (Ext)`}</span>
-                            )}
+                          <span className={`${cfg.admin.bg} ${cfg.admin.text} ${UI_CLASSES.statusBadge}`}>{cfg.label}</span>
+                          {(inc.assigned_staff_name || inc.assigned_external_name) && (
+                            <span className={UI_CLASSES.technicianBadge}><Wrench size={13} /> {inc.assigned_staff_name || `${inc.assigned_external_name} (Ext)`}</span>
+                          )}
                         </div>
                       </div>
                       <button onClick={() => setSelectedIncidence(inc)} className={UI_CLASSES.btnManage + " mt-6 self-end"}>Gestionar <ChevronRight size={18} /></button>
