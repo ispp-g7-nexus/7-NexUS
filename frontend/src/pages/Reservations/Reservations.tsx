@@ -1,18 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, RefreshCw } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { CalendarDays} from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import {
   cancelReservation,
-  createReservation,
   getSpaceAvailability,
   isApiError,
   listCommonSpaces,
   listMyReservations,
   type CommonSpace,
-  type CreateReservationPayload,
   type SpaceAvailability,
   type SpaceReservation,
 } from "../../services/reservations";
@@ -46,8 +44,29 @@ export function Reservations() {
 
   const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedSpace, setSelectedSpace] = useState<CommonSpace | null>(null);
-  const [submittingReservation, setSubmittingReservation] = useState(false);
   const [cancellingReservationId, setCancellingReservationId] = useState<number | null>(null);
+  const [inputDate, setInputDate] = useState(todayDate);
+  const dateInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setInputDate(selectedDate);
+  }, [selectedDate]);
+  const handleDateCommit = () => {
+    if (!inputDate) {
+      setInputDate(todayDate);
+      setSelectedDate(todayDate);
+      return;
+    }
+
+    const year = parseInt(inputDate.split('-')[0], 10);
+    const currentYear = new Date().getFullYear();
+    if (year >= currentYear && year <= 2030) {
+      setSelectedDate(inputDate);
+    } else {
+      setInputDate(todayDate);
+      setSelectedDate(todayDate);
+    }
+  };
 
   const loadMyReservations = async () => {
     setLoadingMyReservations(true);
@@ -134,23 +153,6 @@ export function Reservations() {
     setSheetOpen(true);
   };
 
-  const handleCreateReservation = async (payload: CreateReservationPayload) => {
-    if (!selectedSpace) {
-      return;
-    }
-
-    setSubmittingReservation(true);
-    try {
-      await createReservation(selectedSpace.id, payload);
-      toast.success("Reserva creada correctamente.");
-      setSheetOpen(false);
-      await Promise.all([loadMyReservations(), loadAvailability(spaces, selectedDate)]);
-    } catch (unknownError) {
-      toast.error(isApiError(unknownError) ? unknownError.message : "No se pudo crear la reserva.");
-    } finally {
-      setSubmittingReservation(false);
-    }
-  };
 
   const handleCancelReservation = async (reservationId: number) => {
     setCancellingReservationId(reservationId);
@@ -190,29 +192,24 @@ export function Reservations() {
             </p>
           </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <label htmlFor="reservations-date" className="inline-flex items-center gap-2 text-sm font-medium">
-              <CalendarDays className="h-4 w-4" /> Fecha
-            </label>
-            <input
-              id="reservations-date"
-              type="date"
-              min={todayDate}
-              value={selectedDate}
-              onChange={(event) => setSelectedDate(event.target.value)}
-              className="border-input bg-input-background focus-visible:ring-ring/50 h-9 rounded-md border px-3 text-sm outline-none focus-visible:ring-[3px]"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                void loadInitialData();
-              }}
-              disabled={loadingInitial || loadingAvailability}
-            >
-              <RefreshCw className={`mr-2 h-4 w-4 ${loadingInitial || loadingAvailability ? "animate-spin" : ""}`} />
-              Actualizar
-            </Button>
+          <div className="flex items-center">
+            <div className="group relative flex items-center gap-2 border-b-2 border-transparent pb-1 transition-all focus-within:border-[#4A7C59] hover:border-[#4A7C59]/50">
+              <CalendarDays 
+                className="h-5 w-5 cursor-pointer text-muted-foreground transition-colors group-focus-within:text-[#4A7C59] group-hover:text-[#4A7C59]" 
+                onClick={() => dateInputRef.current?.showPicker()}
+              />
+              <input
+                ref={dateInputRef}
+                id="reservations-date"
+                type="date"
+                min={todayDate}
+                value={inputDate}
+                onChange={(event) => setInputDate(event.target.value)}
+                onBlur={handleDateCommit}
+                onKeyDown={(e) => e.key === "Enter" && handleDateCommit()}
+                className="w-[130px] cursor-text bg-transparent text-sm font-medium text-foreground outline-none border-none p-0 focus:ring-0 [&::-webkit-calendar-picker-indicator]:hidden"
+              />
+            </div>
           </div>
         </div>
       </header>
@@ -268,11 +265,15 @@ export function Reservations() {
 
       <ReservationFormSheet
         open={sheetOpen}
-        selectedDate={selectedDate}
+        initialDate={selectedDate} // Cambiamos selectedDate por initialDate
         space={selectedSpace}
-        isSubmitting={submittingReservation}
         onOpenChange={setSheetOpen}
-        onSubmit={handleCreateReservation}
+        onSuccess={() => {
+          // Cuando la reserva se cree con éxito, cerramos el drawer y recargamos
+          setSheetOpen(false);
+          void loadInitialData();
+          void loadAvailability(spaces, selectedDate);
+        }}
       />
     </section>
   );

@@ -12,6 +12,7 @@ export interface CommonSpace {
   is_active: boolean;
   open_time: string;
   close_time: string;
+  reservation_interval_minutes: number;
 }
 
 export interface ReservationSpaceRef {
