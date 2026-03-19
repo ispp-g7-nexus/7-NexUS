@@ -29,7 +29,6 @@ def _serialize_space(space: CommonSpace) -> dict:
         "open_time": space.open_time.strftime("%H:%M:%S"),
         "close_time": space.close_time.strftime("%H:%M:%S"),
         "reservation_interval_minutes": space.reservation_interval_minutes,
-
     }
 
 
@@ -77,13 +76,17 @@ def _is_admin_for_residence(user, residence: Residence) -> bool:
     if getattr(user, "is_staff", False):
         return True
 
-    return Membership.objects.filter(
-        user=user,
-        is_active=True,
-    ).filter(
-        Q(role__name__iexact="residence_admin", residence=residence)
-        | Q(role__name__iexact="portfolio_admin")
-    ).exists()
+    return (
+        Membership.objects.filter(
+            user=user,
+            is_active=True,
+        )
+        .filter(
+            Q(role__name__iexact="residence_admin", residence=residence)
+            | Q(role__name__iexact="portfolio_admin")
+        )
+        .exists()
+    )
 
 
 def _compute_available_slots(
@@ -93,34 +96,40 @@ def _compute_available_slots(
     reservations: list[SpaceReservation],
 ) -> list[dict[str, any]]:
     tz = timezone.get_current_timezone()
-    window_start = timezone.make_aware(datetime.combine(target_date, space.open_time), tz)
-    window_end = timezone.make_aware(datetime.combine(target_date, space.close_time), tz)
-    
+    window_start = timezone.make_aware(
+        datetime.combine(target_date, space.open_time), tz
+    )
+    window_end = timezone.make_aware(
+        datetime.combine(target_date, space.close_time), tz
+    )
+
     interval = timedelta(minutes=space.reservation_interval_minutes)
     slots = []
-    
+
     current = window_start
     now = timezone.now()
 
-while current + interval <= window_end:
-            slot_end = current + interval
-            is_past = current < now
-            is_occupied = _is_capacity_reached(
-                reservations=reservations,
-                interval_start=current,
-                interval_end=slot_end,
-                capacity=space.capacity,
-            )
-                
-            slots.append({
+    while current + interval <= window_end:
+        slot_end = current + interval
+        is_past = current < now
+        is_occupied = _is_capacity_reached(
+            reservations=reservations,
+            interval_start=current,
+            interval_end=slot_end,
+            capacity=space.capacity,
+        )
+
+        slots.append(
+            {
                 "start_time": current.isoformat(),
                 "end_time": slot_end.isoformat(),
-                "status": "occupied" if (is_occupied or is_past) else "available"
-            })
-            
-            current = slot_end
+                "status": "occupied" if (is_occupied or is_past) else "available",
+            }
+        )
 
-        return slots
+        current = slot_end
+
+    return slots
 
 
 def _build_occupancy_events(
@@ -192,6 +201,7 @@ class AuthenticatedView(View):
     def check_permissions(self, request):
         return None
 
+
 class SpaceListView(AuthenticatedView):
     def get(self, request):
         residence = _validate_residence(request)
@@ -211,13 +221,17 @@ class SpaceAvailabilityView(AuthenticatedView):
 
         date_str = request.GET.get("date", "").strip()
         if not date_str:
-            return JsonResponse({"detail": "Debes enviar la fecha en formato YYYY-MM-DD."}, status=400)
+            return JsonResponse(
+                {"detail": "Debes enviar la fecha en formato YYYY-MM-DD."}, status=400
+            )
 
         target_date = parse_date(date_str)
         if not target_date:
             return JsonResponse({"detail": "Formato de fecha inválido."}, status=400)
 
-        space = get_object_or_404(CommonSpace, id=space_id, residence=residence, is_active=True)
+        space = get_object_or_404(
+            CommonSpace, id=space_id, residence=residence, is_active=True
+        )
 
         tz = timezone.get_current_timezone()
         day_start = timezone.make_aware(datetime.combine(target_date, time.min), tz)
@@ -258,30 +272,44 @@ class SpaceReservationCreateView(AuthenticatedView):
         try:
             payload = json.loads(request.body or "{}")
         except json.JSONDecodeError:
-            return JsonResponse({"detail": "El cuerpo de la petición no es JSON válido."}, status=400)
+            return JsonResponse(
+                {"detail": "El cuerpo de la petición no es JSON válido."}, status=400
+            )
 
         start_time_str = str(payload.get("start_time", "")).strip()
         end_time_str = str(payload.get("end_time", "")).strip()
         notes = str(payload.get("notes", "")).strip()
 
         if not start_time_str or not end_time_str:
-            return JsonResponse({"detail": "Debes indicar hora de inicio y fin."}, status=400)
+            return JsonResponse(
+                {"detail": "Debes indicar hora de inicio y fin."}, status=400
+            )
 
         start_time = _parse_request_datetime(start_time_str)
         end_time = _parse_request_datetime(end_time_str)
 
         if not start_time or not end_time:
-            return JsonResponse({"detail": "Formato de fecha/hora inválido."}, status=400)
+            return JsonResponse(
+                {"detail": "Formato de fecha/hora inválido."}, status=400
+            )
 
         if start_time >= end_time:
-            return JsonResponse({"detail": "La hora de fin debe ser posterior a la de inicio."}, status=400)
+            return JsonResponse(
+                {"detail": "La hora de fin debe ser posterior a la de inicio."},
+                status=400,
+            )
 
         now = timezone.now()
         if start_time < now:
-            return JsonResponse({"detail": "No se pueden crear reservas en el pasado."}, status=400)
+            return JsonResponse(
+                {"detail": "No se pueden crear reservas en el pasado."}, status=400
+            )
 
         if start_time.date() != end_time.date():
-            return JsonResponse({"detail": "La reserva debe empezar y terminar el mismo día."}, status=400)
+            return JsonResponse(
+                {"detail": "La reserva debe empezar y terminar el mismo día."},
+                status=400,
+            )
 
         with transaction.atomic():
             space = get_object_or_404(
@@ -292,11 +320,17 @@ class SpaceReservationCreateView(AuthenticatedView):
             )
 
             # Serializa reservas concurrentes del mismo usuario para validar solapes entre espacios.
-            get_user_model().objects.select_for_update().filter(id=request.user.id).exists()
+            get_user_model().objects.select_for_update().filter(
+                id=request.user.id
+            ).exists()
 
             tz = timezone.get_current_timezone()
-            open_dt = timezone.make_aware(datetime.combine(start_time.date(), space.open_time), tz)
-            close_dt = timezone.make_aware(datetime.combine(start_time.date(), space.close_time), tz)
+            open_dt = timezone.make_aware(
+                datetime.combine(start_time.date(), space.open_time), tz
+            )
+            close_dt = timezone.make_aware(
+                datetime.combine(start_time.date(), space.close_time), tz
+            )
 
             if start_time < open_dt or end_time > close_dt:
                 return JsonResponse(
@@ -327,17 +361,23 @@ class SpaceReservationCreateView(AuthenticatedView):
                 capacity=space.capacity,
             ):
                 return JsonResponse(
-                    {"detail": "Se ha alcanzado el aforo máximo del espacio en esa franja horaria."},
+                    {
+                        "detail": "Se ha alcanzado el aforo máximo del espacio en esa franja horaria."
+                    },
                     status=400,
                 )
 
-            overlaps_for_user = SpaceReservation.objects.select_for_update().filter(
-                residence=residence,
-                user=request.user,
-                status=SpaceReservation.Status.ACTIVE,
-                start_time__lt=end_time,
-                end_time__gt=start_time,
-            ).exists()
+            overlaps_for_user = (
+                SpaceReservation.objects.select_for_update()
+                .filter(
+                    residence=residence,
+                    user=request.user,
+                    status=SpaceReservation.Status.ACTIVE,
+                    start_time__lt=end_time,
+                    end_time__gt=start_time,
+                )
+                .exists()
+            )
             if overlaps_for_user:
                 return JsonResponse(
                     {"detail": "Ya tienes otra reserva activa en esa franja horaria."},
@@ -354,7 +394,9 @@ class SpaceReservationCreateView(AuthenticatedView):
                 status=SpaceReservation.Status.ACTIVE,
             )
 
-        reservation = SpaceReservation.objects.select_related("space", "user").get(pk=reservation.pk)
+        reservation = SpaceReservation.objects.select_related("space", "user").get(
+            pk=reservation.pk
+        )
         return JsonResponse(_serialize_reservation(reservation), status=201)
 
 
@@ -389,9 +431,13 @@ class SpaceReservationCancelView(AuthenticatedView):
             residence=residence,
         )
 
-        can_cancel = reservation.user_id == request.user.id or _is_admin_for_residence(request.user, residence)
+        can_cancel = reservation.user_id == request.user.id or _is_admin_for_residence(
+            request.user, residence
+        )
         if not can_cancel:
-            return JsonResponse({"detail": "No tienes permisos para cancelar esta reserva."}, status=403)
+            return JsonResponse(
+                {"detail": "No tienes permisos para cancelar esta reserva."}, status=403
+            )
 
         if reservation.status == SpaceReservation.Status.CANCELLED:
             return JsonResponse({"detail": "La reserva ya está cancelada."}, status=400)
@@ -405,12 +451,16 @@ class SpaceReservationCancelView(AuthenticatedView):
             }
         )
 
+
 class AdminRequiredMixin:
     """Mixin que verifica que el usuario es admin de la residencia."""
+
     def check_permissions(self, request):
         residence = _validate_residence(request)
         if not residence or not _is_admin_for_residence(request.user, residence):
-            return JsonResponse({"detail": "No tienes permisos de administrador."}, status=403)
+            return JsonResponse(
+                {"detail": "No tienes permisos de administrador."}, status=403
+            )
         return None
 
 
@@ -438,35 +488,51 @@ class AdminSpaceListCreateView(AdminRequiredMixin, AuthenticatedView):
         is_active = payload.get("is_active", True)
 
         if not name or not open_time or not close_time:
-            return JsonResponse({"detail": "name, open_time y close_time son obligatorios."}, status=400)
+            return JsonResponse(
+                {"detail": "name, open_time y close_time son obligatorios."}, status=400
+            )
 
         try:
             capacity = int(capacity)
             if capacity < 1:
                 raise ValueError
         except (ValueError, TypeError):
-            return JsonResponse({"detail": "capacity debe ser un entero positivo."}, status=400)
+            return JsonResponse(
+                {"detail": "capacity debe ser un entero positivo."}, status=400
+            )
 
         from django.core.exceptions import ValidationError
         from datetime import time as dt_time
+
         try:
             ot = dt_time.fromisoformat(open_time)
             ct = dt_time.fromisoformat(close_time)
         except ValueError:
-            return JsonResponse({"detail": "Formato de hora inválido. Usa HH:MM o HH:MM:SS."}, status=400)
+            return JsonResponse(
+                {"detail": "Formato de hora inválido. Usa HH:MM o HH:MM:SS."},
+                status=400,
+            )
 
         try:
             interval = int(interval)
             if interval < 1:
                 raise ValueError
         except (ValueError, TypeError):
-            return JsonResponse({"detail": "El intervalo de reserva debe ser un entero positivo."}, status=400)
+            return JsonResponse(
+                {"detail": "El intervalo de reserva debe ser un entero positivo."},
+                status=400,
+            )
 
         if ct <= ot:
-            return JsonResponse({"detail": "close_time debe ser posterior a open_time."}, status=400)
+            return JsonResponse(
+                {"detail": "close_time debe ser posterior a open_time."}, status=400
+            )
 
         if CommonSpace.objects.filter(residence=residence, name=name).exists():
-            return JsonResponse({"detail": "Ya existe un espacio con ese nombre en esta residencia."}, status=400)
+            return JsonResponse(
+                {"detail": "Ya existe un espacio con ese nombre en esta residencia."},
+                status=400,
+            )
 
         space = CommonSpace.objects.create(
             residence=residence,
@@ -497,9 +563,17 @@ class AdminSpaceDetailView(AdminRequiredMixin, AuthenticatedView):
         if "name" in payload:
             name = str(payload["name"]).strip()
             if not name:
-                return JsonResponse({"detail": "El nombre no puede estar vacío."}, status=400)
-            if CommonSpace.objects.filter(residence=residence, name=name).exclude(id=space_id).exists():
-                return JsonResponse({"detail": "Ya existe un espacio con ese nombre."}, status=400)
+                return JsonResponse(
+                    {"detail": "El nombre no puede estar vacío."}, status=400
+                )
+            if (
+                CommonSpace.objects.filter(residence=residence, name=name)
+                .exclude(id=space_id)
+                .exists()
+            ):
+                return JsonResponse(
+                    {"detail": "Ya existe un espacio con ese nombre."}, status=400
+                )
             space.name = name
 
         if "description" in payload:
@@ -512,25 +586,33 @@ class AdminSpaceDetailView(AdminRequiredMixin, AuthenticatedView):
                     raise ValueError
                 space.capacity = cap
             except (ValueError, TypeError):
-                return JsonResponse({"detail": "capacity debe ser un entero positivo."}, status=400)
+                return JsonResponse(
+                    {"detail": "capacity debe ser un entero positivo."}, status=400
+                )
 
         if "open_time" in payload:
             try:
                 space.open_time = dt_time.fromisoformat(str(payload["open_time"]))
             except ValueError:
-                return JsonResponse({"detail": "Formato de open_time inválido."}, status=400)
+                return JsonResponse(
+                    {"detail": "Formato de open_time inválido."}, status=400
+                )
 
         if "close_time" in payload:
             try:
                 space.close_time = dt_time.fromisoformat(str(payload["close_time"]))
             except ValueError:
-                return JsonResponse({"detail": "Formato de close_time inválido."}, status=400)
+                return JsonResponse(
+                    {"detail": "Formato de close_time inválido."}, status=400
+                )
 
         if "is_active" in payload:
             space.is_active = bool(payload["is_active"])
 
         if space.close_time <= space.open_time:
-            return JsonResponse({"detail": "close_time debe ser posterior a open_time."}, status=400)
+            return JsonResponse(
+                {"detail": "close_time debe ser posterior a open_time."}, status=400
+            )
 
         if "reservation_interval_minutes" in payload:
             try:
@@ -539,7 +621,12 @@ class AdminSpaceDetailView(AdminRequiredMixin, AuthenticatedView):
                     raise ValueError
                 space.reservation_interval_minutes = interval
             except (ValueError, TypeError):
-                return JsonResponse({"detail": "reservation_interval_minutes debe ser un entero positivo."}, status=400)
+                return JsonResponse(
+                    {
+                        "detail": "reservation_interval_minutes debe ser un entero positivo."
+                    },
+                    status=400,
+                )
 
         space.save()
         return JsonResponse(_serialize_space(space))
@@ -567,12 +654,19 @@ class AdminSpaceReservationsView(AdminRequiredMixin, AuthenticatedView):
         space = get_object_or_404(CommonSpace, id=space_id, residence=residence)
 
         status_filter = request.GET.get("status", "").strip()
-        qs = SpaceReservation.objects.filter(
-            residence=residence,
-            space=space,
-        ).select_related("user", "space").order_by("-start_time")
+        qs = (
+            SpaceReservation.objects.filter(
+                residence=residence,
+                space=space,
+            )
+            .select_related("user", "space")
+            .order_by("-start_time")
+        )
 
-        if status_filter in (SpaceReservation.Status.ACTIVE, SpaceReservation.Status.CANCELLED):
+        if status_filter in (
+            SpaceReservation.Status.ACTIVE,
+            SpaceReservation.Status.CANCELLED,
+        ):
             qs = qs.filter(status=status_filter)
 
         return JsonResponse([_serialize_reservation(r) for r in qs], safe=False)
