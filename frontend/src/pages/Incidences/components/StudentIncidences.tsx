@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Bell, MapPin, User, Wrench, MessageSquare, ChevronRight, Loader2 } from "lucide-react";
+import { Plus, Bell, MapPin, User, Wrench, MessageSquare, ChevronRight, Loader2, Clock } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent } from "../../../components/ui/card";
-import { Dialog, DialogContent, DialogTitle } from "../../../components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "../../../components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../components/ui/popover";
 import { fetchWithAuth, API_URL_INCIDENCES } from "../../../utils/api";
 import { IncidenceForm } from "./IncidenceForm";
@@ -76,30 +76,45 @@ const IncidenceSelect = ({
 }: {
   value: string,
   onChange: (val: string) => void,
-  options: Record<string, string | any>,
+  options: Record<string, any>,
   placeholder: string,
   className?: string
 }) => {
   const [open, setOpen] = useState(false);
-  const selectedLabel = value === 'all' || !value ? placeholder : (
-    typeof options[value] === 'object' ? options[value].label : options[value]
-  );
+  
+  let selectedLabel = placeholder;
+  if (value !== 'all' && value && options[value]) {
+    const option = options[value];
+    selectedLabel = typeof option === 'object' ? option.label : option;
+  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button className={`flex items-center justify-between w-full px-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-sm font-medium transition-all outline-none focus:ring-2 focus:ring-[#82D14C]/10 hover:border-[#82D14C] ${className}`}>
+        <button 
+          type="button"
+          className={`flex items-center justify-between w-full px-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-sm font-medium transition-all outline-none focus:ring-2 focus:ring-[#82D14C]/10 hover:border-[#82D14C] ${className}`}
+        >
           <span className={value === 'all' || !value ? 'text-slate-400' : 'text-slate-700'}>{selectedLabel}</span>
           <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${open ? 'rotate-90' : 'rotate-0'}`} />
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-[--radix-popover-trigger-width] p-1 bg-white border-none rounded-2xl shadow-xl z-[100]">
         <div className="max-h-60 overflow-y-auto">
-          <button onClick={() => { onChange('all'); setOpen(false); }} className="w-full text-left px-3 py-2 text-sm rounded-xl hover:bg-[#EEF8E7] hover:text-[#1B4D1C] transition-colors font-bold text-slate-400 border-b border-slate-50 mb-1">
+          <button 
+            type="button"
+            onClick={() => { onChange('all'); setOpen(false); }} 
+            className="w-full text-left px-3 py-2 text-sm rounded-xl hover:bg-[#EEF8E7] hover:text-[#1B4D1C] transition-colors font-bold text-slate-400 border-b border-slate-50 mb-1"
+          >
             Mostrar todas
           </button>
           {Object.entries(options).map(([key, val]) => (
-            <button key={key} onClick={() => { onChange(key); setOpen(false); }} className={`w-full text-left px-3 py-2 text-sm rounded-xl transition-colors font-medium mb-0.5 last:mb-0 ${value === key ? 'bg-[#82D14C] text-white' : 'hover:bg-[#EEF8E7] text-slate-700 hover:text-[#1B4D1C]'}`}>
+            <button 
+              key={key} 
+              type="button"
+              onClick={() => { onChange(key); setOpen(false); }} 
+              className={`w-full text-left px-3 py-2 text-sm rounded-xl transition-colors font-medium mb-0.5 last:mb-0 ${value === key ? 'bg-[#82D14C] text-white' : 'hover:bg-[#EEF8E7] text-slate-700 hover:text-[#1B4D1C]'}`}
+            >
               {typeof val === 'object' ? val.label : val}
             </button>
           ))}
@@ -164,8 +179,16 @@ export default function StudentIncidences() {
   const formatUpdateText = (text: string) => {
     if (!text) return '';
     let out = text.replace(/Nota:\s*/i, '');
-    const statusMapTr: Record<string, string> = { pending: 'Pendiente', reviewing: 'En revisión', in_progress: 'En proceso', resolved: 'Resuelto' };
-    Object.keys(statusMapTr).forEach((key) => { out = out.replace(new RegExp(`\\b${key}\\b`, 'g'), statusMapTr[key]); });
+    const statusMapTr: Record<string, string> = { 
+      pending: 'Pendiente', 
+      reviewing: 'En revisión', 
+      in_progress: 'En proceso', 
+      resolved: 'Resuelto' 
+    };
+    Object.keys(statusMapTr).forEach((key) => { 
+      const re = new RegExp(String.raw`\b${key}\b`, 'g');
+      out = out.replace(re, statusMapTr[key]); 
+    });
     return out.trim();
   };
 
@@ -189,7 +212,7 @@ export default function StudentIncidences() {
           if (open) loadNotifications(true);
         }}>
           <PopoverTrigger asChild>
-            <button type="button" className={UI_CLASSES.bellContainer}>
+            <button type="button" className={UI_CLASSES.bellContainer} aria-label="Notificaciones">
               <Bell className="w-6 h-6 text-white" />
               {unreadNotifications > 0 && <span className={UI_CLASSES.bellBadge}>{unreadNotifications}</span>}
             </button>
@@ -201,7 +224,7 @@ export default function StudentIncidences() {
                 {notificationsLoading && <Loader2 className="w-3 h-3 animate-spin text-[#82D14C]" />}
               </div>
               <div className="max-h-80 overflow-y-auto p-2">
-                {notifications.length === 0 ? <p className="text-center py-6 text-xs text-slate-400">Sin notificaciones</p> : 
+                {notifications.length > 0 ? (
                   notifications.map((n) => (
                     <div key={n.id} className="p-3 mb-1 rounded-2xl bg-slate-50 border border-slate-100">
                       <div className="flex justify-between items-start mb-1">
@@ -211,7 +234,9 @@ export default function StudentIncidences() {
                       <p className="text-xs text-slate-600 mt-1">{n.message}</p>
                     </div>
                   ))
-                }
+                ) : (
+                  <p className="text-center py-6 text-xs text-slate-400">Sin notificaciones</p>
+                )}
               </div>
             </div>
           </PopoverContent>
@@ -221,14 +246,24 @@ export default function StudentIncidences() {
       <main className={UI_CLASSES.mainContent}>
         <div className="w-full space-y-6">
           <div className={UI_CLASSES.filterGrid}>
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar..." className={UI_CLASSES.filterInput} />
+            <input 
+              value={search} 
+              onChange={(e) => setSearch(e.target.value)} 
+              placeholder="Buscar incidencia..." 
+              className={UI_CLASSES.filterInput}
+              aria-label="Buscar incidencia"
+            />
             <IncidenceSelect value={filterLocation} onChange={setFilterLocation} options={LOCATION_LABELS} placeholder="Áreas" />
             <IncidenceSelect value={filterStatus} onChange={setFilterStatus} options={STATUS_MAP} placeholder="Estados" />
             <IncidenceSelect value={filterPriority} onChange={setFilterPriority} options={{ low: 'Baja', high: 'Urgente' }} placeholder="Prioridad" />
           </div>
 
           <div className={UI_CLASSES.btnMineWrapper}>
-            <button onClick={() => setShowOnlyMine(!showOnlyMine)} className={`${UI_CLASSES.btnMineBase} ${showOnlyMine ? UI_CLASSES.btnMineActive : UI_CLASSES.btnMineInactive}`}>
+            <button 
+              type="button"
+              onClick={() => setShowOnlyMine(!showOnlyMine)} 
+              className={`${UI_CLASSES.btnMineBase} ${showOnlyMine ? UI_CLASSES.btnMineActive : UI_CLASSES.btnMineInactive}`}
+            >
               <User className="w-4 h-4" /> {showOnlyMine ? "Viendo mis incidencias" : "Ver mis incidencias"}
             </button>
           </div>
@@ -243,12 +278,12 @@ export default function StudentIncidences() {
                   <Card key={inc.id} className={UI_CLASSES.card}>
                     <CardContent className="p-0 flex h-full">
                       <div className={`${UI_CLASSES.cardSideBar} ${currentStatus.barClass}`} />
-                      <div className="pt-4 px-4 pb-2 flex-1 flex flex-col justify-between min-w-0">
+                      <div className="pt-4 px-4 pb-3 flex-1 flex flex-col justify-between min-w-0">
                         <div className="text-left">
                           <div className="flex justify-between items-start mb-1.5">
                             <div className="flex-1 min-w-0 pr-2">
                               <h3 className={UI_CLASSES.cardTitle}>{inc.title}</h3>
-                              {inc.is_mine && <span className="text-[10px] font-bold text-[#1B4D1C] uppercase tracking-wider bg-[#EEF8E7] px-1.5 rounded">Tu reporte</span>}
+                              {inc.is_mine && <span className="text-[10px] font-bold text-[#1B4D1C] uppercase tracking-wider bg-[#EEF8E7] px-1.5 py-0.5 rounded-md inline-block">Tu reporte</span>}
                             </div>
                             <span className={`${UI_CLASSES.statusBadge} ${currentStatus.colorClass}`}>{currentStatus.label}</span>
                           </div>
@@ -266,9 +301,10 @@ export default function StudentIncidences() {
                                 {inc.assigned_staff_name || inc.assigned_external_name || 'Sin asignar'}
                               </span>
                             </div>
-                            <span className="text-[9px] text-slate-500 font-bold shrink-0">
-                              {new Date(inc.created_at).toLocaleDateString()}
-                            </span>
+                            <div className="flex items-center gap-1 shrink-0 text-slate-400 font-bold">
+                              <Clock size={10} />
+                              <span className="text-[10px]">{new Date(inc.created_at).toLocaleDateString()}</span>
+                            </div>
                           </div>
                           <div className="flex justify-end w-full">
                             <Button
@@ -293,11 +329,16 @@ export default function StudentIncidences() {
         </div>
       </main>
 
-      <button onClick={() => setIsFormOpen(true)} className={UI_CLASSES.btnFloating}><Plus size={32} strokeWidth={3} /></button>
+      <button type="button" onClick={() => setIsFormOpen(true)} className={UI_CLASSES.btnFloating} aria-label="Nueva incidencia">
+        <Plus size={32} strokeWidth={3} />
+      </button>
 
+      {/* MODAL DETALLES */}
       <Dialog open={isNotesOpen} onOpenChange={setIsNotesOpen}>
         <DialogContent className={UI_CLASSES.dialogNotes}>
-          <DialogTitle className={UI_CLASSES.notesTitle}>Seguimiento</DialogTitle>
+          <DialogTitle className={UI_CLASSES.notesTitle}>Seguimiento de Incidencia</DialogTitle>
+          <DialogDescription className="sr-only">Detalles y actualizaciones de la incidencia seleccionada</DialogDescription>
+          
           <div className="p-6 bg-white overflow-y-auto max-h-[75vh] space-y-6 pb-12 text-left">
             {selectedDetails && (
               <>
@@ -305,18 +346,18 @@ export default function StudentIncidences() {
                   <h3 className="font-bold text-lg text-slate-800">{selectedDetails.title}</h3>
                 </section>
                 <section className="space-y-2">
-                  <div className="flex items-center gap-2"><MessageSquare size={14} className="text-slate-400" /><p className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Reporte original</p></div>
+                  <div className="flex items-center gap-2"><MessageSquare size={14} className="text-slate-400" /><p className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Tu descripción de la incidencia</p></div>
                   <div className="bg-slate-50 p-4 rounded-[20px] border border-slate-100"><p className="text-sm text-slate-600 italic">"{selectedDetails.description}"</p></div>
                 </section>
                 {selectedDetails.img && (
                   <section className="flex justify-center">
                     <div className="rounded-[24px] overflow-hidden border border-slate-100 shadow-sm max-w-[220px]">
-                      <img src={selectedDetails.img} alt="Evidencia" className="w-full h-auto" />
+                      <img src={selectedDetails.img} alt="Evidencia de la incidencia" className="w-full h-auto" />
                     </div>
                   </section>
                 )}
                 <section className="pt-2">
-                  <div className="flex items-center gap-2 mb-4"><div className="h-1.5 w-1.5 rounded-full bg-[#82D14C]" /><p className="text-[10px] font-bold uppercase text-[#3A7A1C] tracking-widest">Gestión</p></div>
+                  <div className="flex items-center gap-2 mb-4"><div className="h-1.5 w-1.5 rounded-full bg-[#82D14C]" /><p className="text-[10px] font-bold uppercase text-[#3A7A1C] tracking-widest">Gestión de Administración</p></div>
                   <div className="relative ml-2 space-y-6 border-l-2 border-slate-100 pl-8">
                     {selectedDetails.updates?.map((u) => (
                       <div key={u.id} className="relative">
@@ -337,6 +378,7 @@ export default function StudentIncidences() {
           </div>
         </DialogContent>
       </Dialog>
+
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className={UI_CLASSES.dialogForm}>
           <DialogTitle className="sr-only">Nueva Incidencia</DialogTitle>
@@ -360,19 +402,18 @@ const UI_CLASSES = {
   mainLayout: "flex flex-col h-screen bg-[#F6F7F9] overflow-hidden text-left",
   header: "bg-[#1B4D1C] p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg z-10",
   headerTitle: "text-white text-2xl font-bold",
+  bellContainer: "relative p-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors",
+  bellBadge: "absolute -right-1 -top-1 min-w-5 h-5 flex items-center justify-center rounded-full bg-[#82D14C] px-1 text-[10px] font-bold text-[#123313]",
   mainContent: "flex-1 overflow-y-auto p-4 md:p-6 pb-32 w-full", 
-  incidencesGrid: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 w-full items-start",
+  incidencesGrid: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 w-full",
   
-  card: "border-none shadow-sm rounded-[24px] overflow-hidden bg-white hover:shadow-md transition-all duration-300 flex flex-col",
+  card: "border-none shadow-sm rounded-[24px] overflow-hidden bg-white hover:shadow-md transition-all duration-300 h-full flex flex-col",
   cardSideBar: "w-1.5 shrink-0",
   cardTitle: "font-bold text-[16px] text-[#1A1C1E] leading-tight mb-0.5",
   cardLocationRow: "flex items-center gap-1.5 opacity-70 mb-3",
   statusBadge: "text-[11px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider shrink-0 shadow-sm",
   
   btnNotes: "bg-[#F0F5F0] w-fit h-8 px-4 rounded-xl border-[#E3F2DA] text-[#1B4D1C] hover:bg-[#82D14C] hover:text-white transition-all border-2 font-bold text-[10px] tracking-widest uppercase",
-  
-  bellContainer: "relative p-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors",
-  bellBadge: "absolute -right-1 -top-1 min-w-5 h-5 flex items-center justify-center rounded-full bg-[#82D14C] px-1 text-[10px] font-bold text-[#123313]",
   btnMineWrapper: "flex justify-end mb-6",
   btnMineBase: "flex items-center gap-2 px-6 py-3 rounded-full text-xs font-bold transition-all border shadow-sm",
   btnMineActive: "bg-[#1B4D1C] text-white border-[#1B4D1C]",

@@ -45,11 +45,10 @@ class Incidence(models.Model):
     )
 
 
-    # En tu modelo Incidence
     assigned_external_name = models.CharField(
     max_length=100, 
-    null=True, 
     blank=True, 
+    default="",
     verbose_name="Personal externo u otro"
 )
 
