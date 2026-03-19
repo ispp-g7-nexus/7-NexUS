@@ -167,6 +167,14 @@ export function AdminChats({
         try {
             const data = await chatsService.listGroups();
             setGroups(data);
+            setEditingGroup((prev) => {
+                if (!prev) return prev;
+                return data.find((g) => normalizeGroupId(g.id) === normalizeGroupId(prev.id)) ?? prev;
+            });
+            setChattingGroup((prev) => {
+                if (!prev) return prev;
+                return data.find((g) => normalizeGroupId(g.id) === normalizeGroupId(prev.id)) ?? prev;
+            });
             setIsUnauthorized(false);
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : String(err);
@@ -327,6 +335,27 @@ export function AdminChats({
         const groupId = Number(evt.payload?.group_id ?? -1);
         const senderEmail = typeof evt.payload?.sender_email === "string" ? evt.payload.sender_email : undefined;
         markGroupAsUnread(groupId, senderEmail);
+    const removeGroupLocally = (groupId: number) => {
+        setGroups((prev) => prev.filter((g) => normalizeGroupId(g.id) !== groupId));
+        setEditingGroup((prev) => (prev && normalizeGroupId(prev.id) === groupId ? null : prev));
+        setChattingGroup((prev) => (prev && normalizeGroupId(prev.id) === groupId ? null : prev));
+    };
+
+    const syncGroupById = async (groupId: number) => {
+        if (!Number.isFinite(groupId) || groupId <= 0) return;
+
+        try {
+            const fresh = await chatsService.getGroup(groupId);
+            setGroups((prev) => upsertGroup(prev, fresh));
+            setEditingGroup((prev) => (prev && normalizeGroupId(prev.id) === groupId ? fresh : prev));
+            setChattingGroup((prev) => (prev && normalizeGroupId(prev.id) === groupId ? fresh : prev));
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message.toLowerCase() : String(err).toLowerCase();
+            const notFound = msg.includes("no encontrado") || msg.includes("not found") || msg.includes("error 404");
+            if (notFound) {
+                removeGroupLocally(groupId);
+            }
+        }
     };
 
     useEffect(() => {
@@ -334,7 +363,17 @@ export function AdminChats({
 
         const source = chatsService.subscribeToEvents((evt: ChatRealtimeEvent) => {
             if (evt.event === "group_created" || evt.event === "group_updated") {
-                applyRealtimeGroupUpsert(evt.payload?.group);
+                const incomingGroup = evt.payload?.group;
+                if (incomingGroup) {
+                    applyRealtimeGroupUpsert(incomingGroup);
+                }
+
+                const groupId = Number(evt.payload?.group_id ?? (incomingGroup as ChatGroup | undefined)?.id ?? -1);
+                if (groupId > 0) {
+                    void syncGroupById(groupId);
+                } else if (!incomingGroup) {
+                    void refreshGroups();
+                }
                 return;
             }
 
@@ -345,6 +384,7 @@ export function AdminChats({
                     setEditingGroup((prev) => (prev && normalizeGroupId(prev.id) === groupId ? null : prev));
                     setChattingGroup((prev) => (prev && normalizeGroupId(prev.id) === groupId ? null : prev));
                     clearUnreadForGroup(groupId);
+                    removeGroupLocally(groupId);
                 }
                 return;
             }
@@ -405,7 +445,12 @@ export function AdminChats({
             const incomingGroup = realtimeEvent.payload?.group;
             if (incomingGroup) {
                 applyRealtimeGroupUpsert(incomingGroup);
-            } else {
+            }
+
+            const groupId = Number(realtimeEvent.payload?.group_id ?? (incomingGroup as ChatGroup | undefined)?.id ?? -1);
+            if (groupId > 0) {
+                void syncGroupById(groupId);
+            } else if (!incomingGroup) {
                 void refreshGroups();
             }
             return;
@@ -418,6 +463,7 @@ export function AdminChats({
                 setEditingGroup((prev) => (prev && normalizeGroupId(prev.id) === groupId ? null : prev));
                 setChattingGroup((prev) => (prev && normalizeGroupId(prev.id) === groupId ? null : prev));
                 clearUnreadForGroup(groupId);
+                removeGroupLocally(groupId);
             } else {
                 void refreshGroups();
             }

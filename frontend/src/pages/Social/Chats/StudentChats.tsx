@@ -292,6 +292,10 @@ export function StudentChats({
 
     const handleLeaveGroup = async () => {
         if (!selectedGroup) return;
+        if (!selectedGroup.can_members_leave) {
+            toast.error("No puedes abandonar este grupo.");
+            return;
+        }
         setLeaving(true);
         try {
             await chatsService.leaveGroup(selectedGroup.id);
@@ -788,7 +792,7 @@ export function StudentChats({
                             </span>
                         </div>
                     </div>
-                    {(selectedGroup.can_members_leave || !canInteractInGroup) && (
+                    {selectedGroup.can_members_leave && (
                         <Button variant="ghost" className="text-red-600 hover:bg-red-50 hover:text-red-700 shrink-0" onClick={() => setShowLeaveDialog(true)}>
                             <LogOut className="w-4 h-4 text-red-600" />
                         </Button>

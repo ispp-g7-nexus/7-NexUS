@@ -30,6 +30,10 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
     const [memberSearchTerm, setMemberSearchTerm] = useState("");
 
     useEffect(() => {
+        setCurrentGroup(group);
+    }, [group]);
+
+    useEffect(() => {
         const loadCurrentUser = async () => {
             try {
                 const session = await authService.me();
