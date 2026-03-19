@@ -102,24 +102,70 @@ def _compute_available_slots(
     current = window_start
     now = timezone.now()
 
-    while current + interval <= window_end:
-        slot_end = current + interval
-        is_past = current < now
-        is_occupied = False
-        for res in reservations:
-            if current < res.end_time and slot_end > res.start_time:
-                is_occupied = True
-                break
+while current + interval <= window_end:
+            slot_end = current + interval
+            is_past = current < now
+            is_occupied = _is_capacity_reached(
+                reservations=reservations,
+                interval_start=current,
+                interval_end=slot_end,
+                capacity=space.capacity,
+            )
                 
-        slots.append({
-            "start_time": current.isoformat(),
-            "end_time": slot_end.isoformat(),
-            "status": "occupied" if (is_occupied or is_past) else "available"
-        })
-        
-        current = slot_end
+            slots.append({
+                "start_time": current.isoformat(),
+                "end_time": slot_end.isoformat(),
+                "status": "occupied" if (is_occupied or is_past) else "available"
+            })
+            
+            current = slot_end
 
-    return slots
+        return slots
+
+
+def _build_occupancy_events(
+    *,
+    reservations: list[SpaceReservation],
+    window_start: datetime,
+    window_end: datetime,
+) -> list[tuple[datetime, int]]:
+    """Función introducida en sprint2 necesaria para calcular solapamientos múltiples."""
+    events: list[tuple[datetime, int]] = []
+
+    for reservation in reservations:
+        interval_start = max(reservation.start_time, window_start)
+        interval_end = min(reservation.end_time, window_end)
+
+        if interval_end <= interval_start:
+            continue
+
+        events.append((interval_start, 1))
+        events.append((interval_end, -1))
+
+    events.sort(key=lambda item: (item[0], 0 if item[1] == -1 else 1))
+    return events
+
+
+def _is_capacity_reached(
+    *,
+    reservations: list[SpaceReservation],
+    interval_start: datetime,
+    interval_end: datetime,
+    capacity: int,
+) -> bool:
+    effective_capacity = max(capacity, 1)
+    occupancy = 0
+
+    for _, delta in _build_occupancy_events(
+        reservations=reservations,
+        window_start=interval_start,
+        window_end=interval_end,
+    ):
+        occupancy += delta
+        if occupancy >= effective_capacity:
+            return True
+
+    return False
 
 
 @method_decorator(csrf_exempt, name="dispatch")
@@ -263,16 +309,25 @@ class SpaceReservationCreateView(AuthenticatedView):
                     status=400,
                 )
 
-            overlaps_in_space = SpaceReservation.objects.select_for_update().filter(
-                residence=residence,
-                space=space,
-                status=SpaceReservation.Status.ACTIVE,
-                start_time__lt=end_time,
-                end_time__gt=start_time,
-            ).exists()
-            if overlaps_in_space:
+            overlaps_in_space = list(
+                SpaceReservation.objects.select_for_update()
+                .filter(
+                    residence=residence,
+                    space=space,
+                    status=SpaceReservation.Status.ACTIVE,
+                    start_time__lt=end_time,
+                    end_time__gt=start_time,
+                )
+                .only("id", "start_time", "end_time")
+            )
+            if _is_capacity_reached(
+                reservations=overlaps_in_space,
+                interval_start=start_time,
+                interval_end=end_time,
+                capacity=space.capacity,
+            ):
                 return JsonResponse(
-                    {"detail": "El espacio ya está reservado en esa franja horaria."},
+                    {"detail": "Se ha alcanzado el aforo máximo del espacio en esa franja horaria."},
                     status=400,
                 )
 
