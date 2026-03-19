@@ -5,7 +5,7 @@ import type { AdminSpace, CreateSpacePayload } from "../../../services/adminSpac
 
 interface SpaceFormSheetProps {
   open: boolean;
-  space: AdminSpace | null; // null = create mode
+  space: AdminSpace | null;
   isSubmitting: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (payload: CreateSpacePayload) => Promise<void>;

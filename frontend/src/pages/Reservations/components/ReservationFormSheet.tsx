@@ -1,9 +1,8 @@
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useState, useRef } from "react";
 import { CalendarDays, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "../../../components/ui/button";
-import { Input } from "../../../components/ui/input";
 import {
   Sheet,
   SheetContent,
@@ -29,7 +28,6 @@ interface ReservationFormSheetProps {
   onSuccess: () => void;
 }
 
-// Interfaz para los slots que nos manda el backend refactorizado
 interface TimeSlot {
   start_time: string;
   end_time: string;
@@ -41,7 +39,6 @@ function getTodayDateString(): string {
   return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split("T")[0];
 }
 
-// Función auxiliar para formatear "2024-03-18T16:00:00Z" a "16:00"
 function formatTime(isoString: string): string {
   const d = new Date(isoString);
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -56,16 +53,15 @@ export function ReservationFormSheet({
 }: ReservationFormSheetProps) {
   const isMobile = useIsMobile();
 
-  const [localDate, setLocalDate] = useState(initialDate);
+  const [localDate, setLocalDate] = useState(initialDate); 
+  const [inputDate, setInputDate] = useState(initialDate);
+  const dateInputRef = useRef<HTMLInputElement>(null);
+  const interactionType = useRef<'keyboard' | 'picker'>('keyboard');
+
   const [availability, setAvailability] = useState<SpaceAvailability | null>(null);
   const [loadingAvailability, setLoadingAvailability] = useState(false);
-
-  // Slot seleccionado por el usuario
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
-  
-  // Estado para el acordeón (solo se usa si intervalo < 30 mins)
   const [expandedHour, setExpandedHour] = useState<string | null>(null);
-
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -94,11 +90,32 @@ export function ReservationFormSheet({
   useEffect(() => {
     if (open) {
       setLocalDate(initialDate);
+      setInputDate(initialDate);
       setNotes("");
       setError(null);
       setSelectedSlot(null);
     }
   }, [open, initialDate]);
+  const handleDateCommit = (directDate?: string) => {
+    const valueToEvaluate = typeof directDate === "string" ? directDate : inputDate;
+
+    if (!valueToEvaluate) {
+      setInputDate(getTodayDateString());
+      setLocalDate(getTodayDateString());
+      return;
+    }
+
+    const year = parseInt(valueToEvaluate.split('-')[0], 10);
+    const currentYear = new Date().getFullYear();
+
+    if (year >= currentYear && year <= 2030) {
+      setLocalDate(valueToEvaluate);
+      setInputDate(valueToEvaluate);
+    } else {
+      setInputDate(getTodayDateString());
+      setLocalDate(getTodayDateString());
+    }
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -122,11 +139,9 @@ export function ReservationFormSheet({
     }
   };
 
-  // Lógica de agrupación si hay muchos tramos (< 30 min)
   const slots = (availability?.available_slots as unknown as TimeSlot[]) || [];
   const needsGrouping = space && space.reservation_interval_minutes < 30;
 
-  // Agrupamos los slots por su hora de inicio (ej: "16:00" agrupa 16:00, 16:10, 16:20)
   const groupedSlots = slots.reduce((acc, slot) => {
     const hourKey = formatTime(slot.start_time).split(":")[0] + ":00";
     if (!acc[hourKey]) acc[hourKey] = [];
@@ -148,20 +163,54 @@ export function ReservationFormSheet({
         {space && (
           <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-6 p-6 overflow-y-auto">
             
-            {/* 1. Selector de fecha */}
+            {/* 1. Selector de fecha (Refactorizado con la misma lógica UX) */}
             <div className="space-y-2">
-              <label htmlFor="drawer-date" className="flex items-center gap-2 text-sm font-medium text-foreground">
-                <CalendarDays className="h-4 w-4" /> Fecha de la reserva
+              <label htmlFor="drawer-date" className="block text-sm font-medium text-foreground">
+                Fecha de la reserva
               </label>
-              <Input
-                id="drawer-date"
-                type="date"
-                min={getTodayDateString()}
-                value={localDate}
-                onChange={(e) => setLocalDate(e.target.value)}
-                required
-              />
+              <div 
+                className="flex h-10 w-full items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
+              >
+                <CalendarDays 
+                  className="h-4 w-4 cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() => {
+                    interactionType.current = 'picker';
+                    dateInputRef.current?.showPicker();
+                  }}
+                />
+                <input
+                  ref={dateInputRef}
+                  id="drawer-date"
+                  type="date"
+                  min={getTodayDateString()}
+                  value={inputDate}
+                  required
+                  onClick={() => {
+                    interactionType.current = 'keyboard';
+                  }}
+                  onKeyDown={(e) => {
+                    interactionType.current = 'keyboard';
+                    if (e.key === "Enter") {
+                      e.preventDefault(); // Evita que se envíe el formulario por error al pulsar Enter
+                      handleDateCommit();
+                    }
+                  }}
+                  onChange={(event) => {
+                    const newValue = event.target.value;
+                    setInputDate(newValue);
+                    
+                    if (interactionType.current === 'picker' && newValue) {
+                      handleDateCommit(newValue);
+                      interactionType.current = 'keyboard';
+                    }
+                  }}
+                  onBlur={() => handleDateCommit()}
+                  className="flex-1 bg-transparent outline-none border-none p-0 focus:ring-0 [&::-webkit-calendar-picker-indicator]:hidden cursor-text"
+                />
+              </div>
             </div>
+
+            {/* 2. Cuadrícula de Horas Dinámica */}
             <div className="space-y-3">
               <label className="text-sm font-medium text-foreground flex items-center justify-between">
                 <span>Horas disponibles</span>
@@ -179,11 +228,9 @@ export function ReservationFormSheet({
                   <p className="text-sm text-muted-foreground">No hay huecos generados para este espacio hoy.</p>
                 </div>
               ) : needsGrouping ? (
-                // RENDERIZADO TIPO B: Acordeón para intervalos < 30 min
                 <div className="space-y-2">
                   {Object.entries(groupedSlots).map(([hourLabel, hourSlots]) => {
                     const isExpanded = expandedHour === hourLabel;
-                    // Comprobamos si hay al menos un hueco libre en esta hora para pintar la cabecera gris si está todo lleno
                     const isHourFullyOccupied = hourSlots.every(s => s.status === "occupied");
 
                     return (
@@ -219,7 +266,6 @@ export function ReservationFormSheet({
                   })}
                 </div>
               ) : (
-                // RENDERIZADO TIPO A: Cuadrícula plana para intervalos >= 30 min
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {slots.map((slot, index) => {
                     const isSelected = selectedSlot?.start_time === slot.start_time;
@@ -278,7 +324,7 @@ export function ReservationFormSheet({
   );
 }
 
-// Componente auxiliar para el botón del tramo horario para no repetir código
+// Componente auxiliar
 function SlotButton({ 
   slot, 
   isSelected, 

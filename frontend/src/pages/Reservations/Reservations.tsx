@@ -47,21 +47,25 @@ export function Reservations() {
   const [cancellingReservationId, setCancellingReservationId] = useState<number | null>(null);
   const [inputDate, setInputDate] = useState(todayDate);
   const dateInputRef = useRef<HTMLInputElement>(null);
-
+  const interactionType = useRef<'keyboard' | 'picker'>('keyboard');
   useEffect(() => {
     setInputDate(selectedDate);
   }, [selectedDate]);
-  const handleDateCommit = () => {
-    if (!inputDate) {
+ 
+  const handleDateCommit = (directDate?: string) => {
+    const valueToEvaluate = typeof directDate === "string" ? directDate : inputDate;
+
+    if (!valueToEvaluate) {
       setInputDate(todayDate);
       setSelectedDate(todayDate);
       return;
     }
 
-    const year = parseInt(inputDate.split('-')[0], 10);
+    const year = parseInt(valueToEvaluate.split('-')[0], 10);
     const currentYear = new Date().getFullYear();
     if (year >= currentYear && year <= 2030) {
-      setSelectedDate(inputDate);
+      setSelectedDate(valueToEvaluate);
+      setInputDate(valueToEvaluate);
     } else {
       setInputDate(todayDate);
       setSelectedDate(todayDate);
@@ -196,7 +200,10 @@ export function Reservations() {
             <div className="group relative flex items-center gap-2 border-b-2 border-transparent pb-1 transition-all focus-within:border-[#4A7C59] hover:border-[#4A7C59]/50">
               <CalendarDays 
                 className="h-5 w-5 cursor-pointer text-muted-foreground transition-colors group-focus-within:text-[#4A7C59] group-hover:text-[#4A7C59]" 
-                onClick={() => dateInputRef.current?.showPicker()}
+                onClick={() => {
+                  interactionType.current = 'picker';
+                  dateInputRef.current?.showPicker();
+                }}
               />
               <input
                 ref={dateInputRef}
@@ -204,9 +211,22 @@ export function Reservations() {
                 type="date"
                 min={todayDate}
                 value={inputDate}
-                onChange={(event) => setInputDate(event.target.value)}
-                onBlur={handleDateCommit}
-                onKeyDown={(e) => e.key === "Enter" && handleDateCommit()}
+                onClick={() => {
+                  interactionType.current = 'keyboard';
+                }}
+                onKeyDown={(e) => {
+                  interactionType.current = 'keyboard';
+                  if (e.key === "Enter") handleDateCommit();
+                }}
+                onChange={(event) => {
+                  const newValue = event.target.value;
+                  setInputDate(newValue);
+                  if (interactionType.current === 'picker' && newValue) {
+                    handleDateCommit(newValue);
+                    interactionType.current = 'keyboard';
+                  }
+                }}
+                onBlur={() => handleDateCommit()}
                 className="w-[130px] cursor-text bg-transparent text-sm font-medium text-foreground outline-none border-none p-0 focus:ring-0 [&::-webkit-calendar-picker-indicator]:hidden"
               />
             </div>
