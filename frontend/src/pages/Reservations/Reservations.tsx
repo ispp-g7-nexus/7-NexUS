@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { InteractiveDatePicker } from "../../components/ui/InteractiveDatePicker";
 import { toast } from "sonner";
 
 import { Button } from "../../components/ui/button";
@@ -45,32 +45,6 @@ export function Reservations() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedSpace, setSelectedSpace] = useState<CommonSpace | null>(null);
   const [cancellingReservationId, setCancellingReservationId] = useState<number | null>(null);
-  const [inputDate, setInputDate] = useState(todayDate);
-  const dateInputRef = useRef<HTMLInputElement>(null);
-  const interactionType = useRef<'keyboard' | 'picker'>('keyboard');
-  useEffect(() => {
-    setInputDate(selectedDate);
-  }, [selectedDate]);
- 
-  const handleDateCommit = (directDate?: string) => {
-    const valueToEvaluate = typeof directDate === "string" ? directDate : inputDate;
-
-    if (!valueToEvaluate) {
-      setInputDate(todayDate);
-      setSelectedDate(todayDate);
-      return;
-    }
-
-    const year = parseInt(valueToEvaluate.split('-')[0], 10);
-    const currentYear = new Date().getFullYear();
-    if (year >= currentYear && year <= 2030) {
-      setSelectedDate(valueToEvaluate);
-      setInputDate(valueToEvaluate);
-    } else {
-      setInputDate(todayDate);
-      setSelectedDate(todayDate);
-    }
-  };
 
   const loadMyReservations = async () => {
     setLoadingMyReservations(true);
@@ -197,39 +171,13 @@ export function Reservations() {
           </div>
 
           <div className="flex items-center">
-            <div className="group relative flex items-center gap-2 border-b-2 border-transparent pb-1 transition-all focus-within:border-[#4A7C59] hover:border-[#4A7C59]/50">
-              <CalendarDays 
-                className="h-5 w-5 cursor-pointer text-muted-foreground transition-colors group-focus-within:text-[#4A7C59] group-hover:text-[#4A7C59]" 
-                onClick={() => {
-                  interactionType.current = 'picker';
-                  dateInputRef.current?.showPicker();
-                }}
-              />
-              <input
-                ref={dateInputRef}
-                id="reservations-date"
-                type="date"
-                min={todayDate}
-                value={inputDate}
-                onClick={() => {
-                  interactionType.current = 'keyboard';
-                }}
-                onKeyDown={(e) => {
-                  interactionType.current = 'keyboard';
-                  if (e.key === "Enter") handleDateCommit();
-                }}
-                onChange={(event) => {
-                  const newValue = event.target.value;
-                  setInputDate(newValue);
-                  if (interactionType.current === 'picker' && newValue) {
-                    handleDateCommit(newValue);
-                    interactionType.current = 'keyboard';
-                  }
-                }}
-                onBlur={() => handleDateCommit()}
-                className="w-[130px] cursor-text bg-transparent text-sm font-medium text-foreground outline-none border-none p-0 focus:ring-0 [&::-webkit-calendar-picker-indicator]:hidden"
-              />
-            </div>
+            <InteractiveDatePicker
+              value={selectedDate}
+              onChange={(newDate) => setSelectedDate(newDate)}
+              minDate={todayDate}
+              className="group relative flex items-center gap-2 border-b-2 border-transparent pb-1 transition-all focus-within:border-[#4A7C59] hover:border-[#4A7C59]/50"
+              inputClassName="w-[130px] text-sm font-medium"
+            />
           </div>
         </div>
       </header>

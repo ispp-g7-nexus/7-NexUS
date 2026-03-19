@@ -1,7 +1,7 @@
-import { type FormEvent, useEffect, useState, useRef } from "react";
-import { CalendarDays, ChevronDown, ChevronUp } from "lucide-react";
+import { type FormEvent, useEffect, useState } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
-
+import { InteractiveDatePicker } from "../../../components/ui/InteractiveDatePicker";
 import { Button } from "../../../components/ui/button";
 import {
   Sheet,
@@ -54,10 +54,6 @@ export function ReservationFormSheet({
   const isMobile = useIsMobile();
 
   const [localDate, setLocalDate] = useState(initialDate); 
-  const [inputDate, setInputDate] = useState(initialDate);
-  const dateInputRef = useRef<HTMLInputElement>(null);
-  const interactionType = useRef<'keyboard' | 'picker'>('keyboard');
-
   const [availability, setAvailability] = useState<SpaceAvailability | null>(null);
   const [loadingAvailability, setLoadingAvailability] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
@@ -90,32 +86,11 @@ export function ReservationFormSheet({
   useEffect(() => {
     if (open) {
       setLocalDate(initialDate);
-      setInputDate(initialDate);
       setNotes("");
       setError(null);
       setSelectedSlot(null);
     }
   }, [open, initialDate]);
-  const handleDateCommit = (directDate?: string) => {
-    const valueToEvaluate = typeof directDate === "string" ? directDate : inputDate;
-
-    if (!valueToEvaluate) {
-      setInputDate(getTodayDateString());
-      setLocalDate(getTodayDateString());
-      return;
-    }
-
-    const year = parseInt(valueToEvaluate.split('-')[0], 10);
-    const currentYear = new Date().getFullYear();
-
-    if (year >= currentYear && year <= 2030) {
-      setLocalDate(valueToEvaluate);
-      setInputDate(valueToEvaluate);
-    } else {
-      setInputDate(getTodayDateString());
-      setLocalDate(getTodayDateString());
-    }
-  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -162,55 +137,16 @@ export function ReservationFormSheet({
 
         {space && (
           <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-6 p-6 overflow-y-auto">
-            
-            {/* 1. Selector de fecha (Refactorizado con la misma lógica UX) */}
             <div className="space-y-2">
-              <label htmlFor="drawer-date" className="block text-sm font-medium text-foreground">
+              <label className="block text-sm font-medium text-foreground">
                 Fecha de la reserva
               </label>
-              <div 
-                className="flex h-10 w-full items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
-              >
-                <CalendarDays 
-                  className="h-4 w-4 cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
-                  onClick={() => {
-                    interactionType.current = 'picker';
-                    dateInputRef.current?.showPicker();
-                  }}
-                />
-                <input
-                  ref={dateInputRef}
-                  id="drawer-date"
-                  type="date"
-                  min={getTodayDateString()}
-                  value={inputDate}
-                  required
-                  onClick={() => {
-                    interactionType.current = 'keyboard';
-                  }}
-                  onKeyDown={(e) => {
-                    interactionType.current = 'keyboard';
-                    if (e.key === "Enter") {
-                      e.preventDefault(); // Evita que se envíe el formulario por error al pulsar Enter
-                      handleDateCommit();
-                    }
-                  }}
-                  onChange={(event) => {
-                    const newValue = event.target.value;
-                    setInputDate(newValue);
-                    
-                    if (interactionType.current === 'picker' && newValue) {
-                      handleDateCommit(newValue);
-                      interactionType.current = 'keyboard';
-                    }
-                  }}
-                  onBlur={() => handleDateCommit()}
-                  className="flex-1 bg-transparent outline-none border-none p-0 focus:ring-0 [&::-webkit-calendar-picker-indicator]:hidden cursor-text"
-                />
-              </div>
+              <InteractiveDatePicker
+                value={localDate}
+                onChange={(newDate) => setLocalDate(newDate)}
+                minDate={getTodayDateString()}
+              />
             </div>
-
-            {/* 2. Cuadrícula de Horas Dinámica */}
             <div className="space-y-3">
               <label className="text-sm font-medium text-foreground flex items-center justify-between">
                 <span>Horas disponibles</span>
@@ -283,8 +219,6 @@ export function ReservationFormSheet({
                 </div>
               )}
             </div>
-
-            {/* 3. Notas */}
             <div className="space-y-2">
               <label htmlFor="reservation-notes" className="block text-sm font-medium text-foreground">
                 Notas (opcional)
@@ -323,8 +257,6 @@ export function ReservationFormSheet({
     </Sheet>
   );
 }
-
-// Componente auxiliar
 function SlotButton({ 
   slot, 
   isSelected, 
