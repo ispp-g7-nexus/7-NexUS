@@ -91,38 +91,33 @@ def _compute_available_slots(
     target_date,
     space: CommonSpace,
     reservations: list[SpaceReservation],
-) -> list[dict[str, str]]:
+) -> list[dict[str, any]]:
     tz = timezone.get_current_timezone()
     window_start = timezone.make_aware(datetime.combine(target_date, space.open_time), tz)
     window_end = timezone.make_aware(datetime.combine(target_date, space.close_time), tz)
+    
+    interval = timedelta(minutes=space.reservation_interval_minutes)
+    slots = []
+    
+    current = window_start
+    now = timezone.now()
 
-    slots: list[dict[str, str]] = []
-    cursor = window_start
-
-    for reservation in reservations:
-        interval_start = max(reservation.start_time, window_start)
-        interval_end = min(reservation.end_time, window_end)
-
-        if interval_end <= interval_start:
-            continue
-
-        if interval_start > cursor:
-            slots.append(
-                {
-                    "start_time": cursor.isoformat(),
-                    "end_time": interval_start.isoformat(),
-                }
-            )
-        if interval_end > cursor:
-            cursor = interval_end
-
-    if cursor < window_end:
-        slots.append(
-            {
-                "start_time": cursor.isoformat(),
-                "end_time": window_end.isoformat(),
-            }
-        )
+    while current + interval <= window_end:
+        slot_end = current + interval
+        is_past = current < now
+        is_occupied = False
+        for res in reservations:
+            if current < res.end_time and slot_end > res.start_time:
+                is_occupied = True
+                break
+                
+        slots.append({
+            "start_time": current.isoformat(),
+            "end_time": slot_end.isoformat(),
+            "status": "occupied" if (is_occupied or is_past) else "available"
+        })
+        
+        current = slot_end
 
     return slots
 
