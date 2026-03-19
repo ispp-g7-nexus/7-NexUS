@@ -53,14 +53,14 @@ export async function listAvailableBedrooms(excludeResidentId?: number): Promise
     return res.json();
 }
 
-export async function createBedroom(payload: any) {
+export async function createBedroom(payload: Record<string, unknown>) {
     return fetchWithAuth(`${BASE}create/`, {
         method: 'POST',
         body: JSON.stringify(payload),
     });
 }
 
-export async function updateBedroom(id: number, payload: any) {
+export async function updateBedroom(id: number, payload: Record<string, unknown>) {
     return fetchWithAuth(`${BASE}${id}/update/`, {
         method: 'PUT',
         body: JSON.stringify(payload),
@@ -71,6 +71,20 @@ export async function deleteBedroom(id: number) {
     return fetchWithAuth(`${BASE}${id}/delete/`, {
         method: 'DELETE',
     });
+}
+
+export interface BedroomResident {
+    id: number;
+    user_id: number;
+    full_name: string;
+    email: string | null;
+    residence_id: number | null;
+}
+
+export async function getBedroomResidents(id: number): Promise<BedroomResident[]> {
+    const res = await fetchWithAuth(`${BASE}${id}/residents/`);
+    if (!res.ok) throw new Error(`Error ${res.status}`);
+    return res.json();
 }
 
 export async function listResidents() {
