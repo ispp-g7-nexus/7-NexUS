@@ -1,11 +1,12 @@
-import { ArrowLeft, UserPlus, X, Plus, Users, UsersIcon, Search } from "lucide-react";
+import { ArrowLeft, UserPlus, X, Users, Search } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { ConfirmationModal } from "../../components/ui/ConfirmationModal";
+import { ResidentSelector } from "../../components/ResidentSelector";
 import { chatsService, type ChatGroup, type ChatGroupLabelItem } from "../../services/chats";
-import { residentsService } from "../../services/residents";
+import { type Resident } from "../../services/residents";
 import { authService } from "../../services/auth";
 
 interface AdminGroupEditProps {
@@ -20,16 +21,13 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
     const [groupDescription, setGroupDescription] = useState(group.description);
     const [groupType, setGroupType] = useState<string>(group.label);
     const [canLeave, setCanLeave] = useState(group.can_members_leave);
-    const [newMemberEmail, setNewMemberEmail] = useState("");
     const [saving, setSaving] = useState(false);
     const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
-    const [addingAllResidents, setAddingAllResidents] = useState(false);
-    const [searchTerm, setSearchTerm] = useState("");
     const [showDeleteModal, setShowDeleteModal] = useState(false);
-    const [showAddAllModal, setShowAddAllModal] = useState(false);
     const [memberToDelete, setMemberToDelete] = useState<{ id: number; name: string } | null>(null);
     const [deletingMember, setDeletingMember] = useState(false);
     const [customLabels, setCustomLabels] = useState<ChatGroupLabelItem[]>([]);
+    const [memberSearchTerm, setMemberSearchTerm] = useState("");
 
     useEffect(() => {
         setCurrentGroup(group);
@@ -50,9 +48,19 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
         chatsService.listLabels().then(setCustomLabels).catch(() => { });
     }, []);
 
-    const filteredMembers = currentGroup.members_list.filter(member =>
-        member.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        member.email.toLowerCase().includes(searchTerm.toLowerCase())
+    const normalizeSearchValue = (value: string) =>
+        value
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .trim();
+
+    const normalizedMemberSearch = normalizeSearchValue(memberSearchTerm);
+    
+    const filteredMembers = currentGroup.members_list.filter((member) =>
+        normalizedMemberSearch.length === 0
+        || normalizeSearchValue(member.full_name).includes(normalizedMemberSearch)
+        || normalizeSearchValue(member.email).includes(normalizedMemberSearch)
     );
 
     const handleRemoveMember = async () => {
@@ -110,26 +118,28 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
         }
     };
 
-    const handleAddAllResidents = async () => {
-        setAddingAllResidents(true);
+    const handleMakeAdmin = async (memberId: number) => {
         try {
-            const residents = await residentsService.list();
-            const currentMemberEmails = new Set(currentGroup.members_list.map(m => m.email));
-            const residentsToAdd = residents.filter(r =>
-                r.is_active &&
-                !currentMemberEmails.has(r.email)
-            );
+            const updated = await chatsService.updateMemberRole(currentGroup.id, memberId, true);
+            setCurrentGroup(updated);
+            onGroupUpdated(updated);
+            toast.success("Miembro promocionado a admin.");
+        } catch (err: unknown) {
+            toast.error(err instanceof Error ? err.message : "No se pudo actualizar el rol del miembro.");
+        }
+    };
 
-            if (residentsToAdd.length === 0) {
-                toast.info("Todos los miembros activos ya están añadidos al grupo.");
-                setShowAddAllModal(false);
-                setAddingAllResidents(false);
-                return;
-            }
+    const handleAddSelectedMembers = async (residents: Resident[]) => {
+        if (residents.length === 0) {
+            toast.error("Debes seleccionar al menos un residente.");
+            return;
+        }
 
-            let addedCount = 0;
+        try {
             let updatedGroup = currentGroup;
-            for (const resident of residentsToAdd) {
+            let addedCount = 0;
+
+            for (const resident of residents) {
                 try {
                     updatedGroup = await chatsService.addMember(updatedGroup.id, {
                         email: resident.email,
@@ -144,45 +154,13 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
             if (addedCount > 0) {
                 setCurrentGroup(updatedGroup);
                 onGroupUpdated(updatedGroup);
-                toast.success(`Se añadieron ${addedCount} residentes al grupo.`);
+                const residentSuffix = addedCount === 1 ? "" : "s";
+                toast.success(`Se añadieron ${addedCount} residente${residentSuffix} correctamente.`);
+            } else {
+                toast.error("No se pudo añadir ningún residente.");
             }
-            setShowAddAllModal(false);
         } catch (err: unknown) {
-            toast.error(err instanceof Error ? err.message : "No se pudieron añadir todos los residentes.");
-        } finally {
-            setAddingAllResidents(false);
-        }
-    };
-
-    const handleMakeAdmin = async (memberId: number) => {
-        try {
-            const updated = await chatsService.updateMemberRole(currentGroup.id, memberId, true);
-            setCurrentGroup(updated);
-            onGroupUpdated(updated);
-            toast.success("Miembro promocionado a admin.");
-        } catch (err: unknown) {
-            toast.error(err instanceof Error ? err.message : "No se pudo actualizar el rol del miembro.");
-        }
-    };
-
-    const handleAddMember = async () => {
-        const email = newMemberEmail.trim();
-        if (!email) {
-            toast.error("Debes introducir un email para añadir un miembro.");
-            return;
-        }
-
-        try {
-            const updated = await chatsService.addMember(currentGroup.id, {
-                email,
-                is_admin: false,
-            });
-            setCurrentGroup(updated);
-            onGroupUpdated(updated);
-            setNewMemberEmail("");
-            toast.success("Miembro añadido correctamente.");
-        } catch (err: unknown) {
-            toast.error(err instanceof Error ? err.message : "No se pudo añadir el miembro.");
+            toast.error(err instanceof Error ? err.message : "Error al añadir residentes.");
         }
     };
 
@@ -288,57 +266,35 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
 
             <div className="bg-white rounded-lg border border-gray-200">
                 <div className="p-4 border-b border-gray-200">
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-2">
-                            <UserPlus className="w-5 h-5 text-gray-600" />
-                            <h3 className="font-medium text-gray-900">
-                                Participantes ({currentGroup.members_list.length})
-                            </h3>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                                <Input
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    placeholder="Buscar participante..."
-                                    className="pl-10 w-56"
-                                />
-                            </div>
-                            <Button
-                                size="sm"
-                                variant="outline"
-                                className="bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100"
-                                onClick={() => setShowAddAllModal(true)}
-                                disabled={addingAllResidents}
-                            >
-                                <UsersIcon className="w-4 h-4 mr-2" />
-                                Añadir todos los residentes
-                            </Button>
-                        </div>
+                    <div className="flex items-center gap-2 mb-4">
+                        <UserPlus className="w-5 h-5 text-gray-600" />
+                        <h3 className="font-medium text-gray-900">
+                            Participantes ({currentGroup.members_list.length})
+                        </h3>
                     </div>
 
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                        <h4 className="text-sm font-medium text-gray-700 mb-3">Añadir miembro individual</h4>
-                        <div className="flex items-center gap-3">
-                            <Input
-                                value={newMemberEmail}
-                                onChange={(e) => setNewMemberEmail(e.target.value)}
-                                placeholder="email@ejemplo.com"
-                                className="flex-1"
-                            />
-                            <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={handleAddMember}>
-                                <Plus className="w-4 h-4 mr-2" />
-                                Agregar Miembro
-                            </Button>
-                        </div>
+                    <ResidentSelector
+                        currentMembers={currentGroup.members_list}
+                        onAddMembers={handleAddSelectedMembers}
+                    />
+                </div>
+
+                <div className="p-4 border-b border-gray-200">
+                    <div className="relative mb-4">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                        <Input
+                            value={memberSearchTerm}
+                            onChange={(e) => setMemberSearchTerm(e.target.value)}
+                            placeholder="Buscar participante..."
+                            className="pl-10"
+                        />
                     </div>
                 </div>
 
                 <div className="divide-y divide-gray-200">
                     {filteredMembers.length === 0 ? (
                         <div className="p-8 text-center text-gray-500">
-                            {searchTerm ? "No se encontraron participantes con ese nombre" : "No hay participantes en el grupo"}
+                            {memberSearchTerm ? "No se encontraron participantes con ese criterio" : "No hay participantes en el grupo"}
                         </div>
                     ) : (
                         filteredMembers.map((member) => (
@@ -420,18 +376,6 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
                 cancelText="Cancelar"
                 isDestructive={true}
                 isLoading={deletingMember}
-            />
-
-            <ConfirmationModal
-                isOpen={showAddAllModal}
-                onClose={() => setShowAddAllModal(false)}
-                onConfirm={handleAddAllResidents}
-                title="Añadir a todos los residentes"
-                message="¿Quieres añadir automáticamente a todos los residentes activos al grupo? Este proceso puede tardar unos segundos."
-                confirmText="Añadir a todos"
-                cancelText="Cancelar"
-                isDestructive={false}
-                isLoading={addingAllResidents}
             />
         </div>
     );
