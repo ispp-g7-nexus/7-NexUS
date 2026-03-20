@@ -1,10 +1,11 @@
-import { UserCheck, RefreshCw, Search } from "lucide-react";
-import { useEffect, useState } from "react";
+import { UserCheck, RefreshCw, Search, Calendar, User, Hash, Clock, MessageSquare } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { Input } from "../../components/ui/input";
 import { type AdminGuestPass, GuestPassApiError, listAdminGuestPasses } from "../../services/guestPasses";
 
@@ -46,22 +47,93 @@ function formatDateTime(iso: string): string {
   });
 }
 
+interface GuestPassDetailDialogProps {
+  readonly pass: AdminGuestPass | null;
+  readonly onClose: () => void;
+}
+
+function GuestPassDetailDialog({ pass, onClose }: GuestPassDetailDialogProps) {
+  return (
+    <Dialog open={pass !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-md">
+        {pass && (
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 flex-wrap">
+                {pass.full_name}
+                <Badge className={STATUS_BADGE[pass.status ?? ""] ?? "border-0"}>
+                  {STATUS_LABEL[pass.status ?? ""] ?? pass.status}
+                </Badge>
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-2">
+              <div className="flex items-center gap-3">
+                <Hash className="w-4 h-4 text-muted-foreground shrink-0" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Código de pase</p>
+                  <p className="font-mono font-semibold">{pass.pass_code}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <User className="w-4 h-4 text-muted-foreground shrink-0" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Registrado por</p>
+                  <p className="font-medium">{pass.resident_name}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Calendar className="w-4 h-4 text-muted-foreground shrink-0" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Período de validez</p>
+                  <p className="text-sm">{formatDateTime(pass.valid_from)}</p>
+                  <p className="text-sm">{formatDateTime(pass.valid_until)}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Creado el</p>
+                  <p className="text-sm">{formatDateTime(pass.created_at)}</p>
+                </div>
+              </div>
+              {pass.comment && (
+                <div className="flex items-start gap-3">
+                  <MessageSquare className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Comentario</p>
+                    <p className="text-sm italic">"{pass.comment}"</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function AdminGuestPassListPage() {
   const [passes, setPasses] = useState<AdminGuestPass[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("");
   const [search, setSearch] = useState("");
+  const [selectedPass, setSelectedPass] = useState<AdminGuestPass | null>(null);
+  const requestIdRef = useRef(0);
 
   async function fetchPasses(status: string) {
+    const currentId = ++requestIdRef.current;
     setLoading(true);
     try {
       const data = await listAdminGuestPasses(status || undefined);
+      if (currentId !== requestIdRef.current) return;
       setPasses(data);
     } catch (err) {
+      if (currentId !== requestIdRef.current) return;
       const msg = err instanceof GuestPassApiError ? err.message : "Error al cargar el listado.";
       toast.error(msg);
     } finally {
-      setLoading(false);
+      if (currentId === requestIdRef.current) setLoading(false);
     }
   }
 
@@ -72,51 +144,11 @@ export function AdminGuestPassListPage() {
   const filtered = search.trim()
     ? passes.filter(
         (p) =>
-          p.full_name.toLowerCase().includes(search.toLowerCase()) ||
-          p.resident_name.toLowerCase().includes(search.toLowerCase()) ||
-          p.pass_code.toLowerCase().includes(search.toLowerCase())
+          p.full_name?.toLowerCase().includes(search.toLowerCase()) ||
+          p.resident_name?.toLowerCase().includes(search.toLowerCase()) ||
+          p.pass_code?.toLowerCase().includes(search.toLowerCase())
       )
     : passes;
-
-  function renderList() {
-    if (loading) {
-      return <p className="text-sm text-muted-foreground py-8 text-center">Cargando...</p>;
-    }
-    if (filtered.length === 0) {
-      return <p className="text-sm text-muted-foreground py-8 text-center">No hay pases que coincidan.</p>;
-    }
-    return (
-      <div className="grid gap-3">
-        {filtered.map((pass) => (
-          <Card key={pass.id} className="hover:shadow-sm transition">
-            <CardContent className="flex items-start justify-between gap-4 p-4">
-              <div className="min-w-0 flex-1 space-y-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-semibold truncate">{pass.full_name}</span>
-                  <Badge className={STATUS_BADGE[pass.status ?? ""] ?? "border-0"}>
-                    {STATUS_LABEL[pass.status ?? ""] ?? pass.status}
-                  </Badge>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Registrado por <span className="font-medium text-foreground">{pass.resident_name}</span>
-                  {" · "}Código: <span className="font-mono">{pass.pass_code}</span>
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {formatDateTime(pass.valid_from)} — {formatDateTime(pass.valid_until)}
-                </p>
-                {pass.comment && (
-                  <p className="text-xs text-muted-foreground italic">"{pass.comment}"</p>
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground shrink-0 pt-0.5">
-                {formatDateTime(pass.created_at)}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -143,11 +175,12 @@ export function AdminGuestPassListPage() {
           <Input
             placeholder="Buscar por invitado, residente o código..."
             value={search}
-            onChange={(e) => setSearch((e.target as HTMLInputElement).value)}
+            onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
           />
         </div>
         <select
+          aria-label="Filtrar por estado"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
           className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
@@ -159,7 +192,50 @@ export function AdminGuestPassListPage() {
       </div>
 
       {/* Lista */}
-      {renderList()}
+      {loading ? (
+        <p className="text-sm text-muted-foreground py-8 text-center">Cargando...</p>
+      ) : filtered.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-8 text-center">No hay pases que coincidan.</p>
+      ) : (
+        <div className="grid gap-3">
+          {filtered.map((pass) => (
+            <Card
+              key={pass.id}
+              className="hover:shadow-sm transition cursor-pointer hover:border-purple-200"
+              role="button"
+              tabIndex={0}
+              onClick={() => setSelectedPass(pass)}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setSelectedPass(pass); }}
+            >
+              <CardContent className="flex items-start justify-between gap-4 p-4">
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-semibold truncate">{pass.full_name}</span>
+                    <Badge className={STATUS_BADGE[pass.status ?? ""] ?? "border-0"}>
+                      {STATUS_LABEL[pass.status ?? ""] ?? pass.status}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Registrado por <span className="font-medium text-foreground">{pass.resident_name}</span>
+                    {" · "}Código: <span className="font-mono">{pass.pass_code}</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatDateTime(pass.valid_from)} — {formatDateTime(pass.valid_until)}
+                  </p>
+                  {pass.comment && (
+                    <p className="text-xs text-muted-foreground italic">"{pass.comment}"</p>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground shrink-0 pt-0.5">
+                  {formatDateTime(pass.created_at)}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      <GuestPassDetailDialog pass={selectedPass} onClose={() => setSelectedPass(null)} />
     </div>
   );
 }

@@ -80,7 +80,10 @@ class GuestPassAdminReadSerializer(serializers.ModelSerializer):
         ]
 
     def get_resident_name(self, obj) -> str:
-        user = obj.resident.user
+        resident = getattr(obj, "resident", None)
+        user = getattr(resident, "user", None)
+        if user is None:
+            return "—"
         return user.get_full_name() or user.email
 
 
