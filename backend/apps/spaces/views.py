@@ -1,5 +1,6 @@
 import json
 from datetime import datetime, time, timedelta
+from typing import Any
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
@@ -94,7 +95,7 @@ def _compute_available_slots(
     target_date,
     space: CommonSpace,
     reservations: list[SpaceReservation],
-) -> list[dict[str, any]]:
+) -> list[dict[str, Any]]:
     tz = timezone.get_current_timezone()
     window_start = timezone.make_aware(
         datetime.combine(target_date, space.open_time), tz

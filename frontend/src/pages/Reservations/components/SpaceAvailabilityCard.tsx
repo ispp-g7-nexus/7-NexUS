@@ -36,7 +36,7 @@ export function SpaceAvailabilityCard({
   onReserve,
 }: SpaceAvailabilityCardProps) {
   const reservedCount = availability?.reservations.length ?? 0;
-  const allSlots = (availability?.available_slots as any[]) || [];
+  const allSlots = availability?.available_slots || [];
   const availableSlots = allSlots.filter((slot) => slot.status === "available");
   const hasSlots = availableSlots.length > 0;
   const visibleSlots = availableSlots.slice(0, 3);

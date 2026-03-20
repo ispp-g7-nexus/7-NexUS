@@ -139,13 +139,14 @@ export function SpaceFormSheet({
               </div>
             </div>
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Intervalo de reserva(minutos) *</label>
+              <label htmlFor="reservation-interval-minutes" className="text-sm font-medium">Intervalo de reserva(minutos) *</label>
               <input
+                id="reservation-interval-minutes"
                 required
                 type="number"
                 min={1}
                 value={form.reservation_interval_minutes}
-                onChange={(e) => set("reservation_interval_minutes", parseInt(e.target.value) || 1)}
+                onChange={(e) => set("reservation_interval_minutes", Number.parseInt(e.target.value) || 1)}
                 className="border-input bg-background focus-visible:ring-ring/50 w-full rounded-md border px-3 py-2 text-sm outline-none focus-visible:ring-[3px]"
               />
             </div>

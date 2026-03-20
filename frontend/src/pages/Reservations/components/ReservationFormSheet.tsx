@@ -12,12 +12,12 @@ import {
   SheetTitle,
 } from "../../../components/ui/sheet";
 import { useIsMobile } from "../../../components/ui/use-mobile";
-import {
-  createReservation,
+import { createReservation,
   getSpaceAvailability,
-  isApiError,
-  type CommonSpace,
-  type SpaceAvailability,
+  isApiError} from "../../../services/reservations";
+import type {CommonSpace,
+  SpaceAvailability,
+  AvailableSlot,
 } from "../../../services/reservations";
 
 interface ReservationFormSheetProps {
@@ -33,6 +33,7 @@ interface TimeSlot {
   end_time: string;
   status: "available" | "occupied";
 }
+
 
 function getTodayDateString(): string {
   const now = new Date();
@@ -114,7 +115,7 @@ export function ReservationFormSheet({
     }
   };
 
-  const slots = (availability?.available_slots as unknown as TimeSlot[]) || [];
+  const slots: AvailableSlot[] = availability?.available_slots || [];
   const needsGrouping = space && space.reservation_interval_minutes < 30;
 
   const groupedSlots = slots.reduce((acc, slot) => {
@@ -122,7 +123,7 @@ export function ReservationFormSheet({
     if (!acc[hourKey]) acc[hourKey] = [];
     acc[hourKey].push(slot);
     return acc;
-  }, {} as Record<string, TimeSlot[]>);
+  }, {} as Record<string, AvailableSlot[]>);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -166,8 +167,9 @@ export function ReservationFormSheet({
               ) : needsGrouping ? (
                 <div className="space-y-2">
                   {Object.entries(groupedSlots).map(([hourLabel, hourSlots]) => {
+                    const typedHourSlots = hourSlots as AvailableSlot[];
                     const isExpanded = expandedHour === hourLabel;
-                    const isHourFullyOccupied = hourSlots.every(s => s.status === "occupied");
+                    const isHourFullyOccupied = typedHourSlots.every(s => s.status === "occupied");
 
                     return (
                       <div key={hourLabel} className="rounded-md border border-border overflow-hidden">
@@ -182,7 +184,7 @@ export function ReservationFormSheet({
                         
                         {isExpanded && (
                           <div className="grid grid-cols-2 gap-2 p-3 bg-muted/10 border-t border-border sm:grid-cols-3">
-                            {hourSlots.map((slot, idx) => {
+                            {typedHourSlots.map((slot, idx) => {
                               const isSelected = selectedSlot?.start_time === slot.start_time;
                               const isOccupied = slot.status === "occupied";
                               return (

@@ -31,7 +31,8 @@ export function InteractiveDatePicker({
     }
     const year = parseInt(valueToEvaluate.split('-')[0], 10);
     const currentYear = new Date().getFullYear();
-    if (year >= currentYear && year <= 2030) {
+
+    if (year >= currentYear && year <= currentYear + 2) {
       onChange(valueToEvaluate);
       setInputDate(valueToEvaluate);
     } else {
@@ -67,7 +68,6 @@ export function InteractiveDatePicker({
         onChange={(event) => {
           const newValue = event.target.value;
           setInputDate(newValue);
-          
           if (interactionType.current === 'picker' && newValue) {
             handleDateCommit(newValue);
             interactionType.current = 'keyboard';
