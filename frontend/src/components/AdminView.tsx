@@ -15,6 +15,7 @@ import { AdminReservations } from "./AdminReservations";
 import { AdminChats } from "../pages/Chats/AdminChats";
 import { AdminMenuView } from "../pages/Menu/AdminMenuView";
 import { AdminGuestPassPolicyPage } from "../pages/Visitors/AdminGuestPassPolicy";
+import { AdminGuestPassListPage } from "../pages/Visitors/AdminGuestPassList";
 import { StatCard } from "./statCard";
 import { Button } from "./ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
@@ -323,7 +324,8 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
                 );
             case "visitors":
                 return (
-                    <div className="p-4">
+                    <div className="p-4 space-y-8">
+                        <AdminGuestPassListPage />
                         <AdminGuestPassPolicyPage />
                     </div>
                 );
