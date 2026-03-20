@@ -14,6 +14,7 @@ const STATUS_OPTIONS = [
   { value: "USED", label: "Usados" },
   { value: "CANCELLED", label: "Cancelados" },
   { value: "REVOKED", label: "Revocados" },
+  { value: "REJECTED", label: "Rechazados" },
   { value: "INACTIVE", label: "Inactivos" },
 ];
 
@@ -77,6 +78,46 @@ export function AdminGuestPassListPage() {
       )
     : passes;
 
+  function renderList() {
+    if (loading) {
+      return <p className="text-sm text-muted-foreground py-8 text-center">Cargando...</p>;
+    }
+    if (filtered.length === 0) {
+      return <p className="text-sm text-muted-foreground py-8 text-center">No hay pases que coincidan.</p>;
+    }
+    return (
+      <div className="grid gap-3">
+        {filtered.map((pass) => (
+          <Card key={pass.id} className="hover:shadow-sm transition">
+            <CardContent className="flex items-start justify-between gap-4 p-4">
+              <div className="min-w-0 flex-1 space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold truncate">{pass.full_name}</span>
+                  <Badge className={STATUS_BADGE[pass.status ?? ""] ?? "border-0"}>
+                    {STATUS_LABEL[pass.status ?? ""] ?? pass.status}
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Registrado por <span className="font-medium text-foreground">{pass.resident_name}</span>
+                  {" · "}Código: <span className="font-mono">{pass.pass_code}</span>
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {formatDateTime(pass.valid_from)} — {formatDateTime(pass.valid_until)}
+                </p>
+                {pass.comment && (
+                  <p className="text-xs text-muted-foreground italic">"{pass.comment}"</p>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground shrink-0 pt-0.5">
+                {formatDateTime(pass.created_at)}
+              </p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -118,41 +159,7 @@ export function AdminGuestPassListPage() {
       </div>
 
       {/* Lista */}
-      {loading ? (
-        <p className="text-sm text-muted-foreground py-8 text-center">Cargando...</p>
-      ) : filtered.length === 0 ? (
-        <p className="text-sm text-muted-foreground py-8 text-center">No hay pases que coincidan.</p>
-      ) : (
-        <div className="grid gap-3">
-          {filtered.map((pass) => (
-            <Card key={pass.id} className="hover:shadow-sm transition">
-              <CardContent className="flex items-start justify-between gap-4 p-4">
-                <div className="min-w-0 flex-1 space-y-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold truncate">{pass.full_name}</span>
-                    <Badge className={STATUS_BADGE[pass.status ?? ""] ?? "border-0"}>
-                      {STATUS_LABEL[pass.status ?? ""] ?? pass.status}
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Registrado por <span className="font-medium text-foreground">{pass.resident_name}</span>
-                    {" · "}Código: <span className="font-mono">{pass.pass_code}</span>
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatDateTime(pass.valid_from)} — {formatDateTime(pass.valid_until)}
-                  </p>
-                  {pass.comment && (
-                    <p className="text-xs text-muted-foreground italic">"{pass.comment}"</p>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground shrink-0 pt-0.5">
-                  {formatDateTime(pass.created_at)}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+      {renderList()}
     </div>
   );
 }
