@@ -126,7 +126,7 @@ function LoadingState() {
 function EmptyState({ message }: { message: string }) {
   return (
     <Card className="border-border/80 shadow-sm">
-      <CardContent className="flex flex-col items-center justify-center gap-3 py-14 text-center text-muted-foreground">
+      <CardContent className="flex flex-col items-center justify-center gap-3 py-14 text-center text-gray-500">
         <Ticket className="h-12 w-12 opacity-40" />
         <p className="text-sm">{message}</p>
       </CardContent>
@@ -163,14 +163,14 @@ function GuestPassCard({
   badgeClassName: string;
 }) {
   return (
-    <article className="rounded-xl border border-border/80 bg-card p-4 shadow-sm">
+    <article className="rounded-xl border border-border/80 bg-white p-4 shadow-sm">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-2">
-          <p className="text-base font-semibold text-foreground">{pass.full_name}</p>
-          <p className="text-sm text-muted-foreground">
-            Código: <span className="font-mono font-medium text-foreground">{pass.pass_code}</span>
+          <p className="text-base font-semibold text-gray-900">{pass.full_name}</p>
+          <p className="text-sm text-gray-500">
+            Código: <span className="font-mono font-medium text-gray-900">{pass.pass_code}</span>
           </p>
-          {pass.comment ? <p className="text-sm text-muted-foreground">Motivo: {pass.comment}</p> : null}
+          {pass.comment ? <p className="text-sm text-gray-500">Motivo: {pass.comment}</p> : null}
         </div>
 
         <Badge className={`w-fit border-none shadow-none ${badgeClassName}`}>
@@ -179,7 +179,7 @@ function GuestPassCard({
         </Badge>
       </div>
 
-      <div className="mt-4 flex flex-col gap-1.5 text-sm text-muted-foreground">
+      <div className="mt-4 flex flex-col gap-1.5 text-sm text-gray-500">
         <div className="flex items-center gap-2">
           <CalendarClock className="h-4 w-4" />
           <span>
@@ -296,9 +296,9 @@ export function ActiveGuestPassesPage() {
 
   return (
     <section className="mx-auto flex w-full max-w-4xl flex-col gap-6 pb-24">
-      <header className="rounded-xl border border-border/80 bg-card p-4 shadow-sm sm:p-6">
+      <header className="rounded-xl border border-border/80 bg-white p-4 shadow-sm sm:p-6">
         <h2 className="text-2xl font-bold tracking-tight">Gestión de pases de invitados</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-1 text-sm text-gray-500">
           Crea nuevos pases para tus invitados y consulta los activos y los próximos.
         </p>
       </header>
@@ -312,7 +312,7 @@ export function ActiveGuestPassesPage() {
           <CardDescription>
             El pase se aprueba automáticamente si cumple las reglas de duración y concurrencia.
           </CardDescription>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-gray-500">
             Configuración actual: duración máxima{" "}
             <strong>{policy?.max_duration_hours ?? DEFAULT_MAX_DURATION_HOURS}h</strong> y
             máximo <strong>{policy?.max_concurrent_passes ?? DEFAULT_MAX_CONCURRENT_PASSES}</strong>{" "}
@@ -431,7 +431,7 @@ export function ActiveGuestPassesPage() {
                 key={pass.id}
                 pass={pass}
                 statusLabel="Activo"
-                badgeClassName="bg-[#35C759]/10 text-[#35C759] hover:bg-[#35C759]/10"
+                badgeClassName="bg-green-500/10 text-green-500 hover:bg-green-500/10"
               />
             ))}
           </div>
@@ -441,7 +441,7 @@ export function ActiveGuestPassesPage() {
       <section className="space-y-4">
         <header>
           <h3 className="text-lg font-semibold">Pases próximos</h3>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-gray-500">
             Pases ya creados que comenzarán en el futuro.
           </p>
         </header>

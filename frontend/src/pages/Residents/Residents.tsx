@@ -61,7 +61,7 @@ export function Residents() {
           </p>
         </div>
         <Button
-          className="bg-[#509550] hover:bg-[#3d7a3d] text-white"
+          className="bg-green-600 hover:bg-green-700 text-white"
           onClick={() => setCreateOpen(true)}
         >
           <Plus className="w-4 h-4" />
@@ -70,7 +70,7 @@ export function Residents() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+      <div className="flex flex-col sm:flex-row gap-3 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
           <Input

@@ -237,7 +237,7 @@ export function Rooms() {
           <img src={roomSvg} alt="Rooms" className="w-12 h-12" />
           <div>
             <h1 className="text-3xl font-bold">Habitaciones</h1>
-            <p className="text-muted-foreground">Gestiona las habitaciones</p>
+            <p className="text-gray-500">Gestiona las habitaciones</p>
           </div>
         </div>
 
@@ -254,11 +254,11 @@ export function Rooms() {
       </div>
 
       {/* Toggle Lista / Mapa */}
-      <div className="flex items-center justify-center gap-1 bg-gray-100 p-1 rounded-lg">
-        <button type="button" aria-pressed={viewLayout === "list"} onClick={() => setViewLayout("list")} className={`flex items-center gap-1.5 px-4 py-1.5 rounded text-sm font-medium transition-all ${viewLayout === "list" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+      <div className="flex items-center justify-center gap-1 bg-gray-50 p-1 rounded-lg">
+        <button type="button" aria-pressed={viewLayout === "list"} onClick={() => setViewLayout("list")} className={`flex items-center gap-1.5 px-4 py-1.5 rounded text-sm font-medium transition-all ${viewLayout === "list" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-500"}`}>
           <List className="w-4 h-4" />Lista
         </button>
-        <button type="button" aria-pressed={viewLayout === "map"} onClick={() => setViewLayout("map")} className={`flex items-center gap-1.5 px-4 py-1.5 rounded text-sm font-medium transition-all ${viewLayout === "map" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+        <button type="button" aria-pressed={viewLayout === "map"} onClick={() => setViewLayout("map")} className={`flex items-center gap-1.5 px-4 py-1.5 rounded text-sm font-medium transition-all ${viewLayout === "map" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-500"}`}>
           <Grid3x3 className="w-4 h-4" />Mapa
         </button>
       </div>
@@ -267,7 +267,7 @@ export function Rooms() {
       <Card>
         <CardContent className="flex gap-3 p-4">
           <div className="flex items-center gap-2 w-full">
-            <SearchIcon className="w-4 h-4 text-muted-foreground" />
+            <SearchIcon className="w-4 h-4 text-gray-500" />
             <Input
               placeholder="Buscar por número..."
               value={search}
@@ -294,17 +294,17 @@ export function Rooms() {
           {filteredRooms.map((r) => (
           <Card
             key={r.id}
-            className={`hover:shadow-md transition cursor-pointer ${!r.is_active ? 'border-destructive/30 bg-destructive/5' : 'bg-card'} `}
+            className={`hover:shadow-md transition cursor-pointer ${!r.is_active ? 'border-destructive/30 bg-destructive/5' : 'bg-white'} `}
             onClick={() => setSelectedRoom(r)}
           >
             <CardContent className="flex justify-between items-start gap-4 p-4">
               <div className="min-w-0 flex-1">
                 <h3 className="font-semibold flex items-center gap-2">
-                  <Bed className="w-5 h-5 text-muted-foreground" /> {r.numero}-{r.edificio}
+                  <Bed className="w-5 h-5 text-gray-500" /> {r.numero}-{r.edificio}
                 </h3>
-                <p className="text-sm text-muted-foreground">Planta {r.planta ?? "-"} · {r.tipo} · {r.ocupantes_actuales}/{r.capacidad_maxima} ocupantes</p>
+                <p className="text-sm text-gray-500">Planta {r.planta ?? "-"} · {r.tipo} · {r.ocupantes_actuales}/{r.capacidad_maxima} ocupantes</p>
                 <div className="mt-2 flex items-start gap-2 min-w-0">
-                  <Users className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                  <Users className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
                   <ResidentsInlineList residents={r.residentes} />
                 </div>
               </div>
@@ -364,7 +364,7 @@ export function Rooms() {
       {/* Mapa */}
       {viewLayout === "map" && (
         <div className="space-y-4">
-          <div className="flex items-center gap-4 text-sm text-gray-600">
+          <div className="flex items-center gap-4 text-sm text-gray-500">
             <span className="flex items-center gap-1.5"><span className="w-4 h-4 rounded border-2 border-green-400 bg-green-50 inline-block" />Libre</span>
             <span className="flex items-center gap-1.5"><span className="w-4 h-4 rounded border-2 border-yellow-400 bg-yellow-50 inline-block" />Parcial</span>
             <span className="flex items-center gap-1.5"><span className="w-4 h-4 rounded border-2 border-red-400 bg-red-50 inline-block" />Completa</span>
@@ -373,8 +373,8 @@ export function Rooms() {
             .sort(([a], [b]) => a.localeCompare(b))
             .map(([building, floors]) => (
               <motion.div key={building} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-                <Card className="border border-gray-100 shadow-sm overflow-hidden">
-                  <div className="bg-[#509550] text-white px-4 py-2 flex items-center gap-2">
+                <Card className="border border-gray-200 shadow-sm overflow-hidden">
+                  <div className="bg-green-600 text-white px-4 py-2 flex items-center gap-2">
                     <Building2 className="w-4 h-4" />
                     <span className="font-bold text-sm">Edificio {building}</span>
                   </div>
@@ -402,23 +402,23 @@ export function Rooms() {
               </div>
               <div>
                 <h2 className="text-lg font-semibold leading-tight">Habitación {selectedRoom.numero}</h2>
-                <p className="text-sm text-muted-foreground">Edificio {selectedRoom.edificio} · Planta {selectedRoom.planta ?? "—"}</p>
+                <p className="text-sm text-gray-500">Edificio {selectedRoom.edificio} · Planta {selectedRoom.planta ?? "—"}</p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3 py-2">
-              <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+              <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
                 <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1">Tipo</p>
                 <p className="text-sm font-semibold">{selectedRoom.tipo}</p>
               </div>
-              <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+              <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
                 <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1">Ocupación</p>
                 <p className="text-sm font-semibold">{selectedRoom.ocupantes_actuales}/{selectedRoom.capacidad_maxima} ocupantes</p>
               </div>
-              <div className="col-span-2 bg-gray-50 p-3 rounded-xl border border-gray-100">
+              <div className="col-span-2 bg-gray-50 p-3 rounded-xl border border-gray-200">
                 <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1">Estado</p>
                 <Badge className={getRoomState(selectedRoom.ocupantes_actuales, selectedRoom.capacidad_maxima).badgeClass}>{getRoomState(selectedRoom.ocupantes_actuales, selectedRoom.capacidad_maxima).label}</Badge>
               </div>
-              <div className="col-span-2 bg-gray-50 p-3 rounded-xl border border-gray-100">
+              <div className="col-span-2 bg-gray-50 p-3 rounded-xl border border-gray-200">
                 <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-2">Residentes</p>
                 <ResidentsInlineList residents={selectedRoom.residentes} showEmail />
               </div>
@@ -561,7 +561,7 @@ function FloorRow({ floor, rooms, onSelectRoom }: Readonly<{ floor: string; room
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
-        <div className="bg-gray-100 px-2 py-1 rounded text-xs font-bold text-gray-600">
+        <div className="bg-gray-50 px-2 py-1 rounded text-xs font-bold text-gray-500">
           {Number.parseInt(floor) === 0 ? "Planta baja" : `Planta ${floor}`}
         </div>
         <div className="flex-1 h-px bg-gray-200" />
@@ -599,7 +599,7 @@ function Stat({ title, value }: Readonly<StatProps>) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-sm text-muted-foreground">
+        <CardTitle className="text-sm text-gray-500">
           {title}
         </CardTitle>
       </CardHeader>
@@ -613,7 +613,7 @@ function Stat({ title, value }: Readonly<StatProps>) {
 function ResidentsInlineList({ residents, showEmail = false }: { readonly residents: BedroomResident[]; readonly showEmail?: boolean }) {
   if (residents.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">No hay residentes asignados</p>
+      <p className="text-sm text-gray-500">No hay residentes asignados</p>
     );
   }
 
@@ -621,11 +621,11 @@ function ResidentsInlineList({ residents, showEmail = false }: { readonly reside
     <ul className="min-w-0 space-y-0.5">
       {residents.map((resident) => (
         <li key={resident.id} className="min-w-0">
-          <p className="text-sm text-foreground truncate" title={resident.full_name}>
+          <p className="text-sm text-gray-900 truncate" title={resident.full_name}>
             {resident.full_name}
           </p>
           {showEmail && resident.email && (
-            <p className="text-xs text-muted-foreground truncate">{resident.email}</p>
+            <p className="text-xs text-gray-500 truncate">{resident.email}</p>
           )}
         </li>
       ))}

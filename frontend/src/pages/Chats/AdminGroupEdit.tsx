@@ -204,7 +204,7 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
             <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <label htmlFor="edit-group-name" className="block text-sm font-medium text-gray-700 mb-2">
+                        <label htmlFor="edit-group-name" className="block text-sm font-medium text-gray-500 mb-2">
                             Nombre del grupo
                         </label>
                         <Input
@@ -216,14 +216,14 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
                     </div>
 
                     <div>
-                        <label htmlFor="edit-group-label" className="block text-sm font-medium text-gray-700 mb-2">
+                        <label htmlFor="edit-group-label" className="block text-sm font-medium text-gray-500 mb-2">
                             Etiqueta
                         </label>
                         <select
                             id="edit-group-label"
                             value={groupType}
                             onChange={(e) => setGroupType(e.target.value as typeof groupType)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                            className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                         >
                             <option value="general">General</option>
                             <option value="floor">Por planta</option>
@@ -237,7 +237,7 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
                 </div>
 
                 <div>
-                    <label htmlFor="edit-group-description" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="edit-group-description" className="block text-sm font-medium text-gray-500 mb-2">
                         Descripción
                     </label>
                     <textarea
@@ -246,7 +246,7 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
                         onChange={(e) => setGroupDescription(e.target.value)}
                         placeholder="Descripción del grupo"
                         rows={3}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                     />
                 </div>
 
@@ -256,9 +256,9 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
                         id="canLeave"
                         checked={canLeave}
                         onChange={(e) => setCanLeave(e.target.checked)}
-                        className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                        className="w-4 h-4 text-green-600 border-gray-200 rounded focus:ring-green-500"
                     />
-                    <label htmlFor="canLeave" className="text-sm text-gray-700">
+                    <label htmlFor="canLeave" className="text-sm text-gray-500">
                         Los miembros pueden abandonar el grupo
                     </label>
                 </div>
@@ -267,7 +267,7 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
             <div className="bg-white rounded-lg border border-gray-200">
                 <div className="p-4 border-b border-gray-200">
                     <div className="flex items-center gap-2 mb-4">
-                        <UserPlus className="w-5 h-5 text-gray-600" />
+                        <UserPlus className="w-5 h-5 text-gray-500" />
                         <h3 className="font-medium text-gray-900">
                             Participantes ({currentGroup.members_list.length})
                         </h3>
@@ -301,7 +301,7 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
                             <div key={member.id} className="p-4 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                                        <Users className="w-5 h-5 text-gray-600" />
+                                        <Users className="w-5 h-5 text-gray-500" />
                                     </div>
                                     <div>
                                         <div className="flex items-center gap-2">

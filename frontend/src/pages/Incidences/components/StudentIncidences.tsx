@@ -172,7 +172,7 @@ export default function StudentIncidences() {
         <Popover open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen}>
           <PopoverTrigger asChild>
             <button type="button" aria-label="Abrir notificaciones" className={UI_CLASSES.bellContainer}>
-              <Bell className="w-6 h-6 text-white" />
+              <Bell className="w-6 h-6 text-primary-foreground" />
               {unreadNotifications > 0 && (
                 <span className={UI_CLASSES.bellBadge}>
                   {unreadNotifications > 9 ? "9+" : unreadNotifications}
@@ -182,13 +182,13 @@ export default function StudentIncidences() {
           </PopoverTrigger>
           <PopoverContent align="end" sideOffset={14} className="w-[min(24rem,calc(100vw-2rem))] rounded-[28px] border-none p-0 shadow-2xl">
             <div className="overflow-hidden rounded-[28px] bg-white">
-              <div className="border-b border-slate-100 px-5 py-4">
+              <div className="border-b border-border px-5 py-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm font-black uppercase tracking-[0.18em] text-[#1B4D1C]">Notificaciones</p>
-                    <p className="mt-1 text-sm text-slate-500">Incidencias recientes y actualizaciones.</p>
+                    <p className="text-sm font-black uppercase tracking-[0.18em] text-primary">Notificaciones</p>
+                    <p className="mt-1 text-sm text-muted-foreground">Incidencias recientes y actualizaciones.</p>
                   </div>
-                  <span className="rounded-full bg-[#EEF8E7] px-3 py-1 text-xs font-bold text-[#3A7A1C]">
+                  <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
                     {notifications.length} recientes
                   </span>
                 </div>
@@ -203,15 +203,15 @@ export default function StudentIncidences() {
                   </div>
                 ) : (
                   notifications.map((n) => (
-                    <div key={n.id} className="mb-2 rounded-[22px] border border-slate-100 bg-slate-50/80 px-4 py-3 last:mb-0">
+                    <div key={n.id} className="mb-2 rounded-[22px] border border-gray-200 bg-muted/80 px-4 py-3 last:mb-0">
                       <div className="mb-2 flex items-start justify-between gap-3">
                         <div className="flex items-center gap-2">
-                          <span className={`h-2.5 w-2.5 rounded-full ${n.kind === "admin_update" ? "bg-[#0061A7]" : "bg-[#82D14C]"}`} />
-                          <p className="text-sm font-bold text-slate-800">{n.title}</p>
+                          <span className={`h-2.5 w-2.5 rounded-full ${n.kind === "admin_update" ? "bg-secondary" : "bg-primary"}`} />
+                          <p className="text-sm font-bold text-foreground">{n.title}</p>
                         </div>
                         <span className="shrink-0 text-[11px] font-semibold text-slate-400">{formatNotificationTime(n.created_at)}</span>
                       </div>
-                      <p className="text-sm leading-5 text-slate-600">{n.kind === "admin_update" ? formatUpdateText(n.message) : n.message}</p>
+                      <p className="text-sm leading-5 text-gray-500">{n.kind === "admin_update" ? formatUpdateText(n.message) : n.message}</p>
                     </div>
                   ))
                 )}
@@ -246,7 +246,7 @@ export default function StudentIncidences() {
             onClick={() => setShowOnlyMine(!showOnlyMine)}
             className={`${UI_CLASSES.btnMineBase} ${showOnlyMine ? UI_CLASSES.btnMineActive : UI_CLASSES.btnMineInactive}`}
           >
-            <User className={`${UI_CLASSES.btnMineIcon} ${showOnlyMine ? "text-[#82D14C]" : "text-slate-300"}`} />
+            <User className={`${UI_CLASSES.btnMineIcon} ${showOnlyMine ? "text-primary-foreground" : "text-slate-400"}`} />
             {showOnlyMine ? "Viendo mis incidencias" : "Ver mis incidencias"}
           </button>
         </div>
@@ -262,7 +262,7 @@ export default function StudentIncidences() {
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex flex-col text-left">
                         <h3 className={UI_CLASSES.cardTitle}>{inc.title}</h3>
-                        {inc.is_mine && <span className="text-[10px] font-bold text-[#1B4D1C] uppercase tracking-tighter">Tu incidencia</span>}
+                        {inc.is_mine && <span className="text-[10px] font-bold text-primary uppercase tracking-tighter">Tu incidencia</span>}
                       </div>
                       <span className={`${UI_CLASSES.statusBadge} ${currentStatus.colorClass}`}>{currentStatus.label}</span>
                     </div>
@@ -283,13 +283,13 @@ export default function StudentIncidences() {
                       <div>
                         {(inc.assigned_staff_name || inc.assigned_external_name) ? (
                           <span className={UI_CLASSES.technicianBadge}>
-                            <Wrench size={12} className="text-[#1B4D1C]" />
+                            <Wrench size={12} className="text-primary" />
                             {inc.assigned_staff_name ? (
                               `${inc.assigned_staff_name} - ${inc.assigned_staff_job}`
                             ) : (
                               <span className={UI_CLASSES.technicianBadge}>
                                 {inc.assigned_external_name}
-                                <span className="text-[9px] bg-slate-200 px-1 rounded text-slate-500 font-bold uppercase">Ext</span>
+                                <span className="text-[9px] bg-slate-200 px-1 rounded text-gray-500 font-bold uppercase">Ext</span>
                               </span>
                             )}
                           </span>
@@ -341,7 +341,7 @@ export default function StudentIncidences() {
             {selectedDetails && (
               <>
                 <h3 className="font-bold text-lg mb-2">{selectedDetails.title}</h3>
-                <p className="text-sm text-slate-500 italic mb-6">"{selectedDetails.description}"</p>
+                <p className="text-sm text-gray-500 italic mb-6">"{selectedDetails.description}"</p>
                 {selectedDetails.admin_notes && (
                   <div className={UI_CLASSES.adminNoteBox}>
                     <div className={UI_CLASSES.adminNoteLabel}>Admin</div>
@@ -353,7 +353,7 @@ export default function StudentIncidences() {
                   {selectedDetails.updates?.map(u => (
                     <div key={u.id} className={UI_CLASSES.historyItem}>
                       <div className="text-[10px] text-slate-400 font-bold mb-1 uppercase">{u.author_name} • {new Date(u.created_at).toLocaleString()}</div>
-                      <div className="text-sm text-slate-700">{formatUpdateText(u.text)}</div>
+                      <div className="text-sm text-gray-500">{formatUpdateText(u.text)}</div>
                     </div>
                   ))}
                 </div>
@@ -374,39 +374,39 @@ const STATUS_MAP: Record<string, any> = {
   pending: { label: "Pendiente", colorClass: "bg-[#FFF4E5] text-[#FFB457]", barClass: "bg-[#FFB457]" },
   reviewing: { label: "En revisión", colorClass: "bg-[#E5F1FF] text-[#0061A7]", barClass: "bg-[#0061A7]" },
   in_progress: { label: "En proceso", colorClass: "bg-[#E0F7FA] text-[#00ACC1]", barClass: "bg-[#00ACC1]" },
-  resolved: { label: "Resuelto", colorClass: "bg-[#F0F9EB] text-[#82D14C]", barClass: "bg-[#82D14C]" },
+  resolved: { label: "Resuelto", colorClass: "bg-primary/10 text-primary", barClass: "bg-primary" },
 };
 
 const UI_CLASSES = {
-  mainLayout: "flex flex-col h-screen bg-[#F6F7F9] relative",
-  header: "bg-[#1B4D1C] p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg",
-  headerTitle: "text-white text-2xl font-bold",
-  bellContainer: "relative p-2 bg-white/10 rounded-full",
-  bellBadge: "absolute -right-1 -top-1 min-w-5 h-5 flex items-center justify-center rounded-full bg-[#82D14C] px-1 text-[10px] font-black text-[#123313]",
+  mainLayout: "flex flex-col h-screen bg-background relative",
+  header: "bg-primary p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg",
+  headerTitle: "text-primary-foreground text-2xl font-bold",
+  bellContainer: "relative p-2 bg-primary-foreground/10 rounded-full",
+  bellBadge: "absolute -right-1 -top-1 min-w-5 h-5 flex items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-black text-destructive-foreground",
   mainContent: "flex-1 overflow-y-auto p-4 space-y-4 pb-32",
   btnMineWrapper: "flex justify-end mb-2",
   btnMineBase: "flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all border",
-  btnMineActive: "bg-[#1B4D1C] text-white border-[#1B4D1C]",
-  btnMineInactive: "bg-white text-[#1B4D1C] border-slate-200 hover:bg-slate-50",
+  btnMineActive: "bg-primary text-primary-foreground border-primary",
+  btnMineInactive: "bg-card text-foreground border-border hover:bg-muted",
   btnMineIcon: "w-4 h-4",
   filterGrid: "mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 px-1",
-  filterInput: "w-full px-4 py-2 rounded-xl border border-slate-200 shadow-sm outline-none",
-  filterSelect: "w-full px-3 py-2 rounded-xl border border-slate-200 bg-white",
+  filterInput: "w-full px-4 py-2 rounded-xl border border-gray-200 shadow-sm outline-none",
+  filterSelect: "w-full px-3 py-2 rounded-xl border border-gray-200 bg-white",
   card: "border-none shadow-sm rounded-[24px] overflow-hidden bg-white",
   cardSideBar: "w-1.5 shrink-0",
   cardTitle: "font-bold text-lg text-[#1A1C1E]",
-  cardLocationRow: "flex items-center gap-1.5 text-slate-500 mb-4",
+  cardLocationRow: "flex items-center gap-1.5 text-gray-500 mb-4",
   cardDateRow: "flex items-center gap-2 opacity-60 text-[#74777F] text-xs",
   statusBadge: "text-[10px] px-2 py-0.5 rounded-full font-bold uppercase",
-  btnNotes: "rounded-xl border-[#D1E4FF] text-[#0061A7] hover:bg-[#D1E4FF]/20 h-8 px-4 text-xs font-bold",
-  btnFloating: "fixed bottom-24 right-6 w-14 h-14 bg-[#82D14C] hover:bg-[#74bc44] text-white rounded-full shadow-2xl flex items-center justify-center z-50",
+  btnNotes: "rounded-xl border-border text-foreground hover:bg-muted h-8 px-4 text-xs font-bold shadow-sm",
+  btnFloating: "fixed bottom-24 right-6 w-14 h-14 bg-primary text-primary-foreground hover:opacity-90 rounded-full shadow-2xl flex items-center justify-center z-50",
   dialogForm: "max-w-[90vw] sm:max-w-[425px] rounded-[32px] p-0 border-none overflow-hidden",
   dialogNotes: "max-w-[90vw] sm:max-w-[640px] rounded-[24px] p-0 border-none overflow-hidden",
-  notesTitle: "p-6 bg-white border-b font-bold text-slate-800",
+  notesTitle: "p-6 bg-white border-b font-bold text-gray-900",
   adminNoteBox: "mb-6 p-4 bg-emerald-50 rounded-2xl border border-emerald-100",
   adminNoteLabel: "text-[10px] font-black uppercase text-emerald-600 mb-1",
   historyLabel: "text-[10px] font-black uppercase text-slate-400 mb-3",
-  historyItem: "p-3 border border-slate-100 rounded-xl bg-slate-50/50",
+  historyItem: "p-3 border border-gray-200 rounded-xl bg-muted/50",
   loadingText: "text-center text-slate-400 mt-10 text-sm",
-  technicianBadge: "bg-slate-50 text-slate-500 px-3 py-2 rounded-xl text-[11px] font-medium flex items-center gap-1.5 border border-slate-100 inline-flex",
+  technicianBadge: "bg-gray-50 text-gray-500 px-3 py-2 rounded-xl text-[11px] font-medium flex items-center gap-1.5 border border-gray-200 inline-flex",
 };

@@ -73,116 +73,13 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
     const [tenantLogoUrl, setTenantLogoUrl] = useState<string>("");
     const processedGroupMessageEventKeysRef = useRef<Set<string>>(new Set());
 
-    const normalizeHexColor = (input: string, fallback: string): string => {
-        const value = (input || "").trim();
-        if (/^#[0-9a-fA-F]{6}$/.test(value)) return value.toUpperCase();
-        return fallback;
-    };
 
-    const lightenHexColor = (hex: string, factor: number): string => {
-        const safeHex = normalizeHexColor(hex, "#4A8F5D");
-        const r = parseInt(safeHex.slice(1, 3), 16);
-        const g = parseInt(safeHex.slice(3, 5), 16);
-        const b = parseInt(safeHex.slice(5, 7), 16);
-        const clamp = (n: number) => Math.max(0, Math.min(255, n));
-
-        const nextR = clamp(Math.round(r + (255 - r) * factor));
-        const nextG = clamp(Math.round(g + (255 - g) * factor));
-        const nextB = clamp(Math.round(b + (255 - b) * factor));
-
-        const toHex = (n: number) => n.toString(16).padStart(2, "0");
-        return `#${toHex(nextR)}${toHex(nextG)}${toHex(nextB)}`.toUpperCase();
-    };
-
-    const darkenHexColor = (hex: string, factor: number): string => {
-        const safeHex = normalizeHexColor(hex, "#4A8F5D");
-        const r = parseInt(safeHex.slice(1, 3), 16);
-        const g = parseInt(safeHex.slice(3, 5), 16);
-        const b = parseInt(safeHex.slice(5, 7), 16);
-        const clamp = (n: number) => Math.max(0, Math.min(255, n));
-
-        const nextR = clamp(Math.round(r * (1 - factor)));
-        const nextG = clamp(Math.round(g * (1 - factor)));
-        const nextB = clamp(Math.round(b * (1 - factor)));
-
-        const toHex = (n: number) => n.toString(16).padStart(2, "0");
-        return `#${toHex(nextR)}${toHex(nextG)}${toHex(nextB)}`.toUpperCase();
-    };
 
     const applyTenantTheme = (branding: ResidenceBranding) => {
-        const primary = normalizeHexColor(branding.primary_color, "#4A8F5D");
-        const secondary = normalizeHexColor(branding.secondary_color, "#0F4C81");
-        const accent = normalizeHexColor(branding.accent_color, "#2E7D32");
-        const primarySoft = lightenHexColor(primary, 0.88);
-        const primaryBorder = lightenHexColor(primary, 0.72);
-        const primaryDark = darkenHexColor(primary, 0.18);
-
-        const root = document.documentElement;
-        root.style.setProperty("--tenant-primary", primary);
-        root.style.setProperty("--tenant-secondary", secondary);
-        root.style.setProperty("--tenant-accent", accent);
-        root.style.setProperty("--tenant-primary-soft", primarySoft);
-        root.style.setProperty("--tenant-primary-border", primaryBorder);
-        root.style.setProperty("--tenant-primary-dark", primaryDark);
-
-        const styleId = "tenant-admin-branding-style";
-        const existing = document.getElementById(styleId);
-        if (existing) existing.remove();
-
-        const style = document.createElement("style");
-        style.id = styleId;
-        style.textContent = `
-            .tenant-admin-theme .text-green-600,
-            .tenant-admin-theme .text-green-700,
-            .tenant-admin-theme .text-\[\#4a8f5d\] {
-                color: var(--tenant-primary) !important;
-            }
-
-            .tenant-admin-theme .bg-green-50 {
-                background-color: var(--tenant-primary-soft) !important;
-            }
-
-            .tenant-admin-theme .border-green-200,
-            .tenant-admin-theme .border-green-200\/60,
-            .tenant-admin-theme .border-\[\#4a8f5d\]\/50,
-            .tenant-admin-theme .focus\:border-\[\#4a8f5d\]:focus {
-                border-color: var(--tenant-primary-border) !important;
-            }
-
-            .tenant-admin-theme .bg-\[\#4a8f5d\],
-            .tenant-admin-theme .bg-green-600 {
-                background-color: var(--tenant-primary) !important;
-            }
-
-            .tenant-admin-theme .hover\:bg-\[\#3d754b\]:hover,
-            .tenant-admin-theme .hover\:bg-green-700:hover,
-            .tenant-admin-theme .hover\:bg-\[\#3d7a4e\]:hover {
-                background-color: var(--tenant-primary-dark) !important;
-            }
-
-            .tenant-admin-theme .tenant-admin-title {
-                color: var(--tenant-secondary) !important;
-            }
-
-            .tenant-admin-theme .tenant-admin-subtitle {
-                color: var(--tenant-accent) !important;
-            }
-        `;
-        document.head.appendChild(style);
-
         if (branding.logo_url) {
             setTenantLogoUrl(branding.logo_url);
         }
-
-        const customCssId = "tenant-custom-css";
-        const customExisting = document.getElementById(customCssId);
-        if (customExisting) customExisting.remove();
-        if (branding.custom_css?.trim()) {
-            const customStyle = document.createElement("style");
-            customStyle.id = customCssId;
-            customStyle.textContent = branding.custom_css;
-            document.head.appendChild(customStyle);
-        }
+        import("../hooks/useTenantBranding").then((m) => m.applyGlobalBranding(branding));
     };
 
     const unreadChatsCount = unreadChatKeys.size;
@@ -314,6 +211,11 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
         const normalizedCurrentUserEmail = currentUserEmail.trim().toLowerCase();
 
         const source = chatsService.subscribeToEvents((evt) => {
+            if (evt.event === "branding_updated" && evt.payload) {
+                import("../hooks/useTenantBranding").then((m) => m.applyGlobalBranding(evt.payload as any));
+                return;
+            }
+
             if (isGroupLifecycleEvent(evt)) {
                 setChatRealtimeEvent(evt);
                 setChatRealtimeTick((prev) => prev + 1);
@@ -445,7 +347,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
                                 {todayCapitalized}
                             </p>
                             <h2 className="text-3xl font-serif text-gray-900">
-                                Buenos días, <em className="text-green-600 not-italic">Administrador</em>
+                                Buenos días, <em className="text-primary not-italic">Administrador</em>
                             </h2>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -542,7 +444,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
     };
 
     return (
-        <div className="tenant-admin-theme min-h-screen flex flex-col w-full bg-background relative">
+        <div className="min-h-screen flex flex-col w-full bg-background relative">
             <header className="bg-card border-b border-border px-4 py-3 sticky top-0 z-10">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -567,7 +469,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
                                 <div className="max-h-[70vh] overflow-y-auto rounded-md bg-white p-4">
                                     <div className="mb-3 flex items-center justify-between gap-2">
                                         <div className="flex items-center gap-2">
-                                            <Bell className="h-5 w-5 text-[#35C759]" />
+                                            <Bell className="h-5 w-5 text-green-500" />
                                             <h3 className="font-semibold text-gray-900">Notificaciones</h3>
                                         </div>
                                         {unreadCount > 0 && (
@@ -634,7 +536,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
                                                 }}
                                                 className={`w-full flex items-center justify-between gap-3 px-4 py-3 text-sm rounded-xl transition-colors ${
                                                     activeTab === item.id
-                                                        ? 'bg-green-50 text-green-700 font-medium'
+                                                        ? 'bg-primary/10 text-primary font-medium'
                                                         : 'text-gray-600 hover:bg-gray-50'
                                                 }`}
                                             >

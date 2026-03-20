@@ -207,8 +207,8 @@ export function Events() {
     if (isUnauthorized) {
         return (
             <div className="flex flex-col justify-center items-center min-h-[80vh] text-center w-full max-w-2xl mx-auto px-4">
-                <h2 className="text-2xl font-bold mb-4 text-foreground">Acceso Denegado</h2>
-                <p className="text-muted-foreground max-w-sm leading-relaxed mb-6">
+                <h2 className="text-2xl font-bold mb-4 text-gray-900">Acceso Denegado</h2>
+                <p className="text-gray-500 max-w-sm leading-relaxed mb-6">
                     Debes iniciar sesión para ver y organizar las actividades de tu residencia.
                 </p>
                 <button
@@ -224,7 +224,7 @@ export function Events() {
     return (
         <div className="w-full mx-auto flex flex-col gap-6 pb-20 px-4 sm:px-6 lg:px-8 pt-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <h2 className="text-2xl font-bold tracking-tight text-foreground">Actividades de la Residencia</h2>
+                <h2 className="text-2xl font-bold tracking-tight text-gray-900">Actividades de la Residencia</h2>
                 <button
                     className="bg-primary text-primary-foreground hover:bg-primary/90 px-5 py-2.5 rounded-lg font-medium transition-colors flex items-center gap-2 shadow-sm whitespace-nowrap"
                     onClick={() => {
@@ -241,9 +241,9 @@ export function Events() {
                 </button>
             </div>
 
-            <div className="flex gap-2 border-b border-border pb-1">
+            <div className="flex gap-2 border-b border-gray-200 pb-1">
                 <button
-                    className={`px-4 py-2 font-medium text-sm transition-colors relative ${activeTab === 'upcoming' ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                    className={`px-4 py-2 font-medium text-sm transition-colors relative ${activeTab === 'upcoming' ? 'text-gray-900' : 'text-gray-500 hover:text-gray-900'}`}
                     onClick={() => setActiveTab('upcoming')}
                 >
                     Próximas Actividades
@@ -252,7 +252,7 @@ export function Events() {
                     )}
                 </button>
                 <button
-                    className={`px-4 py-2 font-medium text-sm transition-colors relative ${activeTab === 'past' ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                    className={`px-4 py-2 font-medium text-sm transition-colors relative ${activeTab === 'past' ? 'text-gray-900' : 'text-gray-500 hover:text-gray-900'}`}
                     onClick={() => setActiveTab('past')}
                 >
                     Eventos Pasados

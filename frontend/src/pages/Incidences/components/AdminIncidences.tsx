@@ -63,7 +63,7 @@ const ManageIncidenceModal = ({
               <h2 className={UI_CLASSES.modalTitle}>{incidence.title}</h2>
             </div>
             <p className={UI_CLASSES.modalSubtitle}>
-              Reportada por <span className="font-semibold text-slate-600">{incidence.student_name || "Usuario"}</span> en <span className="font-semibold text-slate-600">{locationDisplay}</span>
+              Reportada por <span className="font-semibold text-gray-500">{incidence.student_name || "Usuario"}</span> en <span className="font-semibold text-gray-500">{locationDisplay}</span>
             </p>
           </div>
 
@@ -239,7 +239,7 @@ export const AdminIncidences = () => {
 
               <div className={UI_CLASSES.descriptionBox}>
                 <div className={UI_CLASSES.descriptionText}>
-                  <p className="mb-2 italic text-slate-500">"{inc.description}"</p>
+                  <p className="mb-2 italic text-gray-500">"{inc.description}"</p>
                   {inc.admin_notes && (
                     <div className={UI_CLASSES.adminNoteText}>
                       <span className={UI_CLASSES.adminNoteLabel}>
@@ -291,7 +291,7 @@ export const AdminIncidences = () => {
       {/* Botón flotante para que el Admin también pueda crear */}
       <button
         onClick={() => setIsFormOpen(true)}
-        className="fixed bottom-24 right-6 w-14 h-14 bg-[#1B4D1C] hover:bg-[#2d6b30] text-white rounded-full shadow-2xl flex items-center justify-center z-50 transition-transform active:scale-95"
+        className="fixed bottom-24 right-6 w-14 h-14 bg-green-900 hover:bg-green-800 text-white rounded-full shadow-2xl flex items-center justify-center z-50 transition-transform active:scale-95"
       >
         <Plus size={32} strokeWidth={3} />
       </button>
@@ -328,56 +328,56 @@ const PRIORITY_LABELS: Record<string, string> = {
 };
 
 const STATUS_STYLES: Record<string, { label: string; bg: string; text: string; icon: any }> = {
-  pending: { label: 'Pendiente', bg: 'bg-slate-50', text: 'text-slate-600', icon: <Clock size={14} /> },
+  pending: { label: 'Pendiente', bg: 'bg-gray-50', text: 'text-gray-500', icon: <Clock size={14} /> },
   reviewing: { label: 'En revisión', bg: 'bg-orange-50', text: 'text-orange-600', icon: <Clock size={14} /> },
   in_progress: { label: 'En proceso', bg: 'bg-blue-50', text: 'text-blue-600', icon: <Wrench size={14} /> },
   resolved: { label: 'Resuelto', bg: 'bg-green-50', text: 'text-green-600', icon: <CheckCircle2 size={14} /> },
 };
 
 const UI_CLASSES = {
-  mainLayout: "bg-slate-100 min-h-screen flex flex-col",
+  mainLayout: "bg-gray-50 min-h-screen flex flex-col",
   mainContent: "flex-1 overflow-y-auto p-4 space-y-4 pb-32",
   loadingText: "text-center text-gray-400 mt-10 font-medium tracking-widest uppercase",
   modalOverlay: "fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4",
   modalContainer: "bg-white w-full max-w-lg rounded-[32px] overflow-hidden shadow-xl relative animate-in fade-in zoom-in duration-200",
-  modalCloseBtn: "absolute right-6 top-6 p-2 hover:bg-gray-100 rounded-full transition-colors",
+  modalCloseBtn: "absolute right-6 top-6 p-2 hover:bg-gray-50 rounded-full transition-colors",
   modalPadding: "p-8 text-left",
-  modalTitle: "text-xl font-bold text-slate-800",
+  modalTitle: "text-xl font-bold text-gray-900",
   modalSubtitle: "text-slate-400 text-sm font-normal",
   modalIndicator: "w-2 h-2 rounded-full bg-blue-500",
 
   // Formularios
   label: "text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block ml-1",
-  select: "w-full bg-slate-50 border-none rounded-2xl h-14 px-5 font-medium text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer",
-  input: "w-full bg-slate-50 border-none rounded-2xl h-14 px-5 font-medium text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500",
-  textarea: "w-full bg-slate-50 border-none rounded-2xl min-h-[100px] p-5 text-sm font-normal outline-none resize-none focus:ring-2 focus:ring-emerald-500",
+  select: "w-full bg-gray-50 border-none rounded-2xl h-14 px-5 font-medium text-gray-500 outline-none focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer",
+  input: "w-full bg-gray-50 border-none rounded-2xl h-14 px-5 font-medium text-gray-500 outline-none focus:ring-2 focus:ring-emerald-500",
+  textarea: "w-full bg-gray-50 border-none rounded-2xl min-h-[100px] p-5 text-sm font-normal outline-none resize-none focus:ring-2 focus:ring-emerald-500",
 
   // Filtros
   filterGrid: "mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3",
-  filterInput: "w-full pl-3 pr-3 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 font-normal",
-  filterSelect: "w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white font-normal text-slate-600",
+  filterInput: "w-full pl-3 pr-3 py-2.5 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-emerald-500 font-normal",
+  filterSelect: "w-full px-3 py-2.5 rounded-xl border border-gray-200 bg-white font-normal text-gray-500",
 
   // Botones
-  btnPrimary: "flex-1 h-14 rounded-2xl bg-[#5B7C5C] hover:bg-[#4A664B] text-white font-bold shadow-md disabled:opacity-50 transition-all active:scale-95",
-  btnSecondary: "flex-1 h-14 rounded-2xl font-bold text-slate-500 bg-slate-50 hover:bg-slate-100 transition-colors",
-  btnManage: "text-[#5B7C5C] font-bold text-sm flex items-center gap-1 hover:gap-2 transition-all",
+  btnPrimary: "flex-1 h-14 rounded-2xl bg-green-700 hover:bg-green-800 text-white font-bold shadow-md disabled:opacity-50 transition-all active:scale-95",
+  btnSecondary: "flex-1 h-14 rounded-2xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-50 transition-colors",
+  btnManage: "text-green-700 font-bold text-sm flex items-center gap-1 hover:gap-2 transition-all",
 
   // Tarjetas (Card)
-  card: "bg-white rounded-[24px] p-6 shadow-sm border border-slate-100 mb-4 text-left",
-  cardTitle: "font-bold text-xl text-slate-900 mb-1 leading-tight",
-  cardStudentName: "font-bold text-[#1B4D1C] text-base leading-tight uppercase",
+  card: "bg-white rounded-[24px] p-6 shadow-sm border border-gray-200 mb-4 text-left",
+  cardTitle: "font-bold text-xl text-gray-900 mb-1 leading-tight",
+  cardStudentName: "font-bold text-green-900 text-base leading-tight uppercase",
   cardDate: "flex items-center gap-1.5 text-slate-400 text-[11px] mt-1 uppercase font-medium tracking-wider",
   cardLocation: "flex items-center gap-1.5 text-orange-500 mb-4",
-  avatar: "w-12 h-12 bg-green-50 text-green-700 rounded-full flex items-center justify-center font-bold text-lg border border-slate-100",
+  avatar: "w-12 h-12 bg-green-50 text-green-700 rounded-full flex items-center justify-center font-bold text-lg border border-gray-200",
 
   // Descripción y Notas
   descriptionBox: "bg-[#F8FAFB] p-4 rounded-2xl mb-6 border border-slate-50",
-  descriptionText: "text-slate-600 text-sm leading-relaxed font-normal",
-  adminNoteText: "block pt-2 border-t border-slate-200 mt-2 text-emerald-700",
+  descriptionText: "text-gray-500 text-sm leading-relaxed font-normal",
+  adminNoteText: "block pt-2 border-t border-gray-200 mt-2 text-emerald-700",
   adminNoteLabel: "flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest mb-1 text-emerald-600",
 
   // Badges
   priorityBadge: "text-[10px] font-bold px-3 py-1 rounded-full tracking-wider uppercase",
   statusBadge: "px-4 py-2 rounded-xl text-[11px] font-bold flex items-center gap-2",
-  technicianBadge: "bg-slate-50 text-slate-500 px-3 py-2 rounded-xl text-[11px] font-medium flex items-center gap-1.5 border border-slate-100",
+  technicianBadge: "bg-gray-50 text-gray-500 px-3 py-2 rounded-xl text-[11px] font-medium flex items-center gap-1.5 border border-gray-200",
 };

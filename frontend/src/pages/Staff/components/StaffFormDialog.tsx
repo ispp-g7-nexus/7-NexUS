@@ -270,7 +270,7 @@ export function StaffFormDialog({
           <Button
             onClick={handleSubmit}
             disabled={submitting}
-            className="bg-[#509550] hover:bg-[#509550]/90 text-white"
+            className="bg-green-600 hover:bg-green-600/90 text-white"
           >
             {isEdit ? (
               <><Edit className="w-4 h-4" />{submitting ? "Guardando…" : "Guardar cambios"}</>

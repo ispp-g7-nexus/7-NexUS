@@ -103,7 +103,7 @@ const typeConfig: Record<string, { label: string; color: string; icon: ReactElem
     },
     private: {
         label: "Privado",
-        color: "bg-gray-100 text-gray-800",
+        color: "bg-gray-50 text-gray-900",
         icon: <Users className="w-3 h-3" />
     }
 };
@@ -634,7 +634,7 @@ export function AdminChats({
                             const isMine = msg.sender_email === currentUserEmail;
                             const bubbleClasses = isMine
                                 ? "bg-green-600 text-white rounded-br-md"
-                                : "bg-gray-100 text-gray-900 rounded-bl-md";
+                                : "bg-gray-50 text-gray-900 rounded-bl-md";
                             const timeClasses = isMine ? "text-green-200" : "text-gray-400";
                             
                             return (
@@ -710,7 +710,7 @@ export function AdminChats({
                 <select
                     value={selectedType}
                     onChange={(e) => setSelectedType(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="px-3 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                 >
                     <option value="all">Todos los tipos</option>
                     {allLabelOptions.map((opt) => (
@@ -756,7 +756,7 @@ export function AdminChats({
                                                 {config.label}
                                             </span>
                                         </div>
-                                        <p className="text-sm text-gray-600 mb-2">
+                                        <p className="text-sm text-gray-500 mb-2">
                                             {group.description}
                                         </p>
                                         <div className="flex items-center gap-4 text-xs text-gray-500">
@@ -827,7 +827,7 @@ export function AdminChats({
 
                     <div className="space-y-4">
                         <div>
-                            <label htmlFor="create-group-name" className="block text-sm font-medium text-gray-700 mb-1">
+                            <label htmlFor="create-group-name" className="block text-sm font-medium text-gray-500 mb-1">
                                 Nombre <span className="text-red-500">*</span>
                             </label>
                             <Input
@@ -839,23 +839,23 @@ export function AdminChats({
                         </div>
 
                         <div>
-                            <label htmlFor="create-group-description" className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+                            <label htmlFor="create-group-description" className="block text-sm font-medium text-gray-500 mb-1">Descripción</label>
                             <textarea
                                 id="create-group-description"
                                 value={createForm.description}
                                 onChange={(e) => setCreateForm((prev) => ({ ...prev, description: e.target.value }))}
                                 rows={3}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                                className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                             />
                         </div>
 
                         <div>
-                            <label htmlFor="create-group-label" className="block text-sm font-medium text-gray-700 mb-1">Etiqueta</label>
+                            <label htmlFor="create-group-label" className="block text-sm font-medium text-gray-500 mb-1">Etiqueta</label>
                             <select
                                 id="create-group-label"
                                 value={createForm.label}
                                 onChange={(e) => setCreateForm((prev) => ({ ...prev, label: e.target.value }))}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                                className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                             >
                                 {allLabelOptions.map((opt) => (
                                     <option key={opt.value} value={opt.value}>{opt.display}</option>
@@ -871,9 +871,9 @@ export function AdminChats({
                                 onChange={(e) =>
                                     setCreateForm((prev) => ({ ...prev, can_members_leave: e.target.checked }))
                                 }
-                                className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                                className="w-4 h-4 text-green-600 border-gray-200 rounded focus:ring-green-500"
                             />
-                            <label htmlFor="create-can-leave" className="text-sm text-gray-700">
+                            <label htmlFor="create-can-leave" className="text-sm text-gray-500">
                                 Los miembros pueden abandonar el grupo
                             </label>
                         </div>
@@ -927,7 +927,7 @@ export function AdminChats({
                         <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Predefinidas</div>
                         <div className="flex flex-wrap gap-2">
                             {["General", "Planta", "Actividad", "Privado"].map((l) => (
-                                <span key={l} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                <span key={l} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-gray-50 text-gray-500">
                                     <Tag className="w-3 h-3" /> {l}
                                 </span>
                             ))}

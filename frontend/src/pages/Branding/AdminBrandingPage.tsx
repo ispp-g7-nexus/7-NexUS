@@ -125,15 +125,15 @@ export function AdminBrandingPage() {
               Configura la identidad visual de la residencia. Los cambios se guardan por tenant.
             </p>
           </div>
-          <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
+          <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-500">
             Última actualización: {updatedAt ? new Date(updatedAt).toLocaleString("es-ES") : "Sin datos"}
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
           <section>
-            <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-800">
-              <Palette className="h-4 w-4 text-green-600" />
+            <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-900">
+              <Palette className="h-4 w-4 text-primary" />
               Paleta base
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -143,19 +143,19 @@ export function AdminBrandingPage() {
                 { field: "accent_color", label: "Color acento" },
               ].map((item) => (
                 <label key={item.field} className="space-y-2 rounded-xl border border-gray-200 p-3">
-                  <span className="block text-sm font-medium text-gray-700">{item.label}</span>
+                  <span className="block text-sm font-medium text-gray-500">{item.label}</span>
                   <div className="flex items-center gap-3">
                     <input
                       type="color"
                       value={form[item.field as keyof BrandingFormState] as string}
                       onChange={(event) => handleColorChange(item.field as keyof BrandingFormState, event.target.value)}
-                      className="h-10 w-14 cursor-pointer rounded border border-gray-300 bg-white"
+                      className="h-10 w-14 cursor-pointer rounded border border-gray-200 bg-white"
                     />
                     <input
                       type="text"
                       value={form[item.field as keyof BrandingFormState] as string}
                       onChange={(event) => handleInputChange(item.field as keyof BrandingFormState, event.target.value)}
-                      className="h-10 w-full rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-green-500"
+                      className="h-10 w-full rounded-lg border border-gray-200 px-3 text-sm outline-none focus:border-primary"
                       placeholder="#000000"
                     />
                   </div>
@@ -165,28 +165,28 @@ export function AdminBrandingPage() {
           </section>
 
           <section>
-            <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-800">
-              <ImageIcon className="h-4 w-4 text-green-600" />
+            <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-900">
+              <ImageIcon className="h-4 w-4 text-primary" />
               Recursos de marca
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <label className="space-y-2">
-                <span className="block text-sm font-medium text-gray-700">URL del logo</span>
+                <span className="block text-sm font-medium text-gray-500">URL del logo</span>
                 <input
                   type="url"
                   value={form.logo_url}
                   onChange={(event) => handleInputChange("logo_url", event.target.value)}
-                  className="h-10 w-full rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-green-500"
+                  className="h-10 w-full rounded-lg border border-gray-200 px-3 text-sm outline-none focus:border-primary"
                   placeholder="https://mi-residencia.com/logo.png"
                 />
               </label>
               <label className="space-y-2">
-                <span className="block text-sm font-medium text-gray-700">URL del favicon</span>
+                <span className="block text-sm font-medium text-gray-500">URL del favicon</span>
                 <input
                   type="url"
                   value={form.favicon_url}
                   onChange={(event) => handleInputChange("favicon_url", event.target.value)}
-                  className="h-10 w-full rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-green-500"
+                  className="h-10 w-full rounded-lg border border-gray-200 px-3 text-sm outline-none focus:border-primary"
                   placeholder="https://mi-residencia.com/favicon.ico"
                 />
               </label>
@@ -195,30 +195,30 @@ export function AdminBrandingPage() {
 
           <section>
             <label className="space-y-2">
-              <span className="block text-sm font-semibold text-gray-800">CSS personalizado (opcional)</span>
+              <span className="block text-sm font-semibold text-gray-900">CSS personalizado (opcional)</span>
               <textarea
                 value={form.custom_css}
                 onChange={(event) => handleInputChange("custom_css", event.target.value)}
                 rows={8}
-                className="w-full rounded-lg border border-gray-300 p-3 text-sm outline-none focus:border-green-500"
+                className="w-full rounded-lg border border-gray-200 p-3 text-sm outline-none focus:border-primary"
                 placeholder=".my-class { color: #0F4C81; }"
               />
             </label>
           </section>
 
-          <div className="flex flex-wrap items-center justify-end gap-3 border-t border-gray-100 pt-6">
+          <div className="flex flex-wrap items-center justify-end gap-3 border-t border-gray-200 pt-6">
             <button
               type="button"
               onClick={handleReset}
               disabled={saving}
-              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
               Restablecer cambios
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-70"
+              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
               Guardar personalización

@@ -23,10 +23,10 @@ export function StudentReservations() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
+              className={`flex-1 py-2 px-4 m-1 rounded-lg text-sm transition-all ${
                 activeTab === tab.id 
-                  ? "text-[#4A7C59] border-[#4A7C59]" 
-                  : "text-muted-foreground border-transparent hover:text-foreground"
+                  ? "bg-primary text-primary-foreground font-bold shadow-sm" 
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
               }`}
             >
               {tab.label}

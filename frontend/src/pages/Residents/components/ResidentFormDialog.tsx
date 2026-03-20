@@ -288,7 +288,7 @@ export function ResidentFormDialog({
           <Button
             onClick={handleSubmit}
             disabled={submitting}
-            className="bg-[#509550] hover:bg-[#3d7a3d] text-white"
+            className="bg-green-600 hover:bg-green-700 text-white"
           >
             {isEdit ? (
               <>

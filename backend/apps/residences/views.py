@@ -1,4 +1,4 @@
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -6,10 +6,14 @@ from apps.membership.permissions import IsResidenceAdmin
 
 from .models import ResidenceBranding
 from .serializers import ResidenceBrandingSerializer
+from apps.chats.realtime import publish_chat_event
 
 
 class ResidenceBrandingAdminView(APIView):
-    permission_classes = [IsAuthenticated, IsResidenceAdmin]
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [IsAuthenticated()]
+        return [IsAuthenticated(), IsResidenceAdmin()]
 
     def _get_branding(self, request):
         residence = getattr(request, "residence", None)
@@ -45,4 +49,11 @@ class ResidenceBrandingAdminView(APIView):
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
+
+        publish_chat_event(
+            branding.residence_id,
+            "branding_updated",
+            serializer.data,
+        )
+
         return Response(serializer.data)

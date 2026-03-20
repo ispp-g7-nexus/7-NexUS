@@ -88,14 +88,14 @@ const RolesPage: React.FC = () => {
                     </div>
                     <button
                         onClick={() => openModal()}
-                        className="bg-[#4a8f5d] hover:bg-[#3d7a4e] text-white px-5 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm"
+                        className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm"
                     >
                         <Plus size={20} />
                         Nuevo Rol
                     </button>
                 </div>
 
-                <div className="bg-white p-2 rounded-xl shadow-sm flex flex-col sm:flex-row gap-2 border border-gray-100 mb-6">
+                <div className="bg-white p-2 rounded-xl shadow-sm flex flex-col sm:flex-row gap-2 border border-gray-200 mb-6">
                     <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                         <input
@@ -103,14 +103,14 @@ const RolesPage: React.FC = () => {
                             placeholder="Buscar por nombre..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 bg-white rounded-lg focus:outline-none text-sm text-gray-700"
+                            className="w-full pl-10 pr-4 py-2 bg-white rounded-lg focus:outline-none text-sm text-gray-500"
                         />
                     </div>
                     <div className="h-px sm:h-8 sm:w-px bg-gray-200 mx-2 self-center hidden sm:block"></div>
                     <select
                         value={filter}
                         onChange={(e) => setFilter(e.target.value)}
-                        className="bg-white rounded-lg px-4 py-2 focus:outline-none text-sm text-gray-700 cursor-pointer font-medium border-none"
+                        className="bg-white rounded-lg px-4 py-2 focus:outline-none text-sm text-gray-500 cursor-pointer font-medium border-none"
                     >
                         <option value="Todos">Todos</option>
                         <option value="Sistema">Por Defecto</option>
@@ -126,7 +126,7 @@ const RolesPage: React.FC = () => {
 
                 {isLoading ? (
                     <div className="flex justify-center py-12">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4a8f5d]"></div>
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
                     </div>
                 ) : (
                     <div className="space-y-4">
@@ -139,7 +139,7 @@ const RolesPage: React.FC = () => {
                             />
                         ))}
                         {filteredRoles.length === 0 && !error && (
-                            <div className="text-center py-12 text-gray-500 bg-white rounded-xl border border-gray-100">
+                            <div className="text-center py-12 text-gray-500 bg-white rounded-xl border border-gray-200">
                                 No se encontraron roles.
                             </div>
                         )}

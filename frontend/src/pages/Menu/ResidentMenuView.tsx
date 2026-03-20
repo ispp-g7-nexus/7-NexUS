@@ -49,7 +49,7 @@ const MealCard = ({ meal }: { meal: Meal }) => {
           <div>
             <p className="font-semibold text-gray-900">{meal.name}</p>
             {meal.description && (
-              <p className="text-sm text-gray-600">{meal.description}</p>
+              <p className="text-sm text-gray-500">{meal.description}</p>
             )}
           </div>
         </div>
@@ -90,11 +90,11 @@ const DayMenuCard = ({ day }: { day: MenuDay }) => {
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-      <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4">
-        <h3 className="text-lg font-semibold text-white capitalize">
+      <div className="bg-primary pt-12 pb-24 px-6 rounded-b-[2.5rem] relative">
+        <h3 className="text-lg font-semibold text-primary-foreground capitalize">
           {dayName}
         </h3>
-        <p className="text-sm text-green-50">{formattedDate}</p>
+        <p className="text-sm text-primary-foreground/80">{formattedDate}</p>
       </div>
 
       <div className="p-6 space-y-4">
@@ -240,7 +240,7 @@ export function ResidentMenuView({ menuWeek }: ResidentMenuViewProps) {
           <h1 className="text-4xl font-serif text-gray-900 mb-2">
             Menú del Comedor
           </h1>
-          <p className="text-gray-600">
+          <p className="text-gray-500">
             Consulta el menú de la semana del{' '}
             {new Date(week.weekStart).toLocaleDateString('es-ES', {
               day: 'numeric',
@@ -272,7 +272,9 @@ export function ResidentMenuView({ menuWeek }: ResidentMenuViewProps) {
           <h3 className="font-semibold text-blue-900 mb-4">Información dietética</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-blue-800">
             <div className="flex items-center gap-2">
-              <Leaf className="w-5 h-5 text-green-600" />
+              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                <Leaf className="w-5 h-5 text-primary" />
+              </div>
               <span>Las opciones vegetarianas disponibles están marcadas</span>
             </div>
             <div className="flex items-center gap-2">

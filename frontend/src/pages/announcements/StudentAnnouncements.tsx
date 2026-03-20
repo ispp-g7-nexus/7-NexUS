@@ -38,8 +38,8 @@ export function StudentAnnouncements() {
           <div className="absolute left-0 w-11 h-11 flex items-center justify-center">
             <img src={logo} alt="NexUS Logo" className="w-full h-full object-contain" />
             </div>
-          <h1 className="text-xl font-bold text-white">Avisos</h1>
-          <NotificationBell onMarkAsRead={loadAnnouncements} className="absolute right-0 text-white hover:text-white" />
+          <h1 className="text-xl font-bold text-primary-foreground">Avisos</h1>
+          <NotificationBell onMarkAsRead={loadAnnouncements} className="absolute right-0 text-primary-foreground hover:opacity-80 transition-opacity" />
         </div>
       </div>
 
@@ -68,7 +68,7 @@ export function StudentAnnouncements() {
         )}
 
         {!loading && !error && announcements.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground">
+          <div className="text-center py-12 text-gray-500">
             No hay avisos disponibles
           </div>
         )}

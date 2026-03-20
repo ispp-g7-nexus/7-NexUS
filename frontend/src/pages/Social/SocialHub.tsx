@@ -40,7 +40,7 @@ export function SocialHub({
 
   return (
     <div className="flex flex-col w-full">
-      <div className="flex bg-gray-100 p-1 rounded-full mb-6 mx-auto w-fit">
+      <div className="flex bg-gray-50 p-1 rounded-full mb-6 mx-auto w-fit">
         {(["eventos", "chat", "matches", "perfil"] as Tab[]).map((tab) => (
           <Button
             key={tab}
