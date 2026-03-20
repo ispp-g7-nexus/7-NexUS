@@ -31,7 +31,7 @@ interface ReservationFormSheetProps {
 interface TimeSlot {
   start_time: string;
   end_time: string;
-  status: "available" | "occupied";
+  status: "available" | "occupied"|"past";
 }
 
 
@@ -62,6 +62,7 @@ export function ReservationFormSheet({
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
 
   useEffect(() => {
     if (!open || !space) return;
@@ -139,10 +140,11 @@ export function ReservationFormSheet({
         {space && (
           <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-6 p-6 overflow-y-auto">
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-foreground">
+              <label htmlFor="reservation-date" className="block text-sm font-medium text-foreground">
                 Fecha de la reserva
               </label>
               <InteractiveDatePicker
+                id="reservation-date"
                 value={localDate}
                 onChange={(newDate) => setLocalDate(newDate)}
                 minDate={getTodayDateString()}
@@ -185,14 +187,13 @@ export function ReservationFormSheet({
                         {isExpanded && (
                           <div className="grid grid-cols-2 gap-2 p-3 bg-muted/10 border-t border-border sm:grid-cols-3">
                             {typedHourSlots.map((slot, idx) => {
+
                               const isSelected = selectedSlot?.start_time === slot.start_time;
-                              const isOccupied = slot.status === "occupied";
                               return (
                                 <SlotButton
                                   key={idx}
                                   slot={slot}
                                   isSelected={isSelected}
-                                  isOccupied={isOccupied}
                                   onClick={() => setSelectedSlot(slot)}
                                 />
                               );
@@ -207,13 +208,11 @@ export function ReservationFormSheet({
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {slots.map((slot, index) => {
                     const isSelected = selectedSlot?.start_time === slot.start_time;
-                    const isOccupied = slot.status === "occupied";
                     return (
                       <SlotButton
                         key={index}
                         slot={slot}
                         isSelected={isSelected}
-                        isOccupied={isOccupied}
                         onClick={() => setSelectedSlot(slot)}
                       />
                     );
@@ -262,26 +261,28 @@ export function ReservationFormSheet({
 function SlotButton({ 
   slot, 
   isSelected, 
-  isOccupied, 
   onClick 
 }: { 
   slot: TimeSlot; 
   isSelected: boolean; 
-  isOccupied: boolean; 
   onClick: () => void; 
 }) {
+  const isOccupied = slot.status === "occupied";
+  const isPast = slot.status === "past";
   return (
     <button
       type="button"
-      disabled={isOccupied}
+      disabled={isOccupied || isPast}
       onClick={onClick}
       className={`
         relative flex items-center justify-center rounded-md px-3 py-2 text-sm font-medium transition-all duration-200
         ${
-          isOccupied
-            ? "bg-muted/50 text-muted-foreground/50 line-through cursor-not-allowed border border-transparent"
+          isPast
+            ? "bg-muted/20 text-muted-foreground/40 cursor-not-allowed border border-transparent" 
+            : isOccupied
+            ? "bg-muted/60 text-muted-foreground/60 line-through cursor-not-allowed border border-transparent" 
             : isSelected
-            ? "bg-[#4A7C59] text-white shadow-md border border-[#4A7C59] scale-[1.02]"
+            ? "bg-[#4A7C59] text-white shadow-md border border-[#4A7C59] scale-[1.02]" 
             : "bg-background text-foreground border border-border hover:border-[#4A7C59] hover:text-[#4A7C59] hover:bg-[#4A7C59]/5"
         }
       `}

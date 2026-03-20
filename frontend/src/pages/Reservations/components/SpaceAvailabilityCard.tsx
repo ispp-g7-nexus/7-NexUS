@@ -129,8 +129,6 @@ export function SpaceAvailabilityCard({
             </div>
           )}
         </div>
-
-        {/* Botón de reservar */}
         <div className="flex justify-end pt-2">
           <Button 
             className="bg-[#4A7C59] hover:bg-[#4A7C59]/90 text-white" 

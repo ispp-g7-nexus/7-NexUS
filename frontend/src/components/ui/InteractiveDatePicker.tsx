@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { CalendarDays } from "lucide-react";
 
 interface InteractiveDatePickerProps {
-  value: string;  
+  value: string;
   onChange: (date: string) => void;
   minDate?: string;
   className?: string;
   inputClassName?: string;
+  id?: string;
 }
 
 export function InteractiveDatePicker({
@@ -15,6 +16,7 @@ export function InteractiveDatePicker({
   minDate,
   className = "flex h-10 w-full items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
   inputClassName = "flex-1 w-full",
+  id,
 }: InteractiveDatePickerProps) {
   const [inputDate, setInputDate] = useState(value);
   const dateInputRef = useRef<HTMLInputElement>(null);
@@ -33,6 +35,10 @@ export function InteractiveDatePicker({
     const currentYear = new Date().getFullYear();
 
     if (year >= currentYear && year <= currentYear + 2) {
+      if (minDate && valueToEvaluate < minDate) {
+        setInputDate(value);
+        return;
+      }
       onChange(valueToEvaluate);
       setInputDate(valueToEvaluate);
     } else {
@@ -55,6 +61,7 @@ export function InteractiveDatePicker({
         min={minDate}
         value={inputDate}
         required
+        id={id}
         onClick={() => {
           interactionType.current = 'keyboard';
         }}

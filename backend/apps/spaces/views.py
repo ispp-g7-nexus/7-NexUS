@@ -124,7 +124,7 @@ def _compute_available_slots(
             {
                 "start_time": current.isoformat(),
                 "end_time": slot_end.isoformat(),
-                "status": "occupied" if (is_occupied or is_past) else "available",
+                "status": "past" if is_past else ("occupied" if is_occupied else "available"),
             }
         )
 

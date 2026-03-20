@@ -1,8 +1,3 @@
-export interface AvailableSlot {
-  start_time: string;
-  end_time: string;
-  status: "available" | "occupied";
-}
 import { fetchWithAuth } from "../utils/api";
 
 const SPACES_API_BASE = "/api/spaces";
@@ -48,7 +43,7 @@ export interface SpaceReservation {
 export interface AvailableSlot {
   start_time: string;
   end_time: string;
-  status: "available" | "occupied";
+  status: "available" | "occupied" | "past";
 }
 
 export interface SpaceAvailability {
