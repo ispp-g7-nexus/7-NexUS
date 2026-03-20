@@ -294,7 +294,8 @@ export function Rooms() {
           {filteredRooms.map((r) => (
           <Card
             key={r.id}
-            className={`hover:shadow-md transition ${!r.is_active ? 'border-destructive/30 bg-destructive/5' : 'bg-card'} `}
+            className={`hover:shadow-md transition cursor-pointer ${!r.is_active ? 'border-destructive/30 bg-destructive/5' : 'bg-card'} `}
+            onClick={() => setSelectedRoom(r)}
           >
             <CardContent className="flex justify-between items-start gap-4 p-4">
               <div className="min-w-0 flex-1">
@@ -318,25 +319,16 @@ export function Rooms() {
                 </Badge>
 
                 <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="text-[#4A7C59] hover:bg-[#4A7C59]/10"
-                  onClick={() => setSelectedRoom(r)}
-                >
-                  Ver detalles
-                </Button>
-
-                <Button
                   variant="outline"
-                  onClick={() => openEdit(r)}
+                  onClick={(e) => { e.stopPropagation(); openEdit(r); }}
                 >
                   <Edit2 className="w-4 h-4 mr-2" />Editar
                 </Button>
 
                 <Button
                   variant="destructive"
-                  onClick={async () => {
+                  onClick={async (e) => {
+                    e.stopPropagation();
                     if (!confirm("¿Eliminar habitación?")) return;
                     try {
                       const res = await deleteBedroom(r.id);

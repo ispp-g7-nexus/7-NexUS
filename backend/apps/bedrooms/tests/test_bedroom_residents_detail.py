@@ -141,7 +141,10 @@ class BedroomDetailViewTests(FastTenantTestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertEqual(len(data["residentes"]), 1)
-        self.assertEqual(data["residentes"][0]["full_name"], "Carlos Ruiz")
+        residente = data["residentes"][0]
+        self.assertEqual(residente["full_name"], "Carlos Ruiz")
+        self.assertIn("email", residente)
+        self.assertEqual(residente["email"], "student@bedrooms.test")
 
     def test_ocupantes_actuales_matches_active_students(self):
         self._create_membership(self.student_user, bedroom=self.bedroom)

@@ -5,6 +5,7 @@ const BASE = '/api/bedrooms/';
 export interface BedroomResident {
     id: number;
     full_name: string;
+    email: string | null;
 }
 
 export interface Bedroom {
