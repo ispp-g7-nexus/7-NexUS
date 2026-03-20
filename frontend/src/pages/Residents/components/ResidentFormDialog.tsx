@@ -200,23 +200,25 @@ export function ResidentFormDialog({
             )}
           </div>
 
-          {/* Password */}
-          <div className="space-y-1.5">
-            <Label htmlFor="res-password">
-              Contraseña {isEdit ? "(dejar en blanco para no cambiar)" : "(opcional — se enviará email de bienvenida si está vacía)"}
-            </Label>
-            <Input
-              id="res-password"
-              type="password"
-              placeholder={isEdit ? "Nueva contraseña" : "Contraseña temporal"}
-              value={form.password}
-              onChange={(e) => set("password", e.target.value)}
-              aria-invalid={!!errors.password}
-            />
-            {errors.password && (
-              <p className="text-xs text-red-600">{errors.password}</p>
-            )}
-          </div>
+          {/* Password — solo en creación */}
+          {!isEdit && (
+            <div className="space-y-1.5">
+              <Label htmlFor="res-password">
+                Contraseña (opcional — se enviará email de bienvenida si está vacía)
+              </Label>
+              <Input
+                id="res-password"
+                type="password"
+                placeholder="Contraseña temporal"
+                value={form.password}
+                onChange={(e) => set("password", e.target.value)}
+                aria-invalid={!!errors.password}
+              />
+              {errors.password && (
+                <p className="text-xs text-red-600">{errors.password}</p>
+              )}
+            </div>
+          )}
 
           {/* Bedroom dropdown */}
           <div className="space-y-1.5">
