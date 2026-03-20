@@ -1,219 +1,293 @@
-import { type FormEvent, useEffect, useMemo, useState } from "react";
-
+import { type FormEvent, useEffect, useState } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import { toast } from "sonner";
+import { InteractiveDatePicker } from "../../../components/ui/InteractiveDatePicker";
 import { Button } from "../../../components/ui/button";
-import { Input } from "../../../components/ui/input";
-import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "../../../components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "../../../components/ui/sheet";
 import { useIsMobile } from "../../../components/ui/use-mobile";
-import type { CommonSpace, CreateReservationPayload } from "../../../services/reservations";
+import { createReservation,
+  getSpaceAvailability,
+  isApiError} from "../../../services/reservations";
+import type {CommonSpace,
+  SpaceAvailability,
+  AvailableSlot,
+} from "../../../services/reservations";
 
 interface ReservationFormSheetProps {
   open: boolean;
-  selectedDate: string;
+  initialDate: string;
   space: CommonSpace | null;
-  isSubmitting: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (payload: CreateReservationPayload) => Promise<void>;
+  onSuccess: () => void;
 }
 
-function normalizeTime(timeWithSeconds: string): string {
-  return timeWithSeconds.slice(0, 5);
+interface TimeSlot {
+  start_time: string;
+  end_time: string;
+  status: "available" | "occupied"|"past";
 }
 
-function toTimeValue(timeValue: string): number {
-  const [hours, minutes] = timeValue.split(":").map(Number);
-  return hours * 60 + minutes;
-}
-
-function buildDateFromLocal(date: string, localTime: string): Date {
-  return new Date(`${date}T${localTime}:00`);
-}
 
 function getTodayDateString(): string {
   const now = new Date();
   return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split("T")[0];
 }
 
+function formatTime(isoString: string): string {
+  const d = new Date(isoString);
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
 export function ReservationFormSheet({
   open,
-  selectedDate,
+  initialDate,
   space,
-  isSubmitting,
   onOpenChange,
-  onSubmit,
+  onSuccess,
 }: ReservationFormSheetProps) {
   const isMobile = useIsMobile();
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
+
+  const [localDate, setLocalDate] = useState(initialDate); 
+  const [availability, setAvailability] = useState<SpaceAvailability | null>(null);
+  const [loadingAvailability, setLoadingAvailability] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
+  const [expandedHour, setExpandedHour] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+
   useEffect(() => {
-    if (!open) {
-      return;
+    if (!open || !space) return;
+
+    const fetchAvailability = async () => {
+      setLoadingAvailability(true);
+      setError(null);
+      setSelectedSlot(null);
+      setExpandedHour(null);
+      try {
+        const data = await getSpaceAvailability(space.id, localDate);
+        setAvailability(data);
+      } catch (err) {
+        setError("No se pudo cargar la disponibilidad para esta fecha.");
+      } finally {
+        setLoadingAvailability(false);
+      }
+    };
+
+    void fetchAvailability();
+  }, [open, space, localDate]);
+
+  useEffect(() => {
+    if (open) {
+      setLocalDate(initialDate);
+      setNotes("");
+      setError(null);
+      setSelectedSlot(null);
     }
-
-    setStartTime("");
-    setEndTime("");
-    setNotes("");
-    setError(null);
-  }, [open, space, selectedDate]);
-
-  const minTime = useMemo(() => {
-    if (!space) {
-      return undefined;
-    }
-
-    const openTime = normalizeTime(space.open_time);
-    if (selectedDate !== getTodayDateString()) {
-      return openTime;
-    }
-
-    const now = new Date();
-    const nowMinutes = now.getHours() * 60 + now.getMinutes();
-    const openMinutes = toTimeValue(openTime);
-    const effective = Math.max(nowMinutes, openMinutes);
-
-    const effectiveHours = String(Math.floor(effective / 60)).padStart(2, "0");
-    const effectiveMinutes = String(effective % 60).padStart(2, "0");
-    return `${effectiveHours}:${effectiveMinutes}`;
-  }, [selectedDate, space]);
-
-  const closeTime = space ? normalizeTime(space.close_time) : undefined;
-
-  const validate = (): string | null => {
-    if (!space) {
-      return "Selecciona un espacio antes de reservar.";
-    }
-
-    if (!startTime || !endTime) {
-      return "Debes indicar hora de inicio y fin.";
-    }
-
-    const startDate = buildDateFromLocal(selectedDate, startTime);
-    const endDate = buildDateFromLocal(selectedDate, endTime);
-
-    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
-      return "Formato de hora inválido.";
-    }
-
-    if (startDate >= endDate) {
-      return "La hora de fin debe ser posterior a la de inicio.";
-    }
-
-    if (startDate < new Date()) {
-      return "No puedes reservar en el pasado.";
-    }
-
-    const startMinutes = toTimeValue(startTime);
-    const endMinutes = toTimeValue(endTime);
-    const openMinutes = toTimeValue(normalizeTime(space.open_time));
-    const closeMinutes = toTimeValue(normalizeTime(space.close_time));
-
-    if (startMinutes < openMinutes || endMinutes > closeMinutes) {
-      return `Este espacio solo se puede reservar entre ${normalizeTime(space.open_time)} y ${normalizeTime(space.close_time)}.`;
-    }
-
-    return null;
-  };
+  }, [open, initialDate]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!space || !selectedSlot) return;
 
-    const validationError = validate();
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
-
+    setIsSubmitting(true);
     setError(null);
 
-    const payload: CreateReservationPayload = {
-      start_time: buildDateFromLocal(selectedDate, startTime).toISOString(),
-      end_time: buildDateFromLocal(selectedDate, endTime).toISOString(),
-      notes: notes.trim(),
-    };
-
-    await onSubmit(payload);
+    try {
+      await createReservation(space.id, {
+        start_time: selectedSlot.start_time,
+        end_time: selectedSlot.end_time,
+        notes: notes.trim(),
+      });
+      toast.success("Reserva confirmada con éxito.");
+      onSuccess();
+    } catch (err) {
+      setError(isApiError(err) ? err.message : "Error al crear la reserva.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  const slots: AvailableSlot[] = availability?.available_slots || [];
+  const needsGrouping = space && space.reservation_interval_minutes < 30;
+
+  const groupedSlots = slots.reduce((acc, slot) => {
+    const hourKey = formatTime(slot.start_time).split(":")[0] + ":00";
+    if (!acc[hourKey]) acc[hourKey] = [];
+    acc[hourKey].push(slot);
+    return acc;
+  }, {} as Record<string, AvailableSlot[]>);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side={isMobile ? "bottom" : "right"}
-        className={isMobile ? "max-h-[90vh] rounded-t-xl" : "w-full sm:max-w-md"}
+        className={isMobile ? "max-h-[90vh] rounded-t-xl" : "w-full sm:max-w-md flex flex-col"}
       >
-        <SheetHeader className="px-6 pt-6">
+        <SheetHeader className="px-6 pt-6 pb-4 border-b border-border">
           <SheetTitle>Nueva reserva</SheetTitle>
-          <SheetDescription>
-            {space ? `${space.name} · ${selectedDate}` : "Selecciona un espacio para continuar."}
-          </SheetDescription>
+          <SheetDescription>{space ? space.name : "Selecciona un espacio"}</SheetDescription>
         </SheetHeader>
 
-        <form onSubmit={handleSubmit} className="flex h-full flex-col gap-4 px-6 pb-6">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label htmlFor="reservation-start" className="mb-1 block text-sm font-medium text-foreground">
-                Hora de inicio
+        {space && (
+          <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-6 p-6 overflow-y-auto">
+            <div className="space-y-2">
+              <label htmlFor="reservation-date" className="block text-sm font-medium text-foreground">
+                Fecha de la reserva
               </label>
-              <Input
-                id="reservation-start"
-                type="time"
-                value={startTime}
-                min={minTime}
-                max={closeTime}
-                onChange={(event) => setStartTime(event.target.value)}
-                required
+              <InteractiveDatePicker
+                id="reservation-date"
+                value={localDate}
+                onChange={(newDate) => setLocalDate(newDate)}
+                minDate={getTodayDateString()}
               />
             </div>
-            <div>
-              <label htmlFor="reservation-end" className="mb-1 block text-sm font-medium text-foreground">
-                Hora de fin
+            <div className="space-y-3">
+              <label className="text-sm font-medium text-foreground flex items-center justify-between">
+                <span>Horas disponibles</span>
+                <span className="text-xs text-muted-foreground font-normal">
+                  Tramos de {space.reservation_interval_minutes} min
+                </span>
               </label>
-              <Input
-                id="reservation-end"
-                type="time"
-                value={endTime}
-                min={minTime}
-                max={closeTime}
-                onChange={(event) => setEndTime(event.target.value)}
-                required
+
+              {loadingAvailability ? (
+                <div className="rounded-lg border border-border bg-muted/30 p-8 text-center">
+                  <p className="text-sm text-muted-foreground animate-pulse">Cargando disponibilidad...</p>
+                </div>
+              ) : slots.length === 0 ? (
+                <div className="rounded-lg border border-border bg-muted/30 p-8 text-center">
+                  <p className="text-sm text-muted-foreground">No hay huecos generados para este espacio hoy.</p>
+                </div>
+              ) : needsGrouping ? (
+                <div className="space-y-2">
+                  {Object.entries(groupedSlots).map(([hourLabel, hourSlots]) => {
+                    const typedHourSlots = hourSlots as AvailableSlot[];
+                    const isExpanded = expandedHour === hourLabel;
+                    const isHourFullyOccupied = typedHourSlots.every(s => s.status === "occupied");
+
+                    return (
+                      <div key={hourLabel} className="rounded-md border border-border overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={() => setExpandedHour(isExpanded ? null : hourLabel)}
+                          className={`flex w-full items-center justify-between px-4 py-3 text-sm font-medium transition-colors hover:bg-muted/50 ${isHourFullyOccupied ? "bg-muted/30 text-muted-foreground" : "bg-card text-foreground"}`}
+                        >
+                          <span>{hourLabel}</span>
+                          {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        </button>
+                        
+                        {isExpanded && (
+                          <div className="grid grid-cols-2 gap-2 p-3 bg-muted/10 border-t border-border sm:grid-cols-3">
+                            {typedHourSlots.map((slot, idx) => {
+
+                              const isSelected = selectedSlot?.start_time === slot.start_time;
+                              return (
+                                <SlotButton
+                                  key={idx}
+                                  slot={slot}
+                                  isSelected={isSelected}
+                                  onClick={() => setSelectedSlot(slot)}
+                                />
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {slots.map((slot, index) => {
+                    const isSelected = selectedSlot?.start_time === slot.start_time;
+                    return (
+                      <SlotButton
+                        key={index}
+                        slot={slot}
+                        isSelected={isSelected}
+                        onClick={() => setSelectedSlot(slot)}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="reservation-notes" className="block text-sm font-medium text-foreground">
+                Notas (opcional)
+              </label>
+              <textarea
+                id="reservation-notes"
+                value={notes}
+                onChange={(event) => setNotes(event.target.value)}
+                rows={3}
+                maxLength={500}
+                className="border-input bg-background focus-visible:ring-ring/50 w-full rounded-md border px-3 py-2 text-sm outline-none focus-visible:ring-[3px] resize-none"
+                placeholder="Ejemplo: reunión del grupo de proyecto"
               />
             </div>
-          </div>
 
-          <div>
-            <label htmlFor="reservation-notes" className="mb-1 block text-sm font-medium text-foreground">
-              Notas (opcional)
-            </label>
-            <textarea
-              id="reservation-notes"
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-              rows={4}
-              maxLength={500}
-              className="border-input bg-input-background focus-visible:ring-ring/50 w-full rounded-md border px-3 py-2 text-sm outline-none focus-visible:ring-[3px]"
-              placeholder="Ejemplo: reunión del grupo de proyecto"
-            />
-          </div>
+            {error && (
+              <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {error}
+              </p>
+            )}
 
-          {error && (
-            <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {error}
-            </p>
-          )}
+            <SheetFooter className="mt-auto pt-4 border-t border-border">
+              <div className="flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={isSubmitting || !selectedSlot} className="bg-[#4A7C59] hover:bg-[#4A7C59]/90 text-white">
+                  {isSubmitting ? "Confirmando..." : "Confirmar reserva"}
+                </Button>
+              </div>
+            </SheetFooter>
 
-          <SheetFooter className="mt-auto px-0 pb-0">
-            <div className="flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
-                Cerrar
-              </Button>
-              <Button type="submit" disabled={!space || isSubmitting}>
-                {isSubmitting ? "Reservando..." : "Confirmar reserva"}
-              </Button>
-            </div>
-          </SheetFooter>
-        </form>
+          </form>
+        )}
       </SheetContent>
     </Sheet>
+  );
+}
+function SlotButton({ 
+  slot, 
+  isSelected, 
+  onClick 
+}: { 
+  slot: TimeSlot; 
+  isSelected: boolean; 
+  onClick: () => void; 
+}) {
+  const isOccupied = slot.status === "occupied";
+  const isPast = slot.status === "past";
+  return (
+    <button
+      type="button"
+      disabled={isOccupied || isPast}
+      onClick={onClick}
+      className={`
+        relative flex items-center justify-center rounded-md px-3 py-2 text-sm font-medium transition-all duration-200
+        ${
+          isPast
+            ? "bg-muted/20 text-muted-foreground/40 cursor-not-allowed border border-transparent" 
+            : isOccupied
+            ? "bg-muted/60 text-muted-foreground/60 line-through cursor-not-allowed border border-transparent" 
+            : isSelected
+            ? "bg-[#4A7C59] text-white shadow-md border border-[#4A7C59] scale-[1.02]" 
+            : "bg-background text-foreground border border-border hover:border-[#4A7C59] hover:text-[#4A7C59] hover:bg-[#4A7C59]/5"
+        }
+      `}
+    >
+      {formatTime(slot.start_time)} - {formatTime(slot.end_time)}
+    </button>
   );
 }
