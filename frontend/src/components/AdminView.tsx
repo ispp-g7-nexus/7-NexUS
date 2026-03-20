@@ -1,26 +1,28 @@
 import { AlertCircle, BarChart3, BedDouble, Bell, BookOpen, Briefcase, Calendar, Home, Layout, LayoutDashboard, LogOut, Menu, MessageSquare, Shield, User, UserCheck, Users, Utensils } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { chatsService, type ChatRealtimeEvent } from "../services/chats";
-import { authService } from "../services/auth";
-import { Events } from "../pages/Social/Events/Events";
-import { Residents } from "../pages/Residents/Residents";
 import logo from "../assets/logo.png";
+import { AdminChats } from "../pages/Chats/AdminChats";
 import { AdminIncidences } from "../pages/Incidences/components/AdminIncidences";
+import { AdminMenuView } from "../pages/Menu/AdminMenuView";
+import { Residents } from "../pages/Residents/Residents";
 import RolesPage from "../pages/RolesPage";
 import Rooms from "../pages/Rooms/Rooms";
+import { Events } from "../pages/Social/Events/Events";
 import { Staff } from "../pages/Staff/Staff";
+import { AdminGuestPassListPage } from "../pages/Visitors/AdminGuestPassList";
+import { AdminGuestPassPolicyPage } from "../pages/Visitors/AdminGuestPassPolicy";
 import { AdminAnnouncements } from "../pages/announcements/AdminAnnouncements";
+import { authService } from "../services/auth";
+import { chatsService, type ChatRealtimeEvent } from "../services/chats";
+import { listAdminGuestPasses } from "../services/guestPasses";
 import { AdminProfile } from "./AdminProfile";
 import { AdminReservations } from "./AdminReservations";
-import { AdminChats } from "../pages/Chats/AdminChats";
-import { AdminMenuView } from "../pages/Menu/AdminMenuView";
-import { AdminGuestPassPolicyPage } from "../pages/Visitors/AdminGuestPassPolicy";
-import { AdminGuestPassListPage } from "../pages/Visitors/AdminGuestPassList";
 import { StatCard } from "./statCard";
 import { Button } from "./ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet";
 import { useAdminNotifications, type AdminNotificationSource } from "./useAdminNotifications";
+
 
 interface AdminViewProps {
     readonly onLogout: () => void;
@@ -142,6 +144,13 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
 
         return null;
     };
+
+    const [totalActiveGuests, setTotalActiveGuests] = useState<number>(0);
+            useEffect(() => {
+                listAdminGuestPasses("active")
+                    .then((data) => setTotalActiveGuests(data.length))
+                    .catch(() => setTotalActiveGuests(0));
+            }, []);
 
     const loadChatsCount = async () => {
         try {
@@ -280,6 +289,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
         { label: 'Menú Comedor',    value: 'Ver', trend: 'Hoy',    icon: Utensils,   theme: 'blue'   as const, onClick: () => setActiveTab('kitchen')      },
         { label: 'Estadísticas',    value: 'Ver', trend: '+5%',    icon: BarChart3,  theme: 'green'  as const, onClick: () => setActiveTab('analytics')    },
         { label: 'Personal',        value: '42',  trend: 'Estable',icon: Briefcase,  theme: 'purple' as const, onClick: () => setActiveTab('staff')        },
+        { label: 'Visitantes', value: totalActiveGuests.toString(), trend: '+0%', icon: UserCheck, theme: 'blue' as const, onClick: () => setActiveTab('visitors') },
     ];
 
     const today = new Date().toLocaleDateString('es-ES', {
