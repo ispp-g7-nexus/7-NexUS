@@ -7,7 +7,7 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.renderers import BaseRenderer
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.exceptions import NotFound, ValidationError
+from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.generics import ListAPIView
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -15,7 +15,7 @@ from rest_framework.response import Response
 from apps.membership.models import Membership
 
 from .models import ChatGroup, ChatGroupMember, ChatGroupLabel, GroupMessage, PrivateConversation, PrivateMessage
-from .permissions import IsAuthenticatedResident, IsResidenceAdmin
+from .permissions import IsAuthenticatedResident, IsChatGroupManager, IsResidenceAdmin
 from .realtime import publish_chat_event, stream_chat_events
 from .serializers import (
 	AddChatMemberSerializer,
@@ -53,19 +53,47 @@ class ServerSentEventsRenderer(BaseRenderer):
 
 
 class ChatGroupViewSet(viewsets.ModelViewSet):
-	permission_classes = [IsResidenceAdmin]
+	permission_classes = [IsChatGroupManager]
+
+	def _get_actor_membership(self):
+		residence = getattr(self.request, "residence", None)
+		if not residence:
+			return None
+
+		return self.request.user.memberships.filter(
+			residence=residence,
+			is_active=True,
+		).select_related("role").first()
+
+	def _actor_is_residence_admin(self, membership) -> bool:
+		if not membership or not getattr(membership, "role", None):
+			return False
+		return membership.role.name.lower() == "admin"
 
 	def get_queryset(self):
 		residence = getattr(self.request, "residence", None)
 		if not residence:
 			return ChatGroup.objects.none()
 
+		membership = self._get_actor_membership()
+		if not membership:
+			return ChatGroup.objects.none()
+
 		members_qs = ChatGroupMember.objects.select_related("membership__user")
-		return (
+		base_qs = (
 			ChatGroup.objects.filter(residence=residence)
 			.prefetch_related(Prefetch("memberships", queryset=members_qs))
 			.order_by("name")
 		)
+
+		if self._actor_is_residence_admin(membership):
+			return base_qs
+
+		return base_qs.filter(
+			memberships__membership=membership,
+			memberships__is_admin=True,
+			memberships__can_interact=True,
+		).distinct()
 
 	def get_serializer_class(self):
 		if self.action in {"create", "update", "partial_update"}:
@@ -77,11 +105,11 @@ class ChatGroupViewSet(viewsets.ModelViewSet):
 		if not residence:
 			raise ValidationError({"detail": "No se ha determinado la residencia."})
 
+		actor_membership = self._get_actor_membership()
+		if not self._actor_is_residence_admin(actor_membership):
+			raise PermissionDenied("Solo un administrador de residencia puede crear grupos.")
+
 		group = serializer.save(residence=residence, created_by=self.request.user)
-		actor_membership = self.request.user.memberships.filter(
-			residence=residence,
-			is_active=True,
-		).first()
 		if actor_membership:
 			ChatGroupMember.objects.get_or_create(
 				group=group,
@@ -124,6 +152,10 @@ class ChatGroupViewSet(viewsets.ModelViewSet):
 		return Response(read_serializer.data)
 
 	def destroy(self, request, *args, **kwargs):
+		actor_membership = self._get_actor_membership()
+		if not self._actor_is_residence_admin(actor_membership):
+			raise PermissionDenied("Solo un administrador de residencia puede eliminar grupos.")
+
 		instance = self.get_object()
 		group_id = instance.id
 		residence = getattr(request, "residence", None)
@@ -180,29 +212,43 @@ class ChatGroupViewSet(viewsets.ModelViewSet):
 		serializer = UpdateChatMemberSerializer(data=request.data)
 		serializer.is_valid(raise_exception=True)
 
-		member = group.memberships.filter(id=member_id).first()
+		member = group.memberships.select_related("membership__user").filter(id=member_id).first()
 		if not member:
 			raise NotFound("Miembro no encontrado.")
+
+		if (
+			not serializer.validated_data["is_admin"]
+			and group.created_by_id
+			and member.membership.user_id == group.created_by_id
+		):
+			raise ValidationError({"detail": "No puedes quitar el rol de administrador al creador del grupo."})
 
 		member.is_admin = serializer.validated_data["is_admin"]
 		member.save(update_fields=["is_admin"])
 
 		residence = getattr(request, "residence", None)
 		if residence:
+			# Refresh group from DB to get updated members
+			group.refresh_from_db()
 			publish_chat_event(
 				residence.id,
 				"group_updated",
-				{"group": ChatGroupSerializer(self.get_queryset().get(id=group.id)).data},
+				{"group": ChatGroupSerializer(group).data},
 			)
 
-		return Response(ChatGroupSerializer(self.get_queryset().get(id=group.id)).data)
+		# Refresh to get updated serialization
+		group.refresh_from_db()
+		return Response(ChatGroupSerializer(group).data)
 
 	@update_member.mapping.delete
 	def remove_member(self, request, pk=None, member_id=None):
 		group = self.get_object()
-		member = group.memberships.filter(id=member_id).first()
+		member = group.memberships.select_related("membership__user").filter(id=member_id).first()
 		if not member:
 			raise NotFound("Miembro no encontrado.")
+
+		if group.created_by_id and member.membership.user_id == group.created_by_id:
+			raise ValidationError({"detail": "No puedes eliminar al creador del grupo."})
 
 		member.can_interact = False
 		member.is_admin = False

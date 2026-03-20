@@ -48,6 +48,18 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
         chatsService.listLabels().then(setCustomLabels).catch(() => { });
     }, []);
 
+    useEffect(() => {
+        if (!currentUserEmail) return;
+
+        const myMember = currentGroup.members_list.find((member) => member.email === currentUserEmail);
+        if (!myMember) return;
+
+        if (!myMember.is_admin) {
+            toast.info("Ya no eres administrador del grupo.");
+            onBack();
+        }
+    }, [currentGroup, currentUserEmail, onBack]);
+
     const normalizeSearchValue = (value: string) =>
         value
             .toLowerCase()
@@ -92,6 +104,11 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
             return;
         }
 
+        if (member.email === currentGroup.created_by_email) {
+            toast.error("No puedes eliminar al creador del grupo.");
+            return;
+        }
+
         if (currentGroup.members_list.length <= 1) {
             toast.error("No puedes eliminar el último miembro del grupo. Los grupos no pueden estar vacíos.");
             return;
@@ -112,6 +129,11 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
             const updated = await chatsService.updateMemberRole(currentGroup.id, memberId, false);
             setCurrentGroup(updated);
             onGroupUpdated(updated);
+            if (member?.email === currentUserEmail) {
+                toast.success("Has dejado de ser administrador del grupo.");
+                onBack();
+                return;
+            }
             toast.success("Rol de administrador eliminado correctamente.");
         } catch (err: unknown) {
             toast.error(err instanceof Error ? err.message : "No se pudo eliminar el rol de administrador.");
@@ -343,7 +365,11 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
                                         onClick={() => handleDeleteMemberClick(member)}
                                         className="w-8 h-8 text-red-600 hover:text-red-700 hover:bg-red-50"
                                         title="Eliminar miembro"
-                                        disabled={member.email === currentUserEmail || currentGroup.members_list.length <= 1}
+                                        disabled={
+                                            member.email === currentUserEmail
+                                            || member.email === currentGroup.created_by_email
+                                            || currentGroup.members_list.length <= 1
+                                        }
                                     >
                                         <X className="w-4 h-4" />
                                     </Button>
