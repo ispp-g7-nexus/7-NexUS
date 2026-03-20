@@ -1,6 +1,5 @@
 import { AlertCircle, BarChart3, BedDouble, Bell, BookOpen, Briefcase, Calendar, Home, Layout, LayoutDashboard, LogOut, Menu, MessageSquare, Shield, User, UserCheck, Users, Utensils } from "lucide-react";
-import { useState, useEffect } from "react";
-import { toast } from "sonner";
+import { useEffect, useRef, useState } from "react";
 import { chatsService, type ChatRealtimeEvent } from "../services/chats";
 import { authService } from "../services/auth";
 import { Events } from "../pages/Social/Events/Events";
@@ -24,7 +23,8 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import { useAdminNotifications, type AdminNotificationSource } from "./useAdminNotifications";
 
 interface AdminViewProps {
-    onLogout: () => void;
+    readonly onLogout: () => void;
+    readonly currentUser: { name: string; email: string } | null;
 }
 
 type AdminTab = "dashboard" | "rooms" | "students" | "incidences" | "reservations" | "kitchen" | "analytics" | "staff" | "announcements" | "visitors" | "events" | "roles" | "profile" | "chats";
@@ -61,13 +61,87 @@ const getTabByNotificationSource = (source: AdminNotificationSource): AdminTab =
     return "reservations";
 };
 
-export function AdminView({ onLogout }: AdminViewProps) {
+export function AdminView({ onLogout, currentUser }: AdminViewProps) {
     const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
     const [totalChats, setTotalChats] = useState<number>(0);
     const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
-    const [unreadChatNotifications, setUnreadChatNotifications] = useState<number>(0);
+    const [unreadChatKeys, setUnreadChatKeys] = useState<Set<string>>(new Set());
     const [chatRealtimeTick, setChatRealtimeTick] = useState<number>(0);
     const [chatRealtimeEvent, setChatRealtimeEvent] = useState<ChatRealtimeEvent | null>(null);
+    const processedGroupMessageEventKeysRef = useRef<Set<string>>(new Set());
+
+    const unreadChatsCount = unreadChatKeys.size;
+
+    const isGroupLifecycleEvent = (evt: ChatRealtimeEvent): boolean =>
+        evt.event === "group_created" || evt.event === "group_updated" || evt.event === "group_deleted";
+
+    const isIncomingMessageEvent = (evt: ChatRealtimeEvent): boolean =>
+        evt.event === "group_message_created" || evt.event === "private_message_created";
+
+    const shouldSkipRepeatedGroupMessageEvent = (evt: ChatRealtimeEvent): boolean => {
+        if (evt.event !== "group_message_created") {
+            return false;
+        }
+
+        const eventKey = buildGroupMessageEventKey(evt);
+        if (!eventKey) {
+            return false;
+        }
+
+        if (processedGroupMessageEventKeysRef.current.has(eventKey)) {
+            return true;
+        }
+
+        processedGroupMessageEventKeysRef.current.add(eventKey);
+        if (processedGroupMessageEventKeysRef.current.size > 1000) {
+            const keys = Array.from(processedGroupMessageEventKeysRef.current);
+            processedGroupMessageEventKeysRef.current = new Set(keys.slice(-500));
+        }
+
+        return false;
+    };
+
+    const getSenderEmailFromEvent = (evt: ChatRealtimeEvent): string =>
+        typeof evt.payload?.sender_email === "string" ? evt.payload.sender_email.trim().toLowerCase() : "";
+
+    const buildUnreadChatKey = (evt: ChatRealtimeEvent): string | null => {
+        if (evt.event === "group_message_created") {
+            const groupId = Number(evt.payload?.group_id ?? -1);
+            return Number.isFinite(groupId) && groupId > 0 ? `group:${groupId}` : null;
+        }
+
+        const conversationId = Number(evt.payload?.conversation_id ?? -1);
+        return Number.isFinite(conversationId) && conversationId > 0 ? `private:${conversationId}` : null;
+    };
+
+    const persistUnreadGroupMessage = (groupId: number) => {
+        if (!currentUserEmail || !Number.isFinite(groupId) || groupId <= 0) return;
+
+        const storageKey = `admin-chat-unread:${currentUserEmail.trim().toLowerCase()}`;
+
+        try {
+            const raw = localStorage.getItem(storageKey);
+            const parsed = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
+            const previousCount = Number(parsed[String(groupId)] ?? 0);
+            const nextCount = Number.isFinite(previousCount) && previousCount > 0 ? previousCount + 1 : 1;
+            parsed[String(groupId)] = nextCount;
+            localStorage.setItem(storageKey, JSON.stringify(parsed));
+        } catch {
+        }
+    };
+
+    const buildGroupMessageEventKey = (evt: ChatRealtimeEvent): string | null => {
+        const groupId = Number(evt.payload?.group_id ?? -1);
+        if (!Number.isFinite(groupId) || groupId <= 0) return null;
+
+        const messagePayload = evt.payload?.message as { id?: number } | undefined;
+        const messageId = Number(messagePayload?.id ?? evt.payload?.message_id ?? -1);
+        if (Number.isFinite(messageId) && messageId > 0) {
+            return `${groupId}:${messageId}`;
+        }
+
+        return null;
+    };
 
     const loadChatsCount = async () => {
         try {
@@ -80,7 +154,6 @@ export function AdminView({ onLogout }: AdminViewProps) {
     };
 
     useEffect(() => {
-        // Cargar conteo inicial
         loadChatsCount();
     }, []);
 
@@ -93,28 +166,51 @@ export function AdminView({ onLogout }: AdminViewProps) {
     }, []);
 
     useEffect(() => {
+        const normalizedCurrentUserEmail = currentUserEmail.trim().toLowerCase();
+
         const source = chatsService.subscribeToEvents((evt) => {
-            if (evt.event === "group_created" || evt.event === "group_updated" || evt.event === "group_deleted") {
+            if (isGroupLifecycleEvent(evt)) {
                 setChatRealtimeEvent(evt);
                 setChatRealtimeTick((prev) => prev + 1);
-                void loadChatsCount();
+                loadChatsCount().catch(() => { });
                 return;
             }
 
-            if (evt.event === "group_message_created" || evt.event === "private_message_created") {
-                setChatRealtimeEvent(evt);
-                setChatRealtimeTick((prev) => prev + 1);
+            if (!isIncomingMessageEvent(evt)) {
+                return;
+            }
 
-                const senderEmail = String(evt.payload?.sender_email ?? "");
-                const senderName = String(evt.payload?.sender_name ?? "Residente");
-                if (!senderEmail || senderEmail === currentUserEmail) return;
+            if (shouldSkipRepeatedGroupMessageEvent(evt)) {
+                return;
+            }
 
-                if (activeTab !== "chats") {
-                    setUnreadChatNotifications((prev) => prev + 1);
-                    toast.info("Nuevo mensaje de chat", {
-                        description: `Mensaje de ${senderName}`,
-                    });
-                }
+            setChatRealtimeEvent(evt);
+            setChatRealtimeTick((prev) => prev + 1);
+
+            const senderEmail = getSenderEmailFromEvent(evt);
+            if (!senderEmail || senderEmail === normalizedCurrentUserEmail) {
+                return;
+            }
+
+            if (activeTab === "chats") {
+                return;
+            }
+
+            const chatKey = buildUnreadChatKey(evt);
+            if (!chatKey) {
+                return;
+            }
+
+            setUnreadChatKeys((prev) => {
+                if (prev.has(chatKey)) return prev;
+                const next = new Set(prev);
+                next.add(chatKey);
+                return next;
+            });
+
+            if (evt.event === "group_message_created") {
+                const groupId = Number(evt.payload?.group_id ?? -1);
+                persistUnreadGroupMessage(groupId);
             }
         });
 
@@ -133,7 +229,7 @@ export function AdminView({ onLogout }: AdminViewProps) {
 
     useEffect(() => {
         if (activeTab === "chats") {
-            setUnreadChatNotifications(0);
+            setUnreadChatKeys(new Set());
         }
     }, [activeTab]);
     const [reservationsSubTab, setReservationsSubTab] = useState("espacios");
@@ -172,7 +268,15 @@ export function AdminView({ onLogout }: AdminViewProps) {
         { label: 'Incidencias',     value: '12',  trend: '-15%',   icon: AlertCircle,theme: 'red'    as const, onClick: () => setActiveTab('incidences')   },
         { label: 'Visitantes',      value: '23',  trend: '+12%',   icon: UserCheck,  theme: 'purple' as const, onClick: () => setActiveTab('visitors')     },
         { label: 'Espacios Comunes',value: '8',   trend: '+2',     icon: Layout,     theme: 'orange' as const, onClick: () => setActiveTab('reservations') },
-        { label: 'Chats',           value: unreadChatNotifications > 0 ? `${totalChats} (+${unreadChatNotifications})` : totalChats.toString(),   trend: '', icon: MessageSquare, theme: 'blue' as const, onClick: () => setActiveTab('chats')        },
+        {
+            label: 'Chats',
+            value: totalChats.toString(),
+            topBadgeText: unreadChatsCount > 0 ? '¡Tienes mensajes sin leer!' : undefined,
+            trend: '',
+            icon: MessageSquare,
+            theme: 'blue' as const,
+            onClick: () => setActiveTab('chats')
+        },
         { label: 'Menú Comedor',    value: 'Ver', trend: 'Hoy',    icon: Utensils,   theme: 'blue'   as const, onClick: () => setActiveTab('kitchen')      },
         { label: 'Estadísticas',    value: 'Ver', trend: '+5%',    icon: BarChart3,  theme: 'green'  as const, onClick: () => setActiveTab('analytics')    },
         { label: 'Personal',        value: '42',  trend: 'Estable',icon: Briefcase,  theme: 'purple' as const, onClick: () => setActiveTab('staff')        },
@@ -403,6 +507,17 @@ export function AdminView({ onLogout }: AdminViewProps) {
                                     ))}
                                 </div>
                                 <div className="pt-6 border-t mt-auto shrink-0">
+                                    {currentUser && (
+                                        <div className="mb-4 flex items-center gap-3 px-1">
+                                            <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                                                <User className="w-5 h-5 text-green-700" />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-medium text-gray-900 truncate">{currentUser.name}</p>
+                                                <p className="text-xs text-gray-500 truncate">{currentUser.email}</p>
+                                            </div>
+                                        </div>
+                                    )}
                                     <Button variant="outline" className="w-full justify-start text-red-600" onClick={onLogout}>
                                         <LogOut className="w-4 h-4 mr-2" /> Cerrar Sesión
                                     </Button>
