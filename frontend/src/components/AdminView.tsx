@@ -1,4 +1,4 @@
-import { AlertCircle, BarChart3, BedDouble, Bell, BookOpen, Briefcase, Calendar, Home, Layout, LayoutDashboard, LogOut, Menu, MessageSquare, Shield, User, UserCheck, Users, Utensils } from "lucide-react";
+import { AlertCircle, BarChart3, BedDouble, Bell, BookOpen, Briefcase, Calendar, Home, Layout, LayoutDashboard, LogOut, Menu, MessageSquare, Palette, Shield, User, UserCheck, Users, Utensils } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { chatsService, type ChatRealtimeEvent } from "../services/chats";
 import { authService } from "../services/auth";
@@ -17,6 +17,8 @@ import { AdminMenuView } from "../pages/Menu/AdminMenuView";
 import { AdminGuestPassPolicyPage } from "../pages/Visitors/AdminGuestPassPolicy";
 import { AdminGuestPassListPage } from "../pages/Visitors/AdminGuestPassList";
 import { StatCard } from "./statCard";
+import { AdminBrandingPage } from "../pages/Branding/AdminBrandingPage";
+import { brandingService, type ResidenceBranding } from "../services/branding";
 import { Button } from "./ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet";
@@ -27,7 +29,7 @@ interface AdminViewProps {
     readonly currentUser: { name: string; email: string } | null;
 }
 
-type AdminTab = "dashboard" | "rooms" | "students" | "incidences" | "reservations" | "kitchen" | "analytics" | "staff" | "announcements" | "visitors" | "events" | "roles" | "profile" | "chats";
+type AdminTab = "dashboard" | "rooms" | "students" | "incidences" | "reservations" | "kitchen" | "analytics" | "staff" | "announcements" | "visitors" | "events" | "roles" | "profile" | "chats" | "branding";
 
 const formatRelativeTime = (isoDate: string) => {
     const parsedTime = Date.parse(isoDate);
@@ -68,7 +70,120 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
     const [unreadChatKeys, setUnreadChatKeys] = useState<Set<string>>(new Set());
     const [chatRealtimeTick, setChatRealtimeTick] = useState<number>(0);
     const [chatRealtimeEvent, setChatRealtimeEvent] = useState<ChatRealtimeEvent | null>(null);
+    const [tenantLogoUrl, setTenantLogoUrl] = useState<string>("");
     const processedGroupMessageEventKeysRef = useRef<Set<string>>(new Set());
+
+    const normalizeHexColor = (input: string, fallback: string): string => {
+        const value = (input || "").trim();
+        if (/^#[0-9a-fA-F]{6}$/.test(value)) return value.toUpperCase();
+        return fallback;
+    };
+
+    const lightenHexColor = (hex: string, factor: number): string => {
+        const safeHex = normalizeHexColor(hex, "#4A8F5D");
+        const r = parseInt(safeHex.slice(1, 3), 16);
+        const g = parseInt(safeHex.slice(3, 5), 16);
+        const b = parseInt(safeHex.slice(5, 7), 16);
+        const clamp = (n: number) => Math.max(0, Math.min(255, n));
+
+        const nextR = clamp(Math.round(r + (255 - r) * factor));
+        const nextG = clamp(Math.round(g + (255 - g) * factor));
+        const nextB = clamp(Math.round(b + (255 - b) * factor));
+
+        const toHex = (n: number) => n.toString(16).padStart(2, "0");
+        return `#${toHex(nextR)}${toHex(nextG)}${toHex(nextB)}`.toUpperCase();
+    };
+
+    const darkenHexColor = (hex: string, factor: number): string => {
+        const safeHex = normalizeHexColor(hex, "#4A8F5D");
+        const r = parseInt(safeHex.slice(1, 3), 16);
+        const g = parseInt(safeHex.slice(3, 5), 16);
+        const b = parseInt(safeHex.slice(5, 7), 16);
+        const clamp = (n: number) => Math.max(0, Math.min(255, n));
+
+        const nextR = clamp(Math.round(r * (1 - factor)));
+        const nextG = clamp(Math.round(g * (1 - factor)));
+        const nextB = clamp(Math.round(b * (1 - factor)));
+
+        const toHex = (n: number) => n.toString(16).padStart(2, "0");
+        return `#${toHex(nextR)}${toHex(nextG)}${toHex(nextB)}`.toUpperCase();
+    };
+
+    const applyTenantTheme = (branding: ResidenceBranding) => {
+        const primary = normalizeHexColor(branding.primary_color, "#4A8F5D");
+        const secondary = normalizeHexColor(branding.secondary_color, "#0F4C81");
+        const accent = normalizeHexColor(branding.accent_color, "#2E7D32");
+        const primarySoft = lightenHexColor(primary, 0.88);
+        const primaryBorder = lightenHexColor(primary, 0.72);
+        const primaryDark = darkenHexColor(primary, 0.18);
+
+        const root = document.documentElement;
+        root.style.setProperty("--tenant-primary", primary);
+        root.style.setProperty("--tenant-secondary", secondary);
+        root.style.setProperty("--tenant-accent", accent);
+        root.style.setProperty("--tenant-primary-soft", primarySoft);
+        root.style.setProperty("--tenant-primary-border", primaryBorder);
+        root.style.setProperty("--tenant-primary-dark", primaryDark);
+
+        const styleId = "tenant-admin-branding-style";
+        const existing = document.getElementById(styleId);
+        if (existing) existing.remove();
+
+        const style = document.createElement("style");
+        style.id = styleId;
+        style.textContent = `
+            .tenant-admin-theme .text-green-600,
+            .tenant-admin-theme .text-green-700,
+            .tenant-admin-theme .text-\[\#4a8f5d\] {
+                color: var(--tenant-primary) !important;
+            }
+
+            .tenant-admin-theme .bg-green-50 {
+                background-color: var(--tenant-primary-soft) !important;
+            }
+
+            .tenant-admin-theme .border-green-200,
+            .tenant-admin-theme .border-green-200\/60,
+            .tenant-admin-theme .border-\[\#4a8f5d\]\/50,
+            .tenant-admin-theme .focus\:border-\[\#4a8f5d\]:focus {
+                border-color: var(--tenant-primary-border) !important;
+            }
+
+            .tenant-admin-theme .bg-\[\#4a8f5d\],
+            .tenant-admin-theme .bg-green-600 {
+                background-color: var(--tenant-primary) !important;
+            }
+
+            .tenant-admin-theme .hover\:bg-\[\#3d754b\]:hover,
+            .tenant-admin-theme .hover\:bg-green-700:hover,
+            .tenant-admin-theme .hover\:bg-\[\#3d7a4e\]:hover {
+                background-color: var(--tenant-primary-dark) !important;
+            }
+
+            .tenant-admin-theme .tenant-admin-title {
+                color: var(--tenant-secondary) !important;
+            }
+
+            .tenant-admin-theme .tenant-admin-subtitle {
+                color: var(--tenant-accent) !important;
+            }
+        `;
+        document.head.appendChild(style);
+
+        if (branding.logo_url) {
+            setTenantLogoUrl(branding.logo_url);
+        }
+
+        const customCssId = "tenant-custom-css";
+        const customExisting = document.getElementById(customCssId);
+        if (customExisting) customExisting.remove();
+        if (branding.custom_css?.trim()) {
+            const customStyle = document.createElement("style");
+            customStyle.id = customCssId;
+            customStyle.textContent = branding.custom_css;
+            document.head.appendChild(customStyle);
+        }
+    };
 
     const unreadChatsCount = unreadChatKeys.size;
 
@@ -155,6 +270,36 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
 
     useEffect(() => {
         loadChatsCount();
+    }, []);
+
+    useEffect(() => {
+        let mounted = true;
+
+        const loadBranding = async () => {
+            try {
+                const branding = await brandingService.get();
+                if (!mounted) return;
+                applyTenantTheme(branding);
+            } catch {
+                // Branding is optional for admin view.
+            }
+        };
+
+        loadBranding();
+
+        const handleBrandingUpdate = (event: Event) => {
+            const customEvent = event as CustomEvent<ResidenceBranding>;
+            if (customEvent.detail) {
+                applyTenantTheme(customEvent.detail);
+            }
+        };
+
+        globalThis.addEventListener("tenant-branding-updated", handleBrandingUpdate as EventListener);
+
+        return () => {
+            mounted = false;
+            globalThis.removeEventListener("tenant-branding-updated", handleBrandingUpdate as EventListener);
+        };
     }, []);
 
     useEffect(() => {
@@ -258,6 +403,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
         { id: "events", label: "Eventos & Comunidad", icon: <Calendar className="w-5 h-5" /> },
         { id: "reservations", label: "Recursos & Reservas", icon: <BookOpen className="w-5 h-5" /> },
         { id: "roles", label: "Roles", icon: <Shield className="w-5 h-5" /> },
+        { id: "branding", label: "Personalización", icon: <Palette className="w-5 h-5" /> },
         { id: "announcements", label: "Avisos", icon: <Bell className="w-5 h-5" /> },
         { id: "visitors", label: "Visitantes", icon: <UserCheck className="w-5 h-5" /> },
     ];
@@ -312,6 +458,9 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
 
             case "roles":
                 return <RolesPage />;
+
+            case "branding":
+                return <AdminBrandingPage />;
 
             case "profile":
                 return <AdminProfile />;
@@ -393,16 +542,16 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
     };
 
     return (
-        <div className="min-h-screen flex flex-col w-full bg-background relative">
+        <div className="tenant-admin-theme min-h-screen flex flex-col w-full bg-background relative">
             <header className="bg-card border-b border-border px-4 py-3 sticky top-0 z-10">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <button onClick={() => setActiveTab("dashboard")} className="w-9 h-9 flex items-center justify-center">
-                            <img src={logo} alt="NexUS Logo" className="w-full h-full object-contain" />
+                            <img src={tenantLogoUrl || logo} alt="Logo residencia" className="w-full h-full object-contain" />
                         </button>
                         <div>
-                            <h1 className="font-semibold text-gray-900">{currentTab?.label}</h1>
-                            <p className="text-xs text-gray-500">Panel de Administración</p>
+                            <h1 className="tenant-admin-title font-semibold text-gray-900">{currentTab?.label}</h1>
+                            <p className="tenant-admin-subtitle text-xs text-gray-500">Panel de Administración</p>
                         </div>
                     </div>
 
