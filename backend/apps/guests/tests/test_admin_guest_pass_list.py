@@ -36,9 +36,9 @@ class AdminGuestPassListTests(TenantTestCase):
         try:
             super().tearDownClass()
         except ProgrammingError as exc:
-            message = str(exc)
+            message = str(exc).strip()
             expected = 'relation "announcements_announcement" does not exist'
-            if expected not in message:
+            if message != expected:
                 raise
 
     def setUp(self):
