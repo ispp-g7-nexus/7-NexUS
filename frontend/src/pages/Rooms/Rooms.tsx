@@ -47,6 +47,21 @@ function validateUnidades(v: string, isEditing: boolean): string {
   return isNaN(n) || n < 1 ? "Debe ser al menos 1" : "";
 }
 
+const CAPACITY_BY_TYPE: Record<string, number> = { Individual: 1, Doble: 2, Triple: 3 };
+
+function getErrorMessage(detail: unknown, fallback: string): string {
+  if (typeof detail === "string" && detail.trim()) return detail;
+  if (Array.isArray(detail)) return detail.map(String).join(" ");
+  if (detail && typeof detail === "object") {
+    const messages = Object.values(detail as Record<string, unknown>)
+      .flatMap((v) => (Array.isArray(v) ? v : [v]))
+      .map(String)
+      .filter(Boolean);
+    if (messages.length) return messages.join(" ");
+  }
+  return fallback;
+}
+
 export function Rooms() {
   const [rooms, setRooms] = useState<Bedroom[]>([]);
   const [loading, setLoading] = useState(true);
@@ -138,18 +153,18 @@ export function Rooms() {
     validateField(k, v);
   };
 
-  const saveOneBedroom = async (payload: object) => {
+  const saveOneBedroom = async (payload: Record<string, unknown>) => {
     if (isEditing && editingId) {
       const res = await updateBedroom(editingId, payload);
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error((body as { detail?: string }).detail || `Error ${res.status}`);
+        throw new Error(getErrorMessage((body as { detail?: unknown }).detail, `Error ${res.status}`));
       }
     } else {
       const res = await createBedroom(payload);
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error((body as { detail?: string }).detail || `Error ${res.status}`);
+        throw new Error(getErrorMessage((body as { detail?: unknown }).detail, `Error ${res.status}`));
       }
     }
   };
@@ -167,7 +182,7 @@ export function Rooms() {
       planta: form.planta ? Number.parseInt(form.planta) : null,
       edificio: form.edificio,
       tipo: form.tipo,
-      capacidad_maxima: form.tipo === "Individual" ? 1 : form.tipo === "Doble" ? 2 : 3,
+      capacidad_maxima: CAPACITY_BY_TYPE[form.tipo] ?? 1,
     };
 
     try {
@@ -195,6 +210,20 @@ export function Rooms() {
     });
     setErrors({});
     setIsEditing(false);
+    setIsModalOpen(true);
+  };
+
+  const openEdit = (room: Bedroom) => {
+    setEditingId(room.id);
+    setForm({
+      numero: room.numero,
+      edificio: room.edificio,
+      planta: room.planta == null ? "" : String(room.planta),
+      tipo: room.tipo,
+      unidades: 1,
+    });
+    setErrors({});
+    setIsEditing(true);
     setIsModalOpen(true);
   };
 
@@ -265,7 +294,8 @@ export function Rooms() {
           {filteredRooms.map((r) => (
           <Card
             key={r.id}
-            className={`hover:shadow-md transition ${!r.is_active ? 'border-destructive/30 bg-destructive/5' : 'bg-card'} `}
+            className={`hover:shadow-md transition cursor-pointer ${!r.is_active ? 'border-destructive/30 bg-destructive/5' : 'bg-card'} `}
+            onClick={() => setSelectedRoom(r)}
           >
             <CardContent className="flex justify-between items-start gap-4 p-4">
               <div className="min-w-0 flex-1">
@@ -290,26 +320,15 @@ export function Rooms() {
 
                 <Button
                   variant="outline"
-                  onClick={() => {
-                    setEditingId(r.id);
-                    setForm({
-                      numero: r.numero,
-                      edificio: r.edificio,
-                      planta: r.planta != null ? String(r.planta) : "",
-                      tipo: r.tipo,
-                      unidades: 1,
-                    });
-                    setErrors({});
-                    setIsEditing(true);
-                    setIsModalOpen(true);
-                  }}
+                  onClick={(e) => { e.stopPropagation(); openEdit(r); }}
                 >
                   <Edit2 className="w-4 h-4 mr-2" />Editar
                 </Button>
 
                 <Button
                   variant="destructive"
-                  onClick={async () => {
+                  onClick={async (e) => {
+                    e.stopPropagation();
                     if (!confirm("¿Eliminar habitación?")) return;
                     try {
                       const res = await deleteBedroom(r.id);
@@ -372,7 +391,7 @@ export function Rooms() {
         </div>
       )}
 
-      {/* Detalle habitación (mapa) */}
+      {/* Detalle habitación */}
       {selectedRoom && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div role="button" tabIndex={-1} aria-label="Cerrar detalle" className="fixed inset-0 bg-black/50" onClick={() => setSelectedRoom(null)} onKeyDown={(e) => { if (e.key === "Escape" || e.key === "Enter") setSelectedRoom(null); }} />
@@ -399,20 +418,14 @@ export function Rooms() {
                 <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1">Estado</p>
                 <Badge className={getRoomState(selectedRoom.ocupantes_actuales, selectedRoom.capacidad_maxima).badgeClass}>{getRoomState(selectedRoom.ocupantes_actuales, selectedRoom.capacidad_maxima).label}</Badge>
               </div>
+              <div className="col-span-2 bg-gray-50 p-3 rounded-xl border border-gray-100">
+                <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-2">Residentes</p>
+                <ResidentsInlineList residents={selectedRoom.residentes} showEmail />
+              </div>
             </div>
             <Button className="w-full mt-4" variant="outline" onClick={() => {
               setSelectedRoom(null);
-              setEditingId(selectedRoom.id);
-              setForm({
-                numero: selectedRoom.numero,
-                edificio: selectedRoom.edificio,
-                planta: selectedRoom.planta === null ? "" : String(selectedRoom.planta),
-                tipo: selectedRoom.tipo,
-                unidades: 1,
-              });
-              setErrors({});
-              setIsEditing(true);
-              setIsModalOpen(true);
+              openEdit(selectedRoom);
             }}>
               <Edit2 className="w-4 h-4 mr-2" />Editar habitación
             </Button>
@@ -532,9 +545,9 @@ function groupByBuildingAndFloor(rooms: Bedroom[]): Record<string, Record<number
 }
 
 const ROOM_STATES = {
-  full:    { label: "Completa", badgeClass: "bg-red-100 text-red-700 border-0",    cellClass: "bg-red-50 border-red-400 hover:bg-red-100",       iconClass: "text-red-500",    textClass: "text-red-700" },
+  full:    { label: "Completa", badgeClass: "bg-red-100 text-red-700 border-0",       cellClass: "bg-red-50 border-red-400 hover:bg-red-100",       iconClass: "text-red-500",    textClass: "text-red-700" },
   partial: { label: "Parcial",  badgeClass: "bg-yellow-100 text-yellow-700 border-0", cellClass: "bg-yellow-50 border-yellow-400 hover:bg-yellow-100", iconClass: "text-yellow-600", textClass: "text-yellow-700" },
-  free:    { label: "Libre",    badgeClass: "bg-green-100 text-green-700 border-0", cellClass: "bg-green-50 border-green-400 hover:bg-green-100",  iconClass: "text-green-600",  textClass: "text-green-700" },
+  free:    { label: "Libre",    badgeClass: "bg-green-100 text-green-700 border-0",   cellClass: "bg-green-50 border-green-400 hover:bg-green-100",  iconClass: "text-green-600",  textClass: "text-green-700" },
 } as const;
 
 function getRoomState(ocupantes: number, capacidad: number) {
@@ -597,33 +610,23 @@ function Stat({ title, value }: Readonly<StatProps>) {
   );
 }
 
-function ResidentsInlineList({ residents }: { residents: BedroomResident[] }) {
+function ResidentsInlineList({ residents, showEmail = false }: { readonly residents: BedroomResident[]; readonly showEmail?: boolean }) {
   if (residents.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">Sin residentes asignados</p>
-    );
-  }
-
-  if (residents.length === 1) {
-    return (
-      <p
-        className="text-sm text-foreground truncate"
-        title={residents[0].full_name}
-      >
-        {residents[0].full_name}
-      </p>
+      <p className="text-sm text-muted-foreground">No hay residentes asignados</p>
     );
   }
 
   return (
     <ul className="min-w-0 space-y-0.5">
       {residents.map((resident) => (
-        <li
-          key={resident.id}
-          className="text-sm text-foreground truncate"
-          title={resident.full_name}
-        >
-          {resident.full_name}
+        <li key={resident.id} className="min-w-0">
+          <p className="text-sm text-foreground truncate" title={resident.full_name}>
+            {resident.full_name}
+          </p>
+          {showEmail && resident.email && (
+            <p className="text-xs text-muted-foreground truncate">{resident.email}</p>
+          )}
         </li>
       ))}
     </ul>

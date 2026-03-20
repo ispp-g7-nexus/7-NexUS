@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 from apps.membership.permissions import IsResidenceAdmin, IsResident
 
 from .serializers import (
+    GuestPassAdminReadSerializer,
     GuestPassCreateSerializer,
     GuestPassPolicyReadSerializer,
     GuestPassPolicyUpdateSerializer,
@@ -91,6 +92,27 @@ class ResidentGuestPassPolicyView(ResidentGuestPassBaseView):
             GuestPassPolicyReadSerializer(policy).data,
             status=status.HTTP_200_OK,
         )
+
+
+class AdminGuestPassListView(APIView):
+    permission_classes = [IsAuthenticated, IsResidenceAdmin]
+
+    def get(self, request):
+        residence = getattr(request, "residence", None)
+        if not residence:
+            raise ValidationError({"detail": ERROR_NO_RESIDENCE})
+
+        queryset = (
+            residence.guest_passes
+            .select_related("resident__user")
+            .order_by("-created_at")
+        )
+        status_filter = request.query_params.get("status")
+        if status_filter:
+            queryset = queryset.filter(status=status_filter.upper())
+
+        serializer = GuestPassAdminReadSerializer(queryset, many=True)
+        return Response(serializer.data)
 
 
 class AdminGuestPassPolicyView(APIView):

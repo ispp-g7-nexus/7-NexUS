@@ -62,6 +62,31 @@ class GuestPassReadSerializer(serializers.ModelSerializer):
         ]
 
 
+class GuestPassAdminReadSerializer(serializers.ModelSerializer):
+    resident_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = GuestPass
+        fields = [
+            "id",
+            "full_name",
+            "pass_code",
+            "valid_from",
+            "valid_until",
+            "status",
+            "comment",
+            "created_at",
+            "resident_name",
+        ]
+
+    def get_resident_name(self, obj) -> str:
+        resident = getattr(obj, "resident", None)
+        user = getattr(resident, "user", None)
+        if user is None:
+            return "—"
+        return user.get_full_name() or user.email
+
+
 class GuestPassPolicyReadSerializer(serializers.ModelSerializer):
     class Meta:
         model = GuestPassPolicy

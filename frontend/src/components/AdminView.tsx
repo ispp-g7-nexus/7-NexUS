@@ -15,6 +15,7 @@ import { AdminReservations } from "./AdminReservations";
 import { AdminChats } from "../pages/Chats/AdminChats";
 import { AdminMenuView } from "../pages/Menu/AdminMenuView";
 import { AdminGuestPassPolicyPage } from "../pages/Visitors/AdminGuestPassPolicy";
+import { AdminGuestPassListPage } from "../pages/Visitors/AdminGuestPassList";
 import { StatCard } from "./statCard";
 import { Button } from "./ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
@@ -22,7 +23,8 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import { useAdminNotifications, type AdminNotificationSource } from "./useAdminNotifications";
 
 interface AdminViewProps {
-    onLogout: () => void;
+    readonly onLogout: () => void;
+    readonly currentUser: { name: string; email: string } | null;
 }
 
 type AdminTab = "dashboard" | "rooms" | "students" | "incidences" | "reservations" | "kitchen" | "analytics" | "staff" | "announcements" | "visitors" | "events" | "roles" | "profile" | "chats";
@@ -59,7 +61,7 @@ const getTabByNotificationSource = (source: AdminNotificationSource): AdminTab =
     return "reservations";
 };
 
-export function AdminView({ onLogout }: AdminViewProps) {
+export function AdminView({ onLogout, currentUser }: AdminViewProps) {
     const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
     const [totalChats, setTotalChats] = useState<number>(0);
     const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
@@ -322,7 +324,8 @@ export function AdminView({ onLogout }: AdminViewProps) {
                 );
             case "visitors":
                 return (
-                    <div className="p-4">
+                    <div className="p-4 space-y-8">
+                        <AdminGuestPassListPage />
                         <AdminGuestPassPolicyPage />
                     </div>
                 );
@@ -504,6 +507,17 @@ export function AdminView({ onLogout }: AdminViewProps) {
                                     ))}
                                 </div>
                                 <div className="pt-6 border-t mt-auto shrink-0">
+                                    {currentUser && (
+                                        <div className="mb-4 flex items-center gap-3 px-1">
+                                            <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                                                <User className="w-5 h-5 text-green-700" />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-medium text-gray-900 truncate">{currentUser.name}</p>
+                                                <p className="text-xs text-gray-500 truncate">{currentUser.email}</p>
+                                            </div>
+                                        </div>
+                                    )}
                                     <Button variant="outline" className="w-full justify-start text-red-600" onClick={onLogout}>
                                         <LogOut className="w-4 h-4 mr-2" /> Cerrar Sesión
                                     </Button>
