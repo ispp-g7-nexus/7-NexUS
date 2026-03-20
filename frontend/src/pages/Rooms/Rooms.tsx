@@ -1,19 +1,19 @@
+import { motion } from "framer-motion";
+import { ArrowLeft, Bed, Building2, Edit2, Grid3x3, List, Plus, Search as SearchIcon, Trash2, Users, X } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import roomSvg from "../../assets/room.svg";
+import "../../index.css";
 import {
-  listBedrooms,
   createBedroom,
-  updateBedroom,
   deleteBedroom,
+  listBedrooms,
+  updateBedroom,
   type Bedroom,
   type BedroomResident,
 } from "../../services/bedrooms";
-import "../../index.css";
-import roomSvg from "../../assets/room.svg";
-import { Plus, Edit2, Trash2, Search as SearchIcon, Bed, Building2, Grid3x3, List, Users } from "lucide-react";
-import { motion } from "framer-motion";
-import { toast } from "sonner";
 
-import { Input } from "../../components/ui/input";
+import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import {
   Card,
@@ -21,7 +21,7 @@ import {
   CardHeader,
   CardTitle,
 } from "../../components/ui/card";
-import { Badge } from "../../components/ui/badge";
+import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 
 function validateNumero(v: string): string {
@@ -47,15 +47,23 @@ function validateUnidades(v: string, isEditing: boolean): string {
   return isNaN(n) || n < 1 ? "Debe ser al menos 1" : "";
 }
 
+// Modal view states
+type ModalView = "detail" | "edit";
+
 export function Rooms() {
   const [rooms, setRooms] = useState<Bedroom[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("todos");
   const [viewLayout, setViewLayout] = useState<"list" | "map">("list");
+
+  // Detail/edit modal state
+  const [modalRoom, setModalRoom] = useState<Bedroom | null>(null);
+  const [modalView, setModalView] = useState<ModalView>("detail");
+
+  // Map room detail state
   const [selectedRoom, setSelectedRoom] = useState<Bedroom | null>(null);
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -88,7 +96,7 @@ export function Rooms() {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
-      setIsModalOpen(false);
+      setModalRoom(null);
       setSelectedRoom(null);
     };
     document.addEventListener("keydown", onKeyDown);
@@ -119,15 +127,12 @@ export function Rooms() {
 
   const filteredRooms = useMemo(() => {
     let list = [...rooms];
-
     if (filter === "ocupadas") list = list.filter((r) => r.ocupantes_actuales > 0);
     if (filter === "libres") list = list.filter((r) => r.ocupantes_actuales === 0);
-
     if (search)
       list = list.filter((r) =>
         r.numero.toLowerCase().includes(search.toLowerCase())
       );
-
     return list;
   }, [rooms, search, filter]);
 
@@ -136,6 +141,34 @@ export function Rooms() {
   const onChange = (k: string, v: string | number) => {
     setForm((prev) => ({ ...prev, [k]: v }));
     validateField(k, v);
+  };
+
+  const openDetailModal = (room: Bedroom) => {
+    setModalRoom(room);
+    setModalView("detail");
+  };
+
+  const openEditFromDetail = (room: Bedroom) => {
+    setEditingId(room.id);
+    setForm({
+      numero: room.numero,
+      edificio: room.edificio,
+      planta: room.planta != null ? String(room.planta) : "",
+      tipo: room.tipo,
+      unidades: 1,
+    });
+    setErrors({});
+    setIsEditing(true);
+    setModalView("edit");
+  };
+
+  const openCreateModal = () => {
+    setForm({ numero: "", edificio: "", planta: "", tipo: "Individual", unidades: 1 });
+    setErrors({});
+    setIsEditing(false);
+    setEditingId(null);
+    setModalRoom({} as Bedroom); // dummy to open modal
+    setModalView("edit");
   };
 
   const saveOneBedroom = async (payload: object) => {
@@ -176,7 +209,7 @@ export function Rooms() {
         await saveOneBedroom({ ...payloadBase, numero });
       }
       toast.success(isEditing ? "Habitación actualizada." : "Habitación(es) creada(s).");
-      setIsModalOpen(false);
+      setModalRoom(null);
       fetchRooms();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Error al guardar la habitación.";
@@ -185,17 +218,29 @@ export function Rooms() {
     }
   };
 
-  const openCreate = () => {
-    setForm({
-      numero: "",
-      edificio: "",
-      planta: "",
-      tipo: "Individual",
-      unidades: 1,
-    });
-    setErrors({});
-    setIsEditing(false);
-    setIsModalOpen(true);
+  const handleDelete = async (room: Bedroom) => {
+    if (!confirm("¿Eliminar habitación?")) return;
+    try {
+      const res = await deleteBedroom(room.id);
+      if (res.ok) {
+        toast.success("Habitación eliminada correctamente.");
+        setModalRoom(null);
+        fetchRooms();
+      } else {
+        const body = await res.json().catch(() => ({}));
+        const detail = (body as { detail?: string }).detail;
+        if (res.status === 409) {
+          toast.error(detail || "No se puede eliminar: tiene residentes asignados.");
+        } else if (res.status === 404) {
+          toast.error("La habitación no existe.");
+        } else {
+          toast.error(detail || `Error ${res.status} al eliminar la habitación.`);
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Error de conexión al eliminar la habitación.");
+    }
   };
 
   if (loading) return <div className="p-10">Cargando...</div>;
@@ -211,8 +256,7 @@ export function Rooms() {
             <p className="text-muted-foreground">Gestiona las habitaciones</p>
           </div>
         </div>
-
-        <Button onClick={openCreate}>
+        <Button onClick={openCreateModal}>
           <Plus className="w-4 h-4 mr-2" />Nueva habitación
         </Button>
       </div>
@@ -246,7 +290,6 @@ export function Rooms() {
               className="flex-1"
             />
           </div>
-
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
@@ -263,77 +306,32 @@ export function Rooms() {
       {viewLayout === "list" && (
         <div className="grid gap-4">
           {filteredRooms.map((r) => (
-          <Card
-            key={r.id}
-            className={`hover:shadow-md transition ${!r.is_active ? 'border-destructive/30 bg-destructive/5' : 'bg-card'} `}
-          >
-            <CardContent className="flex justify-between items-start gap-4 p-4">
-              <div className="min-w-0 flex-1">
-                <h3 className="font-semibold flex items-center gap-2">
-                  <Bed className="w-5 h-5 text-muted-foreground" /> {r.numero}-{r.edificio}
-                </h3>
-                <p className="text-sm text-muted-foreground">Planta {r.planta ?? "-"} · {r.tipo} · {r.ocupantes_actuales}/{r.capacidad_maxima} ocupantes</p>
-                <div className="mt-2 flex items-start gap-2 min-w-0">
-                  <Users className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
-                  <ResidentsInlineList residents={r.residentes} />
+            <Card
+              key={r.id}
+              className={`hover:shadow-md transition ${!r.is_active ? 'border-destructive/30 bg-destructive/5' : 'bg-card'}`}
+            >
+              <CardContent className="flex justify-between items-start gap-4 p-4">
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <Bed className="w-5 h-5 text-muted-foreground" /> {r.numero}-{r.edificio}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">Planta {r.planta ?? "-"} · {r.tipo} · {r.ocupantes_actuales}/{r.capacidad_maxima} ocupantes</p>
+                  <div className="mt-2 flex items-start gap-2 min-w-0">
+                    <Users className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                    <ResidentsInlineList residents={r.residentes} />
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex gap-3 items-center shrink-0">
-                <Badge variant={r.ocupantes_actuales > 0 ? "default" : "secondary"}>
-                  {r.ocupantes_actuales >= r.capacidad_maxima
-                    ? "Completa"
-                    : r.ocupantes_actuales > 0
-                      ? "Parcial"
-                      : "Libre"}
-                </Badge>
-
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setEditingId(r.id);
-                    setForm({
-                      numero: r.numero,
-                      edificio: r.edificio,
-                      planta: r.planta != null ? String(r.planta) : "",
-                      tipo: r.tipo,
-                      unidades: 1,
-                    });
-                    setErrors({});
-                    setIsEditing(true);
-                    setIsModalOpen(true);
-                  }}
-                >
-                  <Edit2 className="w-4 h-4 mr-2" />Editar
-                </Button>
-
-                <Button
-                  variant="destructive"
-                  onClick={async () => {
-                    if (!confirm("¿Eliminar habitación?")) return;
-                    try {
-                      const res = await deleteBedroom(r.id);
-                      if (res.ok) {
-                        toast.success("Habitación eliminada correctamente.");
-                        fetchRooms();
-                      } else {
-                        const body = await res.json().catch(() => ({}));
-                        const detail = (body as { detail?: string }).detail;
-                        if (res.status === 409) {
-                          toast.error(detail || "No se puede eliminar: tiene residentes asignados.");
-                        } else if (res.status === 404) {
-                          toast.error("La habitación no existe.");
-                        } else {
-                          toast.error(detail || `Error ${res.status} al eliminar la habitación.`);
-                        }
-                      }
-                      } catch (err) {
-                        console.error(err);
-                        toast.error("Error de conexión al eliminar la habitación.");
-                      }
-                    }}
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />Eliminar
+                <div className="flex gap-3 items-center shrink-0">
+                  <Badge variant={r.ocupantes_actuales > 0 ? "default" : "secondary"}>
+                    {r.ocupantes_actuales >= r.capacidad_maxima
+                      ? "Completa"
+                      : r.ocupantes_actuales > 0
+                        ? "Parcial"
+                        : "Libre"}
+                  </Badge>
+                  <Button variant="outline" onClick={() => openDetailModal(r)}>
+                    Ver detalles
                   </Button>
                 </div>
               </CardContent>
@@ -372,11 +370,14 @@ export function Rooms() {
         </div>
       )}
 
-      {/* Detalle habitación (mapa) */}
+      {/* Detalle habitación desde mapa */}
       {selectedRoom && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div role="button" tabIndex={-1} aria-label="Cerrar detalle" className="fixed inset-0 bg-black/50" onClick={() => setSelectedRoom(null)} onKeyDown={(e) => { if (e.key === "Escape" || e.key === "Enter") setSelectedRoom(null); }} />
           <div className="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
+            <button onClick={() => setSelectedRoom(null)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+              <X className="w-5 h-5" />
+            </button>
             <div className="flex items-center gap-3 mb-4">
               <div className={`p-2 rounded-xl ${selectedRoom.ocupantes_actuales > 0 ? "bg-red-100" : "bg-green-100"}`}>
                 <Bed className={`w-5 h-5 ${selectedRoom.ocupantes_actuales > 0 ? "text-red-600" : "text-green-600"}`} />
@@ -397,116 +398,216 @@ export function Rooms() {
               </div>
               <div className="col-span-2 bg-gray-50 p-3 rounded-xl border border-gray-100">
                 <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1">Estado</p>
-                <Badge className={getRoomState(selectedRoom.ocupantes_actuales, selectedRoom.capacidad_maxima).badgeClass}>{getRoomState(selectedRoom.ocupantes_actuales, selectedRoom.capacidad_maxima).label}</Badge>
+                <Badge className={getRoomState(selectedRoom.ocupantes_actuales, selectedRoom.capacidad_maxima).badgeClass}>
+                  {getRoomState(selectedRoom.ocupantes_actuales, selectedRoom.capacidad_maxima).label}
+                </Badge>
               </div>
             </div>
             <Button className="w-full mt-4" variant="outline" onClick={() => {
               setSelectedRoom(null);
-              setEditingId(selectedRoom.id);
-              setForm({
-                numero: selectedRoom.numero,
-                edificio: selectedRoom.edificio,
-                planta: selectedRoom.planta === null ? "" : String(selectedRoom.planta),
-                tipo: selectedRoom.tipo,
-                unidades: 1,
-              });
-              setErrors({});
-              setIsEditing(true);
-              setIsModalOpen(true);
+              openDetailModal(selectedRoom);
             }}>
-              <Edit2 className="w-4 h-4 mr-2" />Editar habitación
+              Ver detalles
             </Button>
           </div>
         </div>
       )}
 
-      {/* Modal */}
-      {isModalOpen && (
+      {/* Modal unificado: detalle + edición */}
+      {modalRoom && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div role="button" tabIndex={-1} aria-label="Cerrar modal" className="fixed inset-0 bg-black/50" onClick={() => setIsModalOpen(false)} onKeyDown={(e) => { if (e.key === "Escape" || e.key === "Enter") setIsModalOpen(false); }} />
-          <div className="relative bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
-            <h2 className="text-lg font-semibold mb-4">
-              {isEditing ? "Editar habitación" : "Nueva habitación"}
-            </h2>
-            {errors.general && (
-              <div className="bg-destructive/10 text-destructive p-3 rounded-md">
-                {errors.general}
+          <div
+            role="button"
+            tabIndex={-1}
+            aria-label="Cerrar modal"
+            className="fixed inset-0 bg-black/50"
+            onClick={() => setModalRoom(null)}
+            onKeyDown={(e) => { if (e.key === "Escape" || e.key === "Enter") setModalRoom(null); }}
+          />
+          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b">
+              {modalView === "edit" && isEditing ? (
+                <button
+                  onClick={() => setModalView("detail")}
+                  className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Volver
+                </button>
+              ) : (
+                <div />
+              )}
+              <h2 className="text-base font-semibold text-gray-900">
+                {modalView === "detail"
+                  ? `Habitación ${modalRoom.numero}`
+                  : isEditing
+                    ? "Editar Habitación"
+                    : "Nueva Habitación"}
+              </h2>
+              <button onClick={() => setModalRoom(null)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Vista detalle */}
+            {modalView === "detail" && (
+              <div className="p-6 space-y-5">
+                {/* Info básica */}
+                <div className="flex items-center gap-3">
+                  <div className={`p-2.5 rounded-xl ${modalRoom.ocupantes_actuales > 0 ? "bg-red-100" : "bg-green-100"}`}>
+                    <Bed className={`w-5 h-5 ${modalRoom.ocupantes_actuales > 0 ? "text-red-600" : "text-green-600"}`} />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Edificio {modalRoom.edificio} · Planta {modalRoom.planta ?? "—"}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                    <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1">Tipo</p>
+                    <p className="text-sm font-semibold">{modalRoom.tipo}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                    <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1">Estado</p>
+                    <Badge className={getRoomState(modalRoom.ocupantes_actuales, modalRoom.capacidad_maxima).badgeClass}>
+                      {getRoomState(modalRoom.ocupantes_actuales, modalRoom.capacidad_maxima).label}
+                    </Badge>
+                  </div>
+                  <div className="col-span-2 bg-gray-50 p-3 rounded-xl border border-gray-100">
+                    <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1">Ocupación</p>
+                    <p className="text-sm font-semibold">{modalRoom.ocupantes_actuales}/{modalRoom.capacidad_maxima} ocupantes</p>
+                  </div>
+                </div>
+
+                {/* Residentes */}
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Users className="w-4 h-4 text-muted-foreground" />
+                    <p className="text-sm font-semibold text-gray-700">Residentes actuales</p>
+                  </div>
+                  {modalRoom.residentes.length === 0 ? (
+                    <p className="text-sm text-muted-foreground pl-6">Sin residentes asignados</p>
+                  ) : (
+                    <div className="space-y-2 pl-6">
+                      {modalRoom.residentes.map((res) => (
+                        <div key={res.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">
+                          <span className="text-sm font-medium">{res.full_name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Acciones */}
+                <div className="pt-2">
+                  <Button
+                    className="w-full bg-[#509550] hover:bg-[#3d7a3d] text-white"
+                    onClick={() => openEditFromDetail(modalRoom)}
+                  >
+                    <Edit2 className="w-4 h-4 mr-2" />
+                    Editar información
+                  </Button>
+                </div>
               </div>
             )}
 
-            <form onSubmit={handleSave} className="space-y-4">
-              <div>
-                <Label>Número</Label>
-                <Input
-                  value={form.numero}
-                  onChange={(e) => onChange("numero", (e.target as HTMLInputElement).value)}
-                />
-                {errors.numero && (
-                  <p className="text-sm text-destructive mt-1">{errors.numero}</p>
+            {/* Vista edición / creación */}
+            {modalView === "edit" && (
+              <div className="p-6">
+                {errors.general && (
+                  <div className="bg-destructive/10 text-destructive p-3 rounded-md mb-4 text-sm">
+                    {errors.general}
+                  </div>
                 )}
-              </div>
+                <form onSubmit={handleSave} className="space-y-4">
+                  <div>
+                    <Label>Número</Label>
+                    <Input
+                      value={form.numero}
+                      onChange={(e) => onChange("numero", (e.target as HTMLInputElement).value)}
+                    />
+                    {errors.numero && <p className="text-sm text-destructive mt-1">{errors.numero}</p>}
+                  </div>
 
-              <div>
-                <Label>Edificio</Label>
-                <Input
-                  value={form.edificio}
-                  onChange={(e) => onChange("edificio", (e.target as HTMLInputElement).value)}
-                />
-                {errors.edificio && (
-                  <p className="text-sm text-destructive mt-1">{errors.edificio}</p>
-                )}
-              </div>
+                  <div>
+                    <Label>Edificio</Label>
+                    <Input
+                      value={form.edificio}
+                      onChange={(e) => onChange("edificio", (e.target as HTMLInputElement).value)}
+                    />
+                    {errors.edificio && <p className="text-sm text-destructive mt-1">{errors.edificio}</p>}
+                  </div>
 
-              <div>
-                <Label>Planta</Label>
-                <Input
-                  value={form.planta}
-                  onChange={(e) => onChange("planta", (e.target as HTMLInputElement).value)}
-                />
-                {errors.planta && (
-                  <p className="text-sm text-destructive mt-1">{errors.planta}</p>
-                )}
-              </div>
+                  <div>
+                    <Label>Planta</Label>
+                    <Input
+                      value={form.planta}
+                      onChange={(e) => onChange("planta", (e.target as HTMLInputElement).value)}
+                    />
+                    {errors.planta && <p className="text-sm text-destructive mt-1">{errors.planta}</p>}
+                  </div>
 
-              <div>
-                <Label>Tipo</Label>
-                <select
-                  value={form.tipo}
-                  onChange={(e) => onChange("tipo", e.target.value)}
-                  className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-                  <option value="Individual">Individual</option>
-                  <option value="Doble">Doble</option>
-                  <option value="Triple">Triple</option>
-                </select>
-              </div>
+                  <div>
+                    <Label>Tipo</Label>
+                    <select
+                      value={form.tipo}
+                      onChange={(e) => onChange("tipo", e.target.value)}
+                      className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    >
+                      <option value="Individual">Individual</option>
+                      <option value="Doble">Doble</option>
+                      <option value="Triple">Triple</option>
+                    </select>
+                  </div>
 
-              {!isEditing && (
-                <div>
-                  <Label>Unidades</Label>
-                  <Input
-                    type="number"
-                    value={String(form.unidades)}
-                    onChange={(e) => onChange("unidades", Number.parseInt((e.target as HTMLInputElement).value || '1'))}
-                  />
-                  {errors.unidades && (
-                    <p className="text-sm text-destructive mt-1">{errors.unidades}</p>
+                  {!isEditing && (
+                    <div>
+                      <Label>Unidades</Label>
+                      <Input
+                        type="number"
+                        value={String(form.unidades)}
+                        onChange={(e) => onChange("unidades", Number.parseInt((e.target as HTMLInputElement).value || '1'))}
+                      />
+                      {errors.unidades && <p className="text-sm text-destructive mt-1">{errors.unidades}</p>}
+                    </div>
                   )}
-                </div>
-              )}
 
-              <div className="flex justify-end gap-2 pt-2">
-                <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={Object.values(errors).some((e) => e)}
-                >
-                  Guardar
-                </Button>
+                  {isEditing && modalRoom && (
+                    <div className="pt-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full text-destructive border-destructive/30 hover:bg-destructive/5"
+                        onClick={() => handleDelete(modalRoom)}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Eliminar Habitación
+                      </Button>
+                    </div>
+                  )}
+
+                  <div className="flex gap-2 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => isEditing ? setModalView("detail") : setModalRoom(null)}
+                  >
+                      Cancelar
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="flex-1 bg-[#509550] hover:bg-[#3d7a3d] text-white"
+                      disabled={Object.values(errors).some((e) => e)}
+                    >
+                      Guardar cambios
+                    </Button>
+                  </div>
+                </form>
               </div>
-            </form>
+            )}
           </div>
         </div>
       )}
@@ -532,9 +633,9 @@ function groupByBuildingAndFloor(rooms: Bedroom[]): Record<string, Record<number
 }
 
 const ROOM_STATES = {
-  full:    { label: "Completa", badgeClass: "bg-red-100 text-red-700 border-0",    cellClass: "bg-red-50 border-red-400 hover:bg-red-100",       iconClass: "text-red-500",    textClass: "text-red-700" },
+  full:    { label: "Completa", badgeClass: "bg-red-100 text-red-700 border-0",       cellClass: "bg-red-50 border-red-400 hover:bg-red-100",        iconClass: "text-red-500",    textClass: "text-red-700"    },
   partial: { label: "Parcial",  badgeClass: "bg-yellow-100 text-yellow-700 border-0", cellClass: "bg-yellow-50 border-yellow-400 hover:bg-yellow-100", iconClass: "text-yellow-600", textClass: "text-yellow-700" },
-  free:    { label: "Libre",    badgeClass: "bg-green-100 text-green-700 border-0", cellClass: "bg-green-50 border-green-400 hover:bg-green-100",  iconClass: "text-green-600",  textClass: "text-green-700" },
+  free:    { label: "Libre",    badgeClass: "bg-green-100 text-green-700 border-0",   cellClass: "bg-green-50 border-green-400 hover:bg-green-100",   iconClass: "text-green-600",  textClass: "text-green-700"  },
 } as const;
 
 function getRoomState(ocupantes: number, capacidad: number) {
@@ -565,7 +666,6 @@ function FloorRow({ floor, rooms, onSelectRoom }: Readonly<{ floor: string; room
 
 function RoomMapCell({ room, onClick }: Readonly<{ room: Bedroom; onClick: () => void }>) {
   const { label, cellClass, iconClass, textClass } = getRoomState(room.ocupantes_actuales, room.capacidad_maxima);
-
   return (
     <motion.button
       whileHover={{ scale: 1.05 }}
@@ -586,9 +686,7 @@ function Stat({ title, value }: Readonly<StatProps>) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-sm text-muted-foreground">
-          {title}
-        </CardTitle>
+        <CardTitle className="text-sm text-muted-foreground">{title}</CardTitle>
       </CardHeader>
       <CardContent>
         <p className="text-2xl font-bold">{value}</p>
@@ -599,30 +697,15 @@ function Stat({ title, value }: Readonly<StatProps>) {
 
 function ResidentsInlineList({ residents }: { residents: BedroomResident[] }) {
   if (residents.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground">Sin residentes asignados</p>
-    );
+    return <p className="text-sm text-muted-foreground">Sin residentes asignados</p>;
   }
-
   if (residents.length === 1) {
-    return (
-      <p
-        className="text-sm text-foreground truncate"
-        title={residents[0].full_name}
-      >
-        {residents[0].full_name}
-      </p>
-    );
+    return <p className="text-sm text-foreground truncate" title={residents[0].full_name}>{residents[0].full_name}</p>;
   }
-
   return (
     <ul className="min-w-0 space-y-0.5">
       {residents.map((resident) => (
-        <li
-          key={resident.id}
-          className="text-sm text-foreground truncate"
-          title={resident.full_name}
-        >
+        <li key={resident.id} className="text-sm text-foreground truncate" title={resident.full_name}>
           {resident.full_name}
         </li>
       ))}
