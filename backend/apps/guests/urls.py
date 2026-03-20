@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views import (
+    AdminGuestPassListView,
     AdminGuestPassPolicyView,
     ResidentActiveGuestPassListView,
     ResidentGuestPassCreateView,
@@ -29,6 +30,11 @@ urlpatterns = [
         "guest-passes/me/policy/",
         ResidentGuestPassPolicyView.as_view(),
         name="guest-pass-me-policy",
+    ),
+    path(
+        "admin/guest-passes/",
+        AdminGuestPassListView.as_view(),
+        name="admin-guest-pass-list",
     ),
     path(
         "admin/guest-passes/policy/",
