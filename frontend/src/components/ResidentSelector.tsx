@@ -2,29 +2,27 @@ import { useState, useEffect } from "react";
 import { Search, Loader2, ChevronDown } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { residentsService, type Resident } from "../services/residents";
+import { chatsService, type ChatResident } from "../services/chats";
 import { toast } from "sonner";
 
 interface ResidentSelectorProps {
   readonly currentMembers: Array<{ id: number; email: string }>;
-  readonly onAddMembers: (residents: Resident[]) => Promise<void>;
+  readonly onAddMembers: (residents: ChatResident[]) => Promise<void>;
 }
 
 const getAvailableResidents = (
-  allResidents: Resident[],
+  allResidents: ChatResident[],
   currentMembers: Array<{ id: number; email: string }>
-): Resident[] => {
+): ChatResident[] => {
   const currentMemberEmails = new Set(currentMembers.map((member) => member.email));
-  return allResidents.filter(
-    (resident) => resident.is_active && !currentMemberEmails.has(resident.email)
-  );
+  return allResidents.filter((resident) => !currentMemberEmails.has(resident.email));
 };
 
 export function ResidentSelector({
   currentMembers,
   onAddMembers,
 }: Readonly<ResidentSelectorProps>) {
-  const [residents, setResidents] = useState<Resident[]>([]);
+  const [residents, setResidents] = useState<ChatResident[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedResidents, setSelectedResidents] = useState<Set<number>>(
@@ -36,7 +34,7 @@ export function ResidentSelector({
   const loadResidents = async () => {
     setLoading(true);
     try {
-      const data = await residentsService.list();
+      const data = await chatsService.listChatResidents();
       setResidents(getAvailableResidents(data, currentMembers));
     } catch (error) {
       toast.error("Error al cargar los residentes");
