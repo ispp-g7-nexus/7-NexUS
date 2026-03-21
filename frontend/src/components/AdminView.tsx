@@ -1,5 +1,6 @@
-import { AlertCircle, BarChart3, BedDouble, Bell, BookOpen, Briefcase, Calendar, Home, Layout, LayoutDashboard, LogOut, Menu, MessageSquare, Shield, User, UserCheck, Users, Utensils } from "lucide-react";
+import { AlertCircle, BarChart3, BedDouble, Bell, BookOpen, Briefcase, Calendar, Home, Layout, LayoutDashboard, LogOut, Menu, MessageSquare, Package, Shield, User, UserCheck, Users, Utensils } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { chatsService, type ChatRealtimeEvent } from "../services/chats";
 import { authService } from "../services/auth";
@@ -16,6 +17,7 @@ import { AdminReservations } from "./AdminReservations";
 import { AdminChats } from "../pages/Chats/AdminChats";
 import { AdminMenuView } from "../pages/Menu/AdminMenuView";
 import { AdminGuestPassPolicyPage } from "../pages/Visitors/AdminGuestPassPolicy";
+import { AdminPackages } from "../pages/Packages/AdminPackages";
 import { StatCard } from "./statCard";
 import { Button } from "./ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
@@ -26,7 +28,40 @@ interface AdminViewProps {
     onLogout: () => void;
 }
 
-type AdminTab = "dashboard" | "rooms" | "students" | "incidences" | "reservations" | "kitchen" | "analytics" | "staff" | "announcements" | "visitors" | "events" | "roles" | "profile" | "chats";
+type AdminTab = "dashboard" | "rooms" | "students" | "incidences" | "reservations" | "kitchen" | "analytics" | "staff" | "announcements" | "visitors" | "events" | "roles" | "profile" | "chats" | "packages";
+
+const ADMIN_TABS: AdminTab[] = [
+    "dashboard",
+    "rooms",
+    "students",
+    "incidences",
+    "reservations",
+    "kitchen",
+    "analytics",
+    "staff",
+    "announcements",
+    "visitors",
+    "events",
+    "roles",
+    "profile",
+    "chats",
+    "packages",
+];
+
+const isAdminTab = (value: string): value is AdminTab => {
+    return ADMIN_TABS.includes(value as AdminTab);
+};
+
+const getAdminTabFromPath = (pathname: string): AdminTab => {
+    const [, dashboardSegment, maybeTab] = pathname.split("/");
+    if (dashboardSegment !== "dashboard") {
+        return "dashboard";
+    }
+    if (!maybeTab) {
+        return "dashboard";
+    }
+    return isAdminTab(maybeTab) ? maybeTab : "dashboard";
+};
 
 const formatRelativeTime = (isoDate: string) => {
     const parsedTime = Date.parse(isoDate);
@@ -61,7 +96,9 @@ const getTabByNotificationSource = (source: AdminNotificationSource): AdminTab =
 };
 
 export function AdminView({ onLogout }: AdminViewProps) {
-    const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
+    const navigate = useNavigate();
+    const location = useLocation();
+    const [activeTab, setActiveTab] = useState<AdminTab>(() => getAdminTabFromPath(location.pathname));
     const [totalChats, setTotalChats] = useState<number>(0);
     const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
     const [unreadChatNotifications, setUnreadChatNotifications] = useState<number>(0);
@@ -78,10 +115,20 @@ export function AdminView({ onLogout }: AdminViewProps) {
         }
     };
 
+    const goToTab = (tab: AdminTab) => {
+        setActiveTab(tab);
+        navigate(tab === "dashboard" ? "/dashboard" : `/dashboard/${tab}`);
+    };
+
     useEffect(() => {
         // Cargar conteo inicial
         loadChatsCount();
     }, []);
+
+    useEffect(() => {
+        const nextTab = getAdminTabFromPath(location.pathname);
+        setActiveTab(nextTab);
+    }, [location.pathname]);
 
     useEffect(() => {
         authService.me().then((session) => {
@@ -156,6 +203,7 @@ export function AdminView({ onLogout }: AdminViewProps) {
         { id: "rooms", label: "Habitaciones", icon: <Home className="w-5 h-5" /> },
         { id: "students", label: "Residentes", icon: <Users className="w-5 h-5" /> },
         { id: "staff", label: "Personal", icon: <Briefcase className="w-5 h-5" /> },
+        { id: "packages", label: "Paqueteria", icon: <Package className="w-5 h-5" /> },
         { id: "incidences", label: "Incidencias", icon: <AlertCircle className="w-5 h-5" /> },
         { id: "kitchen", label: "Menú Comedor", icon: <Utensils className="w-5 h-5" /> },
         { id: "events", label: "Eventos & Comunidad", icon: <Calendar className="w-5 h-5" /> },
@@ -166,15 +214,15 @@ export function AdminView({ onLogout }: AdminViewProps) {
     ];
 
     const metricsData = [
-        { label: 'Residentes',      value: '156', trend: '+8%',    icon: Users,      theme: 'blue'   as const, onClick: () => setActiveTab('students')     },
-        { label: 'Habitaciones',    value: '92%', trend: '+3%',    icon: BedDouble,  theme: 'green'  as const, onClick: () => setActiveTab('rooms')        },
-        { label: 'Incidencias',     value: '12',  trend: '-15%',   icon: AlertCircle,theme: 'red'    as const, onClick: () => setActiveTab('incidences')   },
-        { label: 'Visitantes',      value: '23',  trend: '+12%',   icon: UserCheck,  theme: 'purple' as const, onClick: () => setActiveTab('visitors')     },
-        { label: 'Espacios Comunes',value: '8',   trend: '+2',     icon: Layout,     theme: 'orange' as const, onClick: () => setActiveTab('reservations') },
-        { label: 'Chats',           value: unreadChatNotifications > 0 ? `${totalChats} (+${unreadChatNotifications})` : totalChats.toString(),   trend: '', icon: MessageSquare, theme: 'blue' as const, onClick: () => setActiveTab('chats')        },
-        { label: 'Menú Comedor',    value: 'Ver', trend: 'Hoy',    icon: Utensils,   theme: 'blue'   as const, onClick: () => setActiveTab('kitchen')      },
-        { label: 'Estadísticas',    value: 'Ver', trend: '+5%',    icon: BarChart3,  theme: 'green'  as const, onClick: () => setActiveTab('analytics')    },
-        { label: 'Personal',        value: '42',  trend: 'Estable',icon: Briefcase,  theme: 'purple' as const, onClick: () => setActiveTab('staff')        },
+        { label: 'Residentes',      value: '156', trend: '+8%',    icon: Users,      theme: 'blue'   as const, onClick: () => goToTab('students')     },
+        { label: 'Habitaciones',    value: '92%', trend: '+3%',    icon: BedDouble,  theme: 'green'  as const, onClick: () => goToTab('rooms')        },
+        { label: 'Incidencias',     value: '12',  trend: '-15%',   icon: AlertCircle,theme: 'red'    as const, onClick: () => goToTab('incidences')   },
+        { label: 'Visitantes',      value: '23',  trend: '+12%',   icon: UserCheck,  theme: 'purple' as const, onClick: () => goToTab('visitors')     },
+        { label: 'Espacios Comunes',value: '8',   trend: '+2',     icon: Layout,     theme: 'orange' as const, onClick: () => goToTab('reservations') },
+        { label: 'Chats',           value: unreadChatNotifications > 0 ? `${totalChats} (+${unreadChatNotifications})` : totalChats.toString(),   trend: '', icon: MessageSquare, theme: 'blue' as const, onClick: () => goToTab('chats')        },
+        { label: 'Menú Comedor',    value: 'Ver', trend: 'Hoy',    icon: Utensils,   theme: 'blue'   as const, onClick: () => goToTab('kitchen')      },
+        { label: 'Estadísticas',    value: 'Ver', trend: '+5%',    icon: BarChart3,  theme: 'green'  as const, onClick: () => goToTab('analytics')    },
+        { label: 'Personal',        value: '42',  trend: 'Estable',icon: Briefcase,  theme: 'purple' as const, onClick: () => goToTab('staff')        },
     ];
 
     const today = new Date().toLocaleDateString('es-ES', {
@@ -259,6 +307,13 @@ export function AdminView({ onLogout }: AdminViewProps) {
                     </div>
                 );
 
+            case "packages":
+                return (
+                    <div className="p-4">
+                        <AdminPackages />
+                    </div>
+                );
+
             case "incidences":
                 return (
                     <div className="p-4">
@@ -291,7 +346,7 @@ export function AdminView({ onLogout }: AdminViewProps) {
             <header className="bg-card border-b border-border px-4 py-3 sticky top-0 z-10">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <button onClick={() => setActiveTab("dashboard")} className="w-9 h-9 flex items-center justify-center">
+                        <button onClick={() => goToTab("dashboard")} className="w-9 h-9 flex items-center justify-center">
                             <img src={logo} alt="NexUS Logo" className="w-full h-full object-contain" />
                         </button>
                         <div>
@@ -338,7 +393,7 @@ export function AdminView({ onLogout }: AdminViewProps) {
                                                         onClick={() => {
                                                             const source = handleOpenNotification(notification);
                                                             if (source === "reservations") setReservationsSubTab(notification.id.startsWith("object-reservations-") ? "objetos" : "espacios");
-                                                            setActiveTab(getTabByNotificationSource(source));
+                                                            goToTab(getTabByNotificationSource(source));
                                                         }}
                                                         className={`w-full rounded-lg border p-3 text-left transition-colors hover:shadow-sm ${getCardClassesBySource(notification.source)}`}
                                                     >
@@ -375,7 +430,7 @@ export function AdminView({ onLogout }: AdminViewProps) {
                                                 onClick={() => {
                                                     const nextTab = item.id as AdminTab;
                                                     handleNavbarModuleAccess(nextTab);
-                                                    setActiveTab(nextTab);
+                                                    goToTab(nextTab);
                                                 }}
                                                 className={`w-full flex items-center justify-between gap-3 px-4 py-3 text-sm rounded-xl transition-colors ${
                                                     activeTab === item.id
