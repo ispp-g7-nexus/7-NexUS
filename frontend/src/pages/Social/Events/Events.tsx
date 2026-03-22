@@ -1,11 +1,42 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { fetchWithAuth, API_URL } from "../../../utils/api";
+import { listCommonSpaces, isApiError, type CommonSpace } from "../../../services/reservations";
 import { EventForm } from "./components/EventForm";
 import { EventDetails } from "./components/EventDetails";
 import { UpcomingEvents } from "./components/UpcomingEvents";
 import { PastEvents } from "./components/PastEvents";
 import "./Events.css";
+
+type EventType = "internal" | "external";
+
+type EventFormState = {
+    name: string;
+    description: string;
+    photo: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    eventType: EventType;
+    location: string;
+    spaceId: string;
+    limit: string;
+    labels: string;
+};
+
+const EMPTY_EVENT_FORM: EventFormState = {
+    name: "",
+    description: "",
+    photo: "",
+    date: "",
+    startTime: "",
+    endTime: "",
+    eventType: "external",
+    location: "",
+    spaceId: "",
+    limit: "",
+    labels: "",
+};
 
 export function Events() {
     const [events, setEvents] = useState<any[]>([]);
@@ -18,20 +49,13 @@ export function Events() {
     const [selectedEvent, setSelectedEvent] = useState<any>(null);
     const [participants, setParticipants] = useState<any[]>([]);
 
-    const [newEvent, setNewEvent] = useState({
-        name: "",
-        description: "",
-        photo: "",
-        date: "",
-        startTime: "",
-        endTime: "",
-        location: "",
-        limit: "",
-        labels: "",
-    });
+    const [newEvent, setNewEvent] = useState<EventFormState>({ ...EMPTY_EVENT_FORM });
+    const [spaces, setSpaces] = useState<CommonSpace[]>([]);
+    const [isLoadingSpaces, setIsLoadingSpaces] = useState(false);
 
     useEffect(() => {
         fetchEvents();
+        fetchSpaces();
     }, []);
 
     const fetchEvents = async () => {
@@ -51,6 +75,26 @@ export function Events() {
             console.error("Error fetching events:", error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchSpaces = async () => {
+        setIsLoadingSpaces(true);
+        try {
+            const data = await listCommonSpaces();
+            setSpaces(data.filter((space) => space.is_active));
+        } catch (error) {
+            if (isApiError(error)) {
+                if (error.status === 401 || error.status === 403) {
+                    setIsUnauthorized(true);
+                    return;
+                }
+                toast.error(error.message);
+                return;
+            }
+            toast.error("No se pudieron cargar los espacios comunes.");
+        } finally {
+            setIsLoadingSpaces(false);
         }
     };
 
@@ -133,7 +177,9 @@ export function Events() {
                     description: newEvent.description,
                     start_time: new Date(`${newEvent.date}T${newEvent.startTime}`).toISOString(),
                     end_time: new Date(`${newEvent.date}T${newEvent.endTime}`).toISOString(),
-                    location: newEvent.location,
+                    event_type: newEvent.eventType,
+                    location: newEvent.eventType === 'external' ? newEvent.location.trim() : "",
+                    space_id: newEvent.eventType === 'internal' ? Number(newEvent.spaceId) : null,
                     tags: newEvent.labels || null,
                     max_participants: newEvent.limit ? parseInt(newEvent.limit) : null,
                     image_url: newEvent.photo || null,
@@ -150,9 +196,7 @@ export function Events() {
                 setIsCreateEventOpen(false);
                 setIsEditingEvent(false);
                 setEditingEventId(null);
-                setNewEvent({
-                    name: "", description: "", photo: "", date: "", startTime: "", endTime: "", location: "", limit: "", labels: "",
-                });
+                setNewEvent({ ...EMPTY_EVENT_FORM });
                 fetchEvents();
             } else {
                 const data = await response.json();
@@ -228,9 +272,7 @@ export function Events() {
                 <button
                     className="bg-primary text-primary-foreground hover:bg-primary/90 px-5 py-2.5 rounded-lg font-medium transition-colors flex items-center gap-2 shadow-sm whitespace-nowrap"
                     onClick={() => {
-                        setNewEvent({
-                            name: "", description: "", photo: "", date: "", startTime: "", endTime: "", location: "", limit: "", labels: "",
-                        });
+                        setNewEvent({ ...EMPTY_EVENT_FORM });
                         setIsEditingEvent(false);
                         setEditingEventId(null);
                         setIsCreateEventOpen(true);
@@ -267,6 +309,8 @@ export function Events() {
                     isEditingEvent={isEditingEvent}
                     newEvent={newEvent}
                     setNewEvent={setNewEvent}
+                    spaces={spaces}
+                    isLoadingSpaces={isLoadingSpaces}
                     handleSaveEvent={handleSaveEvent}
                     setIsCreateEventOpen={setIsCreateEventOpen}
                 />
@@ -287,7 +331,9 @@ export function Events() {
                         date: event.start_time.split('T')[0],
                         startTime: new Date(event.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
                         endTime: new Date(event.end_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
-                        location: event.location,
+                        eventType: event.event_type || 'external',
+                        location: event.location || "",
+                        spaceId: event.space?.id ? String(event.space.id) : "",
                         limit: event.max_participants ? event.max_participants.toString() : "",
                         labels: event.tags || "",
                     });
