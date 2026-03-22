@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   listBedrooms,
   createBedroom,
@@ -9,7 +9,7 @@ import {
 } from "../../services/bedrooms";
 import "../../index.css";
 import roomSvg from "../../assets/room.svg";
-import { Plus, Edit2, Trash2, Search as SearchIcon, Bed, Building2, Grid3x3, List, Users } from "lucide-react";
+import { Plus, Edit2, Trash2, Search as SearchIcon, Bed, Building2, Grid3x3, List, Users, User } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 
@@ -23,6 +23,15 @@ import {
 } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
 import { Label } from "../../components/ui/label";
+
+import {
+  Select1,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select";
+
 
 function validateNumero(v: string): string {
   if (!v.trim()) return "El número es obligatorio";
@@ -74,6 +83,7 @@ export function Rooms() {
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
 
   const validateField = (name: string, value: string | number): boolean => {
     const v = String(value);
@@ -132,11 +142,33 @@ export function Rooms() {
     };
   }, [rooms]);
 
+  const [filterTipo, setFilterTipo] = useState("todos");
+  const [filterEdificio, setFilterEdificio] = useState("todos");
+  const [buildingOptions, setBuildingOptions] = useState([]);
+
+  useEffect(() => {
+    const fetchBuildingOptions = async () => {
+      try {
+        const res = await fetch("/api/bedrooms/buildings"); // Adjust endpoint as needed
+        if (!res.ok) throw new Error("Error fetching buildings");
+        const data = await res.json();
+        const dataUnique = Array.from(new Set(data.filter((b: string) => b && b.trim())));
+        setBuildingOptions(dataUnique);
+      } catch (error) {
+        console.error("Failed to fetch building options:", error);
+      }
+    };
+
+    fetchBuildingOptions();
+  }, []);
+
   const filteredRooms = useMemo(() => {
     let list = [...rooms];
 
     if (filter === "ocupadas") list = list.filter((r) => r.ocupantes_actuales > 0);
     if (filter === "libres") list = list.filter((r) => r.ocupantes_actuales === 0);
+    if (filterTipo !== "todos") list = list.filter((r) => r.tipo === filterTipo);
+    if (filterEdificio !== "todos") list = list.filter((r) => r.edificio === filterEdificio);
 
     if (search)
       list = list.filter((r) =>
@@ -144,7 +176,7 @@ export function Rooms() {
       );
 
     return list;
-  }, [rooms, search, filter]);
+  }, [rooms, search, filter, filterTipo, filterEdificio]);
 
   const roomsByBuildingAndFloor = useMemo(() => groupByBuildingAndFloor(filteredRooms), [filteredRooms]);
 
@@ -265,28 +297,69 @@ export function Rooms() {
 
       {/* Buscador */}
       <Card>
-        <CardContent className="flex gap-3 p-4">
-          <div className="flex items-center gap-2 w-full">
-            <SearchIcon className="w-4 h-4 text-muted-foreground" />
+        <CardContent className="flex flex-col gap-3 p-4 lg:flex-row">
+          <div className="flex items-center gap-2 w-full rounded-xl border border-slate-200 bg-white px-3 shadow-sm">
+            <SearchIcon className="w-4 h-4 text-slate-400" />
             <Input
               placeholder="Buscar por número..."
               value={search}
               onChange={(e) => setSearch((e.target as HTMLInputElement).value)}
-              className="flex-1"
+              className="flex-1 border-0 shadow-none focus-visible:ring-0"
             />
           </div>
 
-          <select
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            className="w-[180px] h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <option value="todos">Todos</option>
-            <option value="ocupadas">Ocupadas</option>
-            <option value="libres">Libres</option>
-          </select>
+          <Select1 value={filterEdificio} onValueChange={setFilterEdificio}>
+            <SelectTrigger className="h-11 min-w-[220px] rounded-xl border-slate-200 bg-white/95 px-3 shadow-sm transition-all hover:border-emerald-300 hover:shadow-md focus:ring-2 focus:ring-emerald-200 data-[state=open]:border-emerald-400 data-[state=open]:ring-emerald-100">
+              <span className="flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-100 bg-emerald-50 text-emerald-700">
+                  <Building2 className="h-4 w-4" />
+                </span>
+                <SelectValue placeholder="Todos los edificios" />
+              </span>
+            </SelectTrigger>
+            <SelectContent className="rounded-2xl border-slate-200 bg-white/95 p-2 shadow-xl backdrop-blur">
+              <SelectItem className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 focus:bg-emerald-50 focus:text-emerald-800" value="todos">
+                Todos los edificios
+              </SelectItem>
+              {buildingOptions.map((building) => (
+                <SelectItem
+                  key={building}
+                  value={building}
+                  className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 focus:bg-emerald-50 focus:text-emerald-800"
+                >
+                  {building}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select1>
+
+          <Select1 value={filterTipo} onValueChange={setFilterTipo}>
+            <SelectTrigger className="h-11 min-w-[220px] rounded-xl border-slate-200 bg-white/95 px-3 shadow-sm transition-all hover:border-emerald-300 hover:shadow-md focus:ring-2 focus:ring-emerald-200 data-[state=open]:border-emerald-400 data-[state=open]:ring-emerald-100">
+              <span className="flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-100 bg-emerald-50 text-emerald-700">
+                  <User className="h-4 w-4" />
+                </span>
+                <SelectValue placeholder="Todos los tipos" />
+              </span>
+            </SelectTrigger>
+            <SelectContent className="rounded-2xl border-slate-200 bg-white/95 p-2 shadow-xl backdrop-blur">
+              <SelectItem className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 focus:bg-emerald-50 focus:text-emerald-800" value="todos">
+                Todos los tipos
+              </SelectItem>
+              <SelectItem className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 focus:bg-emerald-50 focus:text-emerald-800" value="Individual">
+                Individual
+              </SelectItem>
+              <SelectItem className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 focus:bg-emerald-50 focus:text-emerald-800" value="Doble">
+                Doble
+              </SelectItem>
+              <SelectItem className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 focus:bg-emerald-50 focus:text-emerald-800" value="Triple">
+                Triple
+              </SelectItem>
+            </SelectContent>
+          </Select1>
         </CardContent>
       </Card>
+
 
       {/* Lista */}
       {viewLayout === "list" && (
@@ -330,14 +403,17 @@ export function Rooms() {
                   onClick={async (e) => {
                     e.stopPropagation();
                     if (!confirm("¿Eliminar habitación?")) return;
+
                     try {
                       const res = await deleteBedroom(r.id);
+
                       if (res.ok) {
                         toast.success("Habitación eliminada correctamente.");
                         fetchRooms();
                       } else {
                         const body = await res.json().catch(() => ({}));
                         const detail = (body as { detail?: string }).detail;
+
                         if (res.status === 409) {
                           toast.error(detail || "No se puede eliminar: tiene residentes asignados.");
                         } else if (res.status === 404) {
@@ -346,11 +422,11 @@ export function Rooms() {
                           toast.error(detail || `Error ${res.status} al eliminar la habitación.`);
                         }
                       }
-                      } catch (err) {
-                        console.error(err);
-                        toast.error("Error de conexión al eliminar la habitación.");
-                      }
-                    }}
+                    } catch (err) {
+                      console.error(err);
+                      toast.error("Error de conexión al eliminar la habitación.");
+                    }
+                  }}
                   >
                     <Trash2 className="w-4 h-4 mr-2" />Eliminar
                   </Button>
@@ -358,8 +434,7 @@ export function Rooms() {
               </CardContent>
             </Card>
           ))}
-        </div>
-      )}
+      </div>)}
 
       {/* Mapa */}
       {viewLayout === "map" && (
@@ -486,7 +561,7 @@ export function Rooms() {
                 <select
                   value={form.tipo}
                   onChange={(e) => onChange("tipo", e.target.value)}
-                  className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all duration-300 hover:bg-green-50 hover:border-green-400"
                 >
                   <option value="Individual">Individual</option>
                   <option value="Doble">Doble</option>
