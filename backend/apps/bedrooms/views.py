@@ -46,14 +46,21 @@ class BedroomListView(AdminRequiredView):
 		)
 		return queryset.prefetch_related(active_student_residents)
 
-	def get(self, request):
+	def get(self, request, *args, **kwargs):
 		if not hasattr(request, "residence") or not request.residence:
 			return JsonResponse({"detail": "No residence context."}, status=400)
 
-		bedrooms = self._with_active_student_residents(
-			Bedroom.objects.filter(residence=request.residence)
-		)
-		serializer = BedroomSerializer(bedrooms, many=True)
+		filters = {}
+		tipo = request.GET.get("tipo")
+		capacidad_maxima = request.GET.get("capacidad_maxima")
+
+		if tipo:
+			filters["tipo"] = tipo
+		if capacidad_maxima:
+			filters["capacidad_maxima__gte"] = capacidad_maxima
+
+		queryset = Bedroom.objects.filter(**filters)
+		serializer = BedroomSerializer(queryset, many=True)
 		return JsonResponse(serializer.data, safe=False)
 
 
@@ -164,3 +171,9 @@ class BedroomResidentsView(AdminRequiredView):
 				'residence_id': m.residence_id,
 			})
 		return JsonResponse(data, safe=False)
+
+
+class BuildingListView(AdminRequiredView):
+    def get(self, request, *args, **kwargs):
+        buildings = Bedroom.objects.values_list("edificio", flat=True).distinct()
+        return JsonResponse(list(buildings), safe=False)
