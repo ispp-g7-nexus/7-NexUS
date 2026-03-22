@@ -3,7 +3,9 @@ import React from 'react';
 
 export interface StatCardProps {
   label: string;
-  value: string | number;
+  value: string | number | React.ReactNode;
+  valueBadge?: string;
+  topBadgeText?: string;
   trend: string;
   icon: React.ElementType;
   theme: 'blue' | 'green' | 'red' | 'purple' | 'orange';
@@ -18,10 +20,20 @@ const themeMap = {
   orange: { color: '#d97c3a', bg: '#fdf0e5', border: 'rgba(217,124,58,0.18)', borderHover: 'rgba(217,124,58,0.40)' },
 };
 
-export const StatCard = ({ label, value, trend, icon: Icon, theme, onClick }: StatCardProps) => {
+export const StatCard = ({ label, value, valueBadge, topBadgeText, trend, icon: Icon, theme, onClick }: StatCardProps) => {
   const t = themeMap[theme];
   const isNegative = trend.startsWith('-');
+  const isInfoTrend = /sin leer/i.test(trend);
   const TrendIcon = isNegative ? TrendingDown : TrendingUp;
+  let trendBackground = '#e8f7f1';
+  let trendColor = '#2fa87a';
+  if (isInfoTrend) {
+    trendBackground = '#eaf2ff';
+    trendColor = '#3b7dd8';
+  } else if (isNegative) {
+    trendBackground = '#fdeaea';
+    trendColor = '#e05c5c';
+  }
 
   const [hovered, setHovered] = React.useState(false);
 
@@ -60,39 +72,78 @@ export const StatCard = ({ label, value, trend, icon: Icon, theme, onClick }: St
         transition: 'opacity 0.2s ease',
       }} />
 
-      {/* Icono */}
-      <div style={{
-        width: '40px', height: '40px',
-        borderRadius: '12px',
-        background: t.bg, color: t.color,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        marginBottom: '16px',
-        transform: hovered ? 'scale(1.1) rotate(-4deg)' : 'scale(1) rotate(0deg)',
-        transition: 'transform 0.2s ease',
-      }}>
-        <Icon size={20} strokeWidth={2} />
+      {/* Icono + badge superior */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
+        <div style={{
+          width: '40px', height: '40px',
+          borderRadius: '12px',
+          background: t.bg, color: t.color,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          transform: hovered ? 'scale(1.1) rotate(-4deg)' : 'scale(1) rotate(0deg)',
+          transition: 'transform 0.2s ease',
+        }}>
+          <Icon size={20} strokeWidth={2} />
+        </div>
+        {topBadgeText && (
+          <span style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '999px',
+            background: '#ef4444',
+            color: '#ffffff',
+            fontSize: '11px',
+            fontWeight: 700,
+            padding: '4px 10px',
+            lineHeight: 1.2,
+          }}>
+            {topBadgeText}
+          </span>
+        )}
       </div>
 
-      {/* Trend pill */}
-      <span style={{
-        position: 'absolute', top: '18px', right: '18px',
-        display: 'flex', alignItems: 'center', gap: '3px',
-        fontSize: '11px', fontWeight: 700,
-        padding: '3px 9px', borderRadius: '999px',
-        background: isNegative ? '#fdeaea' : '#e8f7f1',
-        color: isNegative ? '#e05c5c' : '#2fa87a',
-      }}>
-        <TrendIcon size={11} strokeWidth={2.5} />
-        {trend}
-      </span>
+      {/* Trend pill - solo mostrar si hay trend */}
+      {trend && (
+        <span style={{
+          position: 'absolute', top: '18px', right: '18px',
+          display: 'flex', alignItems: 'center', gap: '3px',
+          fontSize: '11px', fontWeight: 700,
+          padding: '3px 9px', borderRadius: '999px',
+          background: trendBackground,
+          color: trendColor,
+        }}>
+          {!isInfoTrend && <TrendIcon size={11} strokeWidth={2.5} />}
+          {trend}
+        </span>
+      )}
 
-      {/* Valor */}
-      <div style={{
-        fontFamily: "'DM Serif Display', serif",
-        fontSize: '38px', lineHeight: 1,
-        color: '#1c1a17', letterSpacing: '-1px',
-      }}>
-        {value}
+      {/* Valor + badge secundario */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+        <div style={{
+          fontFamily: "'DM Serif Display', serif",
+          fontSize: '38px', lineHeight: 1,
+          color: '#1c1a17', letterSpacing: '-1px',
+        }}>
+          {value}
+        </div>
+        {valueBadge && (
+          <span style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minWidth: '22px',
+            height: '22px',
+            padding: '0 8px',
+            borderRadius: '999px',
+            background: '#ef4444',
+            color: '#ffffff',
+            fontSize: '11px',
+            fontWeight: 700,
+            lineHeight: 1,
+          }}>
+            {valueBadge}
+          </span>
+        )}
       </div>
 
       {/* Etiqueta */}

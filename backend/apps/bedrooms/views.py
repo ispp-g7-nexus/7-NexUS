@@ -10,7 +10,7 @@ from django.contrib.auth import get_user_model
 from apps.common.utils.jwt_auth import resolve_user_from_request
 from apps.membership.models import Membership
 from .models import Bedroom
-from .serializers import BedroomSerializer
+from .serializers import BedroomSerializer, ResidentSerializer
 from .services import delete_bedroom, list_available_bedrooms
 
 
@@ -148,6 +148,14 @@ class AvailableBedroomsView(AdminRequiredView):
 		exclude_param = request.GET.get("exclude_resident_id")
 		exclude_id = int(exclude_param) if exclude_param and exclude_param.isdigit() else None
 		data = list_available_bedrooms(request.residence, exclude_membership_id=exclude_id)
+		return JsonResponse(data, safe=False)
+
+
+class BedroomResidentsDetailView(AdminRequiredView):
+	def get(self, request, bedroom_id):
+		bedroom = get_object_or_404(Bedroom, id=bedroom_id, residence=request.residence)
+		qs = bedroom.residents.filter(is_active=True, role__name="Student").select_related('user')
+		data = [ResidentSerializer.from_membership(m) for m in qs]
 		return JsonResponse(data, safe=False)
 
 

@@ -13,6 +13,11 @@ export interface GuestPass {
   comment?: string;
 }
 
+export interface AdminGuestPass extends GuestPass {
+  created_at: string;
+  resident_name: string;
+}
+
 export interface CreateGuestPassPayload {
   guest_first_name: string;
   guest_last_name: string;
@@ -163,6 +168,20 @@ export async function getMyGuestPassPolicy(): Promise<GuestPassPolicy> {
     });
   }
   return (await response.json()) as GuestPassPolicy;
+}
+
+export async function listAdminGuestPasses(statusFilter?: string): Promise<AdminGuestPass[]> {
+  const url = statusFilter
+    ? `${ADMIN_GUEST_PASSES_API_BASE}/?status=${encodeURIComponent(statusFilter)}`
+    : `${ADMIN_GUEST_PASSES_API_BASE}/`;
+  const response = await fetchWithAuth(url);
+  if (!response.ok) {
+    throw await parseError(response, {
+      fallbackMessage: "No se pudo cargar el listado de invitados.",
+      forbiddenMessage: "No tienes permisos para consultar el listado de invitados.",
+    });
+  }
+  return (await response.json()) as AdminGuestPass[];
 }
 
 export async function getAdminGuestPassPolicy(): Promise<GuestPassPolicy> {
