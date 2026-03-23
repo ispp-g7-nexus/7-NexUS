@@ -73,6 +73,23 @@ export function ReservationFormSheet({
       const data = await getSpaceAvailability(space.id, localDate);
       setAvailability(data);
     } catch (err) {
+      try {
+        if (err instanceof Error) {
+          console.error(
+            "Failed to load space availability",
+            {
+              spaceId: space.id,
+              date: localDate,
+              message: err.message,
+              stack: err.stack,
+            }
+          );
+        } else {
+          console.error("Failed to load space availability", { spaceId: space.id, date: localDate, error: JSON.stringify(err) });
+        }
+      } catch (logErr) {
+        console.error("Failed to log availability error", logErr);
+      }
       setError("No se pudo cargar la disponibilidad para esta fecha.");
     } finally {
       setLoadingAvailability(false);
@@ -110,38 +127,53 @@ export function ReservationFormSheet({
       onSuccess();
     } catch (err) {
       if (isApiError(err)) {
-        const apiErr = err;
-        if (apiErr.status === 400) {
-          const backendMsg = apiErr.message && String(apiErr.message).trim();
-          const userMessage = backendMsg || "Esa franja ya no está disponible. Se ha actualizado la disponibilidad.";
-          setError(userMessage);
-          toast.error(userMessage);
-          void fetchAvailability();
-          setSelectedSlot(null);
-        } else if (apiErr.status >= 500) {
-          const userMessage = "Error del servidor. Inténtalo de nuevo más tarde.";
-          setError(userMessage);
-          toast.error(userMessage);
-        } else if (apiErr.status === 401 || apiErr.status === 403) {
-          const userMessage = apiErr.message || "No tienes permisos para realizar esta acción.";
-          setError(userMessage);
-          toast.error(userMessage);
-        } else {
-          const userMessage = apiErr.message || "Error al crear la reserva.";
-          setError(userMessage);
-          toast.error(userMessage);
-        }
+        handleApiError(err);
       } else {
-        const userMessage = (err instanceof Error && err.message && err.message.includes("Failed to fetch"))
-          ? "Error de conexión. Revisa tu red e inténtalo de nuevo." 
-          : "Error al crear la reserva.";
-        setError(userMessage);
-        toast.error(userMessage);
+        handleUnknownError(err);
       }
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  function handleApiError(apiErr: any) {
+    const status = apiErr.status;
+    if (status === 400) {
+      const backendMsg = apiErr.message && String(apiErr.message).trim();
+      const userMessage = backendMsg || "Esa franja ya no está disponible. Se ha actualizado la disponibilidad.";
+      setError(userMessage);
+      toast.error(userMessage);
+      void fetchAvailability();
+      setSelectedSlot(null);
+      return;
+    }
+
+    if (status >= 500) {
+      const userMessage = "Error del servidor. Inténtalo de nuevo más tarde.";
+      setError(userMessage);
+      toast.error(userMessage);
+      return;
+    }
+
+    if (status === 401 || status === 403) {
+      const userMessage = apiErr.message || "No tienes permisos para realizar esta acción.";
+      setError(userMessage);
+      toast.error(userMessage);
+      return;
+    }
+
+    const userMessage = apiErr.message || "Error al crear la reserva.";
+    setError(userMessage);
+    toast.error(userMessage);
+  }
+
+  function handleUnknownError(err: unknown) {
+    const userMessage = (err as Error)?.message?.includes("Failed to fetch")
+      ? "Error de conexión. Revisa tu red e inténtalo de nuevo."
+      : "Error al crear la reserva.";
+    setError(userMessage);
+    toast.error(userMessage);
+  }
 
   const slots: AvailableSlot[] = availability?.available_slots || [];
   const needsGrouping = space && space.reservation_interval_minutes < 30;
