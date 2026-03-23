@@ -84,7 +84,6 @@ export function Rooms() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-
   const validateField = (name: string, value: string | number): boolean => {
     const v = String(value);
     const validators: Record<string, () => string> = {
@@ -135,11 +134,7 @@ export function Rooms() {
 
   const stats = useMemo(() => {
     const ocupadas = rooms.filter((r) => r.ocupantes_actuales > 0).length;
-    return {
-      total: rooms.length,
-      ocupadas,
-      libres: rooms.length - ocupadas,
-    };
+    return { total: rooms.length, ocupadas, libres: rooms.length - ocupadas };
   }, [rooms]);
 
   const [filterTipo, setFilterTipo] = useState("todos");
@@ -149,7 +144,7 @@ export function Rooms() {
   useEffect(() => {
     const fetchBuildingOptions = async () => {
       try {
-        const res = await fetch("/api/bedrooms/buildings"); // Adjust endpoint as needed
+        const res = await fetch("/api/bedrooms/buildings");
         if (!res.ok) throw new Error("Error fetching buildings");
         const data = await res.json();
         const dataUnique = Array.from(new Set(data.filter((b: string) => b && b.trim())));
@@ -158,23 +153,17 @@ export function Rooms() {
         console.error("Failed to fetch building options:", error);
       }
     };
-
     fetchBuildingOptions();
   }, []);
 
   const filteredRooms = useMemo(() => {
     let list = [...rooms];
-
     if (filter === "ocupadas") list = list.filter((r) => r.ocupantes_actuales > 0);
     if (filter === "libres") list = list.filter((r) => r.ocupantes_actuales === 0);
     if (filterTipo !== "todos") list = list.filter((r) => r.tipo === filterTipo);
     if (filterEdificio !== "todos") list = list.filter((r) => r.edificio === filterEdificio);
-
     if (search)
-      list = list.filter((r) =>
-        r.numero.toLowerCase().includes(search.toLowerCase())
-      );
-
+      list = list.filter((r) => r.numero.toLowerCase().includes(search.toLowerCase()));
     return list;
   }, [rooms, search, filter, filterTipo, filterEdificio]);
 
@@ -209,7 +198,6 @@ export function Rooms() {
 
     const base = Number.parseInt(form.numero.replace(/\D/g, "")) || 0;
     const prefix = form.numero.replace(/\d/g, "");
-
     const payloadBase = {
       planta: form.planta ? Number.parseInt(form.planta) : null,
       edificio: form.edificio,
@@ -233,13 +221,7 @@ export function Rooms() {
   };
 
   const openCreate = () => {
-    setForm({
-      numero: "",
-      edificio: "",
-      planta: "",
-      tipo: "Individual",
-      unidades: 1,
-    });
+    setForm({ numero: "", edificio: "", planta: "", tipo: "Individual", unidades: 1 });
     setErrors({});
     setIsEditing(false);
     setIsModalOpen(true);
@@ -259,6 +241,26 @@ export function Rooms() {
     setIsModalOpen(true);
   };
 
+  const handleDelete = async (room: Bedroom) => {
+    if (!confirm("¿Eliminar habitación?")) return;
+    try {
+      const res = await deleteBedroom(room.id);
+      if (res.ok) {
+        toast.success("Habitación eliminada correctamente.");
+        setSelectedRoom(null);
+        fetchRooms();
+      } else {
+        const body = await res.json().catch(() => ({}));
+        const detail = (body as { detail?: string }).detail;
+        if (res.status === 409) toast.error(detail || "No se puede eliminar: tiene residentes asignados.");
+        else if (res.status === 404) toast.error("La habitación no existe.");
+        else toast.error(detail || `Error ${res.status} al eliminar la habitación.`);
+      }
+    } catch {
+      toast.error("Error de conexión al eliminar la habitación.");
+    }
+  };
+
   if (loading) return <div className="p-10">Cargando...</div>;
 
   return (
@@ -272,7 +274,6 @@ export function Rooms() {
             <p className="text-muted-foreground">Gestiona las habitaciones</p>
           </div>
         </div>
-
         <Button onClick={openCreate}>
           <Plus className="w-4 h-4 mr-2" />Nueva habitación
         </Button>
@@ -318,15 +319,9 @@ export function Rooms() {
               </span>
             </SelectTrigger>
             <SelectContent className="rounded-2xl border-slate-200 bg-white/95 p-2 shadow-xl backdrop-blur">
-              <SelectItem className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 focus:bg-emerald-50 focus:text-emerald-800" value="todos">
-                Todos los edificios
-              </SelectItem>
+              <SelectItem className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 focus:bg-emerald-50 focus:text-emerald-800" value="todos">Todos los edificios</SelectItem>
               {buildingOptions.map((building) => (
-                <SelectItem
-                  key={building}
-                  value={building}
-                  className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 focus:bg-emerald-50 focus:text-emerald-800"
-                >
+                <SelectItem key={building} value={building} className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 focus:bg-emerald-50 focus:text-emerald-800">
                   {building}
                 </SelectItem>
               ))}
@@ -343,98 +338,52 @@ export function Rooms() {
               </span>
             </SelectTrigger>
             <SelectContent className="rounded-2xl border-slate-200 bg-white/95 p-2 shadow-xl backdrop-blur">
-              <SelectItem className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 focus:bg-emerald-50 focus:text-emerald-800" value="todos">
-                Todos los tipos
-              </SelectItem>
-              <SelectItem className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 focus:bg-emerald-50 focus:text-emerald-800" value="Individual">
-                Individual
-              </SelectItem>
-              <SelectItem className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 focus:bg-emerald-50 focus:text-emerald-800" value="Doble">
-                Doble
-              </SelectItem>
-              <SelectItem className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 focus:bg-emerald-50 focus:text-emerald-800" value="Triple">
-                Triple
-              </SelectItem>
+              <SelectItem className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 focus:bg-emerald-50 focus:text-emerald-800" value="todos">Todos los tipos</SelectItem>
+              <SelectItem className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 focus:bg-emerald-50 focus:text-emerald-800" value="Individual">Individual</SelectItem>
+              <SelectItem className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 focus:bg-emerald-50 focus:text-emerald-800" value="Doble">Doble</SelectItem>
+              <SelectItem className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 focus:bg-emerald-50 focus:text-emerald-800" value="Triple">Triple</SelectItem>
             </SelectContent>
           </Select1>
         </CardContent>
       </Card>
 
-
       {/* Lista */}
       {viewLayout === "list" && (
         <div className="grid gap-4">
           {filteredRooms.map((r) => (
-          <Card
-            key={r.id}
-            className={`hover:shadow-md transition cursor-pointer ${!r.is_active ? 'border-destructive/30 bg-destructive/5' : 'bg-card'} `}
-            onClick={() => setSelectedRoom(r)}
-          >
-            <CardContent className="flex justify-between items-start gap-4 p-4">
-              <div className="min-w-0 flex-1">
-                <h3 className="font-semibold flex items-center gap-2">
-                  <Bed className="w-5 h-5 text-muted-foreground" /> {r.numero}-{r.edificio}
-                </h3>
-                <p className="text-sm text-muted-foreground">Planta {r.planta ?? "-"} · {r.tipo} · {r.ocupantes_actuales}/{r.capacidad_maxima} ocupantes</p>
-                <div className="mt-2 flex items-start gap-2 min-w-0">
-                  <Users className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
-                  <ResidentsInlineList residents={r.residentes} />
+            <Card
+              key={r.id}
+              className={`hover:shadow-md transition cursor-pointer ${!r.is_active ? 'border-destructive/30 bg-destructive/5' : 'bg-card'}`}
+              onClick={() => setSelectedRoom(r)}
+            >
+              <CardContent className="flex justify-between items-start gap-4 p-4">
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <Bed className="w-5 h-5 text-muted-foreground" /> {r.numero}-{r.edificio}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">Planta {r.planta ?? "-"} · {r.tipo} · {r.ocupantes_actuales}/{r.capacidad_maxima} ocupantes</p>
+                  <div className="mt-2 flex items-start gap-2 min-w-0">
+                    <Users className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                    <ResidentsInlineList residents={r.residentes} />
+                  </div>
                 </div>
-              </div>
-
-              <div className="flex gap-3 items-center shrink-0">
-                <Badge variant={r.ocupantes_actuales > 0 ? "default" : "secondary"}>
-                  {r.ocupantes_actuales >= r.capacidad_maxima
-                    ? "Completa"
-                    : r.ocupantes_actuales > 0
-                      ? "Parcial"
-                      : "Libre"}
-                </Badge>
-
-                <Button
-                  variant="outline"
-                  onClick={(e) => { e.stopPropagation(); openEdit(r); }}
-                >
-                  <Edit2 className="w-4 h-4 mr-2" />Editar
-                </Button>
-
-                <Button
-                  variant="destructive"
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    if (!confirm("¿Eliminar habitación?")) return;
-
-                    try {
-                      const res = await deleteBedroom(r.id);
-
-                      if (res.ok) {
-                        toast.success("Habitación eliminada correctamente.");
-                        fetchRooms();
-                      } else {
-                        const body = await res.json().catch(() => ({}));
-                        const detail = (body as { detail?: string }).detail;
-
-                        if (res.status === 409) {
-                          toast.error(detail || "No se puede eliminar: tiene residentes asignados.");
-                        } else if (res.status === 404) {
-                          toast.error("La habitación no existe.");
-                        } else {
-                          toast.error(detail || `Error ${res.status} al eliminar la habitación.`);
-                        }
-                      }
-                    } catch (err) {
-                      console.error(err);
-                      toast.error("Error de conexión al eliminar la habitación.");
-                    }
-                  }}
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />Eliminar
+                <div className="flex gap-3 items-center shrink-0">
+                  <Badge variant={r.ocupantes_actuales > 0 ? "default" : "secondary"}>
+                    {r.ocupantes_actuales >= r.capacidad_maxima
+                      ? "Completa"
+                      : r.ocupantes_actuales > 0
+                        ? "Parcial"
+                        : "Libre"}
+                  </Badge>
+                  <Button variant="outline" onClick={(e) => { e.stopPropagation(); setSelectedRoom(r); }}>
+                    Ver detalles
                   </Button>
                 </div>
               </CardContent>
             </Card>
           ))}
-      </div>)}
+        </div>
+      )}
 
       {/* Mapa */}
       {viewLayout === "map" && (
@@ -491,24 +440,41 @@ export function Rooms() {
               </div>
               <div className="col-span-2 bg-gray-50 p-3 rounded-xl border border-gray-100">
                 <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1">Estado</p>
-                <Badge className={getRoomState(selectedRoom.ocupantes_actuales, selectedRoom.capacidad_maxima).badgeClass}>{getRoomState(selectedRoom.ocupantes_actuales, selectedRoom.capacidad_maxima).label}</Badge>
+                <Badge className={getRoomState(selectedRoom.ocupantes_actuales, selectedRoom.capacidad_maxima).badgeClass}>
+                  {getRoomState(selectedRoom.ocupantes_actuales, selectedRoom.capacidad_maxima).label}
+                </Badge>
               </div>
               <div className="col-span-2 bg-gray-50 p-3 rounded-xl border border-gray-100">
                 <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-2">Residentes</p>
                 <ResidentsInlineList residents={selectedRoom.residentes} showEmail />
               </div>
             </div>
-            <Button className="w-full mt-4" variant="outline" onClick={() => {
-              setSelectedRoom(null);
-              openEdit(selectedRoom);
-            }}>
-              <Edit2 className="w-4 h-4 mr-2" />Editar habitación
-            </Button>
+
+            {/* Acciones */}
+            <div className="flex gap-2 mt-4">
+              <Button
+                className="flex-1"
+                variant="outline"
+                onClick={() => {
+                  setSelectedRoom(null);
+                  openEdit(selectedRoom);
+                }}
+              >
+                <Edit2 className="w-4 h-4 mr-2" />Editar
+              </Button>
+              <Button
+                className="flex-1"
+                variant="destructive"
+                onClick={() => handleDelete(selectedRoom)}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />Eliminar
+              </Button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Modal */}
+      {/* Modal crear/editar */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div role="button" tabIndex={-1} aria-label="Cerrar modal" className="fixed inset-0 bg-black/50" onClick={() => setIsModalOpen(false)} onKeyDown={(e) => { if (e.key === "Escape" || e.key === "Enter") setIsModalOpen(false); }} />
@@ -517,7 +483,7 @@ export function Rooms() {
               {isEditing ? "Editar habitación" : "Nueva habitación"}
             </h2>
             {errors.general && (
-              <div className="bg-destructive/10 text-destructive p-3 rounded-md">
+              <div className="bg-destructive/10 text-destructive p-3 rounded-md mb-4">
                 {errors.general}
               </div>
             )}
@@ -529,9 +495,7 @@ export function Rooms() {
                   value={form.numero}
                   onChange={(e) => onChange("numero", (e.target as HTMLInputElement).value)}
                 />
-                {errors.numero && (
-                  <p className="text-sm text-destructive mt-1">{errors.numero}</p>
-                )}
+                {errors.numero && <p className="text-sm text-destructive mt-1">{errors.numero}</p>}
               </div>
 
               <div>
@@ -540,9 +504,7 @@ export function Rooms() {
                   value={form.edificio}
                   onChange={(e) => onChange("edificio", (e.target as HTMLInputElement).value)}
                 />
-                {errors.edificio && (
-                  <p className="text-sm text-destructive mt-1">{errors.edificio}</p>
-                )}
+                {errors.edificio && <p className="text-sm text-destructive mt-1">{errors.edificio}</p>}
               </div>
 
               <div>
@@ -551,9 +513,7 @@ export function Rooms() {
                   value={form.planta}
                   onChange={(e) => onChange("planta", (e.target as HTMLInputElement).value)}
                 />
-                {errors.planta && (
-                  <p className="text-sm text-destructive mt-1">{errors.planta}</p>
-                )}
+                {errors.planta && <p className="text-sm text-destructive mt-1">{errors.planta}</p>}
               </div>
 
               <div>
@@ -577,20 +537,15 @@ export function Rooms() {
                     value={String(form.unidades)}
                     onChange={(e) => onChange("unidades", Number.parseInt((e.target as HTMLInputElement).value || '1'))}
                   />
-                  {errors.unidades && (
-                    <p className="text-sm text-destructive mt-1">{errors.unidades}</p>
-                  )}
+                  {errors.unidades && <p className="text-sm text-destructive mt-1">{errors.unidades}</p>}
                 </div>
               )}
 
-              <div className="flex justify-end gap-2 pt-2">
-                <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
+              <div className="flex gap-2 pt-2">
+                <Button type="button" variant="outline" className="flex-1" onClick={() => setIsModalOpen(false)}>
                   Cancelar
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={Object.values(errors).some((e) => e)}
-                >
+                <Button type="submit" className="flex-1" disabled={Object.values(errors).some((e) => e)}>
                   Guardar
                 </Button>
               </div>
@@ -620,9 +575,9 @@ function groupByBuildingAndFloor(rooms: Bedroom[]): Record<string, Record<number
 }
 
 const ROOM_STATES = {
-  full:    { label: "Completa", badgeClass: "bg-red-100 text-red-700 border-0",       cellClass: "bg-red-50 border-red-400 hover:bg-red-100",       iconClass: "text-red-500",    textClass: "text-red-700" },
+  full:    { label: "Completa", badgeClass: "bg-red-100 text-red-700 border-0",       cellClass: "bg-red-50 border-red-400 hover:bg-red-100",        iconClass: "text-red-500",    textClass: "text-red-700"    },
   partial: { label: "Parcial",  badgeClass: "bg-yellow-100 text-yellow-700 border-0", cellClass: "bg-yellow-50 border-yellow-400 hover:bg-yellow-100", iconClass: "text-yellow-600", textClass: "text-yellow-700" },
-  free:    { label: "Libre",    badgeClass: "bg-green-100 text-green-700 border-0",   cellClass: "bg-green-50 border-green-400 hover:bg-green-100",  iconClass: "text-green-600",  textClass: "text-green-700" },
+  free:    { label: "Libre",    badgeClass: "bg-green-100 text-green-700 border-0",   cellClass: "bg-green-50 border-green-400 hover:bg-green-100",   iconClass: "text-green-600",  textClass: "text-green-700"  },
 } as const;
 
 function getRoomState(ocupantes: number, capacidad: number) {
@@ -653,7 +608,6 @@ function FloorRow({ floor, rooms, onSelectRoom }: Readonly<{ floor: string; room
 
 function RoomMapCell({ room, onClick }: Readonly<{ room: Bedroom; onClick: () => void }>) {
   const { label, cellClass, iconClass, textClass } = getRoomState(room.ocupantes_actuales, room.capacidad_maxima);
-
   return (
     <motion.button
       whileHover={{ scale: 1.05 }}
@@ -674,9 +628,7 @@ function Stat({ title, value }: Readonly<StatProps>) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-sm text-muted-foreground">
-          {title}
-        </CardTitle>
+        <CardTitle className="text-sm text-muted-foreground">{title}</CardTitle>
       </CardHeader>
       <CardContent>
         <p className="text-2xl font-bold">{value}</p>
@@ -687,11 +639,8 @@ function Stat({ title, value }: Readonly<StatProps>) {
 
 function ResidentsInlineList({ residents, showEmail = false }: { readonly residents: BedroomResident[]; readonly showEmail?: boolean }) {
   if (residents.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground">No hay residentes asignados</p>
-    );
+    return <p className="text-sm text-muted-foreground">No hay residentes asignados</p>;
   }
-
   return (
     <ul className="min-w-0 space-y-0.5">
       {residents.map((resident) => (
