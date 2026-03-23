@@ -9,7 +9,7 @@ import {
 } from "../../services/bedrooms";
 import "../../index.css";
 import roomSvg from "../../assets/room.svg";
-import { Plus, Edit2, Trash2, Search as SearchIcon, Bed, Building2, Grid3x3, List, Users, User } from "lucide-react";
+import { Plus, Edit2, Trash2, Search as SearchIcon, Bed, Building2, Grid3x3, List, Users, User, Eye } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 
@@ -390,6 +390,13 @@ export function Rooms() {
                       ? "Parcial"
                       : "Libre"}
                 </Badge>
+
+                <Button
+                  variant="outline"
+                  onClick={(e) => { e.stopPropagation(); setSelectedRoom(r); }}
+                >
+                  <Eye className="w-4 h-4 mr-2" />Ver detalles
+                </Button>
 
                 <Button
                   variant="outline"
