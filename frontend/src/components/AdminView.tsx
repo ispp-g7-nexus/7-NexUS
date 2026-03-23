@@ -270,17 +270,20 @@ useEffect(() => {
     if (activeTab !== "dashboard") return;
 
     residentsService.list().then((d) => setTotalResidents(d.length)).catch(() => setTotalResidents(0));
+
     listBedrooms().then((d) => {
-        const pct = d.length > 0 ? Math.round((d.filter(r => r.ocupantes_actuales > 0).length / d.length) * 100) : 0;
+        const totalPlazas = d.reduce((sum, r) => sum + r.capacidad_maxima, 0);
+        const plazasOcupadas = d.reduce((sum, r) => sum + r.ocupantes_actuales, 0);
+        const pct = totalPlazas > 0 ? Math.round((plazasOcupadas / totalPlazas) * 100) : 0;
         setOccupiedRoomsPercent(`${pct}%`);
     }).catch(() => setOccupiedRoomsPercent('—'));
+
     staffService.list().then((d) => setTotalStaff(d.length)).catch(() => setTotalStaff(0));
     listAdminGuestPasses("active").then((d) => setTotalActiveGuests(d.length)).catch(() => setTotalActiveGuests(0));
     IncidenceService.getAll().then((d) => setPendingIncidences(d.filter(i => i.status === 'pending').length)).catch(() => setPendingIncidences(0));
     roleService.getRoles().then((d) => setTotalRoles(d.length)).catch(() => setTotalRoles(0));
     loadChatsCount();
 }, [activeTab]);
-
 
     const allNavItems = [
         { id: "dashboard", label: "Panel de Control", icon: <LayoutDashboard className="w-5 h-5" /> },
