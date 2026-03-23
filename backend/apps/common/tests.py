@@ -32,6 +32,8 @@ from apps.residences.models import Residence
 
 UserModel = get_user_model()
 
+PASSWORD = "password123"  # NOSONAR
+
 
 class CommonUtilsTests(FastTenantTestCase):
     @classmethod
@@ -96,7 +98,7 @@ class CommonSerializersTests(FastTenantTestCase):
         super().setUp()
         with tenant_context(self.tenant):
             self.user1 = UserModel.objects.create_user(
-                username="admin1", email="admin1@test.com", password="password123"
+                username="admin1", email="admin1@test.com", password=PASSWORD
             )
 
     def test_admin_profile_serializer_validation(self):
@@ -165,7 +167,7 @@ class CommonServicesTests(FastTenantTestCase):
         super().setUp()
         with tenant_context(self.tenant):
             self.user = UserModel.objects.create_user(
-                username="testuser", email="test@test.com", password="password123"
+                username="testuser", email="test@test.com", password=PASSWORD
             )
             self.student_role = Role.objects.create(name="Student")
             self.admin_role = Role.objects.create(name="Admin")
@@ -180,7 +182,7 @@ class CommonServicesTests(FastTenantTestCase):
             self.assertIsNone(authenticate_user(request, "", ""))
             self.assertIsNone(authenticate_user(request, "test@test.com", "wrongpass"))
             self.assertEqual(
-                authenticate_user(request, "test@test.com", "password123"), self.user
+                authenticate_user(request, "test@test.com", PASSWORD), self.user
             )
 
     def test_has_access_for_portal(self):
@@ -361,9 +363,7 @@ class CommonViewsTests(FastTenantTestCase):
         url = reverse("password-reset-confirm")
         response = self.anon_client.post(
             url,
-            data=json.dumps(
-                {"uid": "1", "token": "abc", "new_password": "password123"}
-            ),
+            data=json.dumps({"uid": "1", "token": "abc", "new_password": PASSWORD}),
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 200)
@@ -374,9 +374,7 @@ class CommonViewsTests(FastTenantTestCase):
         url = reverse("password-reset-confirm")
         response = self.anon_client.post(
             url,
-            data=json.dumps(
-                {"uid": "1", "token": "abc", "new_password": "password123"}
-            ),
+            data=json.dumps({"uid": "1", "token": "abc", "new_password": PASSWORD}),
             content_type="application/json",
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
