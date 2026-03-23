@@ -75,6 +75,7 @@ export type SimplePackage = {
   sender?: string;
   resident_name?: string;
   tracking?: string;
+  delivery_code?: string;
   date?: string;
   status?: string;
   location?: string;

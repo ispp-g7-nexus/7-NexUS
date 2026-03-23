@@ -1,7 +1,6 @@
 import { AlertCircle, BedDouble, Bell, BookOpen, Briefcase, Calendar, Home, LayoutDashboard, LogOut, Menu, MessageSquare, Package, Palette, Shield, User, UserCheck, Users, Utensils } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { toast } from "sonner";
 import { chatsService, type ChatRealtimeEvent } from "../services/chats";
 import { authService } from "../services/auth";
 import { Events } from "../pages/Social/Events/Events";
@@ -39,7 +38,7 @@ interface AdminViewProps {
     readonly currentUser: { name: string; email: string } | null;
 }
 
-type AdminTab = "dashboard" | "rooms" | "students" | "incidences" | "reservations" | "kitchen" | "analytics" | "staff" | "announcements" | "visitors" | "events" | "roles" | "profile" | "chats" | "packages";
+type AdminTab = "dashboard" | "rooms" | "students" | "incidences" | "reservations" | "kitchen" | "analytics" | "staff" | "announcements" | "visitors" | "events" | "roles" | "profile" | "chats" | "packages" | "branding";
 
 const ADMIN_TABS: AdminTab[] = [
     "dashboard",
@@ -57,6 +56,7 @@ const ADMIN_TABS: AdminTab[] = [
     "profile",
     "chats",
     "packages",
+    "branding",
 ];
 
 const isAdminTab = (value: string): value is AdminTab => {
