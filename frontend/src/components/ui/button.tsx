@@ -20,8 +20,8 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
         
         // --- TUS VARIANTES PERSONALIZADAS ---
-        nexus: "bg-[#82D14C] text-white hover:bg-[#74bc44] shadow-lg shadow-green-100 rounded-2xl font-bold active:scale-95",
-        fab: "fixed bottom-24 right-6 w-14 h-14 bg-[#82D14C] hover:bg-[#74bc44] text-white rounded-full shadow-2xl z-50 transition-transform active:scale-90 border-4 border-white",
+        nexus: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20 rounded-2xl font-bold active:scale-95",
+        fab: "fixed bottom-24 right-6 w-14 h-14 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full shadow-2xl z-50 transition-transform active:scale-90 border-4 border-white",
       },
       size: {
         default: "h-10 px-4 py-2",

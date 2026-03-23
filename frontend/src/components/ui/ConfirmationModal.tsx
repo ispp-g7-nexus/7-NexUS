@@ -68,7 +68,7 @@ export function ConfirmationModal({
                         className={
                             isDestructive 
                                 ? "bg-red-600 hover:bg-red-700" 
-                                : "bg-green-600 hover:bg-green-700"
+                                : "bg-primary text-primary-foreground hover:bg-primary/90"
                         }
                     >
                         {isLoading ? "Procesando..." : confirmText}

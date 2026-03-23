@@ -63,25 +63,41 @@ export function ReservationFormSheet({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  async function fetchAvailability() {
+    if (!space) return;
+    setLoadingAvailability(true);
+    setError(null);
+    setSelectedSlot(null);
+    setExpandedHour(null);
+    try {
+      const data = await getSpaceAvailability(space.id, localDate);
+      setAvailability(data);
+    } catch (err) {
+      try {
+        if (err instanceof Error) {
+          console.error(
+            "Failed to load space availability",
+            {
+              spaceId: space.id,
+              date: localDate,
+              message: err.message,
+              stack: err.stack,
+            }
+          );
+        } else {
+          console.error("Failed to load space availability", { spaceId: space.id, date: localDate, error: JSON.stringify(err) });
+        }
+      } catch (logErr) {
+        console.error("Failed to log availability error", logErr);
+      }
+      setError("No se pudo cargar la disponibilidad para esta fecha.");
+    } finally {
+      setLoadingAvailability(false);
+    }
+  }
 
   useEffect(() => {
     if (!open || !space) return;
-
-    const fetchAvailability = async () => {
-      setLoadingAvailability(true);
-      setError(null);
-      setSelectedSlot(null);
-      setExpandedHour(null);
-      try {
-        const data = await getSpaceAvailability(space.id, localDate);
-        setAvailability(data);
-      } catch (err) {
-        setError("No se pudo cargar la disponibilidad para esta fecha.");
-      } finally {
-        setLoadingAvailability(false);
-      }
-    };
-
     void fetchAvailability();
   }, [open, space, localDate]);
 
@@ -110,11 +126,54 @@ export function ReservationFormSheet({
       toast.success("Reserva confirmada con éxito.");
       onSuccess();
     } catch (err) {
-      setError(isApiError(err) ? err.message : "Error al crear la reserva.");
+      if (isApiError(err)) {
+        handleApiError(err);
+      } else {
+        handleUnknownError(err);
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  function handleApiError(apiErr: any) {
+    const status = apiErr.status;
+    if (status === 400) {
+      const backendMsg = apiErr.message && String(apiErr.message).trim();
+      const userMessage = backendMsg || "Esa franja ya no está disponible. Se ha actualizado la disponibilidad.";
+      setError(userMessage);
+      toast.error(userMessage);
+      void fetchAvailability();
+      setSelectedSlot(null);
+      return;
+    }
+
+    if (status >= 500) {
+      const userMessage = "Error del servidor. Inténtalo de nuevo más tarde.";
+      setError(userMessage);
+      toast.error(userMessage);
+      return;
+    }
+
+    if (status === 401 || status === 403) {
+      const userMessage = apiErr.message || "No tienes permisos para realizar esta acción.";
+      setError(userMessage);
+      toast.error(userMessage);
+      return;
+    }
+
+    const userMessage = apiErr.message || "Error al crear la reserva.";
+    setError(userMessage);
+    toast.error(userMessage);
+  }
+
+  function handleUnknownError(err: unknown) {
+    const userMessage = (err as Error)?.message?.includes("Failed to fetch")
+      ? "Error de conexión. Revisa tu red e inténtalo de nuevo."
+      : "Error al crear la reserva.";
+    setError(userMessage);
+    toast.error(userMessage);
+  }
 
   const slots: AvailableSlot[] = availability?.available_slots || [];
   const needsGrouping = space && space.reservation_interval_minutes < 30;
@@ -132,7 +191,7 @@ export function ReservationFormSheet({
         side={isMobile ? "bottom" : "right"}
         className={isMobile ? "max-h-[90vh] rounded-t-xl" : "w-full sm:max-w-md flex flex-col"}
       >
-        <SheetHeader className="px-6 pt-6 pb-4 border-b border-border">
+        <SheetHeader className="px-6 pt-6 pb-4 border-b border-gray-200">
           <SheetTitle>Nueva reserva</SheetTitle>
           <SheetDescription>{space ? space.name : "Selecciona un espacio"}</SheetDescription>
         </SheetHeader>
@@ -140,7 +199,7 @@ export function ReservationFormSheet({
         {space && (
           <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-6 p-6 overflow-y-auto">
             <div className="space-y-2">
-              <label htmlFor="reservation-date" className="block text-sm font-medium text-foreground">
+              <label htmlFor="reservation-date" className="block text-sm font-medium text-gray-900">
                 Fecha de la reserva
               </label>
               <InteractiveDatePicker
@@ -151,20 +210,20 @@ export function ReservationFormSheet({
               />
             </div>
             <div className="space-y-3">
-              <label className="text-sm font-medium text-foreground flex items-center justify-between">
+              <label className="text-sm font-medium text-gray-900 flex items-center justify-between">
                 <span>Horas disponibles</span>
-                <span className="text-xs text-muted-foreground font-normal">
+                <span className="text-xs text-gray-500 font-normal">
                   Tramos de {space.reservation_interval_minutes} min
                 </span>
               </label>
 
               {loadingAvailability ? (
-                <div className="rounded-lg border border-border bg-muted/30 p-8 text-center">
-                  <p className="text-sm text-muted-foreground animate-pulse">Cargando disponibilidad...</p>
+                <div className="rounded-lg border border-gray-200 bg-muted/30 p-8 text-center">
+                  <p className="text-sm text-gray-500 animate-pulse">Cargando disponibilidad...</p>
                 </div>
               ) : slots.length === 0 ? (
-                <div className="rounded-lg border border-border bg-muted/30 p-8 text-center">
-                  <p className="text-sm text-muted-foreground">No hay huecos generados para este espacio hoy.</p>
+                <div className="rounded-lg border border-gray-200 bg-muted/30 p-8 text-center">
+                  <p className="text-sm text-gray-500">No hay huecos generados para este espacio hoy.</p>
                 </div>
               ) : needsGrouping ? (
                 <div className="space-y-2">
@@ -174,18 +233,18 @@ export function ReservationFormSheet({
                     const isHourFullyOccupied = typedHourSlots.every(s => s.status === "occupied");
 
                     return (
-                      <div key={hourLabel} className="rounded-md border border-border overflow-hidden">
+                      <div key={hourLabel} className="rounded-md border border-gray-200 overflow-hidden">
                         <button
                           type="button"
                           onClick={() => setExpandedHour(isExpanded ? null : hourLabel)}
-                          className={`flex w-full items-center justify-between px-4 py-3 text-sm font-medium transition-colors hover:bg-muted/50 ${isHourFullyOccupied ? "bg-muted/30 text-muted-foreground" : "bg-card text-foreground"}`}
+                          className={`flex w-full items-center justify-between px-4 py-3 text-sm font-medium transition-colors hover:bg-muted/50 ${isHourFullyOccupied ? "bg-muted/30 text-gray-500" : "bg-white text-gray-900"}`}
                         >
                           <span>{hourLabel}</span>
                           {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                         </button>
                         
                         {isExpanded && (
-                          <div className="grid grid-cols-2 gap-2 p-3 bg-muted/10 border-t border-border sm:grid-cols-3">
+                          <div className="grid grid-cols-2 gap-2 p-3 bg-muted/10 border-t border-gray-200 sm:grid-cols-3">
                             {typedHourSlots.map((slot, idx) => {
 
                               const isSelected = selectedSlot?.start_time === slot.start_time;
@@ -221,7 +280,7 @@ export function ReservationFormSheet({
               )}
             </div>
             <div className="space-y-2">
-              <label htmlFor="reservation-notes" className="block text-sm font-medium text-foreground">
+              <label htmlFor="reservation-notes" className="block text-sm font-medium text-gray-900">
                 Notas (opcional)
               </label>
               <textarea
@@ -241,12 +300,12 @@ export function ReservationFormSheet({
               </p>
             )}
 
-            <SheetFooter className="mt-auto pt-4 border-t border-border">
+            <SheetFooter className="mt-auto pt-4 border-t border-gray-200">
               <div className="flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={isSubmitting || !selectedSlot} className="bg-[#4A7C59] hover:bg-[#4A7C59]/90 text-white">
+                <Button type="submit" disabled={isSubmitting || !selectedSlot || loadingAvailability} className="bg-green-700 hover:bg-green-700/90 text-white">
                   {isSubmitting ? "Confirmando..." : "Confirmar reserva"}
                 </Button>
               </div>
@@ -282,8 +341,8 @@ function SlotButton({
             : isOccupied
             ? "bg-muted/60 text-muted-foreground/60 line-through cursor-not-allowed border border-transparent" 
             : isSelected
-            ? "bg-[#4A7C59] text-white shadow-md border border-[#4A7C59] scale-[1.02]" 
-            : "bg-background text-foreground border border-border hover:border-[#4A7C59] hover:text-[#4A7C59] hover:bg-[#4A7C59]/5"
+            ? "bg-green-700 text-white shadow-md border border-green-700 scale-[1.02]" 
+            : "bg-background text-gray-900 border border-gray-200 hover:border-green-700 hover:text-green-700 hover:bg-green-700/5"
         }
       `}
     >

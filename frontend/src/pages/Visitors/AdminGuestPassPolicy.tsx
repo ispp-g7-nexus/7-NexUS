@@ -140,7 +140,7 @@ export function AdminGuestPassPolicyPage() {
             {errors.max_duration_hours ? (
               <p className="text-xs text-red-600">{errors.max_duration_hours}</p>
             ) : (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-gray-500">
                 Rango permitido: {DURATION_MIN} a {DURATION_MAX} horas.
               </p>
             )}
@@ -161,7 +161,7 @@ export function AdminGuestPassPolicyPage() {
             {errors.max_concurrent_passes ? (
               <p className="text-xs text-red-600">{errors.max_concurrent_passes}</p>
             ) : (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-gray-500">
                 Rango permitido: {CONCURRENT_MIN} a {CONCURRENT_MAX} pases.
               </p>
             )}
