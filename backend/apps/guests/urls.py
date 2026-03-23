@@ -4,6 +4,7 @@ from .views import (
     AdminGuestPassListView,
     AdminGuestPassPolicyView,
     ResidentActiveGuestPassListView,
+    ResidentGuestPassCancelView,
     ResidentGuestPassCreateView,
     ResidentGuestPassPolicyView,
     ResidentUpcomingGuestPassListView,
@@ -25,6 +26,11 @@ urlpatterns = [
         "guest-passes/me/upcoming/",
         ResidentUpcomingGuestPassListView.as_view(),
         name="guest-pass-me-upcoming-list",
+    ),
+    path(
+        "guest-passes/me/<int:guest_pass_id>/cancel/",
+        ResidentGuestPassCancelView.as_view(),
+        name="guest-pass-me-cancel",
     ),
     path(
         "guest-passes/me/policy/",

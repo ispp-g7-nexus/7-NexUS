@@ -180,6 +180,9 @@ class GuestPassesApiTests(TenantTestCase):
             "comment": comment,
         }
 
+    def _cancel_url(self, guest_pass_id: int) -> str:
+        return f"/api/guest-passes/me/{guest_pass_id}/cancel/"
+
     def test_resident_lists_only_own_active_passes(self):
         now = timezone.now()
 
@@ -302,6 +305,114 @@ class GuestPassesApiTests(TenantTestCase):
     def test_non_resident_user_is_forbidden_for_upcoming_list(self):
         response = self.admin_client.get("/api/guest-passes/me/upcoming/")
         self.assertEqual(response.status_code, 403)
+
+    def test_resident_can_cancel_own_active_pass(self):
+        now = timezone.now()
+        guest_pass = self._create_pass(
+            resident=self.resident_membership,
+            pass_code="PASS-CANCEL-ME-1",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now - timedelta(hours=1),
+            valid_until=now + timedelta(hours=1),
+        )
+
+        response = self.resident_client.post(self._cancel_url(guest_pass.id))
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["detail"], "Pase cancelado correctamente.")
+        self.assertEqual(payload["guest_pass"]["id"], guest_pass.id)
+        self.assertEqual(payload["guest_pass"]["status"], GuestPass.Status.CANCELLED)
+
+        guest_pass.refresh_from_db()
+        self.assertEqual(guest_pass.status, GuestPass.Status.CANCELLED)
+        self.assertIsNotNone(guest_pass.cancelled_at)
+
+    def test_resident_can_cancel_upcoming_pass(self):
+        now = timezone.now()
+        guest_pass = self._create_pass(
+            resident=self.resident_membership,
+            pass_code="PASS-UPCOMING-CANCEL-1",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now + timedelta(hours=2),
+            valid_until=now + timedelta(hours=4),
+        )
+
+        response = self.resident_client.post(self._cancel_url(guest_pass.id))
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["detail"], "Pase cancelado correctamente.")
+        self.assertEqual(payload["guest_pass"]["id"], guest_pass.id)
+        self.assertEqual(payload["guest_pass"]["status"], GuestPass.Status.CANCELLED)
+
+        guest_pass.refresh_from_db()
+        self.assertEqual(guest_pass.status, GuestPass.Status.CANCELLED)
+        self.assertIsNotNone(guest_pass.cancelled_at)
+
+    def test_resident_cannot_cancel_expired_active_pass(self):
+        now = timezone.now()
+        guest_pass = self._create_pass(
+            resident=self.resident_membership,
+            pass_code="PASS-EXPIRED-CANCEL-1",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now - timedelta(hours=4),
+            valid_until=now - timedelta(minutes=1),
+        )
+
+        response = self.resident_client.post(self._cancel_url(guest_pass.id))
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("detail", response.json())
+        self.assertEqual(
+            response.json()["detail"],
+            "Solo puedes cancelar pases activos o próximos.",
+        )
+
+    def test_resident_cannot_cancel_pass_from_other_resident(self):
+        now = timezone.now()
+        guest_pass = self._create_pass(
+            resident=self.other_resident_membership,
+            pass_code="PASS-OTHER-CANCEL-1",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now - timedelta(hours=1),
+            valid_until=now + timedelta(hours=1),
+        )
+
+        response = self.resident_client.post(self._cancel_url(guest_pass.id))
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_non_resident_user_is_forbidden_for_cancel(self):
+        now = timezone.now()
+        guest_pass = self._create_pass(
+            resident=self.resident_membership,
+            pass_code="PASS-CANCEL-FORBIDDEN-1",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now - timedelta(hours=1),
+            valid_until=now + timedelta(hours=1),
+        )
+
+        response = self.admin_client.post(self._cancel_url(guest_pass.id))
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_resident_cannot_cancel_already_cancelled_pass(self):
+        now = timezone.now()
+        guest_pass = self._create_pass(
+            resident=self.resident_membership,
+            pass_code="PASS-CANCELLED-ALREADY-1",
+            status=GuestPass.Status.CANCELLED,
+            valid_from=now - timedelta(hours=1),
+            valid_until=now + timedelta(hours=1),
+            cancelled_at=now - timedelta(minutes=10),
+        )
+
+        response = self.resident_client.post(self._cancel_url(guest_pass.id))
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("detail", response.json())
+        self.assertEqual(response.json()["detail"], "El pase ya está cancelado.")
 
     def test_resident_creates_guest_pass_with_valid_data(self):
         now = timezone.now()
