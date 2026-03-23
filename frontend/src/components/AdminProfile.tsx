@@ -9,6 +9,7 @@ export function AdminProfile() {
     const [isSaving, setIsSaving] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
 
+
     const [userData, setUserData] = useState({
         username: '',
         email: '',
@@ -114,7 +115,7 @@ export function AdminProfile() {
     if (isLoading) {
         return (
             <div className="flex justify-center items-center min-h-[70vh] text-gray-500">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4a8f5d] mr-3"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mr-3"></div>
                 Cargando datos del perfil...
             </div>
         );
@@ -124,34 +125,36 @@ export function AdminProfile() {
         <div className="min-h-[85vh] w-full flex items-center justify-center p-4 md:p-6 bg-transparent">
             <div className="w-full max-w-4xl bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-gray-100 overflow-hidden transition-all duration-300">
 
-                <div className="bg-[#4a8f5d] p-8 text-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative overflow-hidden">
+                <div className="bg-primary p-8 text-primary-foreground flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative overflow-hidden">
                     <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-white opacity-10 rounded-full blur-2xl"></div>
 
                     <div className="relative z-10">
                         <div className="flex items-center gap-3">
                             <h2 className="text-3xl font-bold tracking-tight">Mi Perfil</h2>
-                            <span className="bg-white/20 text-white text-xs font-semibold px-3 py-1 rounded-full border border-white/30 backdrop-blur-sm">
+                            <span className="bg-primary-foreground/20 text-primary-foreground text-xs font-semibold px-3 py-1 rounded-full border border-primary-foreground/30 backdrop-blur-sm">
                                 {userData.status}
                             </span>
                         </div>
-                        <p className="text-green-50 text-sm mt-2 font-medium opacity-90">
+                        <p className="text-primary-foreground/80 text-sm mt-2 font-medium opacity-90">
                             Gestiona tu información personal y credenciales de acceso
                         </p>
                     </div>
 
-                    <button
-                        type="button"
-                        onClick={() => {
-                            if (isEditing) {
-                                setErrors({});
-                                setUserData(originalData);
-                            }
-                            setIsEditing(!isEditing);
-                        }}
-                        className="relative z-10 w-full sm:w-auto bg-white/10 hover:bg-white/20 backdrop-blur-md transition-all duration-200 px-6 py-2.5 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-white/50 outline-none shadow-sm border border-white/20"
-                    >
-                        {isEditing ? 'Cancelar Edición' : 'Editar Perfil'}
-                    </button>
+                    <div className="relative z-10 flex flex-col sm:flex-row gap-3 w-full sm:w-auto mt-4 sm:mt-0">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                if (isEditing) {
+                                    setErrors({});
+                                    setUserData(originalData);
+                                }
+                                setIsEditing(!isEditing);
+                            }}
+                            className="w-full sm:w-auto bg-primary-foreground/10 hover:bg-primary-foreground/20 backdrop-blur-md transition-all duration-200 px-6 py-2.5 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-primary-foreground/50 outline-none shadow-sm border border-primary-foreground/20 text-primary-foreground"
+                        >
+                            {isEditing ? 'Cancelar Edición' : 'Editar Perfil'}
+                        </button>
+                    </div>
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-8 sm:p-10 bg-white">
@@ -166,7 +169,7 @@ export function AdminProfile() {
                                 onChange={(e) => handleInputChange('first_name', e.target.value)}
                                 disabled={!isEditing}
                                 className={`w-full px-4 py-3 border rounded-xl focus:outline-none transition-all duration-200 ${errors.first_name ? 'border-red-500 bg-red-50/30 focus:ring-4 focus:ring-red-500/10' :
-                                    isEditing ? 'border-[#4a8f5d]/50 focus:border-[#4a8f5d] focus:ring-4 focus:ring-[#4a8f5d]/10 bg-white hover:border-[#4a8f5d]/70' :
+                                    isEditing ? 'border-primary/50 focus:border-primary focus:ring-4 focus:ring-primary/10 bg-white hover:border-primary/70' :
                                         'border-gray-200 bg-gray-50/80 text-gray-600 cursor-default'
                                     }`}
                             />
@@ -182,7 +185,7 @@ export function AdminProfile() {
                                 onChange={(e) => handleInputChange('last_name', e.target.value)}
                                 disabled={!isEditing}
                                 className={`w-full px-4 py-3 border rounded-xl focus:outline-none transition-all duration-200 ${errors.last_name ? 'border-red-500 bg-red-50/30 focus:ring-4 focus:ring-red-500/10' :
-                                    isEditing ? 'border-[#4a8f5d]/50 focus:border-[#4a8f5d] focus:ring-4 focus:ring-[#4a8f5d]/10 bg-white hover:border-[#4a8f5d]/70' :
+                                    isEditing ? 'border-primary/50 focus:border-primary focus:ring-4 focus:ring-primary/10 bg-white hover:border-primary/70' :
                                         'border-gray-200 bg-gray-50/80 text-gray-600 cursor-default'
                                     }`}
                             />
@@ -198,7 +201,7 @@ export function AdminProfile() {
                                 onChange={(e) => handleInputChange('email', e.target.value)}
                                 disabled={!isEditing}
                                 className={`w-full px-4 py-3 border rounded-xl focus:outline-none transition-all duration-200 ${errors.email ? 'border-red-500 bg-red-50/30 focus:ring-4 focus:ring-red-500/10' :
-                                    isEditing ? 'border-[#4a8f5d]/50 focus:border-[#4a8f5d] focus:ring-4 focus:ring-[#4a8f5d]/10 bg-white hover:border-[#4a8f5d]/70' :
+                                    isEditing ? 'border-primary/50 focus:border-primary focus:ring-4 focus:ring-primary/10 bg-white hover:border-primary/70' :
                                         'border-gray-200 bg-gray-50/80 text-gray-600 cursor-default'
                                     }`}
                             />
@@ -214,7 +217,7 @@ export function AdminProfile() {
                                 onChange={(e) => handleInputChange('username', e.target.value)}
                                 disabled={!isEditing}
                                 className={`w-full px-4 py-3 border rounded-xl focus:outline-none transition-all duration-200 ${errors.username ? 'border-red-500 bg-red-50/30 focus:ring-4 focus:ring-red-500/10' :
-                                    isEditing ? 'border-[#4a8f5d]/50 focus:border-[#4a8f5d] focus:ring-4 focus:ring-[#4a8f5d]/10 bg-white hover:border-[#4a8f5d]/70' :
+                                    isEditing ? 'border-primary/50 focus:border-primary focus:ring-4 focus:ring-primary/10 bg-white hover:border-primary/70' :
                                         'border-gray-200 bg-gray-50/80 text-gray-600 cursor-default'
                                     }`}
                             />
@@ -226,7 +229,7 @@ export function AdminProfile() {
                             <div className="flex flex-wrap gap-2">
                                 {userData.roles.length > 0 ? (
                                     userData.roles.map((role, index) => (
-                                        <span key={index} className="bg-green-50 text-[#4a8f5d] text-sm font-bold px-5 py-2 rounded-xl border border-green-200/60 shadow-sm">
+                                        <span key={index} className="bg-primary/10 text-primary text-sm font-bold px-5 py-2 rounded-xl border border-primary/20 shadow-sm">
                                             {role}
                                         </span>
                                     ))
@@ -256,7 +259,7 @@ export function AdminProfile() {
                             <button
                                 type="submit"
                                 disabled={isSaving}
-                                className="bg-[#4a8f5d] hover:bg-[#3d754b] text-white font-semibold py-2.5 px-8 rounded-xl transition-all shadow-[0_4px_14px_rgba(74,143,93,0.3)] hover:shadow-[0_6px_20px_rgba(74,143,93,0.4)] flex items-center justify-center disabled:opacity-70 disabled:hover:shadow-none"
+                                className="bg-primary hover:opacity-90 text-primary-foreground font-semibold py-2.5 px-8 rounded-xl transition-all shadow-primary/30 shadow-[0_4px_14px_var(--tw-shadow-color)] hover:shadow-primary/40 hover:shadow-[0_6px_20px_var(--tw-shadow-color)] flex items-center justify-center disabled:opacity-70 disabled:hover:shadow-none"
                             >
                                 {isSaving ? (
                                     <>
@@ -274,7 +277,7 @@ export function AdminProfile() {
                     <button
                         type="button"
                         onClick={handleLogout}
-                        className="w-full flex items-center justify-center gap-3 px-6 py-3.5 bg-gradient-to-r from-[#1a3a24] to-[#4a8f5d] text-white rounded-xl hover:shadow-lg transition-all font-bold tracking-wide"
+                        className="w-full flex items-center justify-center gap-3 px-6 py-3.5 bg-primary text-primary-foreground rounded-xl hover:shadow-lg transition-all font-bold tracking-wide"
                     >
                         <LogOut size={22} />
                         CERRAR SESIÓN

@@ -40,8 +40,8 @@
 
 .objects-search:focus {
   outline: none;
-  border-color: #4A7C59;
-  box-shadow: 0 0 0 2px rgba(74, 124, 89, 0.1);
+  border-color: hsl(var(--tenant-primary-700));
+  box-shadow: 0 0 0 2px hsl(var(--tenant-primary-700) / 0.1);
 }
 
 .objects-grid {
@@ -190,7 +190,7 @@
 .reserve-button {
   width: 100%;
   padding: 0.75rem 1rem;
-  background: #4A7C59;
+  background: hsl(var(--tenant-primary-700));
   color: white;
   border: none;
   border-radius: 0.75rem;
@@ -206,7 +206,7 @@
 }
 
 .reserve-button:hover:not(:disabled) {
-  background: #3A5F47;
+  background: hsl(var(--tenant-primary-800));
 }
 
 .reserve-button:disabled {
@@ -239,7 +239,7 @@
   width: 2rem;
   height: 2rem;
   border: 2px solid hsl(var(--border));
-  border-top: 2px solid #4A7C59;
+  border-top: 2px solid hsl(var(--tenant-primary-700));
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }

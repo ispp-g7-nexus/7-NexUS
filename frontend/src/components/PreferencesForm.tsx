@@ -159,7 +159,7 @@ const NumericInput = ({ value, onChange, min, max }: NumericInputProps) => {
                     onBlur={handleInputBlur}
                     onKeyDown={handleInputKeyDown}
                     autoFocus
-                    className="w-16 text-center px-3 py-2 border-2 border-[#509550] rounded-lg"
+                    className="w-16 text-center px-3 py-2 border-2 border-green-600 rounded-lg"
                 />
             ) : (
                 <button
@@ -285,7 +285,7 @@ export function PreferencesForm({ onComplete, onBack }: PreferencesFormProps) {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 flex items-start md:items-center justify-center p-4 overflow-y-auto">
+        <div className="w-full bg-gray-50 flex flex-col items-center justify-start p-4">
             <motion.div 
                 initial={{ opacity: 0, y: 20 }} 
                 animate={{ opacity: 1, y: 0 }} 
@@ -323,7 +323,7 @@ export function PreferencesForm({ onComplete, onBack }: PreferencesFormProps) {
                                             onClick={() => setSingle('sex', opt.id)}
                                             className={`px-4 py-2 rounded-lg border-2 transition-all ${
                                                 preferences.sex === opt.id
-                                                    ? 'border-[#509550] bg-emerald-50 text-[#509550]'
+                                                    ? 'border-green-600 bg-emerald-50 text-green-600'
                                                     : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                                             }`}
                                         >
@@ -357,7 +357,7 @@ export function PreferencesForm({ onComplete, onBack }: PreferencesFormProps) {
                                             onClick={() => setSingle('schedule', opt.id)}
                                             className={`px-4 py-2 rounded-lg border-2 transition-all ${
                                                 preferences.schedule === opt.id
-                                                    ? 'border-[#509550] bg-emerald-50 text-[#509550]'
+                                                    ? 'border-green-600 bg-emerald-50 text-green-600'
                                                     : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                                             }`}
                                         >
@@ -380,7 +380,7 @@ export function PreferencesForm({ onComplete, onBack }: PreferencesFormProps) {
                                             onClick={() => setSingle('studyLocation', opt.id)}
                                             className={`text-left px-4 py-2 rounded-lg border-2 transition-all ${
                                                 preferences.studyLocation === opt.id
-                                                    ? 'border-[#509550] bg-emerald-50 text-[#509550]'
+                                                    ? 'border-green-600 bg-emerald-50 text-green-600'
                                                     : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                                             }`}
                                         >
@@ -416,7 +416,7 @@ export function PreferencesForm({ onComplete, onBack }: PreferencesFormProps) {
                                             onClick={() => setSingle('weekendReturn', opt.id)}
                                             className={`px-4 py-2 rounded-lg border-2 transition-all ${
                                                 preferences.weekendReturn === opt.id
-                                                    ? 'border-[#509550] bg-emerald-50 text-[#509550]'
+                                                    ? 'border-green-600 bg-emerald-50 text-green-600'
                                                     : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                                             }`}
                                         >
@@ -439,7 +439,7 @@ export function PreferencesForm({ onComplete, onBack }: PreferencesFormProps) {
                                             onClick={() => setSingle('outsidePlansImportance', opt.id)}
                                             className={`px-4 py-2 rounded-lg border-2 transition-all ${
                                                 preferences.outsidePlansImportance === opt.id
-                                                    ? 'border-[#509550] bg-emerald-50 text-[#509550]'
+                                                    ? 'border-green-600 bg-emerald-50 text-green-600'
                                                     : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                                             }`}
                                         >
@@ -462,7 +462,7 @@ export function PreferencesForm({ onComplete, onBack }: PreferencesFormProps) {
                                             onClick={() => setSingle('desiredActivities', opt.id)}
                                             className={`px-4 py-2 rounded-lg border-2 transition-all ${
                                                 preferences.desiredActivities === opt.id
-                                                    ? 'border-[#509550] bg-emerald-50 text-[#509550]'
+                                                    ? 'border-green-600 bg-emerald-50 text-green-600'
                                                     : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                                             }`}
                                         >
@@ -511,7 +511,7 @@ export function PreferencesForm({ onComplete, onBack }: PreferencesFormProps) {
                                             onClick={() => setSingle('smokingVaping', opt.id)}
                                             className={`px-4 py-2 rounded-lg border-2 transition-all ${
                                                 preferences.smokingVaping === opt.id
-                                                    ? 'border-[#509550] bg-emerald-50 text-[#509550]'
+                                                    ? 'border-green-600 bg-emerald-50 text-green-600'
                                                     : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                                             }`}
                                         >
@@ -534,7 +534,7 @@ export function PreferencesForm({ onComplete, onBack }: PreferencesFormProps) {
                                             onClick={() => setSingle('visitorsPreference', opt.id)}
                                             className={`px-4 py-2 rounded-lg border-2 transition-all ${
                                                 preferences.visitorsPreference === opt.id
-                                                    ? 'border-[#509550] bg-emerald-50 text-[#509550]'
+                                                    ? 'border-green-600 bg-emerald-50 text-green-600'
                                                     : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                                             }`}
                                         >
@@ -557,7 +557,7 @@ export function PreferencesForm({ onComplete, onBack }: PreferencesFormProps) {
                                             onClick={() => setSingle('basicItemsPreference', opt.id)}
                                             className={`px-4 py-2 rounded-lg border-2 transition-all ${
                                                 preferences.basicItemsPreference === opt.id
-                                                    ? 'border-[#509550] bg-emerald-50 text-[#509550]'
+                                                    ? 'border-green-600 bg-emerald-50 text-green-600'
                                                     : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                                             }`}
                                         >
@@ -580,7 +580,7 @@ export function PreferencesForm({ onComplete, onBack }: PreferencesFormProps) {
                                             onClick={() => setSingle('temperaturePreference', opt.id)}
                                             className={`px-4 py-2 rounded-lg border-2 transition-all ${
                                                 preferences.temperaturePreference === opt.id
-                                                    ? 'border-[#509550] bg-emerald-50 text-[#509550]'
+                                                    ? 'border-green-600 bg-emerald-50 text-green-600'
                                                     : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                                             }`}
                                         >
@@ -594,7 +594,7 @@ export function PreferencesForm({ onComplete, onBack }: PreferencesFormProps) {
                             <Button
                                 type="submit"
                                 disabled={isLoading}
-                                className="w-full h-14 text-lg bg-[#509550] hover:bg-[#3d7a3d] text-white shadow-md transition-all"
+                                   className="w-full h-14 text-lg bg-primary hover:bg-primary/90 text-primary-foreground shadow-md transition-all"
                             >
                                 {isLoading ? "Guardando preferencias..." : "Completar Perfil"}
                             </Button>

@@ -212,10 +212,20 @@ class CustomJWTAuthentication(authentication.BaseAuthentication):
         if not user.is_active:
             raise AuthenticationFailed("El usuario está desactivado.")
 
-        residence_id = payload.get("residence_id")
-        if residence_id and getattr(request, "residence", None) is None:
-            from apps.residences.models import Residence
+        tenant_id = payload.get("tenant_id")
+        if tenant_id and (not getattr(request, "tenant", None) or request.tenant.schema_name == "public"):
+            from apps.tenants.models import Client
+            from django.db import connection
+            try:
+                tenant = Client.objects.get(pk=tenant_id)
+                request.tenant = tenant
+                connection.set_tenant(tenant)
+            except Client.DoesNotExist:
+                pass
 
+        residence_id = payload.get("residence_id")
+        if residence_id:
+            from apps.residences.models import Residence
             try:
                 request.residence = Residence.objects.get(pk=residence_id)
             except Residence.DoesNotExist:

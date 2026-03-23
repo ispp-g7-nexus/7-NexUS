@@ -70,7 +70,7 @@ export function SpaceFormSheet({
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            className="rounded-md p-1 text-gray-500 hover:bg-gray-50 hover:text-gray-900 transition-colors"
             aria-label="Cerrar"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

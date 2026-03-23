@@ -329,7 +329,7 @@ export function LocationSelector({
 
   return (
     <div className="space-y-2">
-      <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+      <Label className="text-sm font-medium text-gray-500 flex items-center gap-2">
         <MapPin size={16} />
         Lugar de Origen / Crianza *
       </Label>
@@ -353,7 +353,7 @@ export function LocationSelector({
           {isOpen && value && (
             <button
               onClick={handleClear}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-500 transition"
               type="button"
             >
               <X size={18} />
@@ -362,7 +362,7 @@ export function LocationSelector({
         </div>
 
         {isOpen && (
-          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
+          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
             {filteredCities.length > 0 ? (
               <div>
                 {filteredCities.map((city, index) => (
@@ -370,7 +370,7 @@ export function LocationSelector({
                     key={`${city.province}-${city.name}-${index}`}
                     onClick={() => handleSelect(city.name)}
                     type="button"
-                    className={`w-full px-4 py-3 text-left text-sm transition-colors border-b border-gray-100 hover:bg-green-50 flex justify-between items-center last:border-b-0 ${
+                    className={`w-full px-4 py-3 text-left text-sm transition-colors border-b border-gray-200 hover:bg-green-50 flex justify-between items-center last:border-b-0 ${
                       value === city.name ? "bg-green-100 text-green-900" : ""
                     }`}
                   >

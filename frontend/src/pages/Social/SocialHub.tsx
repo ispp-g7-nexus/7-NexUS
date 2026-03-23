@@ -39,13 +39,19 @@ export function SocialHub({
   }, [activeTab, onChatTabActiveChange]);
 
   return (
-    <div className="flex flex-col w-full">
-      <div className="flex bg-gray-100 p-1 rounded-full mb-6 mx-auto w-fit">
+    <div className="flex flex-col w-full bg-background">
+      {/* Header */}
+      <header className="bg-primary p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg sticky top-0 z-20">
+        <h1 className="text-primary-foreground text-2xl font-bold">Social</h1>
+      </header>
+      
+      <div className="px-4 py-6 space-y-6">
+        <div className="flex bg-gray-100 p-1 rounded-full mb-6 mx-auto w-fit">
         {(["eventos", "chat", "matches", "perfil"] as Tab[]).map((tab) => (
           <Button
             key={tab}
             variant={activeTab === tab ? "default" : "ghost"}
-            className={`relative rounded-full px-6 capitalize ${activeTab === tab ? "bg-white text-green-700 shadow-sm hover:bg-white" : "text-gray-500"
+            className={`relative rounded-full px-6 capitalize ${activeTab === tab ? "bg-white text-primary shadow-sm hover:bg-white" : "text-gray-500"
               }`}
             onClick={() => setActiveTab(tab)}
           >
@@ -72,6 +78,7 @@ export function SocialHub({
           />
         )}
         {activeTab === "matches" && <MyMatchesPage />}
+      </div>
       </div>
     </div>
   );
