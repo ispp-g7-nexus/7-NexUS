@@ -21,6 +21,7 @@ import {
     type GroupMessage,
 } from "../../../services/chats";
 import { authService } from "../../../services/auth";
+import { AdminGroupEdit } from "../../Chats/AdminGroupEdit";
 
 /* ── Helpers ────────────────────────────────────────────────── */
 
@@ -101,9 +102,7 @@ function buildResidentUnreadGroupsStorageKey(email: string): string | null {
     return `student-chat-unread-groups:${normalized}`;
 }
 
-/* ══════════════════════════════════════════════════════════════
-   Componente principal
-   ══════════════════════════════════════════════════════════════ */
+/*  ── Componente principal ──────────────────────────────────── */
 
 export function StudentChats({
     enableRealtimeStream = true,
@@ -129,6 +128,7 @@ export function StudentChats({
     const [loadingGroups, setLoadingGroups] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedGroup, setSelectedGroup] = useState<ChatGroup | null>(null);
+    const [editingGroup, setEditingGroup] = useState<ChatGroup | null>(null);
     const [unreadGroupCounts, setUnreadGroupCounts] = useState<UnreadGroupCounts>({});
     const [showLeaveDialog, setShowLeaveDialog] = useState(false);
     const [leaving, setLeaving] = useState(false);
@@ -216,6 +216,33 @@ export function StudentChats({
 
         setSelectedGroup(updated);
     }, [groups, selectedGroup]);
+
+    useEffect(() => {
+        if (!editingGroup) return;
+
+        const updated = groups.find((g) => g.id === editingGroup.id);
+        if (!updated) {
+            setEditingGroup(null);
+            return;
+        }
+
+        setEditingGroup(updated);
+    }, [editingGroup, groups]);
+
+    const canManageGroup = useCallback((group: ChatGroup) => {
+        if (!currentUserEmail) return false;
+        if (group.current_user_can_interact === false) return false;
+
+        return group.members_list.some(
+            (member) => member.email === currentUserEmail && member.is_admin,
+        );
+    }, [currentUserEmail]);
+
+    const handleGroupUpdatedFromManagement = (updated: ChatGroup) => {
+        setGroups((prev) => prev.map((group) => (group.id === updated.id ? updated : group)));
+        setSelectedGroup((prev) => (prev && prev.id === updated.id ? updated : prev));
+        setEditingGroup(updated);
+    };
 
     useEffect(() => {
         if (groups.length === 0) {
@@ -340,7 +367,6 @@ export function StudentChats({
         try {
             setGroupMessages(dedupeGroupMessages(await chatsService.listGroupMessages(groupId)));
         } catch {
-            // Silencioso: es una recarga reactiva por evento.
         }
     }, []);
 
@@ -453,7 +479,6 @@ export function StudentChats({
         try {
             setMessages(await chatsService.listMessages(conversationId));
         } catch {
-            // Silencioso: es una recarga reactiva por evento.
         }
     }, []);
 
@@ -688,9 +713,17 @@ export function StudentChats({
         ),
         [residents, residentSearch]);
 
-    /* ══════════════════════════════════════════════════════════════
-       RENDER: Vista de chat activo (mensajes)
-       ══════════════════════════════════════════════════════════════ */
+    /*  ── Vista de chat activo ───────────────────────────── */
+
+    if (editingGroup) {
+        return (
+            <AdminGroupEdit
+                group={editingGroup}
+                onBack={() => setEditingGroup(null)}
+                onGroupUpdated={handleGroupUpdatedFromManagement}
+            />
+        );
+    }
 
     if (activeConv) {
         return (
@@ -882,9 +915,7 @@ export function StudentChats({
         );
     }
 
-    /* ══════════════════════════════════════════════════════════════
-       RENDER: Vista principal con sub-tabs
-       ══════════════════════════════════════════════════════════════ */
+    /*  ── Vista principal con sub-tabs ─────────────────────────────────────────────────*/
 
     return (
         <div className="space-y-5">
@@ -1059,53 +1090,67 @@ export function StudentChats({
                                 const unreadBadgeText = unreadCount > 9 ? "9+" : String(unreadCount);
                                 const membersLabel = group.members === 1 ? "miembro" : "miembros";
                                 return (
-                                    <button
+                                    <div
                                         key={group.id}
-                                        onClick={() => openGroup(group)}
-                                        className={`w-full text-left px-4 py-3.5 transition-colors flex items-center gap-3 ${
+                                        className={`px-4 py-3.5 transition-colors flex items-center gap-3 ${
                                             isFormerMember
                                                 ? "bg-gray-50 hover:bg-gray-50"
                                                 : "hover:bg-gray-50"
                                         }`}
                                     >
-                                        <div className="relative shrink-0">
-                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
-                                                isFormerMember
-                                                    ? "bg-gray-300 text-gray-500"
-                                                    : "bg-gradient-to-br from-green-200 to-green-400 text-green-800"
-                                            }`}>
-                                                {group.name.charAt(0).toUpperCase()}
-                                            </div>
-                                            {unreadCount > 0 && (
-                                                <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                                                    {unreadBadgeText}
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 mb-0.5">
-                                                <span className={`font-medium truncate ${isFormerMember ? "text-gray-500" : "text-gray-900"}`}>{group.name}</span>
-                                                {isFormerMember && (
-                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-300 text-gray-500 shrink-0">
-                                                        No perteneces a este grupo
+                                        <button
+                                            onClick={() => openGroup(group)}
+                                            className="flex-1 min-w-0 text-left flex items-center gap-3"
+                                        >
+                                            <div className="relative shrink-0">
+                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
+                                                    isFormerMember
+                                                        ? "bg-gray-300 text-gray-700"
+                                                        : "bg-gradient-to-br from-green-200 to-green-400 text-green-800"
+                                                }`}>
+                                                    {group.name.charAt(0).toUpperCase()}
+                                                </div>
+                                                {unreadCount > 0 && (
+                                                    <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                                                        {unreadBadgeText}
                                                     </span>
                                                 )}
-                                                <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium shrink-0 ${cfg.color}`}>
-                                                    {cfg.icon} {cfg.label}
-                                                </span>
                                             </div>
-                                            {group.description && <p className="text-xs truncate text-gray-500">{group.description}</p>}
-                                            {isFormerMember && (
-                                                <p className="text-[11px] text-gray-500 mt-0.5">
-                                                    Ya no puedes enviar ni recibir mensajes en este grupo.
-                                                </p>
-                                            )}
-                                            <div className={`flex items-center gap-1 mt-0.5 text-[11px] ${isFormerMember ? "text-gray-500" : "text-gray-400"}`}>
-                                                <Users className="w-3 h-3" />
-                                                {group.members} {membersLabel}
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 mb-0.5">
+                                                    <span className={`font-medium truncate ${isFormerMember ? "text-gray-700" : "text-gray-900"}`}>{group.name}</span>
+                                                    {isFormerMember && (
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-300 text-gray-700 shrink-0">
+                                                            No perteneces a este grupo
+                                                        </span>
+                                                    )}
+                                                    <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium shrink-0 ${cfg.color}`}>
+                                                        {cfg.icon} {cfg.label}
+                                                    </span>
+                                                </div>
+                                                {group.description && <p className="text-xs truncate text-gray-500">{group.description}</p>}
+                                                {isFormerMember && (
+                                                    <p className="text-[11px] text-gray-600 mt-0.5">
+                                                        Ya no puedes enviar ni recibir mensajes en este grupo.
+                                                    </p>
+                                                )}
+                                                <div className={`flex items-center gap-1 mt-0.5 text-[11px] ${isFormerMember ? "text-gray-500" : "text-gray-400"}`}>
+                                                    <Users className="w-3 h-3" />
+                                                    {group.members} {membersLabel}
+                                                </div>
                                             </div>
-                                        </div>
-                                    </button>
+                                        </button>
+                                        {canManageGroup(group) && (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="text-green-700 border-green-200 hover:bg-green-50 shrink-0"
+                                                onClick={() => setEditingGroup(group)}
+                                            >
+                                                Gestionar
+                                            </Button>
+                                        )}
+                                    </div>
                                 );
                             })}
                         </div>

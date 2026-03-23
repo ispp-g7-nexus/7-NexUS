@@ -286,7 +286,7 @@ export function ProfileEditForm({
                 onChange={handleInputChange}
                 maxLength={300}
                 rows={4}
-                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
                 placeholder="Cuéntanos sobre ti. ¿De dónde eres? ¿Qué te apasiona?"
               />
             </div>
@@ -349,7 +349,7 @@ export function ProfileEditForm({
                 <Button
                   type="button"
                   onClick={addCustomInterest}
-                  className="bg-green-600 hover:bg-green-700 text-white px-3"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-3"
                 >
                   <Plus size={18} />
                 </Button>
@@ -639,7 +639,7 @@ export function ProfileEditForm({
           <button
             onClick={handleSubmit}
             disabled={isSaving}
-            className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 px-4 py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSaving ? "Guardando..." : "Guardar Cambios"}
           </button>

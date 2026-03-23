@@ -28,15 +28,19 @@ export function StudentPackages({ packages = [], onShowQr, qrData }: StudentPack
   const pendingPackages = packages.filter((p) => p.status !== "DELIVERED");
   const historyPackages = packages.filter((p) => p.status === "DELIVERED");
 
+
   return (
-    <div className="p-4 space-y-6 min-h-full bg-background pb-20">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">Paquetería</h1>
+    <div className="flex flex-col h-screen bg-background relative">
+      {/* Header */}
+      <header className="bg-primary p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg">
+        <h1 className="text-primary-foreground text-2xl font-bold">Paquetería</h1>
         <div className="w-1/3 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Buscar por remitente o tracking..." className="pl-10 bg-white border-none shadow-sm h-10 rounded-xl" />
         </div>
-      </div>
+      </header>
+
+      <main className="flex-1 overflow-y-auto p-4 space-y-6 pb-20">
 
       <Dialog>
         <DialogTrigger asChild>
@@ -66,8 +70,8 @@ export function StudentPackages({ packages = [], onShowQr, qrData }: StudentPack
 
       <Tabs defaultValue="pending" className="w-full">
         <TabsList className="w-full bg-white p-1 rounded-xl shadow-sm mb-4">
-          <TabsTrigger value="pending" className="flex-1 rounded-lg data-[state=active]:bg-secondary data-[state=active]:text-gray-900">Pendientes</TabsTrigger>
-          <TabsTrigger value="history" className="flex-1 rounded-lg data-[state=active]:bg-secondary data-[state=active]:text-gray-900">Historial</TabsTrigger>
+          <TabsTrigger value="pending" className="flex-1 rounded-lg data-[state=active]:bg-secondary data-[state=active]:text-foreground">Pendientes</TabsTrigger>
+          <TabsTrigger value="history" className="flex-1 rounded-lg data-[state=active]:bg-secondary data-[state=active]:text-foreground">Historial</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pending" className="space-y-3">
@@ -90,6 +94,7 @@ export function StudentPackages({ packages = [], onShowQr, qrData }: StudentPack
           )}
         </TabsContent>
       </Tabs>
+      </main>
     </div>
   );
 }

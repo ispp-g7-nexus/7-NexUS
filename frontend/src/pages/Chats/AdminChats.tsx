@@ -93,7 +93,7 @@ const typeConfig: Record<string, { label: string; color: string; icon: ReactElem
     },
     floor: {
         label: "Planta",
-        color: "bg-green-100 text-green-800",
+        color: "bg-primary/10 text-primary",
         icon: <Users className="w-3 h-3" />
     },
     activity: {
@@ -611,7 +611,7 @@ export function AdminChats({
                     }} className="w-9 h-9 shrink-0">
                         <ArrowLeft className="w-5 h-5" />
                     </Button>
-                    <div className="w-9 h-9 bg-gradient-to-br from-green-200 to-green-400 rounded-full flex items-center justify-center text-green-800 font-bold text-sm shrink-0">
+                    <div className="w-9 h-9 bg-gradient-to-br from-primary/20 to-primary/40 rounded-full flex items-center justify-center text-primary font-bold text-sm shrink-0">
                         {chattingGroup.name.charAt(0).toUpperCase()}
                     </div>
                     <div className="min-w-0 flex flex-col">
@@ -633,9 +633,9 @@ export function AdminChats({
                         groupMessages.map((msg) => {
                             const isMine = msg.sender_email === currentUserEmail;
                             const bubbleClasses = isMine
-                                ? "bg-green-600 text-white rounded-br-md"
+                                ? "bg-primary text-primary-foreground rounded-br-md"
                                 : "bg-gray-50 text-gray-900 rounded-bl-md";
-                            const timeClasses = isMine ? "text-green-200" : "text-gray-400";
+                            const timeClasses = isMine ? "text-primary-foreground/70" : "text-gray-400";
                             
                             return (
                                 <div key={msg.id} className={`flex flex-col ${isMine ? "items-end" : "items-start"} mb-3`}>
@@ -665,7 +665,7 @@ export function AdminChats({
                     />
                     <Button
                         size="icon"
-                        className="bg-green-600 hover:bg-green-700 shrink-0 w-10 h-10"
+                        className="bg-primary text-primary-foreground hover:bg-primary/90 shrink-0 w-10 h-10"
                         onClick={handleSendGroupMessage}
                         disabled={sendingGroupMsg || !groupMsgText.trim()}
                     >
@@ -688,7 +688,7 @@ export function AdminChats({
                         <Tag className="w-4 h-4 mr-2" />
                         Gestionar etiquetas
                     </Button>
-                    <Button className="bg-green-600 hover:bg-green-700" onClick={() => setIsCreateOpen(true)}>
+                    <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => setIsCreateOpen(true)}>
                         <Plus className="w-4 h-4 mr-2" />
                         Crear Grupo
                     </Button>
@@ -710,7 +710,7 @@ export function AdminChats({
                 <select
                     value={selectedType}
                     onChange={(e) => setSelectedType(e.target.value)}
-                    className="px-3 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="px-3 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                     <option value="all">Todos los tipos</option>
                     {allLabelOptions.map((opt) => (
@@ -771,7 +771,7 @@ export function AdminChats({
                                             <Button
                                                 variant="default"
                                                 size="sm"
-                                                className="bg-green-600 hover:bg-green-700"
+                                                className="bg-primary text-primary-foreground hover:bg-primary/90"
                                                 onClick={() => {
                                                     clearUnreadForGroup(group.id);
                                                     setChattingGroup(group);
@@ -845,7 +845,7 @@ export function AdminChats({
                                 value={createForm.description}
                                 onChange={(e) => setCreateForm((prev) => ({ ...prev, description: e.target.value }))}
                                 rows={3}
-                                className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                                className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                             />
                         </div>
 
@@ -855,7 +855,7 @@ export function AdminChats({
                                 id="create-group-label"
                                 value={createForm.label}
                                 onChange={(e) => setCreateForm((prev) => ({ ...prev, label: e.target.value }))}
-                                className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                                className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                             >
                                 {allLabelOptions.map((opt) => (
                                     <option key={opt.value} value={opt.value}>{opt.display}</option>
@@ -871,7 +871,7 @@ export function AdminChats({
                                 onChange={(e) =>
                                     setCreateForm((prev) => ({ ...prev, can_members_leave: e.target.checked }))
                                 }
-                                className="w-4 h-4 text-green-600 border-gray-200 rounded focus:ring-green-500"
+                                className="w-4 h-4 text-primary border-gray-200 rounded focus:ring-primary"
                             />
                             <label htmlFor="create-can-leave" className="text-sm text-gray-500">
                                 Los miembros pueden abandonar el grupo
@@ -883,7 +883,7 @@ export function AdminChats({
                         <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
                             Cancelar
                         </Button>
-                        <Button className="bg-green-600 hover:bg-green-700" onClick={handleCreateGroup} disabled={isCreating}>
+                        <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleCreateGroup} disabled={isCreating}>
                             {isCreating ? "Creando..." : "Crear grupo"}
                         </Button>
                     </DialogFooter>
@@ -915,7 +915,7 @@ export function AdminChats({
                                 }}
                             />
                             <Button
-                                className="bg-green-600 hover:bg-green-700"
+                                className="bg-primary text-primary-foreground hover:bg-primary/90"
                                 onClick={handleCreateLabel}
                                 disabled={creatingLabel || !newLabelName.trim()}
                             >
@@ -940,7 +940,7 @@ export function AdminChats({
                                     {customLabels.map((label) => (
                                         <span
                                             key={label.id}
-                                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-primary/10 text-primary"
                                         >
                                             <Tag className="w-3 h-3" /> {label.name}
                                             <button

@@ -4,7 +4,7 @@ import { AnnouncementFilters } from "../../components/announcement/AnnouncementF
 import { NotificationBell } from "../../components/announcement/NotificationBell";
 import announcementService from "../../services/announcement.service";
 import { AnnouncementList } from "../../types/announcement.types";
-import logo from "../../assets/logo.png";
+
 
 export function StudentAnnouncements() {
   const [announcements, setAnnouncements] = useState<AnnouncementList[]>([]);
@@ -30,18 +30,14 @@ export function StudentAnnouncements() {
     }
   };
 
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex flex-col h-screen bg-background relative">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-primary border-b border-primary/80 px-4 py-3">
-        <div className="relative flex items-center justify-center min-h-[2.25rem]">
-          <div className="absolute left-0 w-11 h-11 flex items-center justify-center">
-            <img src={logo} alt="NexUS Logo" className="w-full h-full object-contain" />
-            </div>
-          <h1 className="text-xl font-bold text-primary-foreground">Avisos</h1>
-          <NotificationBell onMarkAsRead={loadAnnouncements} className="absolute right-0 text-primary-foreground hover:opacity-80 transition-opacity" />
-        </div>
-      </div>
+      <header className="bg-primary p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg">
+        <h1 className="text-primary-foreground text-2xl font-bold">Avisos</h1>
+        <NotificationBell onMarkAsRead={loadAnnouncements} className="relative p-2 bg-white/10 rounded-full text-primary hover:text-white" />
+      </header>
 
       {/* Filtros */}
       <div className="px-4 py-3 flex justify-center">

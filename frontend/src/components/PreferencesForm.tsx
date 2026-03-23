@@ -285,12 +285,12 @@ export function PreferencesForm({ onComplete, onBack }: PreferencesFormProps) {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="min-h-screen bg-gray-50 flex items-start md:items-center justify-center p-4 overflow-y-auto">
             <motion.div 
                 initial={{ opacity: 0, y: 20 }} 
                 animate={{ opacity: 1, y: 0 }} 
                 transition={{ duration: 0.5 }} 
-                className="w-full max-w-2xl space-y-6"
+                className="w-full max-w-2xl space-y-6 py-6"
             >
                 {onBack && (
                     <button 
@@ -594,7 +594,7 @@ export function PreferencesForm({ onComplete, onBack }: PreferencesFormProps) {
                             <Button
                                 type="submit"
                                 disabled={isLoading}
-                                className="w-full h-14 text-lg bg-green-600 hover:bg-green-700 text-white shadow-md transition-all"
+                                   className="w-full h-14 text-lg bg-primary hover:bg-primary/90 text-primary-foreground shadow-md transition-all"
                             >
                                 {isLoading ? "Guardando preferencias..." : "Completar Perfil"}
                             </Button>

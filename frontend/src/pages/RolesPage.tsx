@@ -88,7 +88,7 @@ const RolesPage: React.FC = () => {
                     </div>
                     <button
                         onClick={() => openModal()}
-                        className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm"
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground px-5 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm"
                     >
                         <Plus size={20} />
                         Nuevo Rol
@@ -126,7 +126,7 @@ const RolesPage: React.FC = () => {
 
                 {isLoading ? (
                     <div className="flex justify-center py-12">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                     </div>
                 ) : (
                     <div className="space-y-4">

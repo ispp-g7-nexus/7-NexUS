@@ -278,16 +278,16 @@ const DayMenuCardAdmin = ({ day, onAddMeal, onEditMeal, onDeleteMeal }: DayMenuC
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-      <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4 flex items-center justify-between">
+      <div className="bg-primary px-6 py-4 flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold text-white capitalize">
             {dayName}
           </h3>
-          <p className="text-sm text-green-50">{formattedDate}</p>
+          <p className="text-sm text-primary-foreground/80">{formattedDate}</p>
         </div>
         <button
           onClick={() => onAddMeal(day.date)}
-          className="flex items-center gap-2 px-3 py-2 bg-white text-green-700 rounded-lg hover:bg-green-50 transition-colors font-medium"
+          className="flex items-center gap-2 px-3 py-2 bg-white text-primary rounded-lg hover:bg-primary/10 transition-colors font-medium"
           title="Agregar comida"
         >
           <Plus className="w-4 h-4" />
@@ -484,7 +484,7 @@ export function AdminMenuView({ menuWeek }: AdminMenuViewProps) {
               })}
             </p>
           </div>
-          <button className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center gap-2">
+          <button className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium flex items-center gap-2">
             <Plus className="w-5 h-5" />
             Nueva Semana
           </button>

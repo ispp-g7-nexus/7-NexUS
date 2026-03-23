@@ -1,6 +1,5 @@
 import { Bell } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import { Button } from "../ui/button";
 import { cn } from "../ui/utils";
 import { toast } from "sonner";
 import announcementService from "../../services/announcement.service";
@@ -73,18 +72,17 @@ export function NotificationBell({ onMarkAsRead, className }: NotificationBellPr
   };
 
   return (
-    <Button
-      variant="ghost"
-      size="icon"
-      className={cn("relative text-gray-500 w-9 h-9", className)}
+    <button
+      type="button"
+      aria-label="Ver notificaciones de avisos"
       onClick={handleBellClick}
       disabled={loading}
-      aria-label="Ver notificaciones de avisos"
+      className={cn("relative p-2 bg-white/10 rounded-full", className)}
     >
-      <Bell className="w-5 h-5" />
+      <Bell className="w-6 h-6 text-white" />
       {hasNotifications && (
-        <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white" />
+        <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-background" />
       )}
-    </Button>
+    </button>
   );
 }

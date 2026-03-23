@@ -61,7 +61,7 @@ export function Residents() {
           </p>
         </div>
         <Button
-          className="bg-green-600 hover:bg-green-700 text-white"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground"
           onClick={() => setCreateOpen(true)}
         >
           <Plus className="w-4 h-4" />
