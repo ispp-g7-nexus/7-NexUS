@@ -1,4 +1,3 @@
-import { TrendingDown, TrendingUp } from 'lucide-react';
 import React from 'react';
 
 export interface StatCardProps {
@@ -6,7 +5,6 @@ export interface StatCardProps {
   value: string | number | React.ReactNode;
   valueBadge?: string;
   topBadgeText?: string;
-  trend: string;
   icon: React.ElementType;
   theme: 'blue' | 'green' | 'red' | 'purple' | 'orange';
   onClick?: () => void;
@@ -20,21 +18,8 @@ const themeMap = {
   orange: { color: '#d97c3a', bg: '#fdf0e5', border: 'rgba(217,124,58,0.18)', borderHover: 'rgba(217,124,58,0.40)' },
 };
 
-export const StatCard = ({ label, value, valueBadge, topBadgeText, trend, icon: Icon, theme, onClick }: StatCardProps) => {
+export const StatCard = ({ label, value, valueBadge, topBadgeText, icon: Icon, theme, onClick }: StatCardProps) => {
   const t = themeMap[theme];
-  const isNegative = trend.startsWith('-');
-  const isInfoTrend = /sin leer/i.test(trend);
-  const TrendIcon = isNegative ? TrendingDown : TrendingUp;
-  let trendBackground = '#e8f7f1';
-  let trendColor = '#2fa87a';
-  if (isInfoTrend) {
-    trendBackground = '#eaf2ff';
-    trendColor = '#3b7dd8';
-  } else if (isNegative) {
-    trendBackground = '#fdeaea';
-    trendColor = '#e05c5c';
-  }
-
   const [hovered, setHovered] = React.useState(false);
 
   return (
@@ -43,7 +28,6 @@ export const StatCard = ({ label, value, valueBadge, topBadgeText, trend, icon: 
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        // Tamaño: ocupa todo el ancho de su celda en el grid
         width: '100%',
         textAlign: 'left',
         display: 'flex',
@@ -62,7 +46,6 @@ export const StatCard = ({ label, value, valueBadge, topBadgeText, trend, icon: 
         transition: 'all 0.2s ease',
       }}
     >
-      {/* Acento inferior en hover */}
       <span style={{
         position: 'absolute', bottom: 0, left: 0, right: 0,
         height: '3px',
@@ -72,7 +55,6 @@ export const StatCard = ({ label, value, valueBadge, topBadgeText, trend, icon: 
         transition: 'opacity 0.2s ease',
       }} />
 
-      {/* Icono + badge superior */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
         <div style={{
           width: '40px', height: '40px',
@@ -102,22 +84,6 @@ export const StatCard = ({ label, value, valueBadge, topBadgeText, trend, icon: 
         )}
       </div>
 
-      {/* Trend pill - solo mostrar si hay trend */}
-      {trend && (
-        <span style={{
-          position: 'absolute', top: '18px', right: '18px',
-          display: 'flex', alignItems: 'center', gap: '3px',
-          fontSize: '11px', fontWeight: 700,
-          padding: '3px 9px', borderRadius: '999px',
-          background: trendBackground,
-          color: trendColor,
-        }}>
-          {!isInfoTrend && <TrendIcon size={11} strokeWidth={2.5} />}
-          {trend}
-        </span>
-      )}
-
-      {/* Valor + badge secundario */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
         <div style={{
           fontFamily: 'inherit',
@@ -147,7 +113,6 @@ export const StatCard = ({ label, value, valueBadge, topBadgeText, trend, icon: 
         )}
       </div>
 
-      {/* Etiqueta */}
       <p style={{
         fontSize: '11px', fontWeight: 600,
         color: '#9c9690', textTransform: 'uppercase',

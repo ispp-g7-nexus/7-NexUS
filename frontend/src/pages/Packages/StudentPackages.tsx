@@ -30,9 +30,9 @@ export function StudentPackages({ packages = [], onShowQr, qrData }: StudentPack
 
 
   return (
-    <div className="flex flex-col h-screen bg-[#F6F7F9] relative">
+    <div className="flex flex-col w-full bg-[#F6F7F9]">
       {/* Header */}
-      <header className="bg-[#1B4D1C] p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg">
+      <header className="bg-[#1B4D1C] p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg sticky top-0 z-20">
         <h1 className="text-white text-2xl font-bold">Paquetería</h1>
         <div className="w-1/3 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

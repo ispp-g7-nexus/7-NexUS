@@ -122,6 +122,7 @@ const DayMenuCard = ({ day }: { day: MenuDay }) => {
           </div>
         )}
       </div>
+
     </div>
   );
 };
@@ -183,26 +184,14 @@ export function ResidentMenuView() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-serif text-gray-900 mb-2">
-            Menú del Comedor
-          </h1>
-          <p className="text-gray-600">
-            Consulta el menú de la semana del{' '}
-            {new Date(menuWeek.weekStart + 'T00:00:00').toLocaleDateString('es-ES', {
-              day: 'numeric',
-              month: 'long',
-            })}{' '}
-            al{' '}
-            {new Date(menuWeek.weekEnd + 'T00:00:00').toLocaleDateString('es-ES', {
-              day: 'numeric',
-              month: 'long',
-            })}
-          </p>
-        </div>
+    <div className="flex flex-col w-full bg-[#F6F7F9]">
+      {/* Header */}
+      <header className="bg-[#1B4D1C] p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg sticky top-0 z-20">
+        <h1 className="text-white text-2xl font-bold">Menú</h1>
+      </header>
+      
+      <div className="min-h-screen bg-[#F6F7F9] pt-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         {/* Menu Days Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -234,8 +223,9 @@ export function ResidentMenuView() {
               <span>Las opciones sin gluten están identificadas</span>
             </div>
           </div>
-        </div>
+          </div>
       </div>
     </div>
+  </div>
   );
 }

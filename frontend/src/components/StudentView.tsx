@@ -322,17 +322,16 @@ export function StudentView({ onLogout }: StudentViewProps) {
                 break;
         }
 
-        // 3. Devolvemos el contenido envuelto en el div con "p-4"
         return (
-            <div className="p-4 h-full">
+            <div className="h-full w-full">
                 {tabContent}
             </div>
         );
     };
 
     return (
-        <div className="min-h-screen flex flex-col w-full bg-background relative">
-            <div className="flex-1 overflow-y-auto pb-20">
+        <div className="min-h-screen w-full bg-background relative pb-20">
+            <div className="w-full">
                 {renderContent()}
             </div>
 

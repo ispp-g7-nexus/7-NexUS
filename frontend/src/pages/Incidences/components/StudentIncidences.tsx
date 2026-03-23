@@ -73,14 +73,14 @@ export default function StudentIncidences() {
   });
 
   return (
-    <div className={UI_CLASSES.mainLayout}>
-      <header className={UI_CLASSES.header}>
-        <h1 className={UI_CLASSES.headerTitle}>Incidencias</h1>
+    <div className={COMMON_UI_CLASSES.mainLayout}>
+      <header className={COMMON_UI_CLASSES.header}>
+        <h1 className={COMMON_UI_CLASSES.headerTitle}>Incidencias</h1>
         <Popover open={isNotificationsOpen} onOpenChange={(open) => { setIsNotificationsOpen(open); if (open) loadNotifications(true); }}>
           <PopoverTrigger asChild>
-            <button type="button" className={UI_CLASSES.bellContainer} aria-label="Notificaciones">
+            <button type="button" className={COMMON_UI_CLASSES.bellContainer} aria-label="Notificaciones">
               <Bell className="w-6 h-6 text-white" />
-              {unreadNotifications > 0 && <span className={UI_CLASSES.bellBadge}>{unreadNotifications}</span>}
+              {unreadNotifications > 0 && <span className={COMMON_UI_CLASSES.bellBadge}>{unreadNotifications}</span>}
             </button>
           </PopoverTrigger>
           <PopoverContent align="end" className="w-80 p-0 rounded-[28px] overflow-hidden border-none shadow-2xl">
@@ -103,46 +103,46 @@ export default function StudentIncidences() {
         </Popover>
       </header>
 
-      <main className={UI_CLASSES.mainContent}>
+      <main className={COMMON_UI_CLASSES.mainContent}>
         <div className="w-full space-y-6">
-          <div className={UI_CLASSES.filterGrid}>
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar..." className={UI_CLASSES.filterInput} />
+          <div className={COMMON_UI_CLASSES.filterGrid}>
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar..." className={COMMON_UI_CLASSES.filterInput} />
             <IncidenceSelect value={filterLocation} onChange={setFilterLocation} options={LOCATION_LABELS} placeholder="Áreas" />
             <IncidenceSelect value={filterStatus} onChange={setFilterStatus} options={STATUS_CONFIG} placeholder="Estados" />
             <IncidenceSelect value={filterPriority} onChange={setFilterPriority} options={PRIORITY_LABELS} placeholder="Prioridad" />
           </div>
 
-          <div className={UI_CLASSES.btnMineWrapper}>
-            <button onClick={() => setShowOnlyMine(!showOnlyMine)} className={`${UI_CLASSES.btnMineBase} ${showOnlyMine ? UI_CLASSES.btnMineActive : UI_CLASSES.btnMineInactive}`}>
+          <div className={COMMON_UI_CLASSES.btnMineWrapper}>
+            <button onClick={() => setShowOnlyMine(!showOnlyMine)} className={`${COMMON_UI_CLASSES.btnMineBase} ${showOnlyMine ? COMMON_UI_CLASSES.btnMineActive : COMMON_UI_CLASSES.btnMineInactive}`}>
               <User className="w-4 h-4" /> {showOnlyMine ? "Viendo mis incidencias" : "Ver mis incidencias"}
             </button>
           </div>
 
-          {loading ? <p className={UI_CLASSES.loadingText}>Cargando...</p> : (
-            <div className={UI_CLASSES.incidencesGrid}>
+          {loading ? <p className={COMMON_UI_CLASSES.loadingText}>Cargando...</p> : (
+            <div className={COMMON_UI_CLASSES.incidencesGrid}>
               {filteredIncidences.map((inc) => {
                 const config = STATUS_CONFIG[inc.status] || STATUS_CONFIG.pending;
                 return (
-                  <Card key={inc.id} className={UI_CLASSES.card}>
+                  <Card key={inc.id} className={COMMON_UI_CLASSES.card}>
                     <CardContent className="p-0 flex h-full text-left">
-                      <div className={`${UI_CLASSES.cardSideBar} ${config.student.barClass}`} />
+                      <div className={`${COMMON_UI_CLASSES.cardSideBar} ${config.student.barClass}`} />
                       <div className="pt-4 px-4 pb-3 flex-1 flex flex-col justify-between min-w-0">
                         <div>
                           <div className="flex justify-between items-start mb-1.5">
                             <div className="flex-1 min-w-0 pr-2 text-left">
-                              <h3 className={UI_CLASSES.cardTitle}>{inc.title}</h3>
+                              <h3 className={COMMON_UI_CLASSES.cardTitle}>{inc.title}</h3>
                               {(inc as any).is_mine && <span className="text-[10px] font-bold text-[#1B4D1C] uppercase bg-[#EEF8E7] px-1.5 py-0.5 rounded-md inline-block">Tu reporte</span>}
                             </div>
-                            <span className={`${UI_CLASSES.statusBadge} ${config.student.colorClass}`}>{config.label}</span>
+                            <span className={`${COMMON_UI_CLASSES.statusBadge} ${config.student.colorClass}`}>{config.label}</span>
                           </div>
-                          <div className={UI_CLASSES.cardLocationRow}><MapPin size={14} className="text-slate-400" /><span className="text-[11px] font-semibold text-slate-500 truncate">{LOCATION_LABELS[inc.location_type]} {inc.room_number ? `• Hab. ${inc.room_number}` : ''}</span></div>
+                          <div className={COMMON_UI_CLASSES.cardLocationRow}><MapPin size={14} className="text-slate-400" /><span className="text-[11px] font-semibold text-slate-500 truncate">{LOCATION_LABELS[inc.location_type]} {inc.room_number ? `• Hab. ${inc.room_number}` : ''}</span></div>
                         </div>
                         <div className="mt-4 pt-3 border-t">
                           <div className="flex items-center justify-between mb-2.5">
                             <div className="flex items-center gap-1.5 text-slate-600 truncate text-[11px] font-bold"><Wrench size={13} />{inc.assigned_staff_name || inc.assigned_external_name || 'Sin asignar'}</div>
                             <div className="flex items-center gap-1 text-slate-400 font-bold text-[10px]"><Clock size={10} />{new Date(inc.created_at).toLocaleDateString()}</div>
                           </div>
-                          <div className="flex justify-end"><Button variant="outline" onClick={async () => { const res = await fetchWithAuth(`${API_URL_INCIDENCES}${inc.id}/`); if (res.ok) { setSelectedDetails(await res.json()); setIsNotesOpen(true); } }} className={UI_CLASSES.btnNotes}>VER DETALLES</Button></div>
+                          <div className="flex justify-end"><Button variant="outline" onClick={async () => { const res = await fetchWithAuth(`${API_URL_INCIDENCES}${inc.id}/`); if (res.ok) { setSelectedDetails(await res.json()); setIsNotesOpen(true); } }} className={COMMON_UI_CLASSES.btnNotes}>VER DETALLES</Button></div>
                         </div>
                       </div>
                     </CardContent>
