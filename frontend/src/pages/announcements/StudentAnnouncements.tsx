@@ -32,15 +32,15 @@ export function StudentAnnouncements() {
 
 
   return (
-    <div className="flex flex-col h-screen bg-[#F6F7F9] relative">
+    <div className="flex flex-col w-full bg-background">
       {/* Header */}
-      <header className="bg-[#1B4D1C] p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg">
-        <h1 className="text-white text-2xl font-bold">Avisos</h1>
+      <header className="bg-primary  p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg sticky top-0 z-20">
+        <h1 className="text-primary-foreground text-2xl font-bold">Avisos</h1>
         <NotificationBell onMarkAsRead={loadAnnouncements} className="relative p-2 bg-white/10 rounded-full text-white hover:text-white" />
       </header>
 
       {/* Filtros */}
-      <div className="px-4 py-3 flex justify-center">
+      <div className="px-4 py-3 flex justify-center sticky top-[72px] z-10 bg-[#F6F7F9]">
         <div className="w-fit max-w-full">
           <AnnouncementFilters
             selectedCategory={selectedCategory}
@@ -50,7 +50,7 @@ export function StudentAnnouncements() {
       </div>
 
       {/* Lista de avisos */}
-      <div className="px-4 pb-6">
+      <main className="flex-1 overflow-y-auto px-4 pb-32">
         {loading && (
           <div className="flex justify-center items-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -64,7 +64,7 @@ export function StudentAnnouncements() {
         )}
 
         {!loading && !error && announcements.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground">
+          <div className="text-center py-12 text-gray-500">
             No hay avisos disponibles
           </div>
         )}
@@ -79,7 +79,7 @@ export function StudentAnnouncements() {
             ))}
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 }

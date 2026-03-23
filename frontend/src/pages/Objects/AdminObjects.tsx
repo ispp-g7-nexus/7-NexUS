@@ -22,35 +22,35 @@ function ObjectCard({
   onViewRentals: (object: ObjectItem) => void;
 }) {
   return (
-    <article className="rounded-xl border border-border/80 bg-card p-5 shadow-sm flex flex-col gap-4">
+    <article className="rounded-xl border border-border/80 bg-white p-5 shadow-sm flex flex-col gap-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="text-base font-semibold text-foreground truncate">{object.name}</h3>
+            <h3 className="text-base font-semibold text-gray-900 truncate">{object.name}</h3>
             <span
               className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
                 object.can_rent
                   ? "bg-emerald-100 text-emerald-700"
-                  : "bg-slate-200 text-slate-600"
+                  : "bg-slate-200 text-gray-500"
               }`}
             >
               {object.can_rent ? "Disponible" : "No disponible"}
             </span>
           </div>
           {object.description && (
-            <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{object.description}</p>
+            <p className="mt-1 text-sm text-gray-500 line-clamp-2">{object.description}</p>
           )}
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-2 text-sm">
         <div className="rounded-lg bg-muted/60 px-3 py-2">
-          <p className="text-xs text-muted-foreground">Ubicación</p>
-          <p className="font-semibold text-foreground truncate">{object.location || "No especificada"}</p>
+          <p className="text-xs text-gray-500">Ubicación</p>
+          <p className="font-semibold text-gray-900 truncate">{object.location || "No especificada"}</p>
         </div>
         <div className="rounded-lg bg-muted/60 px-3 py-2 text-center">
-          <p className="text-xs text-muted-foreground">Reservas</p>
-          <p className="font-semibold text-foreground">{object.rentals_count}</p>
+          <p className="text-xs text-gray-500">Reservas</p>
+          <p className="font-semibold text-gray-900">{object.rentals_count}</p>
         </div>
       </div>
 
@@ -212,11 +212,11 @@ export function AdminObjects() {
 
   return (
     <section className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-      <header className="rounded-xl border border-border/80 bg-card p-4 shadow-sm sm:p-6">
+      <header className="rounded-xl border border-border/80 bg-white p-4 shadow-sm sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-2xl font-bold tracking-tight">Gestión de objetos</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-sm text-gray-500">
               Administra los objetos disponibles para préstamo
             </p>
           </div>
@@ -240,14 +240,14 @@ export function AdminObjects() {
 
       {loading ? (
         <Card>
-          <CardContent className="p-4 text-sm text-muted-foreground">Cargando objetos...</CardContent>
+          <CardContent className="p-4 text-sm text-gray-500">Cargando objetos...</CardContent>
         </Card>
       ) : objects.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center p-12 text-center">
-            <Package className="h-12 w-12 text-muted-foreground mb-3" />
+            <Package className="h-12 w-12 text-gray-500 mb-3" />
             <h3 className="text-lg font-semibold mb-2">No hay objetos</h3>
-            <p className="text-sm text-muted-foreground mb-4">
+            <p className="text-sm text-gray-500 mb-4">
               Comienza creando el primer objeto disponible para préstamo
             </p>
             <Button onClick={handleOpenForm}>
@@ -348,9 +348,9 @@ export function AdminObjects() {
 
           <div className="max-h-[400px] overflow-y-auto">
             {loadingRentals ? (
-              <p className="text-sm text-muted-foreground p-4">Cargando préstamos...</p>
+              <p className="text-sm text-gray-500 p-4">Cargando préstamos...</p>
             ) : rentals.length === 0 ? (
-              <p className="text-sm text-muted-foreground p-4 text-center">
+              <p className="text-sm text-gray-500 p-4 text-center">
                 No hay préstamos registrados para este objeto
               </p>
             ) : (
@@ -358,7 +358,7 @@ export function AdminObjects() {
                 {rentals.map((rental) => (
                   <div
                     key={rental.id}
-                    className="rounded-lg border border-border p-3 text-sm"
+                    className="rounded-lg border border-gray-200 p-3 text-sm"
                   >
                     <div className="flex justify-between items-start mb-2">
                       <div>
@@ -367,7 +367,7 @@ export function AdminObjects() {
                         </p>
                       </div>
 </div>
-                    <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                    <div className="grid grid-cols-2 gap-2 text-xs text-gray-500">
                       <div>
                         <span className="font-medium">Inicio:</span>{" "}
                         {new Date(rental.start_date).toLocaleString("es-ES")}

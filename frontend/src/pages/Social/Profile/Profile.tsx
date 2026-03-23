@@ -7,6 +7,7 @@ import { getStudentProfile } from "../../../services/api";
 import { authService } from "../../../services/auth";
 import { toast } from "sonner";
 
+
 const emptyProfileData: ProfileFormData = {
   name: "", 
   nickname: "",
@@ -33,6 +34,7 @@ export function Profile() {
   );
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
 
   // Load profile from API on mount
   useEffect(() => {
@@ -170,12 +172,14 @@ export function Profile() {
             <span className="profile-room">
               <Home size={14} /> Habitación {profileData.room || profileData.roomNumber || "Sin asignar"}
             </span>
-            <Button
-              onClick={() => setIsEditModalOpen(true)}
-              className="mt-3 bg-white/20 border-white/30 text-white hover:bg-white/40 rounded-xl border-none"
-            >
-              <Edit size={14} className="mr-2" /> Editar Perfil
-            </Button>
+            <div className="flex items-center gap-2 mt-3">
+                <Button
+                  onClick={() => setIsEditModalOpen(true)}
+                  className="bg-primary-foreground/20 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/40 rounded-xl border-none"
+                >
+                  <Edit size={14} className="mr-2" /> Editar Perfil
+                </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -184,7 +188,7 @@ export function Profile() {
       <div className="profile-info-card">
         <section>
           <h3 className="profile-section-title">
-            <User size={18} className="text-green-600" /> Sobre mí
+            <User size={18} className="text-primary" /> Sobre mí
           </h3>
           <p className="profile-bio-text">{profileData.bio}</p>
           {profileData.birthplace && (
@@ -197,7 +201,7 @@ export function Profile() {
         {allInterests.length > 0 && (
           <section className="profile-section">
             <h3 className="profile-section-title">
-              <Sparkles size={18} className="text-green-600" /> Intereses y Hobbies
+              <Sparkles size={18} className="text-primary" /> Intereses y Hobbies
             </h3>
             <div className="interests-grid">
               {allInterests.map((item) => (
@@ -279,7 +283,7 @@ export function Profile() {
         )}
       </div>
 
-      <div className="mt-12 pt-8 border-t border-gray-100">
+      <div className="mt-12 pt-8 border-t border-gray-200">
           <button
             type="button"
             onClick={handleLogout}

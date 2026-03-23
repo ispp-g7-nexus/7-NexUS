@@ -16,7 +16,7 @@ function StatCard({
   value,
   icon,
   valueClass = "text-gray-900",
-  iconBg = "bg-gray-100",
+  iconBg = "bg-gray-50",
 }: {
   label: string;
   value: number;
@@ -93,7 +93,7 @@ export function Staff() {
           </p>
         </div>
         <Button
-          className="bg-[#509550] hover:bg-[#509550]/90 text-white"
+          className="bg-green-600 hover:bg-green-600/90 text-white"
           onClick={() => setCreateOpen(true)}
         >
           <UserPlus className="w-4 h-4" />
@@ -106,8 +106,8 @@ export function Staff() {
         <StatCard
           label="Total personal"
           value={staff.length}
-          icon={<Briefcase className="w-6 h-6 text-[#509550]" />}
-          iconBg="bg-[#509550]/10"
+          icon={<Briefcase className="w-6 h-6 text-green-600" />}
+          iconBg="bg-green-600/10"
         />
         <StatCard
           label="Activos"
@@ -127,7 +127,7 @@ export function Staff() {
           label="Departamentos"
           value={departments.length}
           icon={<Briefcase className="w-6 h-6 text-gray-500" />}
-          iconBg="bg-gray-100"
+          iconBg="bg-gray-50"
         />
       </div>
 
