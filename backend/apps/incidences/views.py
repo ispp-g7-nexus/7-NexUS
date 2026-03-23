@@ -171,10 +171,6 @@ class IncidenceViewSet(viewsets.ModelViewSet):
         
 
     def perform_update(self, serializer):
-        """
-        Lógica para el panel de Admin (Gestionar) y 
-        soporte (Visualización de notas y comentarios rápidos).
-        """
         instance = self.get_object()
         old_status = instance.status
         
