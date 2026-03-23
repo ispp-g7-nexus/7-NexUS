@@ -2,6 +2,12 @@ import { fetchWithAuth } from '../utils/api';
 
 const BASE = '/api/bedrooms/';
 
+export interface BedroomResident {
+    id: number;
+    full_name: string;
+    email: string | null;
+}
+
 export interface Bedroom {
     id: number;
     numero: string;
@@ -11,6 +17,7 @@ export interface Bedroom {
     tipo: string;
     is_active: boolean;
     ocupantes_actuales: number;
+    residentes: BedroomResident[];
     created_at: string;
     updated_at: string;
 }
@@ -27,7 +34,11 @@ export interface AvailableBedroom {
 export async function listBedrooms(): Promise<Bedroom[]> {
     const res = await fetchWithAuth(BASE);
     if (!res.ok) throw new Error(`Error ${res.status}`);
-    return res.json();
+    const data = await res.json() as Array<Bedroom & { residentes?: BedroomResident[] }>;
+    return data.map((room) => ({
+        ...room,
+        residentes: Array.isArray(room.residentes) ? room.residentes : [],
+    }));
 }
 
 /**
@@ -43,14 +54,14 @@ export async function listAvailableBedrooms(excludeResidentId?: number): Promise
     return res.json();
 }
 
-export async function createBedroom(payload: any) {
+export async function createBedroom(payload: Record<string, unknown>) {
     return fetchWithAuth(`${BASE}create/`, {
         method: 'POST',
         body: JSON.stringify(payload),
     });
 }
 
-export async function updateBedroom(id: number, payload: any) {
+export async function updateBedroom(id: number, payload: Record<string, unknown>) {
     return fetchWithAuth(`${BASE}${id}/update/`, {
         method: 'PUT',
         body: JSON.stringify(payload),
@@ -63,7 +74,20 @@ export async function deleteBedroom(id: number) {
     });
 }
 
+export interface BedroomResident {
+    id: number;
+    user_id: number;
+    full_name: string;
+    email: string | null;
+    residence_id: number | null;
+}
+
+export async function getBedroomResidents(id: number): Promise<BedroomResident[]> {
+    const res = await fetchWithAuth(`${BASE}${id}/residents/`);
+    if (!res.ok) throw new Error(`Error ${res.status}`);
+    return res.json();
+}
+
 export async function listResidents() {
     return fetchWithAuth(`${BASE}residents/`);
 }
-

@@ -52,7 +52,7 @@ function SpaceCard({
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 text-sm">
+      <div className="grid grid-cols-4 gap-2 text-sm">
         <div className="rounded-lg bg-muted/60 px-3 py-2 text-center">
           <p className="text-xs text-muted-foreground">Aforo</p>
           <p className="font-semibold text-foreground">{space.capacity}</p>
@@ -64,6 +64,10 @@ function SpaceCard({
         <div className="rounded-lg bg-muted/60 px-3 py-2 text-center">
           <p className="text-xs text-muted-foreground">Cierre</p>
           <p className="font-semibold text-foreground">{space.close_time.slice(0, 5)}</p>
+        </div>
+        <div className="rounded-lg bg-muted/60 px-3 py-2 text-center">
+          <p className="text-xs text-muted-foreground">Intervalo de reserva</p>
+          <p className="font-semibold text-foreground">{space.reservation_interval_minutes}m</p>
         </div>
       </div>
 

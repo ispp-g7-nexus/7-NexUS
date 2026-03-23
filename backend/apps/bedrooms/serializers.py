@@ -1,11 +1,17 @@
 from rest_framework import serializers
-from django.contrib.auth import get_user_model
 from apps.membership.models import Membership
 from .models import Bedroom
 
 
+class BedroomResidentSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    full_name = serializers.CharField()
+    email = serializers.EmailField(allow_null=True)
+
+
 class BedroomSerializer(serializers.ModelSerializer):
     ocupantes_actuales = serializers.SerializerMethodField()
+    residentes = serializers.SerializerMethodField()
 
     class Meta:
         model = Bedroom
@@ -21,11 +27,34 @@ class BedroomSerializer(serializers.ModelSerializer):
             "updated_at",
             "edificio",
             "ocupantes_actuales",
+            "residentes",
         ]
-        read_only_fields = ["id", "created_at", "updated_at", "residence", "ocupantes_actuales"]
+        read_only_fields = ["id", "created_at", "updated_at", "residence", "ocupantes_actuales", "residentes"]
+
+    def _get_active_student_residents(self, obj: Bedroom):
+        prefetched = getattr(obj, "active_student_residents", None)
+        if prefetched is not None:
+            return prefetched
+        return list(
+            obj.residents.filter(is_active=True, role__name="Student")
+            .select_related("user")
+            .order_by("user__first_name", "user__last_name", "user__username")
+        )
 
     def get_ocupantes_actuales(self, obj: Bedroom) -> int:
-        return obj.residents.filter(is_active=True, role__name="Student").count()
+        return len(self._get_active_student_residents(obj))
+
+    def get_residentes(self, obj: Bedroom):
+        residents = self._get_active_student_residents(obj)
+        payload = [
+            {
+                "id": resident.id,
+                "full_name": resident.user.get_full_name().strip() or resident.user.username,
+                "email": getattr(resident.user, "email", None),
+            }
+            for resident in residents
+        ]
+        return BedroomResidentSerializer(payload, many=True).data
 
     def validate_numero(self, value):
         if not value:
