@@ -10,13 +10,23 @@ type Tab = "eventos" | "chat" | "matches" | "perfil";
 
 export function SocialHub({
   onChatTabActiveChange,
+  onChatSubTabActiveChange,
+  onChatUnreadStatusChange,
   chatRealtimeTick = 0,
   chatRealtimeEvent = null,
+  hasChatNews = false,
+  hasGroupChatNews = false,
+  hasPrivateChatNews = false,
   initialTab = "perfil",
 }: {
   readonly onChatTabActiveChange?: (active: boolean) => void;
+  readonly onChatSubTabActiveChange?: (tab: "grupos" | "privados") => void;
+  readonly onChatUnreadStatusChange?: (status: { hasGroupUnread: boolean; hasPrivateUnread: boolean }) => void;
   readonly chatRealtimeTick?: number;
   readonly chatRealtimeEvent?: ChatRealtimeEvent | null;
+  readonly hasChatNews?: boolean;
+  readonly hasGroupChatNews?: boolean;
+  readonly hasPrivateChatNews?: boolean;
   readonly initialTab?: Tab;
 }) {
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
@@ -29,17 +39,26 @@ export function SocialHub({
   }, [activeTab, onChatTabActiveChange]);
 
   return (
-    <div className="flex flex-col w-full">
-      <div className="flex bg-gray-100 p-1 rounded-full mb-6 mx-auto w-fit">
+    <div className="flex flex-col w-full bg-[#F6F7F9]">
+      {/* Header */}
+      <header className="bg-[#1B4D1C] p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg sticky top-0 z-20">
+        <h1 className="text-white text-2xl font-bold">Social</h1>
+      </header>
+      
+      <div className="px-4 py-6 space-y-6">
+        <div className="flex bg-gray-100 p-1 rounded-full mb-6 mx-auto w-fit">
         {(["eventos", "chat", "matches", "perfil"] as Tab[]).map((tab) => (
           <Button
             key={tab}
             variant={activeTab === tab ? "default" : "ghost"}
-            className={`rounded-full px-6 capitalize ${activeTab === tab ? "bg-white text-green-700 shadow-sm hover:bg-white" : "text-gray-500"
+            className={`relative rounded-full px-6 capitalize ${activeTab === tab ? "bg-white text-green-700 shadow-sm hover:bg-white" : "text-gray-500"
               }`}
             onClick={() => setActiveTab(tab)}
           >
             {tab}
+            {tab === "chat" && hasChatNews && (
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-red-500" />
+            )}
           </Button>
         ))}
       </div>
@@ -47,8 +66,19 @@ export function SocialHub({
       <div className="mt-2">
         {activeTab === "eventos" && <Events />}
         {activeTab === "perfil" && <Profile />}
-        {activeTab === "chat" && <StudentChats enableRealtimeStream={false} realtimeTick={chatRealtimeTick} realtimeEvent={chatRealtimeEvent} />}
+        {activeTab === "chat" && (
+          <StudentChats
+            enableRealtimeStream={false}
+            realtimeTick={chatRealtimeTick}
+            realtimeEvent={chatRealtimeEvent}
+            hasGroupNews={hasGroupChatNews}
+            hasPrivateNews={hasPrivateChatNews}
+            onSubTabActiveChange={onChatSubTabActiveChange}
+            onUnreadStatusChange={onChatUnreadStatusChange}
+          />
+        )}
         {activeTab === "matches" && <MyMatchesPage />}
+      </div>
       </div>
     </div>
   );

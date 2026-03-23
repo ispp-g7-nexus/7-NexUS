@@ -289,10 +289,10 @@ class SpaceReservationApiTests(TenantTestCase):
         )
 
         # Dos reservas existentes con solape parcial entre sí.
-        first_start = start_time + timedelta(minutes=15)   # 10:15
-        first_end = start_time + timedelta(minutes=45)     # 10:45
+        first_start = start_time + timedelta(minutes=15)  # 10:15
+        first_end = start_time + timedelta(minutes=45)  # 10:45
         second_start = start_time + timedelta(minutes=30)  # 10:30
-        second_end = start_time + timedelta(minutes=60)    # 11:00
+        second_end = start_time + timedelta(minutes=60)  # 11:00
 
         SpaceReservation.objects.create(
             space=self.space,
@@ -328,7 +328,7 @@ class SpaceReservationApiTests(TenantTestCase):
             f"/api/spaces/{self.space.id}/reservations/",
             data={
                 "start_time": (start_time + timedelta(minutes=60)).isoformat(),  # 11:00
-                "end_time": (start_time + timedelta(minutes=120)).isoformat(),   # 12:00
+                "end_time": (start_time + timedelta(minutes=120)).isoformat(),  # 12:00
             },
             content_type="application/json",
         )

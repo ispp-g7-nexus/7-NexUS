@@ -34,7 +34,7 @@ class IncidenceSerializer(serializers.ModelSerializer):
         model = Incidence
         fields = [
             'id', 'title', 'description', 'location_type', 'room_number', 
-            'status', 'priority', 'updates', 'admin_notes', 'created_at', 'is_mine',
+            'status', 'priority', 'updates', 'admin_notes', 'img', 'created_at', 'is_mine',
             'assigned_staff_name', 
             'assigned_staff_job',
             'assigned_external_name'

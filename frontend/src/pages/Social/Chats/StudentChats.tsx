@@ -21,6 +21,7 @@ import {
     type GroupMessage,
 } from "../../../services/chats";
 import { authService } from "../../../services/auth";
+import { AdminGroupEdit } from "../../Chats/AdminGroupEdit";
 
 /* ── Helpers ────────────────────────────────────────────────── */
 
@@ -51,6 +52,36 @@ function appendUniqueGroupMessage(messages: GroupMessage[], incoming: GroupMessa
     return dedupeGroupMessages([...messages, incoming]);
 }
 
+function buildGroupMessageEventKey(evt: ChatRealtimeEvent): string | null {
+    const groupId = Number(evt.payload?.group_id ?? -1);
+    if (!Number.isFinite(groupId) || groupId <= 0) return null;
+
+    const payloadMessage = evt.payload?.message as Partial<GroupMessage> | undefined;
+    const messageId = Number(payloadMessage?.id ?? evt.payload?.message_id ?? -1);
+    if (Number.isFinite(messageId) && messageId > 0) {
+        return `${groupId}:${messageId}`;
+    }
+
+    const senderEmail = typeof evt.payload?.sender_email === "string" ? evt.payload.sender_email : "unknown";
+    const ts = typeof evt.ts === "number" ? evt.ts : Date.now();
+    return `${groupId}:fallback:${senderEmail}:${ts}`;
+}
+
+function buildPrivateMessageEventKey(evt: ChatRealtimeEvent): string | null {
+    const conversationId = Number(evt.payload?.conversation_id ?? -1);
+    if (!Number.isFinite(conversationId) || conversationId <= 0) return null;
+
+    const payloadMessage = evt.payload?.message as Partial<PrivateMessage> | undefined;
+    const messageId = Number(payloadMessage?.id ?? evt.payload?.message_id ?? -1);
+    if (Number.isFinite(messageId) && messageId > 0) {
+        return `${conversationId}:${messageId}`;
+    }
+
+    const senderEmail = typeof evt.payload?.sender_email === "string" ? evt.payload.sender_email : "unknown";
+    const ts = typeof evt.ts === "number" ? evt.ts : Date.now();
+    return `${conversationId}:fallback:${senderEmail}:${ts}`;
+}
+
 /* ── Config etiquetas ───────────────────────────────────────── */
 
 const labelConfig: Record<string, { label: string; color: string; icon: ReactElement }> = {
@@ -63,6 +94,13 @@ const labelConfig: Record<string, { label: string; color: string; icon: ReactEle
 /* ── Sub-tabs ───────────────────────────────────────────────── */
 
 type ChatSubTab = "grupos" | "privados";
+type UnreadGroupCounts = Record<number, number>;
+
+function buildResidentUnreadGroupsStorageKey(email: string): string | null {
+    const normalized = email.trim().toLowerCase();
+    if (!normalized) return null;
+    return `student-chat-unread-groups:${normalized}`;
+}
 
 /* ══════════════════════════════════════════════════════════════
    Componente principal
@@ -72,10 +110,18 @@ export function StudentChats({
     enableRealtimeStream = true,
     realtimeTick = 0,
     realtimeEvent = null,
+    hasGroupNews = false,
+    hasPrivateNews = false,
+    onSubTabActiveChange,
+    onUnreadStatusChange,
 }: {
     readonly enableRealtimeStream?: boolean;
     readonly realtimeTick?: number;
     readonly realtimeEvent?: ChatRealtimeEvent | null;
+    readonly hasGroupNews?: boolean;
+    readonly hasPrivateNews?: boolean;
+    readonly onSubTabActiveChange?: (tab: ChatSubTab) => void;
+    readonly onUnreadStatusChange?: (status: { hasGroupUnread: boolean; hasPrivateUnread: boolean }) => void;
 }) {
     const [subTab, setSubTab] = useState<ChatSubTab>("grupos");
 
@@ -84,8 +130,12 @@ export function StudentChats({
     const [loadingGroups, setLoadingGroups] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedGroup, setSelectedGroup] = useState<ChatGroup | null>(null);
+    const [editingGroup, setEditingGroup] = useState<ChatGroup | null>(null);
+    const [unreadGroupCounts, setUnreadGroupCounts] = useState<UnreadGroupCounts>({});
     const [showLeaveDialog, setShowLeaveDialog] = useState(false);
     const [leaving, setLeaving] = useState(false);
+    const [hasLoadedGroupsOnce, setHasLoadedGroupsOnce] = useState(false);
+    const [hasLoadedConversationsOnce, setHasLoadedConversationsOnce] = useState(false);
 
     // ── Estado mensajes de grupo ──
     const [groupMessages, setGroupMessages] = useState<GroupMessage[]>([]);
@@ -105,12 +155,20 @@ export function StudentChats({
     const [msgText, setMsgText] = useState("");
     const [sending, setSending] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const lastProcessedExternalRealtimeTickRef = useRef(0);
+    const processedGroupMessageEventKeysRef = useRef<Set<string>>(new Set());
+    const processedPrivateMessageEventKeysRef = useRef<Set<string>>(new Set());
 
     // ── Estado nueva conversación ──
     const [showNewConv, setShowNewConv] = useState(false);
     const [residents, setResidents] = useState<ChatResident[]>([]);
     const [loadingResidents, setLoadingResidents] = useState(false);
     const [residentSearch, setResidentSearch] = useState("");
+
+    const unreadGroupsStorageKey = useMemo(
+        () => buildResidentUnreadGroupsStorageKey(currentUserEmail),
+        [currentUserEmail],
+    );
 
     /* ────────────────── Carga de grupos ─────────────────────── */
 
@@ -122,6 +180,7 @@ export function StudentChats({
             toast.error("No se pudieron cargar tus grupos.");
         } finally {
             setLoadingGroups(false);
+            setHasLoadedGroupsOnce(true);
         }
     }, []);
 
@@ -160,12 +219,121 @@ export function StudentChats({
         setSelectedGroup(updated);
     }, [groups, selectedGroup]);
 
+    useEffect(() => {
+        if (!editingGroup) return;
+
+        const updated = groups.find((g) => g.id === editingGroup.id);
+        if (!updated) {
+            setEditingGroup(null);
+            return;
+        }
+
+        setEditingGroup(updated);
+    }, [editingGroup, groups]);
+
+    const canManageGroup = useCallback((group: ChatGroup) => {
+        if (!currentUserEmail) return false;
+        if (group.current_user_can_interact === false) return false;
+
+        return group.members_list.some(
+            (member) => member.email === currentUserEmail && member.is_admin,
+        );
+    }, [currentUserEmail]);
+
+    const handleGroupUpdatedFromManagement = (updated: ChatGroup) => {
+        setGroups((prev) => prev.map((group) => (group.id === updated.id ? updated : group)));
+        setSelectedGroup((prev) => (prev && prev.id === updated.id ? updated : prev));
+        setEditingGroup(updated);
+    };
+
+    useEffect(() => {
+        if (groups.length === 0) {
+            setUnreadGroupCounts({});
+            return;
+        }
+
+        const interactiveGroupIds = new Set(
+            groups
+                .filter((group) => group.current_user_can_interact !== false)
+                .map((group) => group.id),
+        );
+
+        setUnreadGroupCounts((prev) => {
+            const next = Object.entries(prev).reduce<UnreadGroupCounts>((acc, [key, count]) => {
+                const groupId = Number(key);
+                if (interactiveGroupIds.has(groupId) && count > 0) {
+                    acc[groupId] = count;
+                }
+                return acc;
+            }, {});
+
+            if (Object.keys(next).length === Object.keys(prev).length) {
+                return prev;
+            }
+
+            return next;
+        });
+    }, [groups]);
+
+    useEffect(() => {
+        if (!unreadGroupsStorageKey) return;
+
+        try {
+            const raw = globalThis.localStorage.getItem(unreadGroupsStorageKey);
+            if (!raw) return;
+
+            const parsed = JSON.parse(raw) as Record<string, unknown>;
+            const restored = Object.entries(parsed).reduce<UnreadGroupCounts>((acc, [key, value]) => {
+                const groupId = Number(key);
+                const count = Number(value);
+                if (Number.isFinite(groupId) && groupId > 0 && Number.isFinite(count) && count > 0) {
+                    acc[groupId] = count;
+                }
+                return acc;
+            }, {});
+
+            if (Object.keys(restored).length === 0) return;
+
+            setUnreadGroupCounts((prev) => {
+                const merged: UnreadGroupCounts = { ...restored };
+                for (const [key, value] of Object.entries(prev)) {
+                    const groupId = Number(key);
+                    const current = Number(value);
+                    if (!Number.isFinite(groupId) || !Number.isFinite(current) || current <= 0) continue;
+                    merged[groupId] = Math.max(merged[groupId] ?? 0, current);
+                }
+                return merged;
+            });
+        } catch {
+        }
+    }, [unreadGroupsStorageKey]);
+
+    useEffect(() => {
+        if (!unreadGroupsStorageKey) return;
+
+        if (Object.keys(unreadGroupCounts).length === 0) {
+            globalThis.localStorage.removeItem(unreadGroupsStorageKey);
+            return;
+        }
+
+        globalThis.localStorage.setItem(unreadGroupsStorageKey, JSON.stringify(unreadGroupCounts));
+    }, [unreadGroupCounts, unreadGroupsStorageKey]);
+
     const handleLeaveGroup = async () => {
         if (!selectedGroup) return;
+        if (!selectedGroup.can_members_leave) {
+            toast.error("No puedes abandonar este grupo.");
+            return;
+        }
         setLeaving(true);
         try {
             await chatsService.leaveGroup(selectedGroup.id);
             setGroups((prev) => prev.filter((g) => g.id !== selectedGroup.id));
+            setUnreadGroupCounts((prev) => {
+                if (!(selectedGroup.id in prev)) return prev;
+                const { [selectedGroup.id]: _ignored, ...rest } = prev;
+                return rest;
+            });
             toast.success("Has abandonado el grupo.");
             setSelectedGroup(null);
             setGroupMessages([]);
@@ -180,6 +348,11 @@ export function StudentChats({
     /* ────────────────── Apertura y Mensajes de Grupo ─────────────────────── */
 
     const openGroup = async (group: ChatGroup) => {
+        setUnreadGroupCounts((prev) => {
+            if (!(group.id in prev)) return prev;
+            const { [group.id]: _ignored, ...rest } = prev;
+            return rest;
+        });
         setSelectedGroup(group);
         setGroupMessages([]);
         setLoadingGroupMsgs(true);
@@ -228,16 +401,55 @@ export function StudentChats({
             toast.error("No se pudieron cargar las conversaciones.");
         } finally {
             setLoadingConvs(false);
+            setHasLoadedConversationsOnce(true);
         }
     }, []);
+
+    useEffect(() => {
+        loadConversations().catch(() => { });
+    }, [loadConversations]);
 
     useEffect(() => {
         if (subTab === "privados") loadConversations();
     }, [subTab, loadConversations]);
 
     useEffect(() => {
+        onSubTabActiveChange?.(subTab);
+    }, [onSubTabActiveChange, subTab]);
+
+    const hasUnreadGroups = useMemo(
+        () => Object.values(unreadGroupCounts).some((count) => count > 0),
+        [unreadGroupCounts],
+    );
+
+    const hasUnreadPrivateConversations = useMemo(
+        () => conversations.some((conversation) => conversation.unread_count > 0),
+        [conversations],
+    );
+
+    useEffect(() => {
+        if (!hasLoadedGroupsOnce || !hasLoadedConversationsOnce) {
+            return;
+        }
+
+        onUnreadStatusChange?.({
+            hasGroupUnread: hasUnreadGroups,
+            hasPrivateUnread: hasUnreadPrivateConversations,
+        });
+    }, [
+        hasLoadedConversationsOnce,
+        hasLoadedGroupsOnce,
+        hasUnreadGroups,
+        hasUnreadPrivateConversations,
+        onUnreadStatusChange,
+    ]);
+
+    const showGroupDot = hasGroupNews || hasUnreadGroups;
+    const showPrivateDot = hasPrivateNews || hasUnreadPrivateConversations;
+
+    useEffect(() => {
         if (subTab === "grupos") {
-            void loadGroups();
+            loadGroups().catch(() => { });
         }
     }, [subTab, loadGroups]);
 
@@ -283,32 +495,94 @@ export function StudentChats({
 
         const incoming = evt.payload?.message as GroupMessage | undefined;
         if (!incoming || typeof incoming.id !== "number") {
-            void loadSelectedGroupMessages(selectedGroup.id);
+            loadSelectedGroupMessages(selectedGroup.id).catch(() => { });
             return;
         }
 
         setGroupMessages((prev) => appendUniqueGroupMessage(prev, incoming));
     }, [loadSelectedGroupMessages, selectedGroup]);
 
+    const applyGroupUnreadEvent = useCallback((evt: ChatRealtimeEvent) => {
+        const eventKey = buildGroupMessageEventKey(evt);
+        if (eventKey) {
+            if (processedGroupMessageEventKeysRef.current.has(eventKey)) {
+                return;
+            }
+            processedGroupMessageEventKeysRef.current.add(eventKey);
+
+            if (processedGroupMessageEventKeysRef.current.size > 1000) {
+                const keys = Array.from(processedGroupMessageEventKeysRef.current);
+                processedGroupMessageEventKeysRef.current = new Set(keys.slice(-500));
+            }
+        }
+
+        applyGroupMessageEvent(evt);
+
+        const groupId = Number(evt.payload?.group_id ?? -1);
+        if (!Number.isFinite(groupId) || groupId <= 0) return;
+
+        const group = groups.find((g) => g.id === groupId);
+        if (!group) return;
+        if (group.current_user_can_interact === false) {
+            setUnreadGroupCounts((prev) => {
+                if (!(groupId in prev)) return prev;
+                const { [groupId]: _ignored, ...rest } = prev;
+                return rest;
+            });
+            return;
+        }
+
+        const senderEmail = typeof evt.payload?.sender_email === "string" ? evt.payload.sender_email.trim().toLowerCase() : "";
+        if (!senderEmail) return;
+
+        const normalizedCurrentUserEmail = currentUserEmail.trim().toLowerCase();
+        const isMine = senderEmail !== "" && senderEmail === normalizedCurrentUserEmail;
+        if (isMine) return;
+
+        if (selectedGroup?.id === groupId) return;
+
+        setUnreadGroupCounts((prev) => ({
+            ...prev,
+            [groupId]: (prev[groupId] ?? 0) + 1,
+        }));
+    }, [applyGroupMessageEvent, currentUserEmail, groups, selectedGroup]);
+
     const applyPrivateMessageEvent = useCallback((evt: ChatRealtimeEvent) => {
+        const eventKey = buildPrivateMessageEventKey(evt);
+        if (eventKey) {
+            if (processedPrivateMessageEventKeysRef.current.has(eventKey)) {
+                return;
+            }
+            processedPrivateMessageEventKeysRef.current.add(eventKey);
+
+            if (processedPrivateMessageEventKeysRef.current.size > 1000) {
+                const keys = Array.from(processedPrivateMessageEventKeysRef.current);
+                processedPrivateMessageEventKeysRef.current = new Set(keys.slice(-500));
+            }
+        }
+
         const conversationId = Number(evt.payload?.conversation_id ?? -1);
         if (conversationId <= 0) return;
 
         const incoming = evt.payload?.message as PrivateMessage | undefined;
-        const senderEmail = String(evt.payload?.sender_email ?? "");
-        const isMine = senderEmail !== "" && senderEmail === currentUserEmail;
+        const senderEmail = typeof evt.payload?.sender_email === "string" ? evt.payload.sender_email.trim().toLowerCase() : "";
+        const normalizedCurrentUserEmail = currentUserEmail.trim().toLowerCase();
+        const isMine = senderEmail !== "" && senderEmail === normalizedCurrentUserEmail;
 
         setConversations((prev) => {
             const idx = prev.findIndex((c) => c.id === conversationId);
             if (idx === -1) {
                 if (subTab === "privados") {
-                    void loadConversations();
+                    loadConversations().catch(() => { });
                 }
                 return prev;
             }
 
             const curr = prev[idx];
-            const unread = activeConv?.id === conversationId ? 0 : (isMine ? curr.unread_count : curr.unread_count + 1);
+            let unread = 0;
+            if (activeConv?.id !== conversationId) {
+                unread = isMine ? curr.unread_count : curr.unread_count + 1;
+            }
             const nextConv: PrivateConversation = {
                 ...curr,
                 unread_count: unread,
@@ -330,7 +604,7 @@ export function StudentChats({
         if (activeConv?.id !== conversationId) return;
 
         if (!incoming || typeof incoming.id !== "number") {
-            void loadActiveConversationMessages(activeConv.id);
+            loadActiveConversationMessages(activeConv.id).catch(() => { });
             return;
         }
 
@@ -342,12 +616,12 @@ export function StudentChats({
 
         const source = chatsService.subscribeToEvents((evt: ChatRealtimeEvent) => {
             if (evt.event === "group_created" || evt.event === "group_updated" || evt.event === "group_deleted") {
-                void loadGroups();
+                loadGroups().catch(() => { });
                 return;
             }
 
-            if (evt.event === "group_message_created" && selectedGroup) {
-                applyGroupMessageEvent(evt);
+            if (evt.event === "group_message_created") {
+                applyGroupUnreadEvent(evt);
                 return;
             }
 
@@ -359,25 +633,31 @@ export function StudentChats({
         return () => {
             source.close();
         };
-    }, [applyGroupMessageEvent, applyPrivateMessageEvent, enableRealtimeStream, loadGroups, selectedGroup]);
+    }, [applyGroupUnreadEvent, applyPrivateMessageEvent, enableRealtimeStream, loadGroups, selectedGroup]);
 
     useEffect(() => {
         if (realtimeTick <= 0 || !realtimeEvent) return;
 
+        if (realtimeTick <= lastProcessedExternalRealtimeTickRef.current) {
+            return;
+        }
+
+        lastProcessedExternalRealtimeTickRef.current = realtimeTick;
+
         if (realtimeEvent.event === "group_created" || realtimeEvent.event === "group_updated" || realtimeEvent.event === "group_deleted") {
-            void loadGroups();
+            loadGroups().catch(() => { });
             return;
         }
 
         if (realtimeEvent.event === "group_message_created") {
-            applyGroupMessageEvent(realtimeEvent);
+            applyGroupUnreadEvent(realtimeEvent);
             return;
         }
 
         if (realtimeEvent.event === "private_message_created") {
             applyPrivateMessageEvent(realtimeEvent);
         }
-    }, [applyGroupMessageEvent, applyPrivateMessageEvent, loadGroups, realtimeEvent, realtimeTick]);
+    }, [applyGroupUnreadEvent, applyPrivateMessageEvent, loadGroups, realtimeEvent, realtimeTick]);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -440,6 +720,16 @@ export function StudentChats({
     /* ══════════════════════════════════════════════════════════════
        RENDER: Vista de chat activo (mensajes)
        ══════════════════════════════════════════════════════════════ */
+
+    if (editingGroup) {
+        return (
+            <AdminGroupEdit
+                group={editingGroup}
+                onBack={() => setEditingGroup(null)}
+                onGroupUpdated={handleGroupUpdatedFromManagement}
+            />
+        );
+    }
 
     if (activeConv) {
         return (
@@ -544,7 +834,7 @@ export function StudentChats({
                             </span>
                         </div>
                     </div>
-                    {(selectedGroup.can_members_leave || !canInteractInGroup) && (
+                    {selectedGroup.can_members_leave && (
                         <Button variant="ghost" className="text-red-600 hover:bg-red-50 hover:text-red-700 shrink-0" onClick={() => setShowLeaveDialog(true)}>
                             <LogOut className="w-4 h-4 text-red-600" />
                         </Button>
@@ -641,11 +931,17 @@ export function StudentChats({
                     <Button
                         key={tab}
                         variant={subTab === tab ? "default" : "ghost"}
-                        className={`rounded-full px-6 capitalize ${subTab === tab ? "bg-white text-green-700 shadow-sm hover:bg-white" : "text-gray-500"
+                        className={`relative rounded-full px-6 capitalize ${subTab === tab ? "bg-white text-green-700 shadow-sm hover:bg-white" : "text-gray-500"
                             }`}
                         onClick={() => setSubTab(tab)}
                     >
                         {tab}
+                        {tab === "grupos" && showGroupDot && (
+                            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-red-500" />
+                        )}
+                        {tab === "privados" && showPrivateDot && (
+                            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-red-500" />
+                        )}
                     </Button>
                 ))}
             </div>
@@ -797,29 +1093,72 @@ export function StudentChats({
                                     color: "bg-amber-100 text-amber-800",
                                     icon: <Tag className="w-3 h-3" />,
                                 };
+                                const isFormerMember = group.current_user_can_interact === false;
+                                const unreadCount = unreadGroupCounts[group.id] ?? 0;
+                                const unreadBadgeText = unreadCount > 9 ? "9+" : String(unreadCount);
+                                const membersLabel = group.members === 1 ? "miembro" : "miembros";
                                 return (
-                                    <button
+                                    <div
                                         key={group.id}
-                                        onClick={() => openGroup(group)}
-                                        className="w-full text-left px-4 py-3.5 hover:bg-gray-50 transition-colors flex items-center gap-3"
+                                        className={`px-4 py-3.5 transition-colors flex items-center gap-3 ${
+                                            isFormerMember
+                                                ? "bg-gray-100 hover:bg-gray-100"
+                                                : "hover:bg-gray-50"
+                                        }`}
                                     >
-                                        <div className="w-10 h-10 bg-gradient-to-br from-green-200 to-green-400 rounded-full flex items-center justify-center text-green-800 font-bold text-sm shrink-0">
-                                            {group.name.charAt(0).toUpperCase()}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 mb-0.5">
-                                                <span className="font-medium text-gray-900 truncate">{group.name}</span>
-                                                <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium shrink-0 ${cfg.color}`}>
-                                                    {cfg.icon} {cfg.label}
-                                                </span>
+                                        <button
+                                            onClick={() => openGroup(group)}
+                                            className="flex-1 min-w-0 text-left flex items-center gap-3"
+                                        >
+                                            <div className="relative shrink-0">
+                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
+                                                    isFormerMember
+                                                        ? "bg-gray-300 text-gray-700"
+                                                        : "bg-gradient-to-br from-green-200 to-green-400 text-green-800"
+                                                }`}>
+                                                    {group.name.charAt(0).toUpperCase()}
+                                                </div>
+                                                {unreadCount > 0 && (
+                                                    <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                                                        {unreadBadgeText}
+                                                    </span>
+                                                )}
                                             </div>
-                                            {group.description && <p className="text-xs text-gray-500 truncate">{group.description}</p>}
-                                            <div className="flex items-center gap-1 mt-0.5 text-[11px] text-gray-400">
-                                                <Users className="w-3 h-3" />
-                                                {group.members} {group.members === 1 ? "miembro" : "miembros"}
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 mb-0.5">
+                                                    <span className={`font-medium truncate ${isFormerMember ? "text-gray-700" : "text-gray-900"}`}>{group.name}</span>
+                                                    {isFormerMember && (
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-300 text-gray-700 shrink-0">
+                                                            No perteneces a este grupo
+                                                        </span>
+                                                    )}
+                                                    <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium shrink-0 ${cfg.color}`}>
+                                                        {cfg.icon} {cfg.label}
+                                                    </span>
+                                                </div>
+                                                {group.description && <p className="text-xs truncate text-gray-500">{group.description}</p>}
+                                                {isFormerMember && (
+                                                    <p className="text-[11px] text-gray-600 mt-0.5">
+                                                        Ya no puedes enviar ni recibir mensajes en este grupo.
+                                                    </p>
+                                                )}
+                                                <div className={`flex items-center gap-1 mt-0.5 text-[11px] ${isFormerMember ? "text-gray-500" : "text-gray-400"}`}>
+                                                    <Users className="w-3 h-3" />
+                                                    {group.members} {membersLabel}
+                                                </div>
                                             </div>
-                                        </div>
-                                    </button>
+                                        </button>
+                                        {canManageGroup(group) && (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="text-green-700 border-green-200 hover:bg-green-50 shrink-0"
+                                                onClick={() => setEditingGroup(group)}
+                                            >
+                                                Gestionar
+                                            </Button>
+                                        )}
+                                    </div>
                                 );
                             })}
                         </div>

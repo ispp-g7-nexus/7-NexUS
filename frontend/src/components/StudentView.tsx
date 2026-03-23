@@ -25,16 +25,109 @@ interface StudentViewProps {
 
 const HOME_INCIDENCES_SEEN_AT_KEY = "home-incidences-seen-at";
 
+function buildResidentUnreadGroupsStorageKey(email: string): string | null {
+    const normalized = email.trim().toLowerCase();
+    if (!normalized) return null;
+    return `student-chat-unread-groups:${normalized}`;
+}
+
+function persistResidentUnreadGroupIncrement(email: string, groupId: number): void {
+    const storageKey = buildResidentUnreadGroupsStorageKey(email);
+    if (!storageKey) return;
+    if (!Number.isFinite(groupId) || groupId <= 0) return;
+
+    try {
+        const raw = globalThis.localStorage.getItem(storageKey);
+        const parsed = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
+        const previous = Number(parsed[String(groupId)] ?? 0);
+        const nextValue = Number.isFinite(previous) && previous > 0 ? previous + 1 : 1;
+        parsed[String(groupId)] = nextValue;
+        globalThis.localStorage.setItem(storageKey, JSON.stringify(parsed));
+    } catch {
+    }
+}
+
+function buildGroupMessageEventKey(evt: ChatRealtimeEvent): string | null {
+    const groupId = Number(evt.payload?.group_id ?? -1);
+    if (!Number.isFinite(groupId) || groupId <= 0) return null;
+
+    const payloadMessage = evt.payload?.message as { id?: number } | undefined;
+    const messageId = Number(evt.payload?.message_id ?? payloadMessage?.id ?? -1);
+    if (Number.isFinite(messageId) && messageId > 0) {
+        return `${groupId}:${messageId}`;
+    }
+
+    const senderEmail = typeof evt.payload?.sender_email === "string"
+        ? evt.payload.sender_email.trim().toLowerCase()
+        : "";
+    const ts = typeof evt.ts === "number" ? evt.ts : Date.now();
+    return `${groupId}:fallback:${senderEmail || "unknown"}:${ts}`;
+}
+
 export function StudentView({ onLogout }: StudentViewProps) {
     const [activeTab, setActiveTab] = useState<StudentTab>("home");
     const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
-    const [unreadChatNotifications, setUnreadChatNotifications] = useState(0);
     const [currentUserEmail, setCurrentUserEmail] = useState("");
     const [chatRealtimeTick, setChatRealtimeTick] = useState(0);
     const [chatRealtimeEvent, setChatRealtimeEvent] = useState<ChatRealtimeEvent | null>(null);
     const [isCommunityChatActive, setIsCommunityChatActive] = useState(false);
+    const [communityChatSubTab, setCommunityChatSubTab] = useState<"grupos" | "privados" | null>(null);
+    const [hasGroupChatNews, setHasGroupChatNews] = useState(false);
+    const [hasPrivateChatNews, setHasPrivateChatNews] = useState(false);
     const previousUnreadCount = useRef<number | null>(null);
     const markAsViewedTimeoutRef = useRef<number | null>(null);
+    const processedGroupMessageEventKeysRef = useRef<Set<string>>(new Set());
+
+    const hasAnyChatNews = hasGroupChatNews || hasPrivateChatNews;
+
+    const isGroupLifecycleEvent = (evt: ChatRealtimeEvent): boolean =>
+        evt.event === "group_created" || evt.event === "group_updated" || evt.event === "group_deleted";
+
+    const isIncomingMessageEvent = (evt: ChatRealtimeEvent): boolean =>
+        evt.event === "group_message_created" || evt.event === "private_message_created";
+
+    const shouldSkipDuplicateGroupMessageEvent = (evt: ChatRealtimeEvent): boolean => {
+        if (evt.event !== "group_message_created") {
+            return false;
+        }
+
+        const eventKey = buildGroupMessageEventKey(evt);
+        if (!eventKey) {
+            return false;
+        }
+
+        if (processedGroupMessageEventKeysRef.current.has(eventKey)) {
+            return true;
+        }
+
+        processedGroupMessageEventKeysRef.current.add(eventKey);
+        if (processedGroupMessageEventKeysRef.current.size > 1000) {
+            const recent = Array.from(processedGroupMessageEventKeysRef.current).slice(-500);
+            processedGroupMessageEventKeysRef.current = new Set(recent);
+        }
+
+        return false;
+    };
+
+    const getSenderEmailFromEvent = (evt: ChatRealtimeEvent): string =>
+        typeof evt.payload?.sender_email === "string" ? evt.payload.sender_email.trim().toLowerCase() : "";
+
+    const handleGroupLifecycleRealtimeEvent = (
+        evt: ChatRealtimeEvent,
+        isViewingGroupChats: boolean,
+    ): boolean => {
+        if (!isGroupLifecycleEvent(evt)) {
+            return false;
+        }
+
+        setChatRealtimeEvent(evt);
+        setChatRealtimeTick((prev) => prev + 1);
+        if (!isViewingGroupChats) {
+            setHasGroupChatNews(true);
+        }
+
+        return true;
+    };
 
     useEffect(() => {
         authService.me().then((session) => {
@@ -45,31 +138,44 @@ export function StudentView({ onLogout }: StudentViewProps) {
     }, []);
 
     useEffect(() => {
+        const normalizedCurrentUserEmail = currentUserEmail.trim().toLowerCase();
+
         const source = chatsService.subscribeToEvents((evt) => {
-            if (evt.event === "group_created" || evt.event === "group_updated" || evt.event === "group_deleted") {
-                setChatRealtimeEvent(evt);
-                setChatRealtimeTick((prev) => prev + 1);
+            const isViewingGroupChats = activeTab === "community" && isCommunityChatActive && communityChatSubTab === "grupos";
+            if (handleGroupLifecycleRealtimeEvent(evt, isViewingGroupChats)) {
                 return;
             }
 
-            if (evt.event !== "group_message_created" && evt.event !== "private_message_created") {
+            if (!isIncomingMessageEvent(evt)) {
                 return;
             }
 
-            const senderEmail = String(evt.payload?.sender_email ?? "");
-            const senderName = String(evt.payload?.sender_name ?? "Residente");
-            if (!senderEmail || senderEmail === currentUserEmail) return;
+            if (shouldSkipDuplicateGroupMessageEvent(evt)) {
+                return;
+            }
+
+            const senderEmail = getSenderEmailFromEvent(evt);
+            if (!senderEmail || senderEmail === normalizedCurrentUserEmail) return;
 
             setChatRealtimeEvent(evt);
             setChatRealtimeTick((prev) => prev + 1);
 
-            const isViewingChats = activeTab === "community" && isCommunityChatActive;
-            if (!isViewingChats) {
-                setUnreadChatNotifications((prev) => prev + 1);
-                toast.info("Tienes un mensaje nuevo", {
-                    description: `Mensaje de ${senderName} en chats.`,
-                });
+            const isViewingPrivateChats = activeTab === "community" && isCommunityChatActive && communityChatSubTab === "privados";
+
+            if (evt.event === "group_message_created" && !isViewingGroupChats) {
+                setHasGroupChatNews(true);
+
+                const chatModuleMounted = activeTab === "community" && isCommunityChatActive;
+                if (!chatModuleMounted) {
+                    const groupId = Number(evt.payload?.group_id ?? -1);
+                    persistResidentUnreadGroupIncrement(currentUserEmail, groupId);
+                }
             }
+
+            if (evt.event === "private_message_created" && !isViewingPrivateChats) {
+                setHasPrivateChatNews(true);
+            }
+
         });
 
         source.onopen = () => {
@@ -83,19 +189,14 @@ export function StudentView({ onLogout }: StudentViewProps) {
         return () => {
             source.close();
         };
-    }, [activeTab, currentUserEmail, isCommunityChatActive]);
+    }, [activeTab, communityChatSubTab, currentUserEmail, isCommunityChatActive]);
 
     useEffect(() => {
         if (activeTab !== "community") {
             setIsCommunityChatActive(false);
+            setCommunityChatSubTab(null);
         }
     }, [activeTab]);
-
-    useEffect(() => {
-        if (activeTab === "community" && isCommunityChatActive) {
-            setUnreadChatNotifications(0);
-        }
-    }, [activeTab, isCommunityChatActive]);
 
     useEffect(() => {
         const loadUnreadCount = async () => {
@@ -122,18 +223,18 @@ export function StudentView({ onLogout }: StudentViewProps) {
 
         loadUnreadCount();
 
-        const intervalId = window.setInterval(loadUnreadCount, 15000);
-        return () => window.clearInterval(intervalId);
+        const intervalId = globalThis.setInterval(loadUnreadCount, 15000);
+        return () => globalThis.clearInterval(intervalId);
     }, [activeTab]);
 
     useEffect(() => {
         if (activeTab === "incidences") {
-            window.localStorage.setItem(HOME_INCIDENCES_SEEN_AT_KEY, new Date().toISOString());
+            globalThis.localStorage.setItem(HOME_INCIDENCES_SEEN_AT_KEY, new Date().toISOString());
         }
 
         if (activeTab !== "announcements") {
             if (markAsViewedTimeoutRef.current) {
-                window.clearTimeout(markAsViewedTimeoutRef.current);
+                globalThis.clearTimeout(markAsViewedTimeoutRef.current);
                 markAsViewedTimeoutRef.current = null;
             }
             return;
@@ -149,14 +250,14 @@ export function StudentView({ onLogout }: StudentViewProps) {
             }
         };
 
-        markAsViewedTimeoutRef.current = window.setTimeout(() => {
+        markAsViewedTimeoutRef.current = globalThis.setTimeout(() => {
             markAsViewed();
             markAsViewedTimeoutRef.current = null;
         }, 5000);
 
         return () => {
             if (markAsViewedTimeoutRef.current) {
-                window.clearTimeout(markAsViewedTimeoutRef.current);
+                globalThis.clearTimeout(markAsViewedTimeoutRef.current);
                 markAsViewedTimeoutRef.current = null;
             }
         };
@@ -187,6 +288,14 @@ export function StudentView({ onLogout }: StudentViewProps) {
                         chatRealtimeTick={chatRealtimeTick}
                         chatRealtimeEvent={chatRealtimeEvent}
                         onChatTabActiveChange={setIsCommunityChatActive}
+                        onChatSubTabActiveChange={setCommunityChatSubTab}
+                        onChatUnreadStatusChange={({ hasGroupUnread, hasPrivateUnread }) => {
+                            setHasGroupChatNews(hasGroupUnread);
+                            setHasPrivateChatNews(hasPrivateUnread);
+                        }}
+                        hasChatNews={hasAnyChatNews}
+                        hasGroupChatNews={hasGroupChatNews}
+                        hasPrivateChatNews={hasPrivateChatNews}
                     />
                 );
                 break;
@@ -213,24 +322,23 @@ export function StudentView({ onLogout }: StudentViewProps) {
                 break;
         }
 
-        // 3. Devolvemos el contenido envuelto en el div con "p-4"
         return (
-            <div className="p-4 h-full">
+            <div className="h-full w-full">
                 {tabContent}
             </div>
         );
     };
 
     return (
-        <div className="min-h-screen flex flex-col w-full bg-background relative">
-            <div className="flex-1 overflow-y-auto pb-20">
+        <div className="min-h-screen w-full bg-background relative pb-20">
+            <div className="w-full">
                 {renderContent()}
             </div>
 
             <nav className="fixed bottom-0 left-0 right-0 bg-background border-t border-border px-6 py-2 pb-6 z-20 w-full shadow-[0_-4px_15px_rgba(0,0,0,0.02)]">
                 <div className="flex justify-between items-center">
                     <NavButton icon={<AlertCircle className="w-5 h-5" />} label="Incidencias" active={activeTab === "incidences"} onClick={() => setActiveTab("incidences")} />
-                    <NavButton icon={<User className="w-5 h-5" />} label="Social" active={activeTab === "community"} onClick={() => setActiveTab("community")} showIndicator={unreadChatNotifications > 0} />
+                    <NavButton icon={<User className="w-5 h-5" />} label="Social" active={activeTab === "community"} onClick={() => setActiveTab("community")} showIndicator={hasAnyChatNews} />
                     <div className="relative -top-5">
                         <motion.button whileTap={{ scale: 0.95 }} onClick={() => setActiveTab("home")} className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-colors ${activeTab === "home" ? "bg-secondary-brand text-white" : "bg-white text-slate-400 border border-slate-100"}`}>
                             <Home className="w-6 h-6" />

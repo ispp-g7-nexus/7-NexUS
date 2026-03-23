@@ -12,6 +12,7 @@ export interface CommonSpace {
   is_active: boolean;
   open_time: string;
   close_time: string;
+  reservation_interval_minutes: number;
 }
 
 export interface ReservationSpaceRef {
@@ -42,6 +43,7 @@ export interface SpaceReservation {
 export interface AvailableSlot {
   start_time: string;
   end_time: string;
+  status: "available" | "occupied" | "past";
 }
 
 export interface SpaceAvailability {
@@ -99,7 +101,6 @@ async function requestJson<T>(url: string, options?: RequestInit): Promise<T> {
 export function isApiError(error: unknown): error is ApiError {
   return error instanceof ApiError;
 }
-
 export async function listCommonSpaces(): Promise<CommonSpace[]> {
   return requestJson<CommonSpace[]>(`${SPACES_API_BASE}/`);
 }

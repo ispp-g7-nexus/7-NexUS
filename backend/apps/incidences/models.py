@@ -45,11 +45,10 @@ class Incidence(models.Model):
     )
 
 
-    # En tu modelo Incidence
     assigned_external_name = models.CharField(
     max_length=100, 
-    null=True, 
     blank=True, 
+    default="",
     verbose_name="Personal externo u otro"
 )
 
@@ -61,6 +60,7 @@ class Incidence(models.Model):
 
     admin_notes = models.TextField(blank=True, null=True)
     is_active = models.BooleanField(default=True)
+    img = models.TextField(blank=True, null=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

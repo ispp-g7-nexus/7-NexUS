@@ -6,6 +6,7 @@ export function CommunityEvent({
     image,
     tags,
     isJoined,
+    canJoin,
     isPast,
     onJoin,
     onLeave,
@@ -13,6 +14,7 @@ export function CommunityEvent({
 }: any) {
     const displayTag = tags ? tags.split(',')[0].trim() : null;
     const isAdmin = localStorage.getItem('userRole') === 'admin';
+    const canUserJoin = typeof canJoin === 'boolean' ? canJoin : true;
 
     return (
         <div
@@ -38,7 +40,7 @@ export function CommunityEvent({
                 <div className="mt-auto pt-2 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center">
                         <span className="text-sm font-medium text-muted-foreground bg-muted px-3 py-1 rounded-full">
-                            +{attendees} {isPast ? 'fueron' : 'van'}
+                            {attendees} {"asistentes"}
                         </span>
                     </div>
                     {isPast ? (
@@ -58,6 +60,12 @@ export function CommunityEvent({
                                 title="Desapuntarme"
                             >
                                 ✕
+                            </button>
+                        </div>
+                    ) : !canUserJoin ? (
+                        <div className="w-full sm:w-auto">
+                            <button className="w-full bg-muted text-muted-foreground px-4 py-2 rounded-lg font-medium text-sm cursor-default" disabled>
+                                Aforo completado
                             </button>
                         </div>
                     ) : (

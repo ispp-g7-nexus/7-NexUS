@@ -7,6 +7,7 @@ import { authService, resolvePortalRoleFromRoles, type PortalRole } from '../ser
 export function DashboardPage() {
     const navigate = useNavigate();
     const [role, setRole] = useState<PortalRole | null>(null);
+    const [adminUser, setAdminUser] = useState<{ name: string; email: string } | null>(null);
 
     useEffect(() => {
         const loadSession = async () => {
@@ -24,6 +25,12 @@ export function DashboardPage() {
                     navigate('/');
                     return;
                 }
+
+                const { first_name, last_name, username, email } = session.user;
+                const name = (first_name || last_name)
+                    ? `${first_name ?? ''} ${last_name ?? ''}`.trim()
+                    : (username ?? '');
+                setAdminUser({ name, email: email ?? '' });
 
                 localStorage.setItem('userRole', nextRole);
                 setRole(nextRole);
@@ -62,5 +69,5 @@ export function DashboardPage() {
 
     return role === 'student'
         ? <StudentView onLogout={handleLogout} />
-        : <AdminView onLogout={handleLogout} />;
+        : <AdminView onLogout={handleLogout} currentUser={adminUser} />;
 }
