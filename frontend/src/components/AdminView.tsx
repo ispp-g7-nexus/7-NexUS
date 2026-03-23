@@ -1,4 +1,4 @@
-import { AlertCircle, BarChart3, BedDouble, Bell, BookOpen, Briefcase, Calendar, Home, Layout, LayoutDashboard, LogOut, Menu, MessageSquare, Shield, User, UserCheck, Users, Utensils } from "lucide-react";
+import { AlertCircle, BedDouble, Bell, BookOpen, Briefcase, Calendar, Home, LayoutDashboard, LogOut, Menu, MessageSquare, Shield, User, UserCheck, Users, Utensils } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import logo from "../assets/logo.png";
 import { AdminChats } from "../pages/Chats/AdminChats";
@@ -13,8 +13,13 @@ import { AdminGuestPassListPage } from "../pages/Visitors/AdminGuestPassList";
 import { AdminGuestPassPolicyPage } from "../pages/Visitors/AdminGuestPassPolicy";
 import { AdminAnnouncements } from "../pages/announcements/AdminAnnouncements";
 import { authService } from "../services/auth";
+import { listBedrooms } from "../services/bedrooms";
 import { chatsService, type ChatRealtimeEvent } from "../services/chats";
 import { listAdminGuestPasses } from "../services/guestPasses";
+import { IncidenceService } from "../services/incidences";
+import { residentsService } from "../services/residents";
+import { roleService } from "../services/roles";
+import { staffService } from "../services/staff";
 import { AdminProfile } from "./AdminProfile";
 import { AdminReservations } from "./AdminReservations";
 import { StatCard } from "./statCard";
@@ -256,6 +261,41 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
         handleNavbarModuleAccess,
     } = useAdminNotifications();
 
+const [totalResidents, setTotalResidents] = useState<number>(0);
+const [totalRooms, setTotalRooms] = useState<number>(0);
+const [occupiedRoomsPercent, setOccupiedRoomsPercent] = useState<string>('—');
+const [totalStaff, setTotalStaff] = useState<number>(0);
+const [totalSpaces, setTotalSpaces] = useState<number>(0);
+const [pendingIncidences, setPendingIncidences] = useState<number>(0);
+const [totalRoles, setTotalRoles] = useState<number>(0);
+useEffect(() => {
+    residentsService.list().then((d) => setTotalResidents(d.length)).catch(() => setTotalResidents(0));
+}, []);
+
+useEffect(() => {
+    listBedrooms().then((d) => {
+        setTotalRooms(d.length);
+        const pct = d.length > 0 ? Math.round((d.filter(r => r.ocupantes_actuales > 0).length / d.length) * 100) : 0;
+        setOccupiedRoomsPercent(`${pct}%`);
+    }).catch(() => { setTotalRooms(0); setOccupiedRoomsPercent('—'); });
+}, []);
+
+useEffect(() => {
+    staffService.list().then((d) => setTotalStaff(d.length)).catch(() => setTotalStaff(0));
+}, []);
+useEffect(() => {
+    IncidenceService.getAll()
+        .then((data) => setPendingIncidences(data.filter(i => i.status === 'pending').length))
+        .catch(() => setPendingIncidences(0));
+}, []);
+
+useEffect(() => {
+    roleService.getRoles()
+        .then((data) => setTotalRoles(data.length))
+        .catch(() => setTotalRoles(0));
+}, []);
+
+
     const allNavItems = [
         { id: "dashboard", label: "Panel de Control", icon: <LayoutDashboard className="w-5 h-5" /> },
         { id: "profile", label: "Mi Perfil", icon: <User className="w-5 h-5" /> },
@@ -272,26 +312,19 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
     ];
 
     const metricsData = [
-        { label: 'Residentes',      value: '156', trend: '+8%',    icon: Users,      theme: 'blue'   as const, onClick: () => setActiveTab('students')     },
-        { label: 'Habitaciones',    value: '92%', trend: '+3%',    icon: BedDouble,  theme: 'green'  as const, onClick: () => setActiveTab('rooms')        },
-        { label: 'Incidencias',     value: '12',  trend: '-15%',   icon: AlertCircle,theme: 'red'    as const, onClick: () => setActiveTab('incidences')   },
-        { label: 'Visitantes',      value: '23',  trend: '+12%',   icon: UserCheck,  theme: 'purple' as const, onClick: () => setActiveTab('visitors')     },
-        { label: 'Espacios Comunes',value: '8',   trend: '+2',     icon: Layout,     theme: 'orange' as const, onClick: () => setActiveTab('reservations') },
-        {
-            label: 'Chats',
-            value: totalChats.toString(),
-            topBadgeText: unreadChatsCount > 0 ? '¡Tienes mensajes sin leer!' : undefined,
-            trend: '',
-            icon: MessageSquare,
-            theme: 'blue' as const,
-            onClick: () => setActiveTab('chats')
-        },
-        { label: 'Menú Comedor',    value: 'Ver', trend: 'Hoy',    icon: Utensils,   theme: 'blue'   as const, onClick: () => setActiveTab('kitchen')      },
-        { label: 'Estadísticas',    value: 'Ver', trend: '+5%',    icon: BarChart3,  theme: 'green'  as const, onClick: () => setActiveTab('analytics')    },
-        { label: 'Personal',        value: '42',  trend: 'Estable',icon: Briefcase,  theme: 'purple' as const, onClick: () => setActiveTab('staff')        },
-        { label: 'Visitantes', value: totalActiveGuests.toString(), trend: '+0%', icon: UserCheck, theme: 'blue' as const, onClick: () => setActiveTab('visitors') },
-    ];
-
+    { label: 'Residentes',         value: totalResidents,    icon: Users,         theme: 'blue'   as const, onClick: () => setActiveTab('students')      },
+    { label: 'Habitaciones',       value: occupiedRoomsPercent, icon: BedDouble,  theme: 'green'  as const, onClick: () => setActiveTab('rooms')         },
+    { label: 'Personal',           value: totalStaff,        icon: Briefcase,     theme: 'purple' as const, onClick: () => setActiveTab('staff')         },
+    { label: 'Visitantes',         value: totalActiveGuests, icon: UserCheck,     theme: 'purple' as const, onClick: () => setActiveTab('visitors')      },
+    { label: 'Incidencias',        value: pendingIncidences, icon: AlertCircle,   theme: 'red'    as const, onClick: () => setActiveTab('incidences')    },
+    { label: 'Eventos',            value: 'Ver',             icon: Calendar,      theme: 'orange' as const, onClick: () => setActiveTab('events')        },
+    { label: 'Roles',              value: totalRoles,        icon: Shield,        theme: 'purple' as const, onClick: () => setActiveTab('roles')         },
+    { label: 'Chats',              value: totalChats,        icon: MessageSquare, theme: 'blue'   as const,
+      topBadgeText: unreadChatsCount > 0 ? '¡Tienes mensajes sin leer!' : undefined,
+      onClick: () => setActiveTab('chats') },
+    { label: 'Menú Comedor',       value: 'Ver',             icon: Utensils,      theme: 'blue'   as const, onClick: () => setActiveTab('kitchen')       },
+    { label: 'Recursos & Reservas',value: 'Ver',             icon: BookOpen,      theme: 'green'  as const, onClick: () => setActiveTab('reservations')  },
+];
     const today = new Date().toLocaleDateString('es-ES', {
         weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
     });
