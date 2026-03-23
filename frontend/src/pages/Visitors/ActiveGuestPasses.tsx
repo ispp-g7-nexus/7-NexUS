@@ -124,7 +124,7 @@ function LoadingState() {
   );
 }
 
-function EmptyState({ message }: { message: string }) {
+function EmptyState({ message }: { readonly message: string }) {
   return (
     <Card className="border-border/80 shadow-sm">
       <CardContent className="flex flex-col items-center justify-center gap-3 py-14 text-center text-gray-500">
@@ -136,8 +136,8 @@ function EmptyState({ message }: { message: string }) {
 }
 
 interface ErrorStateProps {
-  message: string;
-  onRetry: () => void;
+  readonly message: string;
+  readonly onRetry: () => void;
 }
 
 function ErrorState({ message, onRetry }: ErrorStateProps) {
@@ -174,9 +174,9 @@ function GuestPassCard({
   statusLabel,
   badgeClassName,
 }: {
-  pass: GuestPass;
-  statusLabel: string;
-  badgeClassName: string;
+  readonly pass: GuestPass;
+  readonly statusLabel: string;
+  readonly badgeClassName: string;
 }) {
   return (
     <article className="rounded-xl border border-border/80 bg-white p-4 shadow-sm">
@@ -208,14 +208,14 @@ function GuestPassCard({
 }
 
 interface PassesListProps {
-  loading: boolean;
-  error: string | null;
-  passes: GuestPass[];
-  emptyMessage: string;
-  statusLabel: string;
-  badgeClassName: string;
-  isHistory?: boolean;
-  onRetry?: () => void;
+  readonly loading: boolean;
+  readonly error: string | null;
+  readonly passes: GuestPass[];
+  readonly emptyMessage: string;
+  readonly statusLabel: string;
+  readonly badgeClassName: string;
+  readonly isHistory?: boolean;
+  readonly onRetry?: () => void;
 }
 
 function PassesList({
@@ -259,18 +259,18 @@ function PassesList({
 }
 
 interface GuestPassSectionProps {
-  title: string;
-  description?: string;
-  icon?: React.ReactNode;
-  passes: GuestPass[];
-  loading: boolean;
-  error: string | null;
-  emptyMessage: string;
-  statusLabel: string;
-  badgeClassName: string;
-  isHistory?: boolean;
-  onRetry: () => void;
-  onRefresh?: () => void;
+  readonly title: string;
+  readonly description?: string;
+  readonly icon?: React.ReactNode;
+  readonly passes: GuestPass[];
+  readonly loading: boolean;
+  readonly error: string | null;
+  readonly emptyMessage: string;
+  readonly statusLabel: string;
+  readonly badgeClassName: string;
+  readonly isHistory?: boolean;
+  readonly onRetry: () => void;
+  readonly onRefresh?: () => void;
 }
 
 function GuestPassSection({
@@ -326,12 +326,12 @@ function CreateGuestPassForm({
   onFieldChange,
   onSubmit,
 }: {
-  policy: GuestPassPolicy | null;
-  form: GuestPassFormState;
-  formErrors: GuestPassFormErrors;
-  isSubmitting: boolean;
-  onFieldChange: <K extends keyof GuestPassFormState>(field: K, value: GuestPassFormState[K]) => void;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+  readonly policy: GuestPassPolicy | null;
+  readonly form: GuestPassFormState;
+  readonly formErrors: GuestPassFormErrors;
+  readonly isSubmitting: boolean;
+  readonly onFieldChange: <K extends keyof GuestPassFormState>(field: K, value: GuestPassFormState[K]) => void;
+  readonly onSubmit: (event: FormEvent<HTMLFormElement>) => Promise<void>;
 }) {
   const maxDuration = policy?.max_duration_hours ?? DEFAULT_MAX_DURATION_HOURS;
   const maxConcurrent = policy?.max_concurrent_passes ?? DEFAULT_MAX_CONCURRENT_PASSES;
@@ -580,8 +580,8 @@ export function ActiveGuestPassesPage() {
           emptyMessage="No tienes pases de invitados activos en este momento."
           statusLabel="Activo"
           badgeClassName="bg-primary/10 text-primary hover:bg-primary/10"
-          onRetry={() => void loadPasses()}
-          onRefresh={() => void loadPasses()}
+          onRetry={() =>  loadPasses()}
+          onRefresh={() =>  loadPasses()}
         />
 
         <GuestPassSection
@@ -593,7 +593,7 @@ export function ActiveGuestPassesPage() {
           emptyMessage="No tienes pases de invitados programados próximamente."
           statusLabel="Próximo"
           badgeClassName="bg-accent/20 text-accent-foreground hover:bg-accent/20"
-          onRetry={() => void loadPasses()}
+          onRetry={() =>  loadPasses()}
         />
 
         <GuestPassSection
@@ -607,7 +607,7 @@ export function ActiveGuestPassesPage() {
           statusLabel=""
           badgeClassName=""
           isHistory={true}
-          onRetry={() => void loadPasses()}
+          onRetry={() =>  loadPasses()}
         />
       </section>
     </div>
