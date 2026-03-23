@@ -63,25 +63,41 @@ export function ReservationFormSheet({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  async function fetchAvailability() {
+    if (!space) return;
+    setLoadingAvailability(true);
+    setError(null);
+    setSelectedSlot(null);
+    setExpandedHour(null);
+    try {
+      const data = await getSpaceAvailability(space.id, localDate);
+      setAvailability(data);
+    } catch (err) {
+      try {
+        if (err instanceof Error) {
+          console.error(
+            "Failed to load space availability",
+            {
+              spaceId: space.id,
+              date: localDate,
+              message: err.message,
+              stack: err.stack,
+            }
+          );
+        } else {
+          console.error("Failed to load space availability", { spaceId: space.id, date: localDate, error: JSON.stringify(err) });
+        }
+      } catch (logErr) {
+        console.error("Failed to log availability error", logErr);
+      }
+      setError("No se pudo cargar la disponibilidad para esta fecha.");
+    } finally {
+      setLoadingAvailability(false);
+    }
+  }
 
   useEffect(() => {
     if (!open || !space) return;
-
-    const fetchAvailability = async () => {
-      setLoadingAvailability(true);
-      setError(null);
-      setSelectedSlot(null);
-      setExpandedHour(null);
-      try {
-        const data = await getSpaceAvailability(space.id, localDate);
-        setAvailability(data);
-      } catch (err) {
-        setError("No se pudo cargar la disponibilidad para esta fecha.");
-      } finally {
-        setLoadingAvailability(false);
-      }
-    };
-
     void fetchAvailability();
   }, [open, space, localDate]);
 
@@ -110,11 +126,54 @@ export function ReservationFormSheet({
       toast.success("Reserva confirmada con éxito.");
       onSuccess();
     } catch (err) {
-      setError(isApiError(err) ? err.message : "Error al crear la reserva.");
+      if (isApiError(err)) {
+        handleApiError(err);
+      } else {
+        handleUnknownError(err);
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  function handleApiError(apiErr: any) {
+    const status = apiErr.status;
+    if (status === 400) {
+      const backendMsg = apiErr.message && String(apiErr.message).trim();
+      const userMessage = backendMsg || "Esa franja ya no está disponible. Se ha actualizado la disponibilidad.";
+      setError(userMessage);
+      toast.error(userMessage);
+      void fetchAvailability();
+      setSelectedSlot(null);
+      return;
+    }
+
+    if (status >= 500) {
+      const userMessage = "Error del servidor. Inténtalo de nuevo más tarde.";
+      setError(userMessage);
+      toast.error(userMessage);
+      return;
+    }
+
+    if (status === 401 || status === 403) {
+      const userMessage = apiErr.message || "No tienes permisos para realizar esta acción.";
+      setError(userMessage);
+      toast.error(userMessage);
+      return;
+    }
+
+    const userMessage = apiErr.message || "Error al crear la reserva.";
+    setError(userMessage);
+    toast.error(userMessage);
+  }
+
+  function handleUnknownError(err: unknown) {
+    const userMessage = (err as Error)?.message?.includes("Failed to fetch")
+      ? "Error de conexión. Revisa tu red e inténtalo de nuevo."
+      : "Error al crear la reserva.";
+    setError(userMessage);
+    toast.error(userMessage);
+  }
 
   const slots: AvailableSlot[] = availability?.available_slots || [];
   const needsGrouping = space && space.reservation_interval_minutes < 30;
@@ -246,7 +305,7 @@ export function ReservationFormSheet({
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={isSubmitting || !selectedSlot} className="bg-green-700 hover:bg-green-700/90 text-white">
+                <Button type="submit" disabled={isSubmitting || !selectedSlot || loadingAvailability} className="bg-green-700 hover:bg-green-700/90 text-white">
                   {isSubmitting ? "Confirmando..." : "Confirmar reserva"}
                 </Button>
               </div>
