@@ -12,6 +12,7 @@ export interface PackageAdminItem {
   building: string;
   carrier: string;
   tracking_number: string;
+  delivery_code: string;
   notes: string;
   status: PackageStatus;
   received_at: string;
@@ -120,6 +121,7 @@ const mapToSimplePackage = (pkg: PackageAdminItem): SimplePackage => ({
   sender: pkg.carrier || pkg.resident_name || "Remitente desconocido",
   resident_name: pkg.resident_name,
   tracking: pkg.tracking_number || "S/N",
+  delivery_code: pkg.delivery_code,
   date: pkg.received_at ? new Date(pkg.received_at).toLocaleDateString() : undefined,
   status: pkg.status,
   location: pkg.building,

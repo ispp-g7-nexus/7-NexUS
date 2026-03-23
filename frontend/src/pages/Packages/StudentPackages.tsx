@@ -11,6 +11,7 @@ export type SimplePackage = {
   sender?: string;
   resident_name?: string;
   tracking?: string;
+  delivery_code?: string;
   date?: string;
   status?: string;
   location?: string;
@@ -42,32 +43,6 @@ export function StudentPackages({ packages = [], onShowQr, qrData }: StudentPack
 
       <main className="flex-1 overflow-y-auto p-4 space-y-6 pb-20">
 
-      <Dialog>
-        <DialogTrigger asChild>
-          <Button className="w-full bg-foreground text-background shadow-lg" onClick={onShowQr}>
-            <QrCode className="w-5 h-5 mr-2" /> Mostrar código de recogida
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="sm:max-w-xs text-center">
-          <DialogHeader>
-            <DialogTitle className="text-center">Tu Código de Recogida</DialogTitle>
-            <DialogDescription className="text-center">Muestra este código en recepción</DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-center py-6">
-            <div className="bg-gray-50 p-6 rounded-xl border-2 border-dashed border-gray-200 w-full flex items-center justify-center min-h-[120px]">
-              {qrData?.token ? (
-                <span className="text font-mono font-semibold text-gray-900 break-all">
-                  {qrData.token}
-                </span>
-              ) : (
-                <span className="text-sm text-gray-500">Generando código...</span>
-              )}
-            </div>
-          </div>
-          {qrData?.resident_name && <p className="text-sm font-medium">{qrData.resident_name}</p>}
-        </DialogContent>
-      </Dialog>
-
       <Tabs defaultValue="pending" className="w-full">
         <TabsList className="w-full bg-white p-1 rounded-xl shadow-sm mb-4">
           <TabsTrigger value="pending" className="flex-1 rounded-lg data-[state=active]:bg-secondary data-[state=active]:text-foreground">Pendientes</TabsTrigger>
@@ -77,7 +52,7 @@ export function StudentPackages({ packages = [], onShowQr, qrData }: StudentPack
         <TabsContent value="pending" className="space-y-3">
           {pendingPackages.length > 0 ? (
             pendingPackages.map((p) => (
-              <DeliveryCard key={p.id} sender={p.sender} tracking={p.tracking} date={p.date} status={p.status} location={p.location} is_unread={p.is_unread} />
+              <DeliveryCard key={p.id} sender={p.sender} tracking={p.tracking} delivery_code={p.delivery_code} date={p.date} status={p.status} location={p.location} is_unread={p.is_unread} />
             ))
           ) : (
             <div className="p-6 bg-white rounded-xl text-center text-sm text-gray-500">No tienes paquetes pendientes.</div>
@@ -87,7 +62,7 @@ export function StudentPackages({ packages = [], onShowQr, qrData }: StudentPack
         <TabsContent value="history" className="space-y-3">
           {historyPackages.length > 0 ? (
             historyPackages.map((p) => (
-              <DeliveryCard key={p.id} sender={p.sender} tracking={p.tracking} date={p.date} status={p.status} location={undefined} is_unread={p.is_unread} />
+              <DeliveryCard key={p.id} sender={p.sender} tracking={p.tracking} delivery_code={p.delivery_code} date={p.date} status={p.status} location={undefined} is_unread={p.is_unread} />
             ))
           ) : (
             <div className="p-6 bg-white rounded-xl text-center text-sm text-gray-500">Aún no hay historial de paquetes.</div>
@@ -99,35 +74,61 @@ export function StudentPackages({ packages = [], onShowQr, qrData }: StudentPack
   );
 }
 
-function DeliveryCard({ sender, tracking, date, status, location, is_unread }) {
+function DeliveryCard({ sender, tracking, delivery_code, date, status, location, is_unread }) {
   const isReady = status && status !== 'DELIVERED';
 
   return (
     <Card className="border-none shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-      <CardContent className="p-0 flex">
-        <div className={`w-1.5 ${isReady ? "bg-chart-2" : "bg-border"}`} />
-        <div className="p-4 flex-1">
-          <div className="flex justify-between items-start mb-1">
-            <div className="flex items-center gap-2">
-              <h3 className="font-bold text-card-foreground">{sender}</h3>
-              {is_unread && (
-                <Badge className="bg-red-600 text-white text-xs py-0.5 px-2">Nuevo</Badge>
+      <CardContent className="p-0 flex flex-col">
+        <div className="flex">
+          <div className={`w-1.5 ${isReady ? "bg-chart-2" : "bg-border"}`} />
+          <div className="p-4 flex-1">
+            <div className="flex justify-between items-start mb-1">
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-card-foreground">{sender}</h3>
+                {is_unread && (
+                  <Badge className="bg-red-600 text-white text-xs py-0.5 px-2">Nuevo</Badge>
+                )}
+              </div>
+              {isReady ? (
+                <Badge className="bg-accent/10 text-accent hover:bg-accent/10 border-none shadow-none">Listo para recoger</Badge>
+              ) : (
+                <Badge variant="outline" className="text-gray-500 border-gray-200">Entregado</Badge>
               )}
             </div>
-            {isReady ? (
-              <Badge className="bg-accent/10 text-accent hover:bg-accent/10 border-none shadow-none">Listo para recoger</Badge>
-            ) : (
-              <Badge variant="outline" className="text-gray-500 border-gray-200">Entregado</Badge>
-            )}
-          </div>
 
-          <p className="text-xs text-gray-500 mb-3 font-mono">#{tracking}</p>
+            <p className="text-xs text-gray-500 mb-3 font-mono">#{tracking}</p>
 
-          <div className="flex items-center justify-between text-xs text-gray-500">
-            <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {date}</span>
-            {location && (<span className="flex items-center gap-1 text-chart-2 font-medium"><MapPin className="w-3.5 h-3.5" /> {location}</span>)}
+            <div className="flex items-center justify-between text-xs text-gray-500">
+              <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {date}</span>
+              {location && (<span className="flex items-center gap-1 text-chart-2 font-medium"><MapPin className="w-3.5 h-3.5" /> {location}</span>)}
+            </div>
           </div>
         </div>
+        {isReady && delivery_code && (
+          <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 flex justify-end">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button size="sm" className="bg-[#509550] text-white hover:bg-[#3d7a3d]">
+                  Ver codigo de recogida
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Codigo de recogida</DialogTitle>
+                  <DialogDescription>
+                    Muestra este codigo al personal de recepcion para retirar el paquete correspondiente a {sender}.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="flex items-center justify-center p-8">
+                  <div className="bg-gray-100 px-8 py-5 rounded-2xl border-2 border-dashed border-gray-300">
+                    <span className="text-5xl font-mono font-bold tracking-widest text-gray-800">{delivery_code}</span>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

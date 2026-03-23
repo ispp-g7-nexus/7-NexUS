@@ -20,6 +20,7 @@ class PackageReadSerializer(serializers.ModelSerializer):
             "building",
             "carrier",
             "tracking_number",
+            "delivery_code",
             "notes",
             "status",
             "received_at",

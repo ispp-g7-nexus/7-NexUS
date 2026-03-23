@@ -541,13 +541,11 @@ function DeliveryDialog({
 }: {
   packageItem: PackageAdminItem | null;
   onClose: () => void;
-  onConfirm: (id: number, qrToken?: string) => Promise<boolean>;
+  onConfirm: (id: number) => Promise<boolean>;
 }) {
-  const [qrToken, setQrToken] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    setQrToken("");
     setSubmitting(false);
   }, [packageItem]);
 
@@ -557,7 +555,7 @@ function DeliveryDialog({
     }
 
     setSubmitting(true);
-    const ok = await onConfirm(packageItem.id, qrToken.trim() || undefined);
+    const ok = await onConfirm(packageItem.id);
     setSubmitting(false);
 
     if (ok) {
@@ -571,8 +569,7 @@ function DeliveryDialog({
         <DialogHeader>
           <DialogTitle>Registrar entrega</DialogTitle>
           <DialogDescription>
-            Puedes pegar el codigo del residente para validar la entrega con QR o
-            dejarlo vacio para marcar el paquete como entregado manualmente.
+            Verifica que el codigo coincida con el provisto por el residente.
           </DialogDescription>
         </DialogHeader>
 
@@ -586,14 +583,16 @@ function DeliveryDialog({
               </p>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="delivery-qr">Codigo de entrega del residente</Label>
-              <Input
-                id="delivery-qr"
-                value={qrToken}
-                onChange={(event) => setQrToken(event.target.value)}
-                placeholder="Pega aqui el token mostrado por el residente"
-              />
+            <div className="space-y-4 text-center py-4">
+              <p className="text-sm font-medium text-gray-700">Codigo de recogida esperado:</p>
+              <div className="flex justify-center">
+                <div className="bg-gray-100 px-6 py-3 rounded-xl border-2 border-dashed border-gray-300">
+                  <span className="text-4xl font-mono font-bold tracking-widest text-gray-800">
+                    {packageItem.delivery_code || "N/A"}
+                  </span>
+                </div>
+              </div>
+              <p className="text-base text-gray-900 mt-4">¿Es correcto el codigo?</p>
             </div>
           </div>
         )}
@@ -608,11 +607,7 @@ function DeliveryDialog({
             onClick={() => void handleSubmit()}
           >
             <CheckCircle2 className="h-4 w-4" />
-            {submitting
-              ? "Registrando..."
-              : qrToken.trim()
-                ? "Entregar con QR"
-                : "Marcar entregado"}
+            {submitting ? "Registrando..." : "Sí, entregar"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1320,11 +1315,9 @@ export function AdminPackages() {
   }, []);
 
   const handleDeliverPackage = useCallback(
-    async (id: number, qrToken?: string): Promise<boolean> => {
+    async (id: number): Promise<boolean> => {
       try {
-        const updated = qrToken
-          ? await packagesService.deliverByQr(id, qrToken)
-          : await packagesService.update(id, { status: "DELIVERED" });
+        const updated = await packagesService.update(id, { status: "DELIVERED" });
 
         replacePackage(updated);
         toast.success("Entrega registrada correctamente.");
