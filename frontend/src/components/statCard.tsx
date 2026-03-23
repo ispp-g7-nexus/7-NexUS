@@ -120,9 +120,10 @@ export const StatCard = ({ label, value, valueBadge, topBadgeText, trend, icon: 
       {/* Valor + badge secundario */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
         <div style={{
-          fontFamily: "'DM Serif Display', serif",
+          fontFamily: 'inherit',
           fontSize: '38px', lineHeight: 1,
           color: '#1c1a17', letterSpacing: '-1px',
+          fontWeight: 500,
         }}>
           {value}
         </div>
@@ -151,7 +152,7 @@ export const StatCard = ({ label, value, valueBadge, topBadgeText, trend, icon: 
         fontSize: '11px', fontWeight: 600,
         color: '#9c9690', textTransform: 'uppercase',
         letterSpacing: '0.8px', marginTop: '5px',
-        fontFamily: "'DM Sans', sans-serif",
+        fontFamily: 'inherit',
       }}>
         {label}
       </p>

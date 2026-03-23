@@ -28,15 +28,19 @@ export function StudentPackages({ packages = [], onShowQr, qrData }: StudentPack
   const pendingPackages = packages.filter((p) => p.status !== "DELIVERED");
   const historyPackages = packages.filter((p) => p.status === "DELIVERED");
 
+
   return (
-    <div className="p-4 space-y-6 min-h-full bg-background pb-20">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">Paquetería</h1>
+    <div className="flex flex-col h-screen bg-[#F6F7F9] relative">
+      {/* Header */}
+      <header className="bg-[#1B4D1C] p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg">
+        <h1 className="text-white text-2xl font-bold">Paquetería</h1>
         <div className="w-1/3 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Buscar por remitente o tracking..." className="pl-10 bg-card border-none shadow-sm h-10 rounded-xl" />
         </div>
-      </div>
+      </header>
+
+      <main className="flex-1 overflow-y-auto p-4 space-y-6 pb-20">
 
       <Dialog>
         <DialogTrigger asChild>
@@ -90,6 +94,7 @@ export function StudentPackages({ packages = [], onShowQr, qrData }: StudentPack
           )}
         </TabsContent>
       </Tabs>
+      </main>
     </div>
   );
 }
