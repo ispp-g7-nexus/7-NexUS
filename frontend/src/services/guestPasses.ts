@@ -145,6 +145,28 @@ export async function listMyUpcomingGuestPasses(): Promise<GuestPass[]> {
   return (await response.json()) as GuestPass[];
 }
 
+export async function cancelMyGuestPass(guestPassId: number): Promise<GuestPass> {
+  const response = await fetchWithAuth(`${GUEST_PASSES_API_BASE}/me/${guestPassId}/cancel/`, {
+    method: "POST",
+  });
+  if (!response.ok) {
+    throw await parseError(response, {
+      fallbackMessage: "No se pudo cancelar el pase de invitado.",
+      forbiddenMessage: "No tienes permisos para cancelar este pase de invitado.",
+    });
+  }
+
+  const payload = (await response.json()) as { guest_pass?: GuestPass };
+  if (!payload.guest_pass) {
+    throw new GuestPassApiError(
+      "La respuesta de cancelación del pase no es válida.",
+      response.status
+    );
+  }
+
+  return payload.guest_pass;
+}
+
 export async function createMyGuestPass(payload: CreateGuestPassPayload): Promise<GuestPass> {
   const response = await fetchWithAuth(`${GUEST_PASSES_API_BASE}/me/`, {
     method: "POST",
