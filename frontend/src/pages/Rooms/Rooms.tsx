@@ -1,19 +1,19 @@
-import React, { useEffect, useState, useMemo } from "react";
+import { motion } from "framer-motion";
+import { Bed, Building2, Edit2, Grid3x3, List, Plus, Search as SearchIcon, Trash2, User, Users } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import roomSvg from "../../assets/room.svg";
+import "../../index.css";
 import {
-  listBedrooms,
   createBedroom,
-  updateBedroom,
   deleteBedroom,
+  listBedrooms,
+  updateBedroom,
   type Bedroom,
   type BedroomResident,
 } from "../../services/bedrooms";
-import "../../index.css";
-import roomSvg from "../../assets/room.svg";
-import { Plus, Edit2, Trash2, Search as SearchIcon, Bed, Building2, Grid3x3, List, Users, User } from "lucide-react";
-import { motion } from "framer-motion";
-import { toast } from "sonner";
 
-import { Input } from "../../components/ui/input";
+import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import {
   Card,
@@ -21,7 +21,7 @@ import {
   CardHeader,
   CardTitle,
 } from "../../components/ui/card";
-import { Badge } from "../../components/ui/badge";
+import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 
 import {
@@ -75,7 +75,7 @@ export function Rooms() {
   const [rooms, setRooms] = useState<Bedroom[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("todos");
+  const [filter] = useState("todos");
   const [viewLayout, setViewLayout] = useState<"list" | "map">("list");
   const [selectedRoom, setSelectedRoom] = useState<Bedroom | null>(null);
 

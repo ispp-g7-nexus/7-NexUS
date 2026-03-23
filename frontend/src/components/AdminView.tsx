@@ -262,10 +262,8 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
     } = useAdminNotifications();
 
 const [totalResidents, setTotalResidents] = useState<number>(0);
-const [totalRooms, setTotalRooms] = useState<number>(0);
 const [occupiedRoomsPercent, setOccupiedRoomsPercent] = useState<string>('—');
 const [totalStaff, setTotalStaff] = useState<number>(0);
-const [totalSpaces, setTotalSpaces] = useState<number>(0);
 const [pendingIncidences, setPendingIncidences] = useState<number>(0);
 const [totalRoles, setTotalRoles] = useState<number>(0);
 useEffect(() => {
@@ -274,10 +272,9 @@ useEffect(() => {
 
 useEffect(() => {
     listBedrooms().then((d) => {
-        setTotalRooms(d.length);
         const pct = d.length > 0 ? Math.round((d.filter(r => r.ocupantes_actuales > 0).length / d.length) * 100) : 0;
         setOccupiedRoomsPercent(`${pct}%`);
-    }).catch(() => { setTotalRooms(0); setOccupiedRoomsPercent('—'); });
+    }).catch(() => setOccupiedRoomsPercent('—'));
 }, []);
 
 useEffect(() => {
