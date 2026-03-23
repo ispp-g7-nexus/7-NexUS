@@ -33,6 +33,7 @@ from apps.residences.models import Residence
 UserModel = get_user_model()
 
 PASSWORD = "password123"  # NOSONAR
+PASSWORD2 = "SecurePass123!"  # NOSONAR
 
 
 class CommonUtilsTests(FastTenantTestCase):
@@ -226,10 +227,10 @@ class CommonViewsTests(FastTenantTestCase):
         super().setUp()
         with tenant_context(self.tenant):
             self.user = UserModel.objects.create_user(
-                username="authuser", email="auth@test.com", password="SecurePass123!"
+                username="authuser", email="auth@test.com", password=PASSWORD2
             )
             self.admin_user = UserModel.objects.create_user(
-                username="adminuser", email="admin@test.com", password="SecurePass123!"
+                username="adminuser", email="admin@test.com", password=PASSWORD2
             )
             self.residence = Residence.objects.create(
                 name="Test Res", slug="test-res", code="TR"
@@ -274,7 +275,7 @@ class CommonViewsTests(FastTenantTestCase):
         url = reverse("auth-login")
         data = {
             "email": "auth@test.com",
-            "password": "SecurePass123!",
+            "password": PASSWORD2,
             "portal": "student",
         }
         response = self.anon_client.post(
@@ -298,7 +299,7 @@ class CommonViewsTests(FastTenantTestCase):
         url = reverse("auth-login")
         data = {
             "email": "auth@test.com",
-            "password": "SecurePass123!",
+            "password": PASSWORD2,
             "portal": "admin",
         }
         response = self.anon_client.post(
