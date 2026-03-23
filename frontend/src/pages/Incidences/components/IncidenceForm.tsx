@@ -9,7 +9,6 @@ import { Checkbox } from "../../../components/ui/checkbox"
 import { Select, SelectContent, SelectTrigger, SelectItem, SelectValue } from "../../../components/ui/select2"
 import { DialogDescription } from "../../../components/ui/dialog"
 import { IncidenceService } from "../../../services/incidences"
-import { useStaff } from "../../Staff/hooks/useStaff"
 import { BaseIncidence } from "./IncidenceShared"
 
 interface IncidenceFormProps {
@@ -20,15 +19,9 @@ interface IncidenceFormProps {
 }
 
 export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData }: IncidenceFormProps) {
-  const { staff = [], loading: loadingStaff } = useStaff();
   const [loading, setLoading] = useState(false)
   const [locationType, setLocationType] = useState<string>(initialData?.location_type || "")
   const [urgent, setUrgent] = useState<boolean>(initialData?.priority === 'high')
-  const [staffId, setStaffId] = useState(() => {
-    if (initialData?.assigned_staff) return String(initialData.assigned_staff);
-    if (initialData?.assigned_external_name) return "external_placeholder";
-    return "";
-  }); const [externalName, setExternalName] = useState(initialData?.assigned_external_name || "")
   const [base64Image, setBase64Image] = useState<string | null>(initialData?.img || null)
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -40,10 +33,13 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
       title: formData.get("title") as string,
       description: formData.get("description") as string,
       location_type: locationType,
+      priority: urgent ? "high" : "low" 
     };
 
     if (locationType === 'habitacion') {
       payload.room_number = initialData?.room_number || "Pendiente";
+    } else {
+      payload.room_number = "";
     }
 
     if (base64Image && base64Image.startsWith("data:image")) {
@@ -52,28 +48,14 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
       payload.img = "";
     }
 
-    if (isAdmin) {
-      payload.priority = urgent ? "high" : "low";
-      if (staffId === "external_placeholder") {
-        payload.assigned_staff = null;
-        payload.assigned_external_name = externalName;
-      } else if (staffId && staffId !== "none" && staffId !== "") {
-        payload.assigned_staff = Number(staffId);
-        payload.assigned_external_name = "";
-      } else {
-        payload.assigned_staff = null;
-      }
-    } else if (!initialData) {
-      payload.priority = urgent ? "high" : "low";
-    }
-
     try {
       if (initialData) {
         await IncidenceService.update(initialData.id, payload);
       } else {
         await IncidenceService.create(payload);
       }
-      onSuccess(); onClose();
+      onSuccess(); 
+      onClose();
     } catch (error: any) {
       alert("Fallo: " + error.message);
     } finally {
@@ -91,11 +73,13 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
       </div>
 
       <div className={UI_CLASSES.body}>
+        {/* Campo Título */}
         <div className="space-y-1.5 text-left">
           <Label htmlFor="title" className={UI_CLASSES.label}>¿Qué sucede?</Label>
           <Input id="title" name="title" defaultValue={initialData?.title} required className={UI_CLASSES.input} />
         </div>
 
+        {/* Campo Área */}
         <div className="space-y-1.5 text-left">
           <Label className={UI_CLASSES.label}>Área</Label>
           <Select onValueChange={setLocationType} defaultValue={locationType} required>
@@ -111,41 +95,13 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
           </Select>
         </div>
 
+        {/* Campo Descripción */}
         <div className="space-y-1.5 text-left">
           <Label className={UI_CLASSES.label}>Descripción detallada</Label>
           <textarea id="description" name="description" defaultValue={initialData?.description} required className={UI_CLASSES.textarea} />
         </div>
 
-        {isAdmin && (
-          <div className="space-y-4 pt-2 border-t border-gray-100 text-left">
-            <Label className={UI_CLASSES.label}>Asignar Responsable</Label>
-            <Select onValueChange={setStaffId} defaultValue={staffId}>
-              <SelectTrigger className={UI_CLASSES.selectTrigger}>
-                <SelectValue placeholder={loadingStaff ? "Cargando..." : "Sin asignar"} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Dejar sin asignar</SelectItem>
-                {staff.map((m: any) => <SelectItem key={m.id} value={String(m.id)}>{m.full_name}</SelectItem>)}
-                <SelectItem value="external" className="text-emerald-600 font-bold">+ Externo</SelectItem>
-              </SelectContent>
-            </Select>
-
-ç            {staffId === "external" && (
-              <div className="animate-in fade-in slide-in-from-top-1 space-y-1.5">
-                <Label htmlFor="external-name" className={UI_CLASSES.label}>Nombre Empresa/Técnico</Label>
-                <Input
-                  id="external-name"
-                  value={externalName}
-                  onChange={(e) => setExternalName(e.target.value)}
-                  placeholder="Ej: Cerrajero García"
-                  className={UI_CLASSES.input}
-                  required
-                />
-              </div>
-            )}
-          </div>
-        )}
-
+        {/* Campo Foto */}
         <div className="space-y-2 text-left">
           <Label className={UI_CLASSES.label}>Foto (Opcional)</Label>
           {base64Image ? (
@@ -165,6 +121,7 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
           )}
         </div>
 
+        {/* Campo Urgencia */}
         <div className={UI_CLASSES.urgentBox}>
           <Checkbox id="urgent" checked={urgent} onCheckedChange={(val) => setUrgent(Boolean(val))} />
           <Label htmlFor="urgent" className="text-orange-800 text-sm font-bold flex items-center gap-2 cursor-pointer">
@@ -194,7 +151,6 @@ const UI_CLASSES = {
   input: "bg-gray-50 border-none rounded-2xl h-14 px-4 focus-visible:ring-green-400 font-normal",
   selectTrigger: "bg-gray-50 border-none rounded-2xl h-14 px-4 text-gray-500 focus:ring-green-400 font-normal",
   textarea: "w-full bg-gray-50 border-none rounded-2xl min-h-[100px] p-4 focus-visible:ring-green-400 resize-none text-sm font-normal",
-  infoBox: "flex items-center gap-2 mt-2 ml-1 text-green-900 bg-green-50 p-3 rounded-xl border border-green-100",
   urgentBox: "flex items-center space-x-3 p-4 bg-orange-50/50 rounded-2xl border border-orange-100",
   imageUploadPlaceholder: "flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
 };

@@ -239,7 +239,11 @@ export const AdminIncidences = () => {
                     <div className="text-left flex-1 flex flex-col justify-between">
                       <div>
                         <h2 className={UI_CLASSES.cardTitle}>{inc.title}</h2>
-                        <div className={UI_CLASSES.cardLocation}><MapPin size={14} /> {LOCATION_LABELS[inc.location_type]} {inc.room_number || ''}</div>
+                        <div className={UI_CLASSES.cardLocation}>
+                          <MapPin size={14} />
+                          {LOCATION_LABELS[inc.location_type] || inc.location_type}
+                          {inc.location_type === 'habitacion' && inc.room_number ? ` • Hab. ${inc.room_number}` : ''}
+                        </div>
                         <div className="flex flex-wrap gap-2 mt-4">
                           <span className={`${cfg.admin.bg} ${cfg.admin.text} ${UI_CLASSES.statusBadge}`}>{cfg.label}</span>
                           {(inc.assigned_staff_name || inc.assigned_external_name) && (

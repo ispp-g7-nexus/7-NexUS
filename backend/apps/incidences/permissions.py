@@ -7,19 +7,17 @@ class IsAdminOrReadOnly(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         user = request.user
         user_roles = [r.lower() for r in user.memberships.filter(is_active=True).values_list('role__name', flat=True)]
-        is_admin = user.is_staff or "admin" in user_roles
+        is_admin = user.is_staff or "admin" in user_roles or "residence_admin" in user_roles
 
+        if is_admin:
+            return True
+        
         if request.method in permissions.SAFE_METHODS:
-            if is_admin or obj.student == user:
+            if obj.student == user:
                 return True
             return obj.location_type != 'habitacion'
 
-        if request.method == 'DELETE':
-            return obj.student == user
-
-        if request.method in ['PUT', 'PATCH']:
-            if obj.student == user:
-                return obj.status == 'pending'
-            return is_admin
+        if request.method in ['PUT', 'PATCH', 'DELETE']:
+            return obj.student == user and obj.status == 'pending'
 
         return False

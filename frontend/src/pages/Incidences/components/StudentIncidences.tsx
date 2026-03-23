@@ -86,11 +86,11 @@ export default function StudentIncidences() {
     if (!inc.is_mine && inc.location_type === 'habitacion') {
       return false;
     }
-    return applyIncidenceFilters(inc, { 
-      search, 
-      location: filterLocation, 
-      status: filterStatus, 
-      priority: filterPriority 
+    return applyIncidenceFilters(inc, {
+      search,
+      location: filterLocation,
+      status: filterStatus,
+      priority: filterPriority
     });
   });
 
@@ -177,8 +177,13 @@ export default function StudentIncidences() {
                             </div>
 
                           </div>
-                          <div className={UI_CLASSES.cardLocationRow}><MapPin size={14} className="text-slate-400" /><span className="text-[11px] font-semibold text-slate-500 truncate">{LOCATION_LABELS[inc.location_type]} {inc.room_number ? `• Hab. ${inc.room_number}` : ''}</span></div>
-                        </div>
+                          <div className={UI_CLASSES.cardLocationRow}>
+                            <MapPin size={14} className="text-slate-400" />
+                            <span className="text-[11px] font-semibold text-slate-500 truncate">
+                              {LOCATION_LABELS[inc.location_type]}
+                              {inc.location_type === 'habitacion' && inc.room_number ? ` • Hab. ${inc.room_number}` : ''}
+                            </span>
+                          </div>                        </div>
 
                         <div className="mt-4 pt-3 border-t border-slate-50">
                           <div className="flex items-center justify-between mb-2.5">
