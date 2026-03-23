@@ -103,6 +103,9 @@ class BedroomRetrieveView(AdminRequiredView):
 
 class BedroomUpdateView(AdminRequiredView):
 	def put(self, request, bedroom_id):
+		if not hasattr(request, "residence") or not request.residence:
+			return JsonResponse({"detail": "No residence context."}, status=400)
+
 		bedroom = get_object_or_404(Bedroom, id=bedroom_id, residence=request.residence)
 		if not getattr(request.user, "is_staff", False):
 			return JsonResponse({"detail": "Unauthorized"}, status=403)
@@ -153,6 +156,9 @@ class AvailableBedroomsView(AdminRequiredView):
 
 class BedroomResidentsDetailView(AdminRequiredView):
 	def get(self, request, bedroom_id):
+		if not hasattr(request, "residence") or not request.residence:
+			return JsonResponse({"detail": "No residence context."}, status=400)
+
 		bedroom = get_object_or_404(Bedroom, id=bedroom_id, residence=request.residence)
 		qs = bedroom.residents.filter(is_active=True, role__name="Student").select_related('user')
 		data = [ResidentSerializer.from_membership(m) for m in qs]
@@ -183,5 +189,8 @@ class BedroomResidentsView(AdminRequiredView):
 
 class BuildingListView(AdminRequiredView):
     def get(self, request, *args, **kwargs):
-        buildings = Bedroom.objects.values_list("edificio", flat=True).distinct()
+        if not hasattr(request, "residence") or not request.residence:
+            return JsonResponse({"detail": "No residence context."}, status=400)
+        
+        buildings = Bedroom.objects.filter(residence=request.residence).values_list("edificio", flat=True).distinct()
         return JsonResponse(list(buildings), safe=False)
