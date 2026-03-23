@@ -185,7 +185,12 @@ export const AdminIncidences = () => {
 
   return (
     <div className={UI_CLASSES.mainLayout}>
+
       <main className={UI_CLASSES.mainContent}>
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">Incidencias</h2>
+          <p className="text-sm text-gray-500 mt-1">Crea y visualiza las incidencias</p>
+        </div>
 
         {/* Filtros */}
         <div className={UI_CLASSES.filterGrid}>
