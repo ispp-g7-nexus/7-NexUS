@@ -1,15 +1,40 @@
 import type React from 'react';
 
+type EventType = 'internal' | 'external';
+
+type EventFormState = {
+    name: string;
+    description: string;
+    photo: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    eventType: EventType;
+    location: string;
+    spaceId: string;
+    limit: string;
+    labels: string;
+};
+
+type CommonSpaceOption = {
+    id: number;
+    name: string;
+};
+
 export function EventForm({
     isEditingEvent,
     newEvent,
     setNewEvent,
+    spaces,
+    isLoadingSpaces,
     handleSaveEvent,
     setIsCreateEventOpen,
 }: {
     isEditingEvent: boolean;
-    newEvent: any;
-    setNewEvent: React.Dispatch<React.SetStateAction<any>>;
+    newEvent: EventFormState;
+    setNewEvent: React.Dispatch<React.SetStateAction<EventFormState>>;
+    spaces: CommonSpaceOption[];
+    isLoadingSpaces: boolean;
     handleSaveEvent: (e: React.FormEvent) => void;
     setIsCreateEventOpen: (open: boolean) => void;
 }) {
@@ -113,19 +138,57 @@ export function EventForm({
                         </div>
                     </div>
                     <div className="space-y-2">
-                        <label htmlFor="location" className="text-sm font-medium leading-none">Lugar</label>
-                        <div className="relative">
-                            <span className="absolute left-3 top-2.5 text-muted-foreground text-sm">📍</span>
-                            <input
-                                id="location"
-                                className="flex h-10 w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                                placeholder="Ej: Sala Común"
-                                value={newEvent.location}
-                                onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
-                                required
-                            />
+                        <label className="text-sm font-medium leading-none">Tipo de evento</label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <button
+                                type="button"
+                                className={`rounded-md border px-4 py-2 text-sm text-left transition-colors ${newEvent.eventType === 'internal' ? 'border-primary bg-primary/10 text-foreground' : 'border-input bg-background text-muted-foreground hover:text-foreground'}`}
+                                onClick={() => setNewEvent({ ...newEvent, eventType: 'internal', location: '' })}
+                            >
+                                Interno (espacio común)
+                            </button>
+                            <button
+                                type="button"
+                                className={`rounded-md border px-4 py-2 text-sm text-left transition-colors ${newEvent.eventType === 'external' ? 'border-primary bg-primary/10 text-foreground' : 'border-input bg-background text-muted-foreground hover:text-foreground'}`}
+                                onClick={() => setNewEvent({ ...newEvent, eventType: 'external', spaceId: '' })}
+                            >
+                                Externo (ubicación libre)
+                            </button>
                         </div>
                     </div>
+                    {newEvent.eventType === 'internal' ? (
+                        <div className="space-y-2">
+                            <label htmlFor="space" className="text-sm font-medium leading-none">Espacio común</label>
+                            <select
+                                id="space"
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                value={newEvent.spaceId}
+                                onChange={(e) => setNewEvent({ ...newEvent, spaceId: e.target.value })}
+                                required
+                                disabled={isLoadingSpaces}
+                            >
+                                <option value="">{isLoadingSpaces ? 'Cargando espacios...' : 'Selecciona un espacio'}</option>
+                                {spaces.map((space) => (
+                                    <option key={space.id} value={space.id}>{space.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    ) : (
+                        <div className="space-y-2">
+                            <label htmlFor="location" className="text-sm font-medium leading-none">Lugar externo</label>
+                            <div className="relative">
+                                <span className="absolute left-3 top-2.5 text-muted-foreground text-sm">📍</span>
+                                <input
+                                    id="location"
+                                    className="flex h-10 w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                    placeholder="Ej: Polideportivo municipal"
+                                    value={newEvent.location}
+                                    onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
+                                    required
+                                />
+                            </div>
+                        </div>
+                    )}
                     <div className="space-y-2">
                         <label htmlFor="photo" className="text-sm font-medium leading-none">URL de la foto</label>
                         <div className="relative">

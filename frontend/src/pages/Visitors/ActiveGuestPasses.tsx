@@ -295,7 +295,13 @@ export function ActiveGuestPassesPage() {
   };
 
   return (
-    <section className="mx-auto flex w-full max-w-4xl flex-col gap-6 pb-24">
+    <div className="flex flex-col w-full bg-[#F6F7F9]">
+      {/* Header */}
+      <header className="bg-[#1B4D1C] p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg sticky top-0 z-20">
+        <h1 className="text-white text-2xl font-bold">Pases de Invitados</h1>
+      </header>
+      
+      <section className="mx-auto flex w-full max-w-4xl flex-col gap-6 pb-24 pt-6 px-4">
       <header className="rounded-xl border border-border/80 bg-card p-4 shadow-sm sm:p-6">
         <h2 className="text-2xl font-bold tracking-tight">Gestión de pases de invitados</h2>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -466,6 +472,7 @@ export function ActiveGuestPassesPage() {
         )}
       </section>
     </section>
+    </div>
   );
 }
 
