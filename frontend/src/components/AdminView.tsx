@@ -308,8 +308,8 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
                             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-[1px] mb-1">
                                 {todayCapitalized}
                             </p>
-                            <h2 className="text-3xl font-serif text-gray-900">
-                                Buenos días, <em className="text-green-600 not-italic">Administrador</em>
+                            <h2 className="text-2xl font-medium text-gray-900">
+                                Buenos días, <span className="text-green-600 font-medium">Administrador</span>
                             </h2>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
