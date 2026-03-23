@@ -96,12 +96,29 @@ export const applyIncidenceFilters = (inc: any, filters: any) => {
 };
 
 export const COMMON_UI_CLASSES = {
+  mainLayout: "flex flex-col w-full bg-[#F6F7F9]",
+  header: "bg-[#1B4D1C] p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg sticky top-0 z-20",
+  headerTitle: "text-white text-2xl font-bold",
+  mainContent: "w-full px-4 py-6 pb-32",
+  filterGrid: "grid grid-cols-2 md:grid-cols-4 gap-3 bg-white p-4 rounded-xl shadow-sm",
+  filterInput: "w-full px-5 py-2 rounded-2xl border border-slate-200 bg-white text-sm focus:ring-2 focus:ring-[#82D14C]/20 outline-none",
+  btnMineWrapper: "flex justify-center",
+  btnMineBase: "flex items-center gap-2 px-4 py-2 rounded-2xl font-medium transition-all duration-200",
+  btnMineActive: "bg-[#82D14C] text-white",
+  btnMineInactive: "bg-white border border-slate-200 text-slate-600 hover:border-[#82D14C]",
+  incidencesGrid: "grid gap-3",
+  card: "flex border-0 shadow-sm rounded-2xl bg-white overflow-hidden hover:shadow-md transition-shadow",
+  cardSideBar: "w-1 shrink-0",
+  cardTitle: "text-sm font-bold text-slate-800 truncate",
+  statusBadge: "px-2 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap",
+  cardLocationRow: "flex items-center gap-2 mt-2",
+  btnNotes: "text-[10px] font-bold h-7 px-3",
+  loadingText: "text-center text-slate-400 mt-20 text-sm font-bold animate-pulse",
+  bellContainer: "relative p-2 bg-white/10 rounded-full text-white hover:text-white transition-colors hover:bg-white/20",
+  bellBadge: "absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#1B4D1C] text-[10px] font-bold flex items-center justify-center text-white",
   dialogNotes: "max-w-[95vw] sm:max-w-[500px] rounded-[30px] p-0 border-none overflow-hidden shadow-2xl",
   notesTitle: "p-5 bg-white border-b border-slate-50 font-bold text-[#1B4D1C] text-[11px] text-center uppercase tracking-widest",
-  loadingText: "text-center text-slate-400 mt-20 text-sm font-bold animate-pulse",
-  filterInput: "w-full px-5 py-2 rounded-2xl border border-slate-200 bg-white text-sm focus:ring-2 focus:ring-[#82D14C]/20 outline-none",
   btnFloating: "fixed bottom-24 right-8 w-16 h-16 bg-[#82D14C] hover:bg-[#74bc44] text-white rounded-full shadow-2xl flex items-center justify-center z-50 transition-transform active:scale-90",
-
 };
 
 export const IncidenceSelect = ({ value, onChange, options, placeholder, className = "" }: any) => {
