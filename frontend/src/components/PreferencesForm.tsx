@@ -285,7 +285,7 @@ export function PreferencesForm({ onComplete, onBack }: PreferencesFormProps) {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 flex items-start md:items-center justify-center p-4 overflow-y-auto">
+        <div className="w-full bg-gray-50 flex flex-col items-center justify-start p-4">
             <motion.div 
                 initial={{ opacity: 0, y: 20 }} 
                 animate={{ opacity: 1, y: 0 }} 

@@ -11,9 +11,9 @@ export function StudentReservations() {
   ];
 
   return (
-    <div className="flex flex-col h-screen bg-background relative">
+    <div className="flex flex-col w-full bg-background">
       {/* Header */}
-      <header className="bg-primary p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg">
+      <header className="bg-primary p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg sticky top-0 z-20">
         <h1 className="text-primary-foreground text-2xl font-bold">Reservas</h1>
       </header>
 

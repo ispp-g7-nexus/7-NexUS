@@ -295,8 +295,14 @@ export function ActiveGuestPassesPage() {
   };
 
   return (
-    <section className="mx-auto flex w-full max-w-4xl flex-col gap-6 pb-24">
-      <header className="rounded-xl border border-border/80 bg-white p-4 shadow-sm sm:p-6">
+    <div className="flex flex-col w-full bg-background">
+      {/* Header */}
+      <header className="bg-primary p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg sticky top-0 z-20">
+        <h1 className="text-primary-foreground text-2xl font-bold">Pases de Invitados</h1>
+      </header>
+      
+      <section className="mx-auto flex w-full max-w-4xl flex-col gap-6 pb-24 pt-6 px-4">
+      <header className="rounded-xl border border-border/80 bg-card p-4 shadow-sm sm:p-6">
         <h2 className="text-2xl font-bold tracking-tight">Gestión de pases de invitados</h2>
         <p className="mt-1 text-sm text-gray-500">
           Crea nuevos pases para tus invitados y consulta los activos y los próximos.
@@ -431,7 +437,7 @@ export function ActiveGuestPassesPage() {
                 key={pass.id}
                 pass={pass}
                 statusLabel="Activo"
-                badgeClassName="bg-green-500/10 text-green-500 hover:bg-green-500/10"
+                badgeClassName="bg-primary/10 text-primary hover:bg-primary/10"
               />
             ))}
           </div>
@@ -459,13 +465,14 @@ export function ActiveGuestPassesPage() {
                 key={pass.id}
                 pass={pass}
                 statusLabel="Próximo"
-                badgeClassName="bg-[#0A84FF]/10 text-[#0A84FF] hover:bg-[#0A84FF]/10"
+                badgeClassName="bg-accent/20 text-accent-foreground hover:bg-accent/20"
               />
             ))}
           </div>
         )}
       </section>
     </section>
+    </div>
   );
 }
 
