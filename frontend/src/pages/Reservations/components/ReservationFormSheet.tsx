@@ -63,25 +63,24 @@ export function ReservationFormSheet({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  async function fetchAvailability() {
+    if (!space) return;
+    setLoadingAvailability(true);
+    setError(null);
+    setSelectedSlot(null);
+    setExpandedHour(null);
+    try {
+      const data = await getSpaceAvailability(space.id, localDate);
+      setAvailability(data);
+    } catch (err) {
+      setError("No se pudo cargar la disponibilidad para esta fecha.");
+    } finally {
+      setLoadingAvailability(false);
+    }
+  }
 
   useEffect(() => {
     if (!open || !space) return;
-
-    const fetchAvailability = async () => {
-      setLoadingAvailability(true);
-      setError(null);
-      setSelectedSlot(null);
-      setExpandedHour(null);
-      try {
-        const data = await getSpaceAvailability(space.id, localDate);
-        setAvailability(data);
-      } catch (err) {
-        setError("No se pudo cargar la disponibilidad para esta fecha.");
-      } finally {
-        setLoadingAvailability(false);
-      }
-    };
-
     void fetchAvailability();
   }, [open, space, localDate]);
 
@@ -110,7 +109,35 @@ export function ReservationFormSheet({
       toast.success("Reserva confirmada con éxito.");
       onSuccess();
     } catch (err) {
-      setError(isApiError(err) ? err.message : "Error al crear la reserva.");
+      if (isApiError(err)) {
+        const apiErr = err;
+        if (apiErr.status === 400) {
+          const backendMsg = apiErr.message && String(apiErr.message).trim();
+          const userMessage = backendMsg || "Esa franja ya no está disponible. Se ha actualizado la disponibilidad.";
+          setError(userMessage);
+          toast.error(userMessage);
+          void fetchAvailability();
+          setSelectedSlot(null);
+        } else if (apiErr.status >= 500) {
+          const userMessage = "Error del servidor. Inténtalo de nuevo más tarde.";
+          setError(userMessage);
+          toast.error(userMessage);
+        } else if (apiErr.status === 401 || apiErr.status === 403) {
+          const userMessage = apiErr.message || "No tienes permisos para realizar esta acción.";
+          setError(userMessage);
+          toast.error(userMessage);
+        } else {
+          const userMessage = apiErr.message || "Error al crear la reserva.";
+          setError(userMessage);
+          toast.error(userMessage);
+        }
+      } else {
+        const userMessage = (err instanceof Error && err.message && err.message.includes("Failed to fetch"))
+          ? "Error de conexión. Revisa tu red e inténtalo de nuevo." 
+          : "Error al crear la reserva.";
+        setError(userMessage);
+        toast.error(userMessage);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -246,7 +273,7 @@ export function ReservationFormSheet({
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={isSubmitting || !selectedSlot} className="bg-[#4A7C59] hover:bg-[#4A7C59]/90 text-white">
+                <Button type="submit" disabled={isSubmitting || !selectedSlot || loadingAvailability} className="bg-[#4A7C59] hover:bg-[#4A7C59]/90 text-white">
                   {isSubmitting ? "Confirmando..." : "Confirmar reserva"}
                 </Button>
               </div>
