@@ -8,7 +8,7 @@
 }
 
 .incidences-header {
-  background-color: #1B4D1C;
+  background-color: hsl(var(--tenant-primary-900));
   padding: 40px 24px 30px;
   border-bottom-left-radius: 32px;
   border-bottom-right-radius: 32px;
@@ -33,13 +33,13 @@
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background-color: #82D14C;
+  background-color: hsl(var(--tenant-primary-400));
   color: white;
   border: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8px 24px rgba(130, 209, 76, 0.4);
+  box-shadow: 0 8px 24px hsl(var(--tenant-primary-400) / 0.4);
   cursor: pointer;
   transition: transform 0.2s, background-color 0.2s;
   z-index: 40;
@@ -47,7 +47,7 @@
 
 .fab-button:active {
   transform: scale(0.9);
-  background-color: #74bc44;
+  background-color: hsl(var(--tenant-primary-500));
 }
 
 .incidence-card {
@@ -67,7 +67,7 @@
 }
 
 .status-reviewing { background-color: #FFB457; }
-.status-resolved { background-color: #82D14C; }
+.status-resolved { background-color: hsl(var(--tenant-primary-400)); }
 .status-pending { background-color: #94A3B8; }
 
 .incidence-content {
@@ -78,7 +78,7 @@
 .incidence-title {
   font-size: 1.15rem;
   font-weight: 700;
-  color: #1A1C1E;
+  color: hsl(var(--foreground));
   margin-bottom: 8px;
 }
 
@@ -86,7 +86,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  color: #74777F;
+  color: hsl(var(--muted-foreground));
   font-size: 0.875rem;
   margin-bottom: 16px;
 }
@@ -99,9 +99,9 @@
 
 .btn-view-notes {
   width: 100%;
-  background-color: #F0F4FA;
-  color: #0061A7;
-  border: 1px solid #D1E4FF;
+  background-color: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+  border: 1px solid hsl(var(--border));
   border-radius: 12px;
   padding: 10px;
   font-weight: 600;
@@ -114,7 +114,7 @@
 }
 
 .btn-view-notes:hover {
-  background-color: #E1E9F5;
+  background-color: hsl(var(--border));
 }
 
 .notes-modal-overlay {
@@ -130,10 +130,11 @@
 }
 
 .notes-modal-content {
-  background-color: #D1E4FF;
+  background-color: hsl(var(--popover));
+  border: 1px solid hsl(var(--border));
   border-radius: 28px;
   padding: 24px;
   max-width: 400px;
   width: 100%;
-  color: #001D36;
+  color: hsl(var(--popover-foreground));
 }

@@ -150,7 +150,7 @@ export function Reservations() {
       <Card className="mx-auto mt-6 w-full max-w-3xl">
         <CardContent className="space-y-4 p-6 text-center">
           <h2 className="text-xl font-semibold">Acceso no autorizado</h2>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-gray-500">
             Debes iniciar sesión para consultar disponibilidad y gestionar reservas.
           </p>
           <Button onClick={() => (window.location.href = "/")}>Ir al inicio</Button>
@@ -161,11 +161,11 @@ export function Reservations() {
 
   return (
     <section className="mx-auto flex w-full max-w-5xl flex-col gap-6 pb-24">
-      <header className="rounded-xl border border-border/80 bg-card p-4 shadow-sm sm:p-6">
+      <header className="rounded-xl border border-border/80 bg-white p-4 shadow-sm sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-2xl font-bold tracking-tight">Reservas de espacios</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-sm text-gray-500">
               Consulta la disponibilidad diaria y reserva espacios comunes de tu residencia.
             </p>
           </div>
@@ -175,7 +175,7 @@ export function Reservations() {
               value={selectedDate}
               onChange={(newDate) => setSelectedDate(newDate)}
               minDate={todayDate}
-              className="group relative flex items-center gap-2 border-b-2 border-transparent pb-1 transition-all focus-within:border-[#4A7C59] hover:border-[#4A7C59]/50"
+              className="group relative flex items-center gap-2 border-b-2 border-transparent pb-1 transition-all focus-within:border-green-700 hover:border-green-700/50"
               inputClassName="w-[130px] text-sm font-medium"
             />
           </div>
@@ -199,11 +199,11 @@ export function Reservations() {
 
           {loadingInitial ? (
             <Card>
-              <CardContent className="p-4 text-sm text-muted-foreground">Cargando espacios...</CardContent>
+              <CardContent className="p-4 text-sm text-gray-500">Cargando espacios...</CardContent>
             </Card>
           ) : spaces.length === 0 ? (
             <Card>
-              <CardContent className="p-4 text-sm text-muted-foreground">
+              <CardContent className="p-4 text-sm text-gray-500">
                 No hay espacios activos en esta residencia por el momento.
               </CardContent>
             </Card>

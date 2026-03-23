@@ -81,7 +81,7 @@ export function NotificationBell({ onMarkAsRead, className }: NotificationBellPr
     >
       <Bell className="w-6 h-6 text-white" />
       {hasNotifications && (
-        <span className="absolute -right-1 -top-1 min-w-5 h-5 flex items-center justify-center rounded-full bg-[#82D14C] px-1 text-[10px] font-black text-[#123313]" />
+        <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-background" />
       )}
     </button>
   );

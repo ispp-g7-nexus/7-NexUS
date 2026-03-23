@@ -88,7 +88,7 @@ const labelConfig: Record<string, { label: string; color: string; icon: ReactEle
     general: { label: "General", color: "bg-blue-100 text-blue-800", icon: <MessageSquare className="w-3 h-3" /> },
     floor: { label: "Planta", color: "bg-green-100 text-green-800", icon: <Users className="w-3 h-3" /> },
     activity: { label: "Actividad", color: "bg-purple-100 text-purple-800", icon: <Users className="w-3 h-3" /> },
-    private: { label: "Privado", color: "bg-gray-100 text-gray-800", icon: <Users className="w-3 h-3" /> },
+    private: { label: "Privado", color: "bg-gray-50 text-gray-900", icon: <Users className="w-3 h-3" /> },
 };
 
 /* ── Sub-tabs ───────────────────────────────────────────────── */
@@ -102,9 +102,7 @@ function buildResidentUnreadGroupsStorageKey(email: string): string | null {
     return `student-chat-unread-groups:${normalized}`;
 }
 
-/* ══════════════════════════════════════════════════════════════
-   Componente principal
-   ══════════════════════════════════════════════════════════════ */
+/*  ── Componente principal ──────────────────────────────────── */
 
 export function StudentChats({
     enableRealtimeStream = true,
@@ -369,7 +367,6 @@ export function StudentChats({
         try {
             setGroupMessages(dedupeGroupMessages(await chatsService.listGroupMessages(groupId)));
         } catch {
-            // Silencioso: es una recarga reactiva por evento.
         }
     }, []);
 
@@ -482,7 +479,6 @@ export function StudentChats({
         try {
             setMessages(await chatsService.listMessages(conversationId));
         } catch {
-            // Silencioso: es una recarga reactiva por evento.
         }
     }, []);
 
@@ -717,9 +713,7 @@ export function StudentChats({
         ),
         [residents, residentSearch]);
 
-    /* ══════════════════════════════════════════════════════════════
-       RENDER: Vista de chat activo (mensajes)
-       ══════════════════════════════════════════════════════════════ */
+    /*  ── Vista de chat activo ───────────────────────────── */
 
     if (editingGroup) {
         return (
@@ -764,12 +758,14 @@ export function StudentChats({
                             const isMine = msg.sender_membership_id !== activeConv.other_user.membership_id;
                             return (
                                 <div key={msg.id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
-                                    <div className={`max-w-[75%] px-3.5 py-2 rounded-2xl text-sm ${isMine
-                                        ? "bg-green-600 text-white rounded-br-md"
-                                        : "bg-gray-100 text-gray-900 rounded-bl-md"
-                                        }`}>
-                                        <p className="whitespace-pre-line break-words">{msg.content}</p>
-                                        <p className={`text-[10px] mt-1 ${isMine ? "text-green-200" : "text-gray-400"}`}>
+                                    <div
+                                        className={`px-4 py-2 max-w-[85%] rounded-2xl shadow-sm ${isMine
+                                        ? "bg-primary text-primary-foreground rounded-br-md"
+                                        : "bg-white text-gray-800 rounded-bl-md border border-gray-100"
+                                            }`}
+                                    >
+                                        <p className="text-[13.5px] leading-relaxed break-words">{msg.content}</p>
+                                        <p className={`text-[10px] mt-1 ${isMine ? "text-primary-foreground/70" : "text-gray-400"}`}>
                                             {timeAgo(msg.created_at)}
                                         </p>
                                     </div>
@@ -791,9 +787,9 @@ export function StudentChats({
                     />
                     <Button
                         size="icon"
-                        className="bg-green-600 hover:bg-green-700 shrink-0 w-10 h-10"
                         onClick={handleSendMessage}
                         disabled={sending || !msgText.trim()}
+                        className="bg-primary text-primary-foreground hover:opacity-90 shrink-0 w-10 h-10"
                     >
                         <Send className="w-4 h-4" />
                     </Button>
@@ -864,11 +860,11 @@ export function StudentChats({
                                         <span className="text-[10px] text-gray-500 mb-1 ml-1">{msg.sender_name}</span>
                                     )}
                                     <div className={`max-w-[75%] px-3.5 py-2 rounded-2xl text-sm ${isMine
-                                        ? "bg-green-600 text-white rounded-br-md"
-                                        : "bg-gray-100 text-gray-900 rounded-bl-md"
+                                        ? "bg-primary text-primary-foreground rounded-br-md"
+                                        : "bg-gray-50 text-gray-900 rounded-bl-md"
                                         }`}>
                                         <p className="whitespace-pre-line break-words">{msg.content}</p>
-                                        <p className={`text-[10px] mt-1 ${isMine ? "text-green-200" : "text-gray-400"}`}>
+                                        <p className={`text-[10px] mt-1 ${isMine ? "text-primary-foreground/70" : "text-gray-400"}`}>
                                             {timeAgo(msg.created_at)}
                                         </p>
                                     </div>
@@ -891,9 +887,9 @@ export function StudentChats({
                     />
                     <Button
                         size="icon"
-                        className="bg-green-600 hover:bg-green-700 shrink-0 w-10 h-10"
                         onClick={handleSendGroupMessage}
                         disabled={!canInteractInGroup || sendingGroupMsg || !groupMsgText.trim()}
+                        className="bg-primary text-primary-foreground hover:opacity-90 shrink-0 w-10 h-10"
                     >
                         <Send className="w-4 h-4 ml-0.5" />
                     </Button>
@@ -919,21 +915,17 @@ export function StudentChats({
         );
     }
 
-    /* ══════════════════════════════════════════════════════════════
-       RENDER: Vista principal con sub-tabs
-       ══════════════════════════════════════════════════════════════ */
+    /*  ── Vista principal con sub-tabs ─────────────────────────────────────────────────*/
 
     return (
         <div className="space-y-5">
             {/* Sub-tabs */}
-            <div className="flex bg-gray-100 p-1 rounded-full w-fit mx-auto">
+            <div className="flex bg-gray-50 p-1 rounded-full w-fit mx-auto">
                 {(["grupos", "privados"] as ChatSubTab[]).map((tab) => (
-                    <Button
+                    <button
                         key={tab}
-                        variant={subTab === tab ? "default" : "ghost"}
-                        className={`relative rounded-full px-6 capitalize ${subTab === tab ? "bg-white text-green-700 shadow-sm hover:bg-white" : "text-gray-500"
-                            }`}
-                        onClick={() => setSubTab(tab)}
+                        onClick={() => setSubTab(tab as "grupos" | "privados")}
+                        className={`relative rounded-full px-6 capitalize ${subTab === tab ? "bg-primary text-primary-foreground shadow-sm" : "text-gray-500"}`}
                     >
                         {tab}
                         {tab === "grupos" && showGroupDot && (
@@ -942,7 +934,7 @@ export function StudentChats({
                         {tab === "privados" && showPrivateDot && (
                             <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-red-500" />
                         )}
-                    </Button>
+                    </button>
                 ))}
             </div>
 
@@ -960,7 +952,7 @@ export function StudentChats({
                                 className="pl-9"
                             />
                         </div>
-                        <Button size="icon" className="bg-green-600 hover:bg-green-700 shrink-0 w-10 h-10" onClick={openNewConvDialog}>
+                        <Button size="icon" className="bg-primary text-primary-foreground hover:opacity-90 shrink-0 w-10 h-10" onClick={openNewConvDialog}>
                             <Plus className="w-5 h-5" />
                         </Button>
                     </div>
@@ -971,7 +963,7 @@ export function StudentChats({
                     ) : filteredConvs.length === 0 ? (
                         <div className="text-center py-16">
                             <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                            <h3 className="text-base font-medium text-gray-800 mb-1">
+                            <h3 className="text-base font-medium text-gray-900 mb-1">
                                 {convSearch ? "Sin resultados" : "No tienes conversaciones"}
                             </h3>
                             <p className="text-sm text-gray-400">
@@ -1001,7 +993,7 @@ export function StudentChats({
                                     {/* Info */}
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between mb-0.5">
-                                            <span className={`font-medium truncate ${conv.unread_count > 0 ? "text-gray-900" : "text-gray-700"}`}>
+                                            <span className={`font-medium truncate ${conv.unread_count > 0 ? "text-gray-900" : "text-gray-500"}`}>
                                                 {conv.other_user.full_name}
                                             </span>
                                             {conv.last_message && (
@@ -1011,7 +1003,7 @@ export function StudentChats({
                                             )}
                                         </div>
                                         {conv.last_message ? (
-                                            <p className={`text-xs truncate ${conv.unread_count > 0 ? "text-gray-600 font-medium" : "text-gray-400"}`}>
+                                            <p className={`text-xs truncate ${conv.unread_count > 0 ? "text-gray-500 font-medium" : "text-gray-400"}`}>
                                                 {conv.last_message.is_mine && "Tú: "}{conv.last_message.content}
                                             </p>
                                         ) : (
@@ -1078,7 +1070,7 @@ export function StudentChats({
                     ) : filteredGroups.length === 0 ? (
                         <div className="text-center py-16">
                             <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                            <h3 className="text-base font-medium text-gray-800 mb-1">
+                            <h3 className="text-base font-medium text-gray-900 mb-1">
                                 {searchTerm ? "Sin resultados" : "No estás en ningún grupo"}
                             </h3>
                             <p className="text-sm text-gray-400">
@@ -1102,7 +1094,7 @@ export function StudentChats({
                                         key={group.id}
                                         className={`px-4 py-3.5 transition-colors flex items-center gap-3 ${
                                             isFormerMember
-                                                ? "bg-gray-100 hover:bg-gray-100"
+                                                ? "bg-gray-50 hover:bg-gray-50"
                                                 : "hover:bg-gray-50"
                                         }`}
                                     >

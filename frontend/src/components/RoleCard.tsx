@@ -29,7 +29,7 @@ const RoleCard: React.FC<RoleCardProps> = ({ role, onEdit, onDelete }) => {
         <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between mb-4 hover:shadow-md transition-shadow">
             <div className="flex items-center gap-4 overflow-hidden">
                 <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg shrink-0
-                    ${role.is_system_default ? 'bg-gray-100 text-gray-600' : 'bg-[#e8f3ec] text-[#4a8f5d]'}`}>
+                    ${role.is_system_default ? 'bg-gray-100 text-gray-600' : 'bg-green-50 text-green-600'}`}>
                     {initial}
                 </div>
 
@@ -43,7 +43,7 @@ const RoleCard: React.FC<RoleCardProps> = ({ role, onEdit, onDelete }) => {
                 <span className={`px-3 py-1 rounded-full text-xs font-medium 
                     ${role.is_system_default
                         ? 'bg-gray-100 text-gray-700'
-                        : 'bg-[#e8f3ec] text-[#4a8f5d]'}`}>
+                        : 'bg-green-50 text-green-600'}`}>
                     {role.is_system_default ? 'Sistema' : 'Personalizado'}
                 </span>
 
