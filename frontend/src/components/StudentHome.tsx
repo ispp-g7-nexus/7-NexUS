@@ -412,18 +412,17 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
 
     return (
         <div className="bg-[#F5F5F5] min-h-full">
-            {/* Header Verde Corporativo con Datos Reales */}
-            <div className="bg-[#1B5E20] pt-12 pb-24 px-6 rounded-b-[2.5rem] relative">
+            <div className="bg-primary pt-12 pb-24 px-6 rounded-b-[2.5rem] relative">
                 <div className="flex justify-between items-center mb-6">
                     <div className="flex items-center gap-3">
-                        <Avatar className="border-2 border-white/30 w-12 h-12">
-                            <AvatarFallback className="bg-white/20 text-white font-bold">
+                        <Avatar className="border-2 border-primary-foreground/30 w-12 h-12">
+                            <AvatarFallback className="bg-primary-foreground/20 text-primary-foreground font-bold">
                                 {userData.initials}
                             </AvatarFallback>
                         </Avatar>
                         <div>
-                            <p className="text-green-100 text-sm">Bienvenido/a,</p>
-                            <h1 className="text-white text-2xl font-bold truncate max-w-[180px]">
+                            <p className="text-primary-foreground/80 text-sm">Bienvenido/a,</p>
+                            <h1 className="text-primary-foreground text-2xl font-bold truncate max-w-[180px]">
                                 {userData.name}
                             </h1>
                         </div>
@@ -431,17 +430,17 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                     <div className="flex gap-2">
                         <Popover open={isNotificationsOpen} onOpenChange={handleNotificationsOpenChange}>
                             <PopoverTrigger asChild>
-                                <Button size="icon" variant="ghost" className="text-white hover:bg-white/20 rounded-full relative">
+                                <Button size="icon" variant="ghost" className="text-primary-foreground hover:bg-primary-foreground/20 rounded-full relative">
                                     <Bell className="w-6 h-6" />
                                     {hasUnreadNotifications && (
-                                        <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-[#F5A623] rounded-full border-2 border-[#1B5E20]" />
+                                        <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-destructive rounded-full border-2 border-primary" />
                                     )}
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent align="end" sideOffset={10} className="w-[min(26rem,calc(100vw-2rem))] p-0">
                                 <div className="max-h-[70vh] overflow-y-auto rounded-md bg-white p-4">
                                     <div className="mb-3 flex items-center gap-2">
-                                        <Bell className="h-5 w-5 text-[#35C759]" />
+                                        <Bell className="h-5 w-5 text-primary" />
                                         <h3 className="font-semibold text-gray-900">Notificaciones</h3>
                                     </div>
 
@@ -486,7 +485,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                             </PopoverContent>
                         </Popover>
                         {onLogout && (
-                            <Button size="icon" variant="ghost" className="text-white hover:bg-white/20 rounded-full" onClick={onLogout}>
+                            <Button size="icon" variant="ghost" className="text-primary-foreground hover:bg-primary-foreground/20 rounded-full" onClick={onLogout}>
                                 <LogOut className="w-5 h-5" />
                             </Button>
                         )}
@@ -495,7 +494,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
 
                 {/* Digital ID Card con Datos Reales */}
                 <div className="absolute left-6 right-6 -bottom-16">
-                    <Card className="bg-white shadow-xl shadow-green-900/5 border-none rounded-2xl overflow-hidden">
+                    <Card className="bg-card shadow-xl shadow-primary/10 border-none rounded-2xl overflow-hidden">
                         <CardContent className="p-0 flex h-32">
                             <button className="w-24 bg-gray-900 flex flex-col items-center justify-center text-white p-2 text-center hover:bg-gray-800 transition-colors cursor-pointer" onClick={() => setIsQrDialogOpen(true)}>
                                 <QrCode className="w-10 h-10 mb-2 opacity-80" />
@@ -505,7 +504,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                                 <p className="text-xs text-gray-400 uppercase font-bold tracking-wider">Membresía</p>
                                 <p className="text-lg font-bold text-gray-900">{userData.room}</p>
                                 <div className="mt-2 flex items-center gap-2">
-                                    <Badge variant="outline" className="bg-[#35C759]/10 text-[#35C759] border-[#35C759]/30">
+                                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
                                         {userData.status}
                                     </Badge>
                                 </div>
@@ -521,11 +520,11 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
             <div className="px-6 pb-6">
                 <h2 className="text-lg font-bold text-gray-900 mb-4">Servicios Rápidos</h2>
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                    <QuickAction icon={<MessageSquare className="w-6 h-6" />} label="Avisos" color="bg-[#35C759]/10 text-[#35C759]" onClick={() => onNavigate("announcements")} />
-                    <QuickAction icon={<Utensils className="w-6 h-6" />} label="Menú" color="bg-orange-100 text-orange-600" onClick={() => onNavigate("menu")} />
-                    <QuickAction icon={<Wifi className="w-6 h-6" />} label="WiFi" color="bg-blue-100 text-blue-600" onClick={() => setIsWifiDialogOpen(true)} />
-                    <QuickAction icon={<Package className="w-6 h-6" />} label="Paquetes" color="bg-purple-100 text-purple-600" onClick={() => onNavigate("packages")} badge={unreadPackages > 0 ? unreadPackages : undefined} />
-                    <QuickAction icon={<Users className="w-6 h-6" />} label="Invitados" color="bg-pink-100 text-pink-600" onClick={() => onNavigate("visitors")} />
+                    <QuickAction icon={<MessageSquare className="w-6 h-6" />} label="Avisos" color="bg-primary text-primary-foreground" onClick={() => onNavigate("announcements")} />
+                    <QuickAction icon={<Utensils className="w-6 h-6" />} label="Menú" color="bg-primary text-primary-foreground" onClick={() => onNavigate("menu")} />
+                    <QuickAction icon={<Wifi className="w-6 h-6" />} label="WiFi" color="bg-primary text-primary-foreground" onClick={() => setIsWifiDialogOpen(true)} />
+                    <QuickAction icon={<Package className="w-6 h-6" />} label="Paquetes" color="bg-primary text-primary-foreground" onClick={() => onNavigate("packages")} badge={unreadPackages > 0 ? unreadPackages : undefined} />
+                    <QuickAction icon={<Users className="w-6 h-6" />} label="Invitados" color="bg-primary text-primary-foreground" onClick={() => onNavigate("visitors")} />
                 </div>
             </div>
 
@@ -560,7 +559,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                         <div className="text-center space-y-2">
                             <p className="font-bold text-gray-900 text-lg">{userData.name}</p>
                             <p className="text-sm text-gray-600">{userData.room}</p>
-                            <Badge variant="outline" className="bg-[#35C759]/10 text-[#35C759] border-[#35C759]/30 mt-2">{userData.status}</Badge>
+                            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 mt-2">{userData.status}</Badge>
                         </div>
                         <p className="text-xs text-gray-400 text-center px-4">Este código QR es personal e intransferible. Úsalo para acceder a la residencia y registrar tu entrada/salida.</p>
                     </div>
@@ -598,7 +597,7 @@ function NotificationCard({ icon, title, description, time, type, onOpenSource }
         admin: "bg-blue-50 border-blue-200",
         event: "bg-yellow-50 border-yellow-200",
         info: "bg-gray-50 border-gray-200",
-        success: "bg-green-50 border-green-200",
+        success: "bg-primary/5 border-primary/20",
         warning: "bg-red-50 border-red-200",
     };
 

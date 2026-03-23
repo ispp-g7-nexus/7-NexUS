@@ -34,7 +34,7 @@ export function MatchCard({
             onKeyDown={handleKeyDown}
             role="button"
             tabIndex={0}
-            className="relative bg-white border border-slate-100 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] transition-all hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.1)] flex flex-col sm:flex-row gap-4 hover:-translate-y-0.5 cursor-pointer"
+            className="relative bg-white border border-gray-200 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] transition-all hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.1)] flex flex-col sm:flex-row gap-4 hover:-translate-y-0.5 cursor-pointer"
         >
             {isTop3 && (
                 <div className="absolute -top-3 -right-3">
@@ -53,13 +53,13 @@ export function MatchCard({
             )}
 
             <div className="flex items-center sm:items-start flex-1 gap-4">
-                <div className="flex-shrink-0 w-16 h-16 rounded-full bg-gradient-to-br from-[#4A7C59] to-[#3a6146] text-white flex items-center justify-center text-xl font-bold shadow-sm">
+                <div className="flex-shrink-0 w-16 h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xl font-bold shadow-sm">
                     {getInitials(match.display_name)}
                 </div>
 
                 <div className="flex-1 min-w-0">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1">
-                        <h3 className="text-lg font-bold text-slate-900 truncate pr-4">
+                        <h3 className="text-lg font-bold text-gray-900 truncate pr-4">
                             {match.display_name}
                         </h3>
 
@@ -73,7 +73,7 @@ export function MatchCard({
                                 className={`p-2 rounded-full transition-colors flex-shrink-0 ${
                                     isSaved
                                         ? "bg-pink-50 text-pink-500"
-                                        : "bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-pink-400"
+                                        : "bg-gray-50 text-slate-400 hover:bg-gray-50 hover:text-pink-400"
                                 }`}
                                 aria-label="Guardar Match"
                             >

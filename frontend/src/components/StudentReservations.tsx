@@ -11,10 +11,10 @@ export function StudentReservations() {
   ];
 
   return (
-    <div className="flex flex-col w-full bg-[#F6F7F9]">
+    <div className="flex flex-col w-full bg-background">
       {/* Header */}
-      <header className="bg-[#1B4D1C] p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg sticky top-0 z-20">
-        <h1 className="text-white text-2xl font-bold">Reservas</h1>
+      <header className="bg-primary p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg sticky top-0 z-20">
+        <h1 className="text-primary-foreground text-2xl font-bold">Reservas</h1>
       </header>
 
       <main className="flex-1 overflow-y-auto p-4 space-y-4 pb-32">
@@ -25,10 +25,10 @@ export function StudentReservations() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
+                className={`flex-1 py-3 px-4 text-sm font-medium border-b-2 transition-all ${
                   activeTab === tab.id 
-                    ? "text-[#4A7C59] border-[#4A7C59]" 
-                    : "text-muted-foreground border-transparent hover:text-foreground"
+                    ? "bg-primary text-primary-foreground font-bold shadow-sm" 
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
                 {tab.label}

@@ -16,7 +16,7 @@ export function ObjectsList({ objects, loading, error, onReserve, onRetry }: Obj
     return (
       <Card className="border-border/80 shadow-sm">
         <CardContent className="p-6">
-          <p className="text-sm text-muted-foreground">Cargando objetos...</p>
+          <p className="text-sm text-gray-500">Cargando objetos...</p>
         </CardContent>
       </Card>
     );
@@ -39,9 +39,9 @@ export function ObjectsList({ objects, loading, error, onReserve, onRetry }: Obj
     return (
       <Card className="border-border/80 shadow-sm">
         <CardContent className="p-6 text-center">
-          <Package className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-          <h3 className="text-lg font-medium text-foreground mb-2">No hay objetos disponibles</h3>
-          <p className="text-sm text-muted-foreground">No hay objetos registrados en este momento.</p>
+          <Package className="w-12 h-12 text-gray-500 mx-auto mb-3" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No hay objetos disponibles</h3>
+          <p className="text-sm text-gray-500">No hay objetos registrados en este momento.</p>
         </CardContent>
       </Card>
     );
@@ -75,19 +75,19 @@ function ObjectCard({ object, onReserve }: { object: ObjectItem; onReserve: () =
           <div>
             <h3 className="text-lg font-semibold">{object.name}</h3>
             {object.description && (
-              <p className="mt-1 text-sm text-muted-foreground">{object.description}</p>
+              <p className="mt-1 text-sm text-gray-500">{object.description}</p>
             )}
           </div>
           <span
             className={`rounded-full px-3 py-1 text-xs font-semibold ${
-              object.can_rent ? "bg-primary/10 text-primary" : "bg-slate-200 text-slate-700"
+              object.can_rent ? "bg-primary/10 text-primary" : "bg-slate-200 text-gray-500"
             }`}
           >
             {object.can_rent ? 'Disponible' : 'No disponible'}
           </span>
         </div>
 
-        <div className="grid grid-cols-1 gap-2 text-sm text-muted-foreground sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2 text-sm text-gray-500 sm:grid-cols-2">
           {object.location && (
             <div className="flex items-center gap-2">
               <MapPin className="h-4 w-4" />

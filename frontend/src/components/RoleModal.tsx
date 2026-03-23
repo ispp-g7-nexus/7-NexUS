@@ -64,7 +64,7 @@ const RoleModal: React.FC<RoleModalProps> = ({ isOpen, onClose, onSave, editingR
                             required
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-[#4a8f5d] focus:border-[#4a8f5d] outline-none transition-shadow"
+                            className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-green-600 focus:border-green-600 outline-none transition-shadow"
                             placeholder="Ej: Mantenimiento"
                         />
                     </div>
@@ -73,7 +73,7 @@ const RoleModal: React.FC<RoleModalProps> = ({ isOpen, onClose, onSave, editingR
                         <textarea
                             value={formData.description}
                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                            className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-[#4a8f5d] focus:border-[#4a8f5d] outline-none transition-shadow"
+                            className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-green-600 focus:border-green-600 outline-none transition-shadow"
                             placeholder="Describe las funciones..."
                         />
                     </div>
@@ -90,7 +90,7 @@ const RoleModal: React.FC<RoleModalProps> = ({ isOpen, onClose, onSave, editingR
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="bg-[#4a8f5d] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#3d7a4e] transition-colors disabled:opacity-50"
+                            className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
                         >
                             {isLoading ? 'Guardando...' : 'Guardar'}
                         </button>

@@ -32,10 +32,10 @@ export function StudentAnnouncements() {
 
 
   return (
-    <div className="flex flex-col w-full bg-[#F6F7F9]">
+    <div className="flex flex-col w-full bg-background">
       {/* Header */}
-      <header className="bg-[#1B4D1C] p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg sticky top-0 z-20">
-        <h1 className="text-white text-2xl font-bold">Avisos</h1>
+      <header className="bg-primary  p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg sticky top-0 z-20">
+        <h1 className="text-primary-foreground text-2xl font-bold">Avisos</h1>
         <NotificationBell onMarkAsRead={loadAnnouncements} className="relative p-2 bg-white/10 rounded-full text-white hover:text-white" />
       </header>
 
@@ -64,7 +64,7 @@ export function StudentAnnouncements() {
         )}
 
         {!loading && !error && announcements.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground">
+          <div className="text-center py-12 text-gray-500">
             No hay avisos disponibles
           </div>
         )}

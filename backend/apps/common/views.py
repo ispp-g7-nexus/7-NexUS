@@ -151,10 +151,34 @@ class AuthLoginView(APIView):
 
         residence = getattr(request, "residence", None)
         if not has_access_for_portal(user, portal, residence):
-            return Response(
-                {"detail": "No tienes permisos para este portal en esta residencia."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+            from apps.membership.models import Membership
+            has_any_access = False
+            fallback_residence = None
+
+            if portal == "student":
+                member = Membership.objects.filter(user=user, role__name__iexact="Student", is_active=True).first()
+                if member and member.residence:
+                    has_any_access = True
+                    fallback_residence = member.residence
+            else:
+                memberList = Membership.objects.filter(user=user, is_active=True).exclude(role__name__iexact="Student")
+                if memberList.exists():
+                    has_any_access = True
+                    # Prefer the first one that has a residence attached, if any
+                    fallback_residence = memberList.exclude(residence__isnull=True).first()
+                    if fallback_residence:
+                        fallback_residence = fallback_residence.residence
+                    else:
+                        fallback_residence = None
+
+            if has_any_access:
+                residence = fallback_residence
+                request.residence = fallback_residence
+            else:
+                return Response(
+                    {"detail": "No tienes permisos para este portal en esta ni en ninguna otra residencia válida."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
 
         token, max_age = build_access_token(
             user, request.tenant, residence, remember_me
