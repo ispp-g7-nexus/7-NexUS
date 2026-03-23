@@ -154,6 +154,21 @@ function ErrorState({ message, onRetry }: ErrorStateProps) {
   );
 }
 
+const STATUS_BADGE_STYLES = {
+  USED: { label: "Usado", badgeClass: "bg-blue-100 text-blue-700 hover:bg-blue-100" },
+  CANCELLED: { label: "Cancelado", badgeClass: "bg-gray-100 text-gray-600 hover:bg-gray-100" },
+  REVOKED: { label: "Revocado", badgeClass: "bg-red-100 text-red-700 hover:bg-red-100" },
+  REJECTED: { label: "Rechazado", badgeClass: "bg-orange-100 text-orange-700 hover:bg-orange-100" },
+  INACTIVE: { label: "Inactivo", badgeClass: "bg-yellow-100 text-yellow-700 hover:bg-yellow-100" },
+};
+
+function getHistoryStatusConfig(status: string) {
+  return STATUS_BADGE_STYLES[status as keyof typeof STATUS_BADGE_STYLES] || {
+    label: status || "Desconocido",
+    badgeClass: "bg-gray-100 text-gray-600 hover:bg-gray-100",
+  };
+}
+
 function GuestPassCard({
   pass,
   statusLabel,
@@ -189,6 +204,242 @@ function GuestPassCard({
         </div>
       </div>
     </article>
+  );
+}
+
+interface PassesListProps {
+  loading: boolean;
+  error: string | null;
+  passes: GuestPass[];
+  emptyMessage: string;
+  statusLabel: string;
+  badgeClassName: string;
+  isHistory?: boolean;
+  onRetry?: () => void;
+}
+
+function PassesList({
+  loading,
+  error,
+  passes,
+  emptyMessage,
+  statusLabel,
+  badgeClassName,
+  isHistory = false,
+  onRetry,
+}: PassesListProps) {
+  if (loading) {
+    return <LoadingState />;
+  }
+
+  if (error) {
+    return <ErrorState message={error} onRetry={onRetry || (() => {})} />;
+  }
+
+  if (passes.length === 0) {
+    return <EmptyState message={emptyMessage} />;
+  }
+
+  return (
+    <div className="space-y-4">
+      {passes.map((pass) => {
+        const finalStatusLabel = isHistory ? getHistoryStatusConfig(pass.status).label : statusLabel;
+        const finalBadgeClass = isHistory ? getHistoryStatusConfig(pass.status).badgeClass : badgeClassName;
+        return (
+          <GuestPassCard
+            key={pass.id}
+            pass={pass}
+            statusLabel={finalStatusLabel}
+            badgeClassName={finalBadgeClass}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+interface GuestPassSectionProps {
+  title: string;
+  description?: string;
+  icon?: React.ReactNode;
+  passes: GuestPass[];
+  loading: boolean;
+  error: string | null;
+  emptyMessage: string;
+  statusLabel: string;
+  badgeClassName: string;
+  isHistory?: boolean;
+  onRetry: () => void;
+  onRefresh?: () => void;
+}
+
+function GuestPassSection({
+  title,
+  description,
+  icon,
+  passes,
+  loading,
+  error,
+  emptyMessage,
+  statusLabel,
+  badgeClassName,
+  isHistory = false,
+  onRetry,
+  onRefresh,
+}: GuestPassSectionProps) {
+  return (
+    <section className="space-y-4">
+      <header className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            {icon}
+            {title}
+          </h3>
+          {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
+        </div>
+        {onRefresh ? (
+          <Button type="button" variant="outline" onClick={onRefresh}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Actualizar
+          </Button>
+        ) : null}
+      </header>
+      <PassesList
+        loading={loading}
+        error={error}
+        passes={passes}
+        emptyMessage={emptyMessage}
+        statusLabel={statusLabel}
+        badgeClassName={badgeClassName}
+        isHistory={isHistory}
+        onRetry={onRetry}
+      />
+    </section>
+  );
+}
+
+function CreateGuestPassForm({
+  policy,
+  form,
+  formErrors,
+  isSubmitting,
+  onFieldChange,
+  onSubmit,
+}: {
+  policy: GuestPassPolicy | null;
+  form: GuestPassFormState;
+  formErrors: GuestPassFormErrors;
+  isSubmitting: boolean;
+  onFieldChange: <K extends keyof GuestPassFormState>(field: K, value: GuestPassFormState[K]) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+}) {
+  const maxDuration = policy?.max_duration_hours ?? DEFAULT_MAX_DURATION_HOURS;
+  const maxConcurrent = policy?.max_concurrent_passes ?? DEFAULT_MAX_CONCURRENT_PASSES;
+
+  return (
+    <Card className="border-border/80 shadow-sm">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+          <UserRoundPlus className="h-5 w-5" />
+          Crear nuevo pase
+        </CardTitle>
+        <CardDescription>
+          El pase se aprueba automáticamente si cumple las reglas de duración y concurrencia.
+        </CardDescription>
+        <p className="text-xs text-gray-500">
+          Configuración actual: duración máxima <strong>{maxDuration}h</strong> y máximo{" "}
+          <strong>{maxConcurrent}</strong> pases concurrentes.
+        </p>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={onSubmit} className="grid gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="guest-first-name">Nombre del invitado</Label>
+              <Input
+                id="guest-first-name"
+                value={form.guest_first_name}
+                onChange={(event) => onFieldChange("guest_first_name", event.target.value)}
+                aria-invalid={Boolean(formErrors.guest_first_name)}
+                maxLength={100}
+                required
+              />
+              {formErrors.guest_first_name ? (
+                <p className="text-xs text-red-600">{formErrors.guest_first_name}</p>
+              ) : null}
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="guest-last-name">Apellidos del invitado</Label>
+              <Input
+                id="guest-last-name"
+                value={form.guest_last_name}
+                onChange={(event) => onFieldChange("guest_last_name", event.target.value)}
+                aria-invalid={Boolean(formErrors.guest_last_name)}
+                maxLength={100}
+                required
+              />
+              {formErrors.guest_last_name ? (
+                <p className="text-xs text-red-600">{formErrors.guest_last_name}</p>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="guest-valid-from">Fecha/hora inicio</Label>
+              <Input
+                id="guest-valid-from"
+                type="datetime-local"
+                value={form.valid_from}
+                onChange={(event) => onFieldChange("valid_from", event.target.value)}
+                aria-invalid={Boolean(formErrors.valid_from)}
+                required
+              />
+              {formErrors.valid_from ? (
+                <p className="text-xs text-red-600">{formErrors.valid_from}</p>
+              ) : null}
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="guest-valid-until">Fecha/hora fin</Label>
+              <Input
+                id="guest-valid-until"
+                type="datetime-local"
+                value={form.valid_until}
+                onChange={(event) => onFieldChange("valid_until", event.target.value)}
+                aria-invalid={Boolean(formErrors.valid_until)}
+                required
+              />
+              {formErrors.valid_until ? (
+                <p className="text-xs text-red-600">{formErrors.valid_until}</p>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="guest-comment">Motivo o comentario (opcional)</Label>
+            <Textarea
+              id="guest-comment"
+              value={form.comment}
+              onChange={(event) => onFieldChange("comment", event.target.value)}
+              aria-invalid={Boolean(formErrors.comment)}
+              maxLength={500}
+              rows={3}
+            />
+            {formErrors.comment ? (
+              <p className="text-xs text-red-600">{formErrors.comment}</p>
+            ) : null}
+          </div>
+
+          <div className="flex justify-end">
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Creando..." : "Crear pase"}
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -300,228 +551,67 @@ export function ActiveGuestPassesPage() {
 
   return (
     <div className="flex flex-col w-full bg-background">
-      {/* Header */}
       <header className="bg-primary p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg sticky top-0 z-20">
         <h1 className="text-primary-foreground text-2xl font-bold">Pases de Invitados</h1>
       </header>
-      
+
       <section className="mx-auto flex w-full max-w-4xl flex-col gap-6 pb-24 pt-6 px-4">
-      <header className="rounded-xl border border-border/80 bg-card p-4 shadow-sm sm:p-6">
-        <h2 className="text-2xl font-bold tracking-tight">Gestión de pases de invitados</h2>
-        <p className="mt-1 text-sm text-gray-500">
-          Crea nuevos pases para tus invitados y consulta los activos y los próximos.
-        </p>
-      </header>
-
-      <Card className="border-border/80 shadow-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-            <UserRoundPlus className="h-5 w-5" />
-            Crear nuevo pase
-          </CardTitle>
-          <CardDescription>
-            El pase se aprueba automáticamente si cumple las reglas de duración y concurrencia.
-          </CardDescription>
-          <p className="text-xs text-gray-500">
-            Configuración actual: duración máxima{" "}
-            <strong>{policy?.max_duration_hours ?? DEFAULT_MAX_DURATION_HOURS}h</strong> y
-            máximo <strong>{policy?.max_concurrent_passes ?? DEFAULT_MAX_CONCURRENT_PASSES}</strong>{" "}
-            pases concurrentes.
-          </p>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="grid gap-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="grid gap-2">
-                <Label htmlFor="guest-first-name">Nombre del invitado</Label>
-                <Input
-                  id="guest-first-name"
-                  value={form.guest_first_name}
-                  onChange={(event) => setField("guest_first_name", event.target.value)}
-                  aria-invalid={Boolean(formErrors.guest_first_name)}
-                  maxLength={100}
-                  required
-                />
-                {formErrors.guest_first_name ? (
-                  <p className="text-xs text-red-600">{formErrors.guest_first_name}</p>
-                ) : null}
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="guest-last-name">Apellidos del invitado</Label>
-                <Input
-                  id="guest-last-name"
-                  value={form.guest_last_name}
-                  onChange={(event) => setField("guest_last_name", event.target.value)}
-                  aria-invalid={Boolean(formErrors.guest_last_name)}
-                  maxLength={100}
-                  required
-                />
-                {formErrors.guest_last_name ? (
-                  <p className="text-xs text-red-600">{formErrors.guest_last_name}</p>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="grid gap-2">
-                <Label htmlFor="guest-valid-from">Fecha/hora inicio</Label>
-                <Input
-                  id="guest-valid-from"
-                  type="datetime-local"
-                  value={form.valid_from}
-                  onChange={(event) => setField("valid_from", event.target.value)}
-                  aria-invalid={Boolean(formErrors.valid_from)}
-                  required
-                />
-                {formErrors.valid_from ? (
-                  <p className="text-xs text-red-600">{formErrors.valid_from}</p>
-                ) : null}
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="guest-valid-until">Fecha/hora fin</Label>
-                <Input
-                  id="guest-valid-until"
-                  type="datetime-local"
-                  value={form.valid_until}
-                  onChange={(event) => setField("valid_until", event.target.value)}
-                  aria-invalid={Boolean(formErrors.valid_until)}
-                  required
-                />
-                {formErrors.valid_until ? (
-                  <p className="text-xs text-red-600">{formErrors.valid_until}</p>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="guest-comment">Motivo o comentario (opcional)</Label>
-              <Textarea
-                id="guest-comment"
-                value={form.comment}
-                onChange={(event) => setField("comment", event.target.value)}
-                aria-invalid={Boolean(formErrors.comment)}
-                maxLength={500}
-                rows={3}
-              />
-              {formErrors.comment ? (
-                <p className="text-xs text-red-600">{formErrors.comment}</p>
-              ) : null}
-            </div>
-
-            <div className="flex justify-end">
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Creando..." : "Crear pase"}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-
-      <section className="space-y-4">
-        <header className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Pases activos</h3>
-          <Button type="button" variant="outline" onClick={() => void loadPasses()}>
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Actualizar
-          </Button>
-        </header>
-
-        {loading ? (
-          <LoadingState />
-        ) : error ? (
-          <ErrorState message={error} onRetry={() => void loadPasses()} />
-        ) : activePasses.length === 0 ? (
-          <EmptyState message="No tienes pases de invitados activos en este momento." />
-        ) : (
-          <div className="space-y-4">
-            {activePasses.map((pass) => (
-              <GuestPassCard
-                key={pass.id}
-                pass={pass}
-                statusLabel="Activo"
-                badgeClassName="bg-primary/10 text-primary hover:bg-primary/10"
-              />
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className="space-y-4">
-        <header>
-          <h3 className="text-lg font-semibold">Pases próximos</h3>
-          <p className="text-sm text-gray-500">
-            Pases ya creados que comenzarán en el futuro.
+        <header className="rounded-xl border border-border/80 bg-card p-4 shadow-sm sm:p-6">
+          <h2 className="text-2xl font-bold tracking-tight">Gestión de pases de invitados</h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Crea nuevos pases para tus invitados y consulta los activos y los próximos.
           </p>
         </header>
 
-        {loading ? (
-          <LoadingState />
-        ) : error ? (
-          <ErrorState message={error} onRetry={() => void loadPasses()} />
-        ) : upcomingPasses.length === 0 ? (
-          <EmptyState message="No tienes pases de invitados programados próximamente." />
-        ) : (
-          <div className="space-y-4">
-            {upcomingPasses.map((pass) => (
-              <GuestPassCard
-                key={pass.id}
-                pass={pass}
-                statusLabel="Próximo"
-                badgeClassName="bg-accent/20 text-accent-foreground hover:bg-accent/20"
-              />
-            ))}
-          </div>
-        )}
-      </section>
+        <CreateGuestPassForm
+          policy={policy}
+          form={form}
+          formErrors={formErrors}
+          isSubmitting={isSubmitting}
+          onFieldChange={setField}
+          onSubmit={handleSubmit}
+        />
 
-      <section className="space-y-4">
-        <header>
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <History className="h-5 w-5 text-muted-foreground" />
-            Historial de pases
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Pases completados, cancelados, revocados y otros estados históricos.
-          </p>
-        </header>
+        <GuestPassSection
+          title="Pases activos"
+          passes={activePasses}
+          loading={loading}
+          error={error}
+          emptyMessage="No tienes pases de invitados activos en este momento."
+          statusLabel="Activo"
+          badgeClassName="bg-primary/10 text-primary hover:bg-primary/10"
+          onRetry={() => void loadPasses()}
+          onRefresh={() => void loadPasses()}
+        />
 
-        {loading ? (
-          <LoadingState />
-        ) : error ? (
-          <ErrorState message={error} onRetry={() => void loadPasses()} />
-        ) : historyPasses.length === 0 ? (
-          <EmptyState message="No tienes historial de pases de invitados." />
-        ) : (
-          <div className="space-y-4">
-            {historyPasses.map((pass) => {
-              const statusConfig = {
-                USED: { label: "Usado", badgeClass: "bg-blue-100 text-blue-700 hover:bg-blue-100" },
-                CANCELLED: { label: "Cancelado", badgeClass: "bg-gray-100 text-gray-600 hover:bg-gray-100" },
-                REVOKED: { label: "Revocado", badgeClass: "bg-red-100 text-red-700 hover:bg-red-100" },
-                REJECTED: { label: "Rechazado", badgeClass: "bg-orange-100 text-orange-700 hover:bg-orange-100" },
-                INACTIVE: { label: "Inactivo", badgeClass: "bg-yellow-100 text-yellow-700 hover:bg-yellow-100" },
-              };
-              const config = statusConfig[pass.status] || {
-                label: pass.status || "Desconocido",
-                badgeClass: "bg-gray-100 text-gray-600 hover:bg-gray-100",
-              };
-              return (
-                <GuestPassCard
-                  key={pass.id}
-                  pass={pass}
-                  statusLabel={config.label}
-                  badgeClassName={config.badgeClass}
-                />
-              );
-            })}
-          </div>
-        )}
+        <GuestPassSection
+          title="Pases próximos"
+          description="Pases ya creados que comenzarán en el futuro."
+          passes={upcomingPasses}
+          loading={loading}
+          error={error}
+          emptyMessage="No tienes pases de invitados programados próximamente."
+          statusLabel="Próximo"
+          badgeClassName="bg-accent/20 text-accent-foreground hover:bg-accent/20"
+          onRetry={() => void loadPasses()}
+        />
+
+        <GuestPassSection
+          title="Historial de pases"
+          description="Pases completados, cancelados, revocados y otros estados históricos."
+          icon={<History className="h-5 w-5 text-muted-foreground" />}
+          passes={historyPasses}
+          loading={loading}
+          error={error}
+          emptyMessage="No tienes historial de pases de invitados."
+          statusLabel=""
+          badgeClassName=""
+          isHistory={true}
+          onRetry={() => void loadPasses()}
+        />
       </section>
-    </section>
     </div>
   );
 }
 
-export default ActiveGuestPassesPage;
+export default ActiveGuestPassesPage

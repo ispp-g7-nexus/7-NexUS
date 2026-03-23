@@ -230,7 +230,6 @@ def get_upcoming_guest_passes_queryset(membership: Membership, residence):
 
 
 def get_guest_pass_history_queryset(membership: Membership, residence):
-    now = timezone.now()
     return (
         GuestPass.objects.filter(
             residence=residence,
