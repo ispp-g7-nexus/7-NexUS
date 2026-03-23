@@ -185,15 +185,16 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
 const UI_CLASSES = {
   form: "flex flex-col h-full max-h-[90vh] bg-white overflow-hidden",
   header: "p-6 text-center border-b border-gray-50 shrink-0 relative",
-  title: "text-xl font-bold text-[#1B4D1C] mt-2",
+  closeBtn: "absolute right-4 top-4 p-2 hover:bg-gray-50 rounded-full transition-colors z-10",
+  title: "text-xl font-bold text-green-900 mt-2",
   description: "text-sm text-gray-500 mt-1 px-6 leading-tight text-center font-normal",
   body: "flex-1 overflow-y-auto p-6 space-y-5",
   footer: "p-6 border-t border-gray-50 shrink-0 bg-white",
-  label: "text-[10px] font-bold uppercase text-gray-400 ml-1 block mb-1",
-  input: "bg-gray-50 border-none rounded-2xl h-14 px-4 focus-visible:ring-[#82D14C] font-normal",
-  selectTrigger: "bg-gray-50 border-none rounded-2xl h-14 px-4 text-gray-600 focus:ring-[#82D14C] font-normal",
-  textarea: "w-full bg-gray-50 border-none rounded-2xl min-h-[100px] p-4 focus-visible:ring-[#82D14C] resize-none text-sm font-normal",
-  infoBox: "flex items-center gap-2 mt-2 ml-1 text-[#1B4D1C] bg-green-50 p-3 rounded-xl border border-green-100",
+  label: "text-[10px] font-bold uppercase text-gray-400 ml-1",
+  input: "bg-gray-50 border-none rounded-2xl h-14 px-4 focus-visible:ring-green-400 font-normal",
+  selectTrigger: "bg-gray-50 border-none rounded-2xl h-14 px-4 text-gray-500 focus:ring-green-400 font-normal",
+  textarea: "w-full bg-gray-50 border-none rounded-2xl min-h-[100px] p-4 focus-visible:ring-green-400 resize-none text-sm font-normal",
+  infoBox: "flex items-center gap-2 mt-2 ml-1 text-green-900 bg-green-50 p-3 rounded-xl border border-green-100",
   urgentBox: "flex items-center space-x-3 p-4 bg-orange-50/50 rounded-2xl border border-orange-100",
   imageUploadPlaceholder: "flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
 };

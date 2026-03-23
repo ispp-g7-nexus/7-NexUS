@@ -44,6 +44,7 @@ export default function StudentIncidences() {
       const data = await res.json();
       const all = Array.isArray(data.results) ? data.results : [];
       const lastReadAt = getLastReadNotificationsAt();
+
       if (markAsRead && all.length > 0) {
         saveLastReadNotificationsAt(all[0].created_at);
         setUnreadNotifications(0);
@@ -156,7 +157,7 @@ export default function StudentIncidences() {
                               <h3 className={UI_CLASSES.cardTitle}>{inc.title}</h3>
 
                               {inc.is_mine ? (
-                                <span className="text-[10px] font-bold text-[#1B4D1C] uppercase bg-[#EEF8E7] px-1.5 py-0.5 rounded-md inline-block">
+                                <span className="text-[10px] font-bold text-primary uppercase bg-primary/10 px-1.5 py-0.5 rounded-md inline-block">
                                   Tu reporte
                                 </span>
                               ) : (
@@ -174,6 +175,7 @@ export default function StudentIncidences() {
                                 </div>
                               )}
                             </div>
+
                           </div>
                           <div className={UI_CLASSES.cardLocationRow}><MapPin size={14} className="text-slate-400" /><span className="text-[11px] font-semibold text-slate-500 truncate">{LOCATION_LABELS[inc.location_type]} {inc.room_number ? `• Hab. ${inc.room_number}` : ''}</span></div>
                         </div>

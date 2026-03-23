@@ -47,9 +47,9 @@ export function MyMatchesPage() {
     if (isLoading) {
         return (
             <div className="max-w-2xl mx-auto p-4">
-                <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-                    <div className="flex items-center gap-3 text-slate-700">
-                        <Loader2 className="w-5 h-5 animate-spin text-[#4A7C59]" />
+                <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+                    <div className="flex items-center gap-3 text-gray-500">
+                        <Loader2 className="w-5 h-5 animate-spin text-green-700" />
                         <p className="text-sm">Cargando tus matches...</p>
                     </div>
                 </div>
@@ -72,7 +72,13 @@ export function MyMatchesPage() {
     }
 
     return (
-        <div className="max-w-2xl mx-auto p-4 space-y-4">
+        <div className="flex flex-col w-full bg-[#F6F7F9]">
+            {/* Header */}
+            <header className="bg-[#1B4D1C] p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg sticky top-0 z-20">
+                <h1 className="text-white text-2xl font-bold">Matches</h1>
+            </header>
+            
+            <div className="max-w-2xl mx-auto p-4 space-y-4 pb-32">
             <PageHeader />
             <ContentRenderer 
                 payload={payload} 
@@ -85,18 +91,19 @@ export function MyMatchesPage() {
                 onClose={() => setSelectedMatch(null)} 
             />
         </div>
+        </div>
     );
 }
 
 function PageHeader() {
     return (
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-            <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#4A7C59]/10 flex items-center justify-center">
-                    <HeartHandshake className="w-5 h-5 text-[#4A7C59]" />
+        <div className="bg-card rounded-2xl border border-border p-6 shadow-sm">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center shadow-md">
+                    <HeartHandshake className="w-5 h-5 text-primary-foreground" />
                 </div>
-                <div>
-                    <h2 className="text-lg font-semibold text-slate-900">Tus mejores matches</h2>
+                <div className="flex-1 text-center sm:text-left">
+                    <h2 className="text-xl font-bold text-gray-900">Tus Matches</h2>
                 </div>
             </div>
         </div>
@@ -166,15 +173,15 @@ function MatchProfileModal({
         <Dialog open={!!match} onOpenChange={(open) => !open && onClose()}>
             <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto w-[95vw] rounded-2xl">
                 <DialogHeader className="mb-6 flex flex-col items-center justify-center space-y-4 pt-4">
-                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-[#4A7C59] to-[#3a6146] text-white flex items-center justify-center text-3xl font-bold shadow-md">
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-3xl font-bold shadow-md">
                         {match ? getInitials(match.display_name) : ""}
                     </div>
                     <div className="text-center space-y-1.5">
-                        <DialogTitle className="text-2xl font-bold text-slate-900 leading-tight">
+                        <DialogTitle className="text-2xl font-bold text-gray-900 leading-tight">
                             {match?.display_name}
                         </DialogTitle>
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 rounded-full border border-green-200">
-                            <Sparkles className="w-4 h-4" />
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-secondary text-secondary-foreground rounded-full border border-border">
+                            <Sparkles className="w-4 h-4 text-secondary-foreground" />
                             <span className="text-sm font-bold">
                                 {match ? Math.round(match.score * 100) : 0}% Match
                             </span>
@@ -194,7 +201,7 @@ function MatchProfileDetails({ match }: { match: MatchItem }) {
     return (
         <div className="space-y-6">
             <div className="flex flex-col gap-2">
-                <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Atributos Clave</h4>
+                <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Atributos Clave</h4>
                 <div className="flex flex-wrap gap-2">
                     {tags.map((tag, i) => (
                         <span key={i} className={`px-3 py-1.5 rounded-md text-sm font-medium ${tag.color}`}>
@@ -207,7 +214,7 @@ function MatchProfileDetails({ match }: { match: MatchItem }) {
                 </div>
             </div>
 
-            <div className="h-px bg-slate-100 w-full" />
+            <div className="h-px bg-gray-50 w-full" />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
                 <DetailItem label="Edad" value={match.age ? `${match.age} años` : null} />
@@ -228,16 +235,16 @@ function DetailItem({ label, value }: { label: string; value: React.ReactNode })
     if (!value) return null;
     return (
         <div className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{label}</span>
-            <span className="text-sm font-medium text-slate-900">{value}</span>
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{label}</span>
+            <span className="text-sm font-medium text-gray-900">{value}</span>
         </div>
     );
 }
 
 function StateCard({ message }: { message: string }) {
     return (
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-            <p className="text-sm text-slate-600">{message}</p>
+        <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+            <p className="text-sm text-gray-500">{message}</p>
         </div>
     );
 }

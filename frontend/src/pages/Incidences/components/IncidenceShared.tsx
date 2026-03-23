@@ -50,8 +50,8 @@ export const STATUS_CONFIG: Record<string, { label: string, student: any, admin:
   },
   resolved: { 
     label: "Resuelto", 
-    student: { colorClass: "bg-[#F0F9EB] text-[#82D14C]", barClass: "bg-[#82D14C]" },
-    admin: { bg: 'bg-green-100', text: 'text-green-600' }
+    student: { colorClass: "bg-primary/10 text-primary", barClass: "bg-primary" },
+    admin: { bg: 'bg-primary/10', text: 'text-primary' }
   }
 };
 
@@ -96,11 +96,29 @@ export const applyIncidenceFilters = (inc: any, filters: any) => {
 };
 
 export const COMMON_UI_CLASSES = {
-  dialogNotes: "max-w-[95vw] sm:max-w-[500px] rounded-[30px] p-0 border-none overflow-hidden shadow-2xl",
-  notesTitle: "p-5 bg-white border-b border-slate-50 font-bold text-[#1B4D1C] text-[11px] text-center uppercase tracking-widest",
+  mainLayout: "flex flex-col h-screen bg-background overflow-hidden",
+  header: "bg-primary p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg",
+  headerTitle: "text-primary-foreground text-2xl font-bold",
+  mainContent: "flex-1 overflow-y-auto p-4 md:p-6 pb-32 w-full",
+  filterGrid: "grid grid-cols-2 md:grid-cols-4 gap-3 bg-white p-4 rounded-xl shadow-sm",
+  filterInput: "w-full px-5 py-2 rounded-2xl border border-slate-200 bg-white text-sm focus:ring-2 focus:ring-primary/20 outline-none",
+  btnMineWrapper: "flex justify-end mb-6",
+  btnMineBase: "flex items-center gap-2 px-6 py-3 rounded-full text-xs font-bold transition-all border shadow-sm",
+  btnMineActive: "bg-primary text-primary-foreground",
+  btnMineInactive: "bg-white text-primary border-primary/20",
+  incidencesGrid: "grid gap-3",
+  card: "flex border-0 shadow-sm rounded-2xl bg-white overflow-hidden hover:shadow-md transition-shadow",
+  cardSideBar: "w-1 shrink-0",
+  cardTitle: "text-sm font-bold text-slate-800 truncate",
+  statusBadge: "px-2 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap",
+  cardLocationRow: "flex items-center gap-2 mt-2",
+  btnNotes: "bg-primary/10 h-8 px-4 rounded-xl text-primary border-primary/20 border-2 font-bold text-[10px] uppercase hover:bg-primary hover:text-primary-foreground transition-all",
   loadingText: "text-center text-slate-400 mt-20 text-sm font-bold animate-pulse",
-  filterInput: "w-full px-5 py-2 rounded-2xl border border-slate-200 bg-white text-sm focus:ring-2 focus:ring-[#82D14C]/20 outline-none",
-  btnFloating: "fixed bottom-24 right-8 w-16 h-16 bg-[#82D14C] hover:bg-[#74bc44] text-white rounded-full shadow-2xl flex items-center justify-center z-50 transition-transform active:scale-90",
+  bellContainer: "relative p-2 bg-white/10 rounded-full text-white hover:text-white transition-colors hover:bg-white/20",
+  bellBadge: "absolute -right-1 -top-1 min-w-5 h-5 flex items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground ring-2 ring-background",
+  dialogNotes: "max-w-[95vw] sm:max-w-[500px] rounded-[30px] p-0 border-none overflow-hidden shadow-2xl",
+  notesTitle: "p-5 bg-white border-b border-slate-50 font-bold text-primary text-[11px] text-center uppercase tracking-widest",
+  btnFloating: "fixed bottom-24 right-8 w-16 h-16 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full shadow-2xl flex items-center justify-center z-50 transition-transform active:scale-90",
   actionBtn: "p-2 rounded-full transition-colors hover:bg-slate-100",
   deleteBtn: "text-red-500 hover:bg-red-50",
   editBtn: "text-blue-500 hover:bg-blue-50"
@@ -117,16 +135,16 @@ export const IncidenceSelect = ({ value, onChange, options, placeholder, classNa
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button type="button" className={`flex items-center justify-between w-full px-4 h-[50px] bg-white border border-slate-200 rounded-2xl text-sm font-medium transition-all outline-none focus:ring-2 focus:ring-[#82D14C]/10 hover:border-[#82D14C] ${className}`}>
+        <button type="button" className={`flex items-center justify-between w-full px-4 h-[50px] bg-white border border-slate-200 rounded-2xl text-sm font-medium transition-all outline-none focus:ring-2 focus:ring-primary/10 hover:border-primary ${className}`}>
           <span className={!value || value === 'all' ? 'text-slate-400' : 'text-slate-700'}>{getLabel()}</span>
           <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${open ? 'rotate-90' : 'rotate-0'}`} />
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-[--radix-popover-trigger-width] p-1 bg-white border-none rounded-2xl shadow-xl z-[100]">
         <div className="max-h-60 overflow-y-auto">
-          <button type="button" onClick={() => { onChange('all'); setOpen(false); }} className="w-full text-left px-3 py-2 text-sm rounded-xl hover:bg-[#EEF8E7] hover:text-[#1B4D1C] font-bold text-slate-400 border-b mb-1">Todas</button>
+          <button type="button" onClick={() => { onChange('all'); setOpen(false); }} className="w-full text-left px-3 py-2 text-sm rounded-xl hover:bg-primary/10 hover:text-primary font-bold text-slate-400 border-b mb-1">Todas</button>
           {Object.entries(options).map(([key, val]) => (
-            <button key={key} type="button" onClick={() => { onChange(key); setOpen(false); }} className={`w-full text-left px-3 py-2 text-sm rounded-xl mb-0.5 ${value === key ? 'bg-[#82D14C] text-white' : 'hover:bg-[#EEF8E7] text-slate-700'}`}>
+            <button key={key} type="button" onClick={() => { onChange(key); setOpen(false); }} className={`w-full text-left px-3 py-2 text-sm rounded-xl mb-0.5 ${value === key ? 'bg-primary text-primary-foreground' : 'hover:bg-primary/10 text-slate-700'}`}>
               {(val && typeof val === 'object') ? (val as ConfigOption).label : String(val)}
             </button>
           ))}

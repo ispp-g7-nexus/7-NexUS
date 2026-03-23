@@ -1,4 +1,4 @@
-import { AlertCircle, BarChart3, BedDouble, Bell, BookOpen, Briefcase, Calendar, Home, Layout, LayoutDashboard, LogOut, Menu, MessageSquare, Shield, User, UserCheck, Users, Utensils } from "lucide-react";
+import { AlertCircle, BedDouble, Bell, BookOpen, Briefcase, Calendar, Home, LayoutDashboard, LogOut, Menu, MessageSquare, Palette, Shield, User, UserCheck, Users, Utensils } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import logo from "../assets/logo.png";
 import { AdminChats } from "../pages/Chats/AdminChats";
@@ -13,11 +13,18 @@ import { AdminGuestPassListPage } from "../pages/Visitors/AdminGuestPassList";
 import { AdminGuestPassPolicyPage } from "../pages/Visitors/AdminGuestPassPolicy";
 import { AdminAnnouncements } from "../pages/announcements/AdminAnnouncements";
 import { authService } from "../services/auth";
+import { listBedrooms } from "../services/bedrooms";
 import { chatsService, type ChatRealtimeEvent } from "../services/chats";
 import { listAdminGuestPasses } from "../services/guestPasses";
+import { IncidenceService } from "../services/incidences";
+import { residentsService } from "../services/residents";
+import { roleService } from "../services/roles";
+import { staffService } from "../services/staff";
 import { AdminProfile } from "./AdminProfile";
 import { AdminReservations } from "./AdminReservations";
 import { StatCard } from "./statCard";
+import { AdminBrandingPage } from "../pages/Branding/AdminBrandingPage";
+import { brandingService, type ResidenceBranding } from "../services/branding";
 import { Button } from "./ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet";
@@ -29,7 +36,7 @@ interface AdminViewProps {
     readonly currentUser: { name: string; email: string } | null;
 }
 
-type AdminTab = "dashboard" | "rooms" | "students" | "incidences" | "reservations" | "kitchen" | "analytics" | "staff" | "announcements" | "visitors" | "events" | "roles" | "profile" | "chats";
+type AdminTab = "dashboard" | "rooms" | "students" | "incidences" | "reservations" | "kitchen" | "analytics" | "staff" | "announcements" | "visitors" | "events" | "roles" | "profile" | "chats" | "branding";
 
 const formatRelativeTime = (isoDate: string) => {
     const parsedTime = Date.parse(isoDate);
@@ -70,7 +77,17 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
     const [unreadChatKeys, setUnreadChatKeys] = useState<Set<string>>(new Set());
     const [chatRealtimeTick, setChatRealtimeTick] = useState<number>(0);
     const [chatRealtimeEvent, setChatRealtimeEvent] = useState<ChatRealtimeEvent | null>(null);
+    const [tenantLogoUrl, setTenantLogoUrl] = useState<string>("");
     const processedGroupMessageEventKeysRef = useRef<Set<string>>(new Set());
+
+
+
+    const applyTenantTheme = (branding: ResidenceBranding) => {
+        if (branding.logo_url) {
+            setTenantLogoUrl(branding.logo_url);
+        }
+        import("../hooks/useTenantBranding").then((m) => m.applyGlobalBranding(branding));
+    };
 
     const unreadChatsCount = unreadChatKeys.size;
 
@@ -167,6 +184,36 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
     }, []);
 
     useEffect(() => {
+        let mounted = true;
+
+        const loadBranding = async () => {
+            try {
+                const branding = await brandingService.get();
+                if (!mounted) return;
+                applyTenantTheme(branding);
+            } catch {
+                // Branding is optional for admin view.
+            }
+        };
+
+        loadBranding();
+
+        const handleBrandingUpdate = (event: Event) => {
+            const customEvent = event as CustomEvent<ResidenceBranding>;
+            if (customEvent.detail) {
+                applyTenantTheme(customEvent.detail);
+            }
+        };
+
+        globalThis.addEventListener("tenant-branding-updated", handleBrandingUpdate as EventListener);
+
+        return () => {
+            mounted = false;
+            globalThis.removeEventListener("tenant-branding-updated", handleBrandingUpdate as EventListener);
+        };
+    }, []);
+
+    useEffect(() => {
         authService.me().then((session) => {
             if (session.user?.email) {
                 setCurrentUserEmail(session.user.email);
@@ -178,6 +225,11 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
         const normalizedCurrentUserEmail = currentUserEmail.trim().toLowerCase();
 
         const source = chatsService.subscribeToEvents((evt) => {
+            if (evt.event === "branding_updated" && evt.payload) {
+                import("../hooks/useTenantBranding").then((m) => m.applyGlobalBranding(evt.payload as any));
+                return;
+            }
+
             if (isGroupLifecycleEvent(evt)) {
                 setChatRealtimeEvent(evt);
                 setChatRealtimeTick((prev) => prev + 1);
@@ -256,6 +308,30 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
         handleNavbarModuleAccess,
     } = useAdminNotifications();
 
+const [totalResidents, setTotalResidents] = useState<number>(0);
+const [occupiedRoomsPercent, setOccupiedRoomsPercent] = useState<string>('—');
+const [totalStaff, setTotalStaff] = useState<number>(0);
+const [pendingIncidences, setPendingIncidences] = useState<number>(0);
+const [totalRoles, setTotalRoles] = useState<number>(0);
+useEffect(() => {
+    if (activeTab !== "dashboard") return;
+
+    residentsService.list().then((d) => setTotalResidents(d.length)).catch(() => setTotalResidents(0));
+
+    listBedrooms().then((d) => {
+        const totalPlazas = d.reduce((sum, r) => sum + r.capacidad_maxima, 0);
+        const plazasOcupadas = d.reduce((sum, r) => sum + r.ocupantes_actuales, 0);
+        const pct = totalPlazas > 0 ? Math.round((plazasOcupadas / totalPlazas) * 100) : 0;
+        setOccupiedRoomsPercent(`${pct}%`);
+    }).catch(() => setOccupiedRoomsPercent('—'));
+
+    staffService.list().then((d) => setTotalStaff(d.length)).catch(() => setTotalStaff(0));
+    listAdminGuestPasses("active").then((d) => setTotalActiveGuests(d.length)).catch(() => setTotalActiveGuests(0));
+    IncidenceService.getAll().then((d) => setPendingIncidences(d.filter(i => i.status === 'pending').length)).catch(() => setPendingIncidences(0));
+    roleService.getRoles().then((d) => setTotalRoles(d.length)).catch(() => setTotalRoles(0));
+    loadChatsCount();
+}, [activeTab]);
+
     const allNavItems = [
         { id: "dashboard", label: "Panel de Control", icon: <LayoutDashboard className="w-5 h-5" /> },
         { id: "profile", label: "Mi Perfil", icon: <User className="w-5 h-5" /> },
@@ -267,31 +343,25 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
         { id: "events", label: "Eventos & Comunidad", icon: <Calendar className="w-5 h-5" /> },
         { id: "reservations", label: "Recursos & Reservas", icon: <BookOpen className="w-5 h-5" /> },
         { id: "roles", label: "Roles", icon: <Shield className="w-5 h-5" /> },
+        { id: "branding", label: "Personalización", icon: <Palette className="w-5 h-5" /> },
         { id: "announcements", label: "Avisos", icon: <Bell className="w-5 h-5" /> },
         { id: "visitors", label: "Visitantes", icon: <UserCheck className="w-5 h-5" /> },
     ];
 
     const metricsData = [
-        { label: 'Residentes',      value: '156', trend: '+8%',    icon: Users,      theme: 'blue'   as const, onClick: () => setActiveTab('students')     },
-        { label: 'Habitaciones',    value: '92%', trend: '+3%',    icon: BedDouble,  theme: 'green'  as const, onClick: () => setActiveTab('rooms')        },
-        { label: 'Incidencias',     value: '12',  trend: '-15%',   icon: AlertCircle,theme: 'red'    as const, onClick: () => setActiveTab('incidences')   },
-        { label: 'Visitantes',      value: '23',  trend: '+12%',   icon: UserCheck,  theme: 'purple' as const, onClick: () => setActiveTab('visitors')     },
-        { label: 'Espacios Comunes',value: '8',   trend: '+2',     icon: Layout,     theme: 'orange' as const, onClick: () => setActiveTab('reservations') },
-        {
-            label: 'Chats',
-            value: totalChats.toString(),
-            topBadgeText: unreadChatsCount > 0 ? '¡Tienes mensajes sin leer!' : undefined,
-            trend: '',
-            icon: MessageSquare,
-            theme: 'blue' as const,
-            onClick: () => setActiveTab('chats')
-        },
-        { label: 'Menú Comedor',    value: 'Ver', trend: 'Hoy',    icon: Utensils,   theme: 'blue'   as const, onClick: () => setActiveTab('kitchen')      },
-        { label: 'Estadísticas',    value: 'Ver', trend: '+5%',    icon: BarChart3,  theme: 'green'  as const, onClick: () => setActiveTab('analytics')    },
-        { label: 'Personal',        value: '42',  trend: 'Estable',icon: Briefcase,  theme: 'purple' as const, onClick: () => setActiveTab('staff')        },
-        { label: 'Visitantes', value: totalActiveGuests.toString(), trend: '+0%', icon: UserCheck, theme: 'blue' as const, onClick: () => setActiveTab('visitors') },
-    ];
-
+    { label: 'Residentes',         value: totalResidents,    icon: Users,         theme: 'blue'   as const, onClick: () => setActiveTab('students')      },
+    { label: 'Habitaciones',       value: occupiedRoomsPercent, icon: BedDouble,  theme: 'green'  as const, onClick: () => setActiveTab('rooms')         },
+    { label: 'Personal',           value: totalStaff,        icon: Briefcase,     theme: 'purple' as const, onClick: () => setActiveTab('staff')         },
+    { label: 'Visitantes',         value: totalActiveGuests, icon: UserCheck,     theme: 'purple' as const, onClick: () => setActiveTab('visitors')      },
+    { label: 'Incidencias',        value: pendingIncidences, icon: AlertCircle,   theme: 'red'    as const, onClick: () => setActiveTab('incidences')    },
+    { label: 'Eventos',            value: 'Ver',             icon: Calendar,      theme: 'orange' as const, onClick: () => setActiveTab('events')        },
+    { label: 'Roles',              value: totalRoles,        icon: Shield,        theme: 'purple' as const, onClick: () => setActiveTab('roles')         },
+    { label: 'Chats',              value: totalChats,        icon: MessageSquare, theme: 'blue'   as const,
+      topBadgeText: unreadChatsCount > 0 ? '¡Tienes mensajes sin leer!' : undefined,
+      onClick: () => setActiveTab('chats') },
+    { label: 'Menú Comedor',       value: 'Ver',             icon: Utensils,      theme: 'blue'   as const, onClick: () => setActiveTab('kitchen')       },
+    { label: 'Recursos & Reservas',value: 'Ver',             icon: BookOpen,      theme: 'green'  as const, onClick: () => setActiveTab('reservations')  },
+];
     const today = new Date().toLocaleDateString('es-ES', {
         weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
     });
@@ -309,7 +379,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
                                 {todayCapitalized}
                             </p>
                             <h2 className="text-2xl font-medium text-gray-900">
-                                Buenos días, <span className="text-green-600 font-medium">Administrador</span>
+                                Buenos días, <span className="text-primary font-medium">Administrador</span>
                             </h2>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -322,6 +392,9 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
 
             case "roles":
                 return <RolesPage />;
+
+            case "branding":
+                return <AdminBrandingPage />;
 
             case "profile":
                 return <AdminProfile />;
@@ -408,11 +481,11 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <button onClick={() => setActiveTab("dashboard")} className="w-9 h-9 flex items-center justify-center">
-                            <img src={logo} alt="NexUS Logo" className="w-full h-full object-contain" />
+                            <img src={tenantLogoUrl || logo} alt="Logo residencia" className="w-full h-full object-contain" />
                         </button>
                         <div>
-                            <h1 className="font-semibold text-gray-900">{currentTab?.label}</h1>
-                            <p className="text-xs text-gray-500">Panel de Administración</p>
+                            <h1 className="tenant-admin-title font-semibold text-gray-900">{currentTab?.label}</h1>
+                            <p className="tenant-admin-subtitle text-xs text-gray-500">Panel de Administración</p>
                         </div>
                     </div>
 
@@ -428,7 +501,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
                                 <div className="max-h-[70vh] overflow-y-auto rounded-md bg-white p-4">
                                     <div className="mb-3 flex items-center justify-between gap-2">
                                         <div className="flex items-center gap-2">
-                                            <Bell className="h-5 w-5 text-[#35C759]" />
+                                            <Bell className="h-5 w-5 text-green-500" />
                                             <h3 className="font-semibold text-gray-900">Notificaciones</h3>
                                         </div>
                                         {unreadCount > 0 && (
@@ -495,7 +568,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
                                                 }}
                                                 className={`w-full flex items-center justify-between gap-3 px-4 py-3 text-sm rounded-xl transition-colors ${
                                                     activeTab === item.id
-                                                        ? 'bg-green-50 text-green-700 font-medium'
+                                                        ? 'bg-primary/10 text-primary font-medium'
                                                         : 'text-gray-600 hover:bg-gray-50'
                                                 }`}
                                             >
@@ -519,8 +592,8 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
                                 <div className="pt-6 border-t mt-auto shrink-0">
                                     {currentUser && (
                                         <div className="mb-4 flex items-center gap-3 px-1">
-                                            <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center shrink-0">
-                                                <User className="w-5 h-5 text-green-700" />
+                                            <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                                                <User className="w-5 h-5 text-primary" />
                                             </div>
                                             <div className="min-w-0">
                                                 <p className="text-sm font-medium text-gray-900 truncate">{currentUser.name}</p>

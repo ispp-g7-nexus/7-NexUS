@@ -113,7 +113,7 @@ const ManageIncidenceModal = ({ incidence, onClose, onRefresh }: ManageModalProp
                   incidence.updates.map((u) => (
                     <div key={u.id} className={UI_CLASSES.historyBubble}>
                       <div className="flex justify-between items-center mb-1">
-                        <span className="text-[9px] font-black text-emerald-700 uppercase bg-emerald-50 px-1.5 py-0.5 rounded">{u.author_name || 'Admin'}</span>
+                        <span className="text-[9px] font-black text-primary uppercase bg-primary/10 px-1.5 py-0.5 rounded">{u.author_name || 'Admin'}</span>
                         <span className="text-[9px] text-slate-400 font-bold">{new Date(u.created_at).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
                       </div>
                       <p className="text-xs text-slate-600 leading-snug">{u.text}</p>
@@ -319,7 +319,7 @@ export default AdminIncidences;
 
 const UI_CLASSES = {
   ...COMMON_UI_CLASSES,
-  mainLayout: "bg-slate-50 min-h-screen flex flex-col",
+  mainLayout: "bg-background min-h-screen flex flex-col",
   mainContent: "flex-1 overflow-y-auto p-4 md:p-10 pb-32",
   incidencesGrid: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-stretch",
   filterGrid: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8",
@@ -331,13 +331,14 @@ const UI_CLASSES = {
   avatar: "w-10 h-10 bg-slate-100 text-slate-600 rounded-full flex items-center justify-center font-bold",
   priorityBadge: "text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider h-fit inline-flex items-center",
   label: "text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block",
-  input: "w-full bg-slate-50 border border-slate-100 rounded-2xl h-[50px] px-4 font-bold text-slate-700 outline-none text-sm mt-2 focus:ring-2 focus:ring-emerald-500",
-  textarea: "w-full bg-slate-50 border border-slate-100 rounded-2xl min-h-[100px] p-4 text-sm font-medium outline-none resize-none focus:ring-2 focus:ring-emerald-500",
-  btnPrimary: "flex-1 h-12 rounded-2xl bg-[#1B4D1C] text-white font-black uppercase tracking-widest text-xs shadow-lg hover:bg-[#2a632c] transition-all",
+  input: "w-full bg-slate-50 border border-slate-100 rounded-2xl h-[50px] px-4 font-bold text-slate-700 outline-none text-sm mt-2 focus:ring-2 focus:ring-primary",
+  textarea: "w-full bg-slate-50 border border-slate-100 rounded-2xl min-h-[100px] p-4 text-sm font-medium outline-none resize-none focus:ring-2 focus:ring-primary",
+  btnPrimary: "flex-1 h-12 rounded-2xl bg-primary text-primary-foreground font-black uppercase tracking-widest text-xs shadow-lg hover:bg-primary/90 transition-all",
   btnSecondary: "flex-1 h-12 rounded-2xl font-black uppercase text-xs text-slate-400 bg-slate-50 hover:bg-slate-100 transition-all",
   statusBadge: "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider shadow-sm",
   technicianBadge: "px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-[10px] font-bold flex items-center gap-1.5",
-  btnManage: "text-[#1B4D1C] font-black text-xs flex items-center gap-1 uppercase tracking-widest hover:gap-2 transition-all",
+  btnManage: "text-primary font-black text-xs flex items-center gap-1 uppercase tracking-widest hover:gap-2 transition-all",
+  btnFloating: "fixed bottom-24 right-8 w-16 h-16 bg-primary text-primary-foreground rounded-full shadow-2xl flex items-center justify-center z-50 transition-transform active:scale-90",
   historyScrollArea: "bg-slate-50 border border-slate-100 rounded-2xl p-3 max-h-40 overflow-y-auto space-y-2 mb-2",
   historyBubble: "bg-white p-3 rounded-xl border border-slate-90 shadow-sm",
   actionBtnSmall: "p-1.5 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors border border-slate-100"

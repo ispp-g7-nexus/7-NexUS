@@ -13,11 +13,11 @@ export function UpcomingEvents({
     handleLeaveEvent: (id: number) => Promise<void>;
     handleOpenDetails: (event: any) => void;
 }) {
-    if (loading) return <p className="text-center text-muted-foreground py-10">Cargando eventos...</p>;
+    if (loading) return <p className="text-center text-gray-500 py-10">Cargando eventos...</p>;
     if (events.length === 0) {
         return (
-            <div className="bg-card text-card-foreground p-8 rounded-xl border border-border text-center shadow-sm">
-                <p className="text-muted-foreground">No hay próximas actividades programadas en este momento.</p>
+            <div className="bg-white text-card-foreground p-8 rounded-xl border border-gray-200 text-center shadow-sm">
+                <p className="text-gray-500">No hay próximas actividades programadas en este momento.</p>
             </div>
         );
     }
@@ -36,6 +36,7 @@ export function UpcomingEvents({
                     image={event.image_url || "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&q=80&w=400"}
                     tags={event.tags}
                     isJoined={event.is_joined}
+                    canJoin={event.can_join}
                     isPast={false}
                     onJoin={handleJoinEvent}
                     onLeave={handleLeaveEvent}

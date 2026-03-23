@@ -56,7 +56,7 @@ const MealCardAdmin = ({ meal, onEdit, onDelete }: MealCardAdminProps) => {
           <div className="flex-1">
             <p className="font-semibold text-gray-900">{meal.name}</p>
             {meal.description && (
-              <p className="text-sm text-gray-600">{meal.description}</p>
+              <p className="text-sm text-gray-500">{meal.description}</p>
             )}
           </div>
         </div>
@@ -143,7 +143,7 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave }: EditMealModalProps) =>
           </h2>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-gray-100 rounded-md"
+            className="p-1 hover:bg-gray-50 rounded-md"
           >
             <X className="w-5 h-5" />
           </button>
@@ -152,7 +152,7 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave }: EditMealModalProps) =>
         <div className="p-6 space-y-4">
           {/* Nombre */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-500 mb-1">
               Nombre de la comida
             </label>
             <input
@@ -160,19 +160,19 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave }: EditMealModalProps) =>
               value={formData.name}
               onChange={(e) => handleChange('name', e.target.value)}
               placeholder="Ej: Arroz con pollo"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           {/* Tipo */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-500 mb-1">
               Tipo de comida
             </label>
             <select
               value={formData.type}
               onChange={(e) => handleChange('type', e.target.value as Meal['type'])}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {MEAL_TYPES.map(type => (
                 <option key={type.value} value={type.value}>
@@ -184,7 +184,7 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave }: EditMealModalProps) =>
 
           {/* Descripción */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-500 mb-1">
               Descripción (opcional)
             </label>
             <textarea
@@ -192,13 +192,13 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave }: EditMealModalProps) =>
               onChange={(e) => handleChange('description', e.target.value)}
               placeholder="Ej: Acompañado de ensalada fresca"
               rows={2}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             />
           </div>
 
           {/* Alérgenos */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-500 mb-1">
               Alérgenos (separados por comas)
             </label>
             <input
@@ -206,13 +206,13 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave }: EditMealModalProps) =>
               value={formData.allergens?.join(', ') || ''}
               onChange={(e) => handleChange('allergens', e.target.value.split(',').map(a => a.trim()).filter(Boolean))}
               placeholder="Ej: Gluten, Maní, Leche"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           {/* Opciones dietéticas */}
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-gray-500">
               Opciones dietéticas
             </label>
             <div className="flex items-center gap-4">
@@ -223,7 +223,7 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave }: EditMealModalProps) =>
                   onChange={(e) => handleChange('isVegetarian', e.target.checked)}
                   className="w-4 h-4 rounded"
                 />
-                <span className="text-sm text-gray-700">Vegetariano</span>
+                <span className="text-sm text-gray-500">Vegetariano</span>
               </label>
               <label className="flex items-center gap-2">
                 <input
@@ -232,7 +232,7 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave }: EditMealModalProps) =>
                   onChange={(e) => handleChange('isVegan', e.target.checked)}
                   className="w-4 h-4 rounded"
                 />
-                <span className="text-sm text-gray-700">Vegano</span>
+                <span className="text-sm text-gray-500">Vegano</span>
               </label>
             </div>
           </div>
@@ -242,7 +242,7 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave }: EditMealModalProps) =>
         <div className="flex gap-3 p-6 border-t border-gray-200">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+            className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-gray-500 font-medium hover:bg-gray-50 transition-colors"
           >
             Cancelar
           </button>
@@ -278,16 +278,16 @@ const DayMenuCardAdmin = ({ day, onAddMeal, onEditMeal, onDeleteMeal }: DayMenuC
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-      <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4 flex items-center justify-between">
+      <div className="bg-primary px-6 py-4 flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold text-white capitalize">
             {dayName}
           </h3>
-          <p className="text-sm text-green-50">{formattedDate}</p>
+          <p className="text-sm text-primary-foreground/80">{formattedDate}</p>
         </div>
         <button
           onClick={() => onAddMeal(day.date)}
-          className="flex items-center gap-2 px-3 py-2 bg-white text-green-700 rounded-lg hover:bg-green-50 transition-colors font-medium"
+          className="flex items-center gap-2 px-3 py-2 bg-white text-primary rounded-lg hover:bg-primary/10 transition-colors font-medium"
           title="Agregar comida"
         >
           <Plus className="w-4 h-4" />
@@ -471,7 +471,7 @@ export function AdminMenuView({ menuWeek }: AdminMenuViewProps) {
             <h1 className="text-4xl font-serif text-gray-900 mb-2">
               Gestión del Menú del Comedor
             </h1>
-            <p className="text-gray-600">
+            <p className="text-gray-500">
               Administra el menú de la semana del{' '}
               {new Date(week.weekStart).toLocaleDateString('es-ES', {
                 day: 'numeric',
@@ -484,7 +484,7 @@ export function AdminMenuView({ menuWeek }: AdminMenuViewProps) {
               })}
             </p>
           </div>
-          <button className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center gap-2">
+          <button className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium flex items-center gap-2">
             <Plus className="w-5 h-5" />
             Nueva Semana
           </button>

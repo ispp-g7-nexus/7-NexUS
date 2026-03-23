@@ -49,7 +49,7 @@ export function InteractiveDatePicker({
   return (
     <div className={className}>
       <CalendarDays 
-        className="h-4 w-4 cursor-pointer text-muted-foreground transition-colors hover:text-foreground group-focus-within:text-[#4A7C59]" 
+        className="h-4 w-4 cursor-pointer text-muted-foreground transition-colors hover:text-foreground group-focus-within:text-green-700" 
         onClick={() => {
           interactionType.current = 'picker';
           dateInputRef.current?.showPicker();
