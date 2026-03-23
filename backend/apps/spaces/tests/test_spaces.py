@@ -46,6 +46,13 @@ class SpaceReservationApiTests(TenantTestCase):
             first_name="Other",
             last_name="Demo",
         )
+        self.third_user = user_model.objects.create_user(
+            username="third",
+            email="third@example.com",
+            password="demo1234",
+            first_name="Third",
+            last_name="Demo",
+        )
 
         self.residence = Residence.objects.create(
             name="Residencia A",
@@ -120,6 +127,9 @@ class SpaceReservationApiTests(TenantTestCase):
         self.assertEqual(reservation.status, SpaceReservation.Status.ACTIVE)
 
     def test_blocks_overlapping_reservation(self):
+        self.space.capacity = 1
+        self.space.save(update_fields=["capacity"])
+
         start_time, end_time = self._build_slot(
             day_offset=1,
             start_hour=10,
@@ -148,7 +158,257 @@ class SpaceReservationApiTests(TenantTestCase):
 
         self.assertEqual(response.status_code, 400)
         payload = response.json()
-        self.assertIn("espacio", payload["detail"].lower())
+        self.assertIn("aforo", payload["detail"].lower())
+
+    def test_allows_overlapping_reservation_when_capacity_has_room(self):
+        self.space.capacity = 2
+        self.space.save(update_fields=["capacity"])
+
+        start_time, end_time = self._build_slot(
+            day_offset=1,
+            start_hour=10,
+            start_minute=0,
+            end_hour=11,
+            end_minute=0,
+        )
+
+        SpaceReservation.objects.create(
+            space=self.space,
+            user=self.other_user,
+            residence=self.residence,
+            start_time=start_time,
+            end_time=end_time,
+            status=SpaceReservation.Status.ACTIVE,
+        )
+
+        response = self.client.post(
+            f"/api/spaces/{self.space.id}/reservations/",
+            data={
+                "start_time": (start_time + timedelta(minutes=15)).isoformat(),
+                "end_time": (end_time - timedelta(minutes=15)).isoformat(),
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(SpaceReservation.objects.count(), 2)
+
+    def test_allows_overlapping_reservation_with_multiple_existing_below_capacity(self):
+        self.space.capacity = 3
+        self.space.save(update_fields=["capacity"])
+
+        start_time, end_time = self._build_slot(
+            day_offset=1,
+            start_hour=10,
+            start_minute=0,
+            end_hour=11,
+            end_minute=0,
+        )
+
+        SpaceReservation.objects.create(
+            space=self.space,
+            user=self.other_user,
+            residence=self.residence,
+            start_time=start_time,
+            end_time=end_time,
+            status=SpaceReservation.Status.ACTIVE,
+        )
+        SpaceReservation.objects.create(
+            space=self.space,
+            user=self.third_user,
+            residence=self.residence,
+            start_time=start_time,
+            end_time=end_time,
+            status=SpaceReservation.Status.ACTIVE,
+        )
+
+        response = self.client.post(
+            f"/api/spaces/{self.space.id}/reservations/",
+            data={
+                "start_time": (start_time + timedelta(minutes=20)).isoformat(),
+                "end_time": (end_time - timedelta(minutes=20)).isoformat(),
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(SpaceReservation.objects.count(), 3)
+
+    def test_blocks_overlapping_reservation_when_capacity_is_full(self):
+        self.space.capacity = 2
+        self.space.save(update_fields=["capacity"])
+
+        start_time, end_time = self._build_slot(
+            day_offset=1,
+            start_hour=10,
+            start_minute=0,
+            end_hour=11,
+            end_minute=0,
+        )
+
+        SpaceReservation.objects.create(
+            space=self.space,
+            user=self.other_user,
+            residence=self.residence,
+            start_time=start_time,
+            end_time=end_time,
+            status=SpaceReservation.Status.ACTIVE,
+        )
+        SpaceReservation.objects.create(
+            space=self.space,
+            user=self.third_user,
+            residence=self.residence,
+            start_time=start_time,
+            end_time=end_time,
+            status=SpaceReservation.Status.ACTIVE,
+        )
+
+        response = self.client.post(
+            f"/api/spaces/{self.space.id}/reservations/",
+            data={
+                "start_time": (start_time + timedelta(minutes=10)).isoformat(),
+                "end_time": (end_time - timedelta(minutes=10)).isoformat(),
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        payload = response.json()
+        self.assertIn("aforo", payload["detail"].lower())
+
+    def test_partial_overlaps_are_evaluated_by_real_concurrency(self):
+        self.space.capacity = 2
+        self.space.save(update_fields=["capacity"])
+
+        start_time, _ = self._build_slot(
+            day_offset=1,
+            start_hour=10,
+            start_minute=0,
+            end_hour=12,
+            end_minute=0,
+        )
+
+        # Dos reservas existentes con solape parcial entre sí.
+        first_start = start_time + timedelta(minutes=15)  # 10:15
+        first_end = start_time + timedelta(minutes=45)  # 10:45
+        second_start = start_time + timedelta(minutes=30)  # 10:30
+        second_end = start_time + timedelta(minutes=60)  # 11:00
+
+        SpaceReservation.objects.create(
+            space=self.space,
+            user=self.other_user,
+            residence=self.residence,
+            start_time=first_start,
+            end_time=first_end,
+            status=SpaceReservation.Status.ACTIVE,
+        )
+        SpaceReservation.objects.create(
+            space=self.space,
+            user=self.third_user,
+            residence=self.residence,
+            start_time=second_start,
+            end_time=second_end,
+            status=SpaceReservation.Status.ACTIVE,
+        )
+
+        # Esta reserva engloba a las anteriores y debe rechazarse porque
+        # hay un tramo donde la ocupación existente ya alcanza el aforo.
+        blocking_response = self.client.post(
+            f"/api/spaces/{self.space.id}/reservations/",
+            data={
+                "start_time": start_time.isoformat(),  # 10:00
+                "end_time": (start_time + timedelta(minutes=90)).isoformat(),  # 11:30
+            },
+            content_type="application/json",
+        )
+        self.assertEqual(blocking_response.status_code, 400)
+
+        # Reserva con solape repartido, sin superar aforo en ningún instante.
+        ok_response = self.client.post(
+            f"/api/spaces/{self.space.id}/reservations/",
+            data={
+                "start_time": (start_time + timedelta(minutes=60)).isoformat(),  # 11:00
+                "end_time": (start_time + timedelta(minutes=120)).isoformat(),  # 12:00
+            },
+            content_type="application/json",
+        )
+        self.assertEqual(ok_response.status_code, 201)
+
+    def test_adjacent_slots_do_not_count_as_overlap(self):
+        self.space.capacity = 1
+        self.space.save(update_fields=["capacity"])
+
+        start_time, end_time = self._build_slot(
+            day_offset=1,
+            start_hour=10,
+            start_minute=0,
+            end_hour=11,
+            end_minute=0,
+        )
+
+        SpaceReservation.objects.create(
+            space=self.space,
+            user=self.other_user,
+            residence=self.residence,
+            start_time=start_time,
+            end_time=end_time,
+            status=SpaceReservation.Status.ACTIVE,
+        )
+
+        response = self.client.post(
+            f"/api/spaces/{self.space.id}/reservations/",
+            data={
+                "start_time": end_time.isoformat(),
+                "end_time": (end_time + timedelta(hours=1)).isoformat(),
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+
+    def test_availability_only_blocks_when_capacity_is_reached(self):
+        self.space.capacity = 2
+        self.space.open_time = time(10, 0)
+        self.space.close_time = time(12, 0)
+        self.space.save(update_fields=["capacity", "open_time", "close_time"])
+
+        start_time, end_time = self._build_slot(
+            day_offset=1,
+            start_hour=10,
+            start_minute=0,
+            end_hour=12,
+            end_minute=0,
+        )
+
+        SpaceReservation.objects.create(
+            space=self.space,
+            user=self.other_user,
+            residence=self.residence,
+            start_time=start_time,
+            end_time=end_time,
+            status=SpaceReservation.Status.ACTIVE,
+        )
+
+        available_response = self.client.get(
+            f"/api/spaces/{self.space.id}/availability/?date={start_time.date().isoformat()}"
+        )
+        self.assertEqual(available_response.status_code, 200)
+        self.assertEqual(len(available_response.json()["available_slots"]), 1)
+
+        SpaceReservation.objects.create(
+            space=self.space,
+            user=self.third_user,
+            residence=self.residence,
+            start_time=start_time,
+            end_time=end_time,
+            status=SpaceReservation.Status.ACTIVE,
+        )
+
+        full_response = self.client.get(
+            f"/api/spaces/{self.space.id}/availability/?date={start_time.date().isoformat()}"
+        )
+        self.assertEqual(full_response.status_code, 200)
+        self.assertEqual(full_response.json()["available_slots"], [])
 
     def test_blocks_reservation_outside_schedule(self):
         start_time, end_time = self._build_slot(
