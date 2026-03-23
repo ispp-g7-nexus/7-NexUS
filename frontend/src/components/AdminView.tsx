@@ -267,30 +267,19 @@ const [totalStaff, setTotalStaff] = useState<number>(0);
 const [pendingIncidences, setPendingIncidences] = useState<number>(0);
 const [totalRoles, setTotalRoles] = useState<number>(0);
 useEffect(() => {
-    residentsService.list().then((d) => setTotalResidents(d.length)).catch(() => setTotalResidents(0));
-}, []);
+    if (activeTab !== "dashboard") return;
 
-useEffect(() => {
+    residentsService.list().then((d) => setTotalResidents(d.length)).catch(() => setTotalResidents(0));
     listBedrooms().then((d) => {
         const pct = d.length > 0 ? Math.round((d.filter(r => r.ocupantes_actuales > 0).length / d.length) * 100) : 0;
         setOccupiedRoomsPercent(`${pct}%`);
     }).catch(() => setOccupiedRoomsPercent('—'));
-}, []);
-
-useEffect(() => {
     staffService.list().then((d) => setTotalStaff(d.length)).catch(() => setTotalStaff(0));
-}, []);
-useEffect(() => {
-    IncidenceService.getAll()
-        .then((data) => setPendingIncidences(data.filter(i => i.status === 'pending').length))
-        .catch(() => setPendingIncidences(0));
-}, []);
-
-useEffect(() => {
-    roleService.getRoles()
-        .then((data) => setTotalRoles(data.length))
-        .catch(() => setTotalRoles(0));
-}, []);
+    listAdminGuestPasses("active").then((d) => setTotalActiveGuests(d.length)).catch(() => setTotalActiveGuests(0));
+    IncidenceService.getAll().then((d) => setPendingIncidences(d.filter(i => i.status === 'pending').length)).catch(() => setPendingIncidences(0));
+    roleService.getRoles().then((d) => setTotalRoles(d.length)).catch(() => setTotalRoles(0));
+    loadChatsCount();
+}, [activeTab]);
 
 
     const allNavItems = [
