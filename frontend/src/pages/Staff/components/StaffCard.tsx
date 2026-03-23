@@ -8,6 +8,7 @@ import type { StaffMember, StaffStatus } from "../../../services/staff";
 
 interface StaffCardProps {
   member: StaffMember;
+  isCurrentUser: boolean;
   onEdit: (member: StaffMember) => void;
   onDelete: (member: StaffMember) => void;
 }
@@ -32,9 +33,9 @@ const STATUS_VARIANT: Record<StaffStatus, "success" | "muted" | "warning"> = {
   holidays: "warning",
 };
 
-export function StaffCard({ member, onEdit, onDelete }: StaffCardProps) {
+export function StaffCard({ member, isCurrentUser, onEdit, onDelete }: Readonly<StaffCardProps>) {
   const { full_name, job_title, department, email, location, schedule, status, role_name } = member;
-
+  
   return (
     <Card className="hover:shadow-md transition-shadow border-gray-200">
       <CardContent className="p-6">
@@ -76,6 +77,7 @@ export function StaffCard({ member, onEdit, onDelete }: StaffCardProps) {
             >
               <Edit className="w-4 h-4" />
             </Button>
+            {!isCurrentUser && (
             <Button
               variant="ghost"
               size="icon"
@@ -85,6 +87,7 @@ export function StaffCard({ member, onEdit, onDelete }: StaffCardProps) {
             >
               <Trash2 className="w-4 h-4" />
             </Button>
+            )}
           </div>
         </div>
 

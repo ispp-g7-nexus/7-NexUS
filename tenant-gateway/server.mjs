@@ -1,6 +1,8 @@
 import http from "node:http";
 import { URL } from "node:url";
 import httpProxy from "http-proxy";
+import { createClient } from "redis";
+import { WebSocketServer } from "ws";
 
 const PORT = Number(process.env.PORT || 3000);
 const FRONTEND_UPSTREAM_URL = process.env.FRONTEND_UPSTREAM_URL || "http://frontend:5173";
@@ -9,9 +11,15 @@ const TENANT_CONTEXT_HOST = process.env.TENANT_CONTEXT_HOST || "demo.nexus.local
 const TENANT_CONTEXT_PATH = process.env.TENANT_CONTEXT_PATH || "/api/public/tenant-context/";
 const TENANT_BOOTSTRAP_GLOBAL = process.env.TENANT_BOOTSTRAP_GLOBAL || "__NEXUS_DATA__";
 const REQUEST_TIMEOUT_MS = Number(process.env.REQUEST_TIMEOUT_MS || 5000);
+const REDIS_URL = process.env.REDIS_URL || "redis://redis:6379/0";
+const WS_EVENTS_PATH = "/ws/chats/events";
 
 const frontendTarget = new URL(FRONTEND_UPSTREAM_URL);
 const backendTarget = new URL(BACKEND_UPSTREAM_URL);
+const wss = new WebSocketServer({ noServer: true });
+const wsClientsByResidence = new Map();
+const redisSubscriptionsByResidence = new Map();
+const redisRetryTimersByResidence = new Map();
 
 const apiProxy = httpProxy.createProxyServer({
   target: backendTarget.origin,
@@ -47,6 +55,188 @@ function resolveTenantHost(req) {
 
 function shouldProxyToBackend(pathname) {
   return pathname === "/api" || pathname.startsWith("/api/") || pathname === "/health/";
+}
+
+function getRedisChannelForResidence(residenceId) {
+  return `chats:events:residence:${residenceId}`;
+}
+
+async function getAuthSession(tenantHost, cookieHeader) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    const headers = {
+      Host: tenantHost,
+      "X-Forwarded-Host": tenantHost,
+      "X-Forwarded-Proto": "http",
+    };
+
+    if (cookieHeader) {
+      headers.Cookie = cookieHeader;
+    }
+
+    const response = await fetch(`${backendTarget.origin}/api/auth/me/`, {
+      method: "GET",
+      headers,
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      return { ok: false, authenticated: false };
+    }
+
+    const payload = await response.json();
+    return { ok: true, authenticated: Boolean(payload?.authenticated) };
+  } catch {
+    return { ok: false, authenticated: false };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function addWsClient(residenceId, socket) {
+  const set = wsClientsByResidence.get(residenceId) || new Set();
+  set.add(socket);
+  wsClientsByResidence.set(residenceId, set);
+}
+
+function removeWsClient(residenceId, socket) {
+  const set = wsClientsByResidence.get(residenceId);
+  if (!set) return;
+
+  set.delete(socket);
+  if (set.size === 0) {
+    wsClientsByResidence.delete(residenceId);
+    clearRedisRetry(residenceId);
+    void stopRedisSubscription(residenceId);
+  }
+}
+
+function broadcastToResidence(residenceId, message) {
+  const set = wsClientsByResidence.get(residenceId);
+  if (!set || set.size === 0) return;
+
+  for (const client of set) {
+    if (client.readyState === client.OPEN) {
+      client.send(message);
+    }
+  }
+}
+
+async function ensureRedisSubscription(residenceId) {
+  if (redisSubscriptionsByResidence.has(residenceId)) {
+    return true;
+  }
+
+  const client = createClient({ url: REDIS_URL });
+  try {
+    client.on("error", () => {
+      // Si falla redis, los sockets se mantienen conectados pero sin eventos.
+    });
+
+    await client.connect();
+    const channel = getRedisChannelForResidence(residenceId);
+    await client.subscribe(channel, (message) => {
+      broadcastToResidence(residenceId, message);
+    });
+
+    redisSubscriptionsByResidence.set(residenceId, { client, channel });
+    clearRedisRetry(residenceId);
+    return true;
+  } catch {
+    try {
+      await client.quit();
+    } catch {
+      // ignore
+    }
+    return false;
+  }
+}
+
+async function stopRedisSubscription(residenceId) {
+  const entry = redisSubscriptionsByResidence.get(residenceId);
+  if (!entry) return;
+  redisSubscriptionsByResidence.delete(residenceId);
+
+  try {
+    await entry.client.unsubscribe(entry.channel);
+  } catch {
+    // ignore
+  }
+
+  try {
+    await entry.client.quit();
+  } catch {
+    // ignore
+  }
+}
+
+function clearRedisRetry(residenceId) {
+  const timer = redisRetryTimersByResidence.get(residenceId);
+  if (timer) {
+    clearTimeout(timer);
+  }
+  redisRetryTimersByResidence.delete(residenceId);
+}
+
+function scheduleRedisRetry(residenceId) {
+  if (redisSubscriptionsByResidence.has(residenceId)) return;
+  if (redisRetryTimersByResidence.has(residenceId)) return;
+
+  const timer = setTimeout(async () => {
+    redisRetryTimersByResidence.delete(residenceId);
+
+    if (!wsClientsByResidence.has(residenceId)) {
+      return;
+    }
+
+    const ok = await ensureRedisSubscription(residenceId);
+    if (!ok && wsClientsByResidence.has(residenceId)) {
+      scheduleRedisRetry(residenceId);
+    }
+  }, 5000);
+
+  redisRetryTimersByResidence.set(residenceId, timer);
+}
+
+async function handleChatWsUpgrade(req, socket, head) {
+  const tenantHost = resolveTenantHost(req);
+  const cookieHeader = req.headers.cookie;
+
+  const [tenantContext, authSession] = await Promise.all([
+    getTenantContext(tenantHost, cookieHeader),
+    getAuthSession(tenantHost, cookieHeader),
+  ]);
+
+  const residenceId = tenantContext?.payload?.residence?.id;
+  if (!tenantContext?.ok || !residenceId || !authSession?.authenticated) {
+    socket.write("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
+    socket.destroy();
+    return;
+  }
+
+  const redisReady = await ensureRedisSubscription(residenceId);
+
+  wss.handleUpgrade(req, socket, head, (ws) => {
+    addWsClient(residenceId, ws);
+
+    if (!redisReady) {
+      scheduleRedisRetry(residenceId);
+    }
+
+    ws.on("close", () => {
+      removeWsClient(residenceId, ws);
+    });
+
+    ws.on("error", () => {
+      removeWsClient(residenceId, ws);
+    });
+
+    ws.send(JSON.stringify({
+      event: redisReady ? "ws_connected" : "ws_connected_degraded",
+      ts: Date.now(),
+    }));
+  });
 }
 
 function sanitizeJsonForInlineScript(value) {
@@ -224,6 +414,12 @@ const server = http.createServer((req, res) => {
 
 server.on("upgrade", (req, socket, head) => {
   const parsedUrl = new URL(req.url || "/", "http://tenant-gateway.local");
+
+  if (parsedUrl.pathname === WS_EVENTS_PATH) {
+    void handleChatWsUpgrade(req, socket, head);
+    return;
+  }
+
   if (shouldProxyToBackend(parsedUrl.pathname)) {
     apiProxy.ws(req, socket, head, { target: backendTarget.origin });
     return;

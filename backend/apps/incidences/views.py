@@ -18,17 +18,33 @@ class IncidenceViewSet(viewsets.ModelViewSet):
     serializer_class = IncidenceSerializer
 
     def get_serializer_class(self):
-        if self.request.user.is_staff:
+        user = self.request.user
+        
+        user_role_names = [r.lower() for r in user.memberships.filter(is_active=True).values_list('role__name', flat=True)]
+
+        if "admin" in user_role_names or "student" not in user_role_names:
             return AdminIncidenceSerializer
+        
         return IncidenceSerializer
     
     def get_queryset(self):
         user = self.request.user
-        if user.is_staff:
-            return Incidence.objects.all()
-        return Incidence.objects.filter(
-            Q(student=user) | ~Q(location_type='habitacion'),
-            is_active=True
+        queryset = Incidence.objects.select_related('student', 'assigned_staff__user').all()
+
+        if user.is_superuser:
+            return queryset
+        
+        user_role_names = list(user.memberships.filter(is_active=True).values_list('role__name', flat=True))
+        roles_lower = [r.lower() for r in user_role_names]
+
+        if "admin" in roles_lower:
+            return queryset
+
+        if "student" not in roles_lower:
+            return queryset.filter(Q(assigned_staff__user=user) | Q(student=user))
+
+        return queryset.filter(
+            Q(student=user) | ~Q(location_type='habitacion')
         )
 
     def get_location_label(self, incidence):
@@ -94,6 +110,7 @@ class IncidenceViewSet(viewsets.ModelViewSet):
         )
         recent_updates = (
             IncidenceUpdate.objects
+            .filter(incidence__student=user)
             .select_related('incidence')
             .filter(incidence__student=user)
             .order_by('-created_at')[:self.NOTIFICATION_LIMIT]
@@ -154,33 +171,51 @@ class IncidenceViewSet(viewsets.ModelViewSet):
         
 
     def perform_update(self, serializer):
-        """
-        Lógica para el panel de Admin (Gestionar) y 
-        soporte (Visualización de notas y comentarios rápidos).
-        """
         instance = self.get_object()
         old_status = instance.status
         
         updated_incidence = serializer.save()
+
+        def get_current_assignee(obj):
+            if obj.assigned_staff:
+                # Usamos select_related o chequeo de nulidad para evitar errores
+                return obj.assigned_staff.user.get_full_name() or obj.assigned_staff.user.username
+            return obj.assigned_external_name
+
         
+        old_assignee = get_current_assignee(instance)
+        
+        
+        new_assignee = get_current_assignee(updated_incidence)
         new_status = updated_incidence.status
-        quick_comment = self.request.data.get('quick_comment') # Campo para comentarios rápidos
+        quick_comment = self.request.data.get('quick_comment')
 
-        if old_status != new_status or quick_comment:
-            log_text = ""
-            if old_status != new_status:
-                old_status_label = self.get_status_label(old_status)
-                new_status_label = self.get_status_label(new_status)
-                log_text += f"Estado cambiado de {old_status_label} a {new_status_label}. "
-            if quick_comment:
-                log_text += f"Nota: {quick_comment}"
+        log_parts = []
 
-            # Esto crea el registro que se ve en el historial del modal "Gestionar"
-            IncidenceUpdate.objects.create(
-                incidence=updated_incidence,
-                author_name="Staff",
-                text=log_text
-            )
+        if old_status != new_status:
+            old_label = self.get_status_label(old_status)
+            new_label = self.get_status_label(new_status)
+            log_parts.append(f"Estado cambiado de {old_label} a {new_label}.")
 
+        if old_assignee != new_assignee:
+            if not old_assignee and new_assignee:
+                log_parts.append(f"Asignada a: {new_assignee}.")
+            elif old_assignee and new_assignee:
+                log_parts.append(f"Cambio de técnico: de {old_assignee} a {new_assignee}.")
+            elif old_assignee and not new_assignee:
+                log_parts.append(f"Se ha retirado la asignación de {old_assignee}.")
+
+        if quick_comment:
+            log_parts.append(f"Nota: {quick_comment}")
+
+        if log_parts:
+            full_log_text = " ".join(log_parts)
+        IncidenceUpdate.objects.create(
+            incidence=updated_incidence,
+            author_name=self.request.user.get_full_name() or self.request.user.username,
+            text=full_log_text
+        )
+
+        
     def perform_destroy(self, instance):
         instance.delete()

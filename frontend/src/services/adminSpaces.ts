@@ -17,6 +17,7 @@ export interface AdminSpace {
   is_active: boolean;
   open_time: string;
   close_time: string;
+  reservation_interval_minutes: number;
 }
 
 export interface AdminSpaceReservation {
@@ -38,6 +39,7 @@ export interface CreateSpacePayload {
   capacity: number;
   open_time: string;
   close_time: string;
+  reservation_interval_minutes: number;
   is_active?: boolean;
 }
 

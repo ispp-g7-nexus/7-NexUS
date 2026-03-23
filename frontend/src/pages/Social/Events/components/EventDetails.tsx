@@ -21,6 +21,7 @@ export function EventDetails({
 
     const now = new Date();
     const isPastEvent = new Date(selectedEvent.end_time) < now;
+    const isAdmin = localStorage.getItem('userRole') === 'admin';
 
     return (
         <div className="dialog-overlay" onClick={() => setSelectedEvent(null)}>
@@ -86,7 +87,7 @@ export function EventDetails({
                     )}
                     {isPastEvent ? (
                         <p className="no-participants" style={{ width: '100%', textAlign: 'center' }}>Este evento ya ha finalizado.</p>
-                    ) : selectedEvent.is_joined ? (
+                    ) : isAdmin ? null : selectedEvent.is_joined ? (
                         <button className="btn-leave" style={{ width: '100%' }} onClick={async () => { await handleLeaveEvent(selectedEvent.id); setSelectedEvent(null); }}>Desapuntarme</button>
                     ) : (
                         <button className="btn-join" style={{ width: '100%', justifyContent: 'center' }} onClick={async () => { await handleJoinEvent(selectedEvent.id); setSelectedEvent(null); }}>Apuntarme al Evento</button>

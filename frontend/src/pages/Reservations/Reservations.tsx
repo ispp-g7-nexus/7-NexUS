@@ -1,18 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, RefreshCw } from "lucide-react";
+import { InteractiveDatePicker } from "../../components/ui/InteractiveDatePicker";
 import { toast } from "sonner";
 
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import {
   cancelReservation,
-  createReservation,
   getSpaceAvailability,
   isApiError,
   listCommonSpaces,
   listMyReservations,
   type CommonSpace,
-  type CreateReservationPayload,
   type SpaceAvailability,
   type SpaceReservation,
 } from "../../services/reservations";
@@ -46,7 +44,6 @@ export function Reservations() {
 
   const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedSpace, setSelectedSpace] = useState<CommonSpace | null>(null);
-  const [submittingReservation, setSubmittingReservation] = useState(false);
   const [cancellingReservationId, setCancellingReservationId] = useState<number | null>(null);
 
   const loadMyReservations = async () => {
@@ -134,23 +131,6 @@ export function Reservations() {
     setSheetOpen(true);
   };
 
-  const handleCreateReservation = async (payload: CreateReservationPayload) => {
-    if (!selectedSpace) {
-      return;
-    }
-
-    setSubmittingReservation(true);
-    try {
-      await createReservation(selectedSpace.id, payload);
-      toast.success("Reserva creada correctamente.");
-      setSheetOpen(false);
-      await Promise.all([loadMyReservations(), loadAvailability(spaces, selectedDate)]);
-    } catch (unknownError) {
-      toast.error(isApiError(unknownError) ? unknownError.message : "No se pudo crear la reserva.");
-    } finally {
-      setSubmittingReservation(false);
-    }
-  };
 
   const handleCancelReservation = async (reservationId: number) => {
     setCancellingReservationId(reservationId);
@@ -190,29 +170,14 @@ export function Reservations() {
             </p>
           </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <label htmlFor="reservations-date" className="inline-flex items-center gap-2 text-sm font-medium">
-              <CalendarDays className="h-4 w-4" /> Fecha
-            </label>
-            <input
-              id="reservations-date"
-              type="date"
-              min={todayDate}
+          <div className="flex items-center">
+            <InteractiveDatePicker
               value={selectedDate}
-              onChange={(event) => setSelectedDate(event.target.value)}
-              className="border-input bg-input-background focus-visible:ring-ring/50 h-9 rounded-md border px-3 text-sm outline-none focus-visible:ring-[3px]"
+              onChange={(newDate) => setSelectedDate(newDate)}
+              minDate={todayDate}
+              className="group relative flex items-center gap-2 border-b-2 border-transparent pb-1 transition-all focus-within:border-[#4A7C59] hover:border-[#4A7C59]/50"
+              inputClassName="w-[130px] text-sm font-medium"
             />
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                void loadInitialData();
-              }}
-              disabled={loadingInitial || loadingAvailability}
-            >
-              <RefreshCw className={`mr-2 h-4 w-4 ${loadingInitial || loadingAvailability ? "animate-spin" : ""}`} />
-              Actualizar
-            </Button>
           </div>
         </div>
       </header>
@@ -268,11 +233,15 @@ export function Reservations() {
 
       <ReservationFormSheet
         open={sheetOpen}
-        selectedDate={selectedDate}
+        initialDate={selectedDate} // Cambiamos selectedDate por initialDate
         space={selectedSpace}
-        isSubmitting={submittingReservation}
         onOpenChange={setSheetOpen}
-        onSubmit={handleCreateReservation}
+        onSuccess={() => {
+          // Cuando la reserva se cree con éxito, cerramos el drawer y recargamos
+          setSheetOpen(false);
+          void loadInitialData();
+          void loadAvailability(spaces, selectedDate);
+        }}
       />
     </section>
   );

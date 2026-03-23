@@ -8,12 +8,10 @@ import { ForgotPassword } from './pages/ForgotPassword';
 import { ResetPassword } from './pages/ResetPassword';
 import RolesPage from './pages/RolesPage';
 
-
 export default function App() {
   return (
     <Router>
       <Toaster position="top-center" richColors />
-
       <Routes>
         <Route path="/" element={<AuthPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />

@@ -1,4 +1,5 @@
 import json
+from django.db.models import Prefetch
 from django.db import IntegrityError
 from django.http import JsonResponse
 from django.views import View
@@ -9,7 +10,7 @@ from django.contrib.auth import get_user_model
 from apps.common.utils.jwt_auth import resolve_user_from_request
 from apps.membership.models import Membership
 from .models import Bedroom
-from .serializers import BedroomSerializer
+from .serializers import BedroomSerializer, ResidentSerializer
 from .services import delete_bedroom, list_available_bedrooms
 
 
@@ -34,12 +35,32 @@ class AdminRequiredView(View):
 
 
 class BedroomListView(AdminRequiredView):
-	def get(self, request):
+	@staticmethod
+	def _with_active_student_residents(queryset):
+		active_student_residents = Prefetch(
+			"residents",
+			queryset=Membership.objects.filter(is_active=True, role__name="Student")
+			.select_related("user")
+			.order_by("user__first_name", "user__last_name", "user__username"),
+			to_attr="active_student_residents",
+		)
+		return queryset.prefetch_related(active_student_residents)
+
+	def get(self, request, *args, **kwargs):
 		if not hasattr(request, "residence") or not request.residence:
 			return JsonResponse({"detail": "No residence context."}, status=400)
 
-		bedrooms = Bedroom.objects.filter(residence=request.residence)
-		serializer = BedroomSerializer(bedrooms, many=True)
+		filters = {}
+		tipo = request.GET.get("tipo")
+		capacidad_maxima = request.GET.get("capacidad_maxima")
+
+		if tipo:
+			filters["tipo"] = tipo
+		if capacidad_maxima:
+			filters["capacidad_maxima__gte"] = capacidad_maxima
+
+		queryset = Bedroom.objects.filter(**filters)
+		serializer = BedroomSerializer(queryset, many=True)
 		return JsonResponse(serializer.data, safe=False)
 
 
@@ -69,7 +90,13 @@ class BedroomCreateView(AdminRequiredView):
 
 class BedroomRetrieveView(AdminRequiredView):
 	def get(self, request, bedroom_id):
-		bedroom = get_object_or_404(Bedroom, id=bedroom_id, residence=request.residence)
+		if not hasattr(request, "residence") or not request.residence:
+			return JsonResponse({"detail": "No residence context."}, status=400)
+
+		queryset = BedroomListView._with_active_student_residents(
+			Bedroom.objects.filter(residence=request.residence)
+		)
+		bedroom = get_object_or_404(queryset, id=bedroom_id)
 		serializer = BedroomSerializer(bedroom)
 		return JsonResponse(serializer.data)
 
@@ -124,6 +151,14 @@ class AvailableBedroomsView(AdminRequiredView):
 		return JsonResponse(data, safe=False)
 
 
+class BedroomResidentsDetailView(AdminRequiredView):
+	def get(self, request, bedroom_id):
+		bedroom = get_object_or_404(Bedroom, id=bedroom_id, residence=request.residence)
+		qs = bedroom.residents.filter(is_active=True, role__name="Student").select_related('user')
+		data = [ResidentSerializer.from_membership(m) for m in qs]
+		return JsonResponse(data, safe=False)
+
+
 class BedroomResidentsView(AdminRequiredView):
 	def get(self, request):		
 		if not hasattr(request, 'residence') or not request.residence:
@@ -144,3 +179,9 @@ class BedroomResidentsView(AdminRequiredView):
 				'residence_id': m.residence_id,
 			})
 		return JsonResponse(data, safe=False)
+
+
+class BuildingListView(AdminRequiredView):
+    def get(self, request, *args, **kwargs):
+        buildings = Bedroom.objects.values_list("edificio", flat=True).distinct()
+        return JsonResponse(list(buildings), safe=False)
