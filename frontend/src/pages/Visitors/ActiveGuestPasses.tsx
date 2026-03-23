@@ -155,6 +155,7 @@ function ErrorState({ message, onRetry }: ErrorStateProps) {
 }
 
 const STATUS_BADGE_STYLES = {
+  ACTIVE: { label: "Inactivo", badgeClass: "bg-yellow-100 text-yellow-700 hover:bg-yellow-100" },
   USED: { label: "Usado", badgeClass: "bg-blue-100 text-blue-700 hover:bg-blue-100" },
   CANCELLED: { label: "Cancelado", badgeClass: "bg-gray-100 text-gray-600 hover:bg-gray-100" },
   REVOKED: { label: "Revocado", badgeClass: "bg-red-100 text-red-700 hover:bg-red-100" },
