@@ -22,7 +22,7 @@ const STATUS_OPTIONS = [
 const STATUS_BADGE: Record<string, string> = {
   ACTIVE:    "bg-green-100 text-green-700 border-0",
   USED:      "bg-blue-100 text-blue-700 border-0",
-  CANCELLED: "bg-gray-100 text-gray-600 border-0",
+  CANCELLED: "bg-gray-50 text-gray-500 border-0",
   REVOKED:   "bg-red-100 text-red-700 border-0",
   REJECTED:  "bg-orange-100 text-orange-700 border-0",
   INACTIVE:  "bg-yellow-100 text-yellow-700 border-0",
@@ -68,39 +68,39 @@ function GuestPassDetailDialog({ pass, onClose }: GuestPassDetailDialogProps) {
             </DialogHeader>
             <div className="space-y-4 pt-2">
               <div className="flex items-center gap-3">
-                <Hash className="w-4 h-4 text-muted-foreground shrink-0" />
+                <Hash className="w-4 h-4 text-gray-500 shrink-0" />
                 <div>
-                  <p className="text-xs text-muted-foreground">Código de pase</p>
+                  <p className="text-xs text-gray-500">Código de pase</p>
                   <p className="font-mono font-semibold">{pass.pass_code}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <User className="w-4 h-4 text-muted-foreground shrink-0" />
+                <User className="w-4 h-4 text-gray-500 shrink-0" />
                 <div>
-                  <p className="text-xs text-muted-foreground">Registrado por</p>
+                  <p className="text-xs text-gray-500">Registrado por</p>
                   <p className="font-medium">{pass.resident_name}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <Calendar className="w-4 h-4 text-muted-foreground shrink-0" />
+                <Calendar className="w-4 h-4 text-gray-500 shrink-0" />
                 <div>
-                  <p className="text-xs text-muted-foreground">Período de validez</p>
+                  <p className="text-xs text-gray-500">Período de validez</p>
                   <p className="text-sm">{formatDateTime(pass.valid_from)}</p>
                   <p className="text-sm">{formatDateTime(pass.valid_until)}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
+                <Clock className="w-4 h-4 text-gray-500 shrink-0" />
                 <div>
-                  <p className="text-xs text-muted-foreground">Creado el</p>
+                  <p className="text-xs text-gray-500">Creado el</p>
                   <p className="text-sm">{formatDateTime(pass.created_at)}</p>
                 </div>
               </div>
               {pass.comment && (
                 <div className="flex items-start gap-3">
-                  <MessageSquare className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+                  <MessageSquare className="w-4 h-4 text-gray-500 shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-xs text-muted-foreground">Comentario</p>
+                    <p className="text-xs text-gray-500">Comentario</p>
                     <p className="text-sm italic">"{pass.comment}"</p>
                   </div>
                 </div>
@@ -159,7 +159,7 @@ export function AdminGuestPassListPage() {
           </div>
           <div>
             <h2 className="text-xl font-bold">Historial de Invitados</h2>
-            <p className="text-sm text-muted-foreground">Pases de visita pasados y actuales</p>
+            <p className="text-sm text-gray-500">Pases de visita pasados y actuales</p>
           </div>
         </div>
         <Button variant="outline" size="sm" onClick={() => fetchPasses(statusFilter)} disabled={loading}>
@@ -171,7 +171,7 @@ export function AdminGuestPassListPage() {
       {/* Filtros */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
           <Input
             placeholder="Buscar por invitado, residente o código..."
             value={search}
@@ -193,9 +193,9 @@ export function AdminGuestPassListPage() {
 
       {/* Lista */}
       {loading ? (
-        <p className="text-sm text-muted-foreground py-8 text-center">Cargando...</p>
+        <p className="text-sm text-gray-500 py-8 text-center">Cargando...</p>
       ) : filtered.length === 0 ? (
-        <p className="text-sm text-muted-foreground py-8 text-center">No hay pases que coincidan.</p>
+        <p className="text-sm text-gray-500 py-8 text-center">No hay pases que coincidan.</p>
       ) : (
         <div className="grid gap-3">
           {filtered.map((pass) => (
@@ -215,18 +215,18 @@ export function AdminGuestPassListPage() {
                       {STATUS_LABEL[pass.status ?? ""] ?? pass.status}
                     </Badge>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Registrado por <span className="font-medium text-foreground">{pass.resident_name}</span>
+                  <p className="text-xs text-gray-500">
+                    Registrado por <span className="font-medium text-gray-900">{pass.resident_name}</span>
                     {" · "}Código: <span className="font-mono">{pass.pass_code}</span>
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-gray-500">
                     {formatDateTime(pass.valid_from)} — {formatDateTime(pass.valid_until)}
                   </p>
                   {pass.comment && (
-                    <p className="text-xs text-muted-foreground italic">"{pass.comment}"</p>
+                    <p className="text-xs text-gray-500 italic">"{pass.comment}"</p>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground shrink-0 pt-0.5">
+                <p className="text-xs text-gray-500 shrink-0 pt-0.5">
                   {formatDateTime(pass.created_at)}
                 </p>
               </CardContent>

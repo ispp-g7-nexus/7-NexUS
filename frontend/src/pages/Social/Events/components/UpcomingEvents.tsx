@@ -13,11 +13,11 @@ export function UpcomingEvents({
     handleLeaveEvent: (id: number) => Promise<void>;
     handleOpenDetails: (event: any) => void;
 }) {
-    if (loading) return <p className="text-center text-muted-foreground py-10">Cargando eventos...</p>;
+    if (loading) return <p className="text-center text-gray-500 py-10">Cargando eventos...</p>;
     if (events.length === 0) {
         return (
-            <div className="bg-card text-card-foreground p-8 rounded-xl border border-border text-center shadow-sm">
-                <p className="text-muted-foreground">No hay próximas actividades programadas en este momento.</p>
+            <div className="bg-white text-card-foreground p-8 rounded-xl border border-gray-200 text-center shadow-sm">
+                <p className="text-gray-500">No hay próximas actividades programadas en este momento.</p>
             </div>
         );
     }

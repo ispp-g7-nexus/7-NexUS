@@ -1,4 +1,4 @@
-import { AlertCircle, BedDouble, Bell, BookOpen, Briefcase, Calendar, Home, LayoutDashboard, LogOut, Menu, MessageSquare, Package, Shield, User, UserCheck, Users, Utensils } from "lucide-react";
+import { AlertCircle, BedDouble, Bell, BookOpen, Briefcase, Calendar, Home, LayoutDashboard, LogOut, Menu, MessageSquare, Package, Palette, Shield, User, UserCheck, Users, Utensils } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -27,6 +27,8 @@ import { AdminReservations } from "./AdminReservations";
 import { AdminPackages } from "../pages/Packages/AdminPackages";
 
 import { StatCard } from "./statCard";
+import { AdminBrandingPage } from "../pages/Branding/AdminBrandingPage";
+import { brandingService, type ResidenceBranding } from "../services/branding";
 import { Button } from "./ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet";
@@ -114,7 +116,17 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
     const [unreadChatKeys, setUnreadChatKeys] = useState<Set<string>>(new Set());
     const [chatRealtimeTick, setChatRealtimeTick] = useState<number>(0);
     const [chatRealtimeEvent, setChatRealtimeEvent] = useState<ChatRealtimeEvent | null>(null);
+    const [tenantLogoUrl, setTenantLogoUrl] = useState<string>("");
     const processedGroupMessageEventKeysRef = useRef<Set<string>>(new Set());
+
+
+
+    const applyTenantTheme = (branding: ResidenceBranding) => {
+        if (branding.logo_url) {
+            setTenantLogoUrl(branding.logo_url);
+        }
+        import("../hooks/useTenantBranding").then((m) => m.applyGlobalBranding(branding));
+    };
 
     const unreadChatsCount = unreadChatKeys.size;
 
@@ -217,9 +229,34 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
     }, []);
 
     useEffect(() => {
-        const nextTab = getAdminTabFromPath(location.pathname);
-        setActiveTab(nextTab);
-    }, [location.pathname]);
+        let mounted = true;
+
+        const loadBranding = async () => {
+            try {
+                const branding = await brandingService.get();
+                if (!mounted) return;
+                applyTenantTheme(branding);
+            } catch {
+                // Branding is optional for admin view.
+            }
+        };
+
+        loadBranding();
+
+        const handleBrandingUpdate = (event: Event) => {
+            const customEvent = event as CustomEvent<ResidenceBranding>;
+            if (customEvent.detail) {
+                applyTenantTheme(customEvent.detail);
+            }
+        };
+
+        globalThis.addEventListener("tenant-branding-updated", handleBrandingUpdate as EventListener);
+
+        return () => {
+            mounted = false;
+            globalThis.removeEventListener("tenant-branding-updated", handleBrandingUpdate as EventListener);
+        };
+    }, []);
 
     useEffect(() => {
         authService.me().then((session) => {
@@ -233,6 +270,11 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
         const normalizedCurrentUserEmail = currentUserEmail.trim().toLowerCase();
 
         const source = chatsService.subscribeToEvents((evt) => {
+            if (evt.event === "branding_updated" && evt.payload) {
+                import("../hooks/useTenantBranding").then((m) => m.applyGlobalBranding(evt.payload as any));
+                return;
+            }
+
             if (isGroupLifecycleEvent(evt)) {
                 setChatRealtimeEvent(evt);
                 setChatRealtimeTick((prev) => prev + 1);
@@ -349,6 +391,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
         { id: "events", label: "Eventos & Comunidad", icon: <Calendar className="w-5 h-5" /> },
         { id: "reservations", label: "Recursos & Reservas", icon: <BookOpen className="w-5 h-5" /> },
         { id: "roles", label: "Roles", icon: <Shield className="w-5 h-5" /> },
+        { id: "branding", label: "Personalización", icon: <Palette className="w-5 h-5" /> },
         { id: "announcements", label: "Avisos", icon: <Bell className="w-5 h-5" /> },
         { id: "visitors", label: "Visitantes", icon: <UserCheck className="w-5 h-5" /> },
     ];
@@ -385,7 +428,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
                                 {todayCapitalized}
                             </p>
                             <h2 className="text-2xl font-medium text-gray-900">
-                                Buenos días, <span className="text-green-600 font-medium">Administrador</span>
+                                Buenos días, <span className="text-primary font-medium">Administrador</span>
                             </h2>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -398,6 +441,9 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
 
             case "roles":
                 return <RolesPage />;
+
+            case "branding":
+                return <AdminBrandingPage />;
 
             case "profile":
                 return <AdminProfile />;
@@ -490,12 +536,12 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
             <header className="bg-card border-b border-border px-4 py-3 sticky top-0 z-10">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <button onClick={() => goToTab("dashboard")} className="w-9 h-9 flex items-center justify-center">
-                            <img src={logo} alt="NexUS Logo" className="w-full h-full object-contain" />
+                        <button onClick={() => setActiveTab("dashboard")} className="w-9 h-9 flex items-center justify-center">
+                            <img src={tenantLogoUrl || logo} alt="Logo residencia" className="w-full h-full object-contain" />
                         </button>
                         <div>
-                            <h1 className="font-semibold text-gray-900">{currentTab?.label}</h1>
-                            <p className="text-xs text-gray-500">Panel de Administración</p>
+                            <h1 className="tenant-admin-title font-semibold text-gray-900">{currentTab?.label}</h1>
+                            <p className="tenant-admin-subtitle text-xs text-gray-500">Panel de Administración</p>
                         </div>
                     </div>
 
@@ -511,7 +557,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
                                 <div className="max-h-[70vh] overflow-y-auto rounded-md bg-white p-4">
                                     <div className="mb-3 flex items-center justify-between gap-2">
                                         <div className="flex items-center gap-2">
-                                            <Bell className="h-5 w-5 text-[#35C759]" />
+                                            <Bell className="h-5 w-5 text-green-500" />
                                             <h3 className="font-semibold text-gray-900">Notificaciones</h3>
                                         </div>
                                         {unreadCount > 0 && (
@@ -578,7 +624,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
                                                 }}
                                                 className={`w-full flex items-center justify-between gap-3 px-4 py-3 text-sm rounded-xl transition-colors ${
                                                     activeTab === item.id
-                                                        ? 'bg-green-50 text-green-700 font-medium'
+                                                        ? 'bg-primary/10 text-primary font-medium'
                                                         : 'text-gray-600 hover:bg-gray-50'
                                                 }`}
                                             >
@@ -602,8 +648,8 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
                                 <div className="pt-6 border-t mt-auto shrink-0">
                                     {currentUser && (
                                         <div className="mb-4 flex items-center gap-3 px-1">
-                                            <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center shrink-0">
-                                                <User className="w-5 h-5 text-green-700" />
+                                            <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                                                <User className="w-5 h-5 text-primary" />
                                             </div>
                                             <div className="min-w-0">
                                                 <p className="text-sm font-medium text-gray-900 truncate">{currentUser.name}</p>
