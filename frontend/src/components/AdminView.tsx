@@ -407,6 +407,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
         { label: 'Chats',              value: totalChats,        icon: MessageSquare, theme: 'blue'   as const,
           topBadgeText: unreadChatsCount > 0 ? '¡Tienes mensajes sin leer!' : undefined,
           onClick: () => setActiveTab('chats') },
+        { label: 'Paquetería',         value: 'Ver',             icon: Package,       theme: 'orange'  as const, onClick: () => setActiveTab('packages')      },
         { label: 'Menú Comedor',       value: 'Ver',             icon: Utensils,      theme: 'blue'   as const, onClick: () => setActiveTab('kitchen')       },
         { label: 'Recursos & Reservas',value: 'Ver',             icon: BookOpen,      theme: 'green'  as const, onClick: () => setActiveTab('reservations')  },
     ];

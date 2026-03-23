@@ -644,3 +644,15 @@ def _decode_delivery_qr_token(qr_token: str) -> dict[str, Any]:
         "resident_id": resident_id,
         "residence_id": residence_id,
     }
+
+def update_resident_packages_snapshot(membership: Membership) -> None:
+    packages = list(Package.objects.filter(
+        resident=membership,
+    ))
+    if packages:
+        for package in packages:
+            sync_package_snapshots(package, membership)
+        Package.objects.bulk_update(
+            packages, 
+            fields=["resident_name_snapshot", "room_snapshot", "building_snapshot"]
+        )
