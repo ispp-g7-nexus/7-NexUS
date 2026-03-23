@@ -75,7 +75,7 @@ export function Rooms() {
   const [rooms, setRooms] = useState<Bedroom[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("todos");
+  const [filter] = useState("todos");
   const [viewLayout, setViewLayout] = useState<"list" | "map">("list");
   const [selectedRoom, setSelectedRoom] = useState<Bedroom | null>(null);
 
