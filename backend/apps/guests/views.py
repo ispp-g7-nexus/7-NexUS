@@ -3,9 +3,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.utils import timezone
 
 from apps.membership.permissions import IsResidenceAdmin, IsResident
 
+from .models import GuestPass
 from .serializers import (
     GuestPassAdminReadSerializer,
     GuestPassCreateSerializer,
@@ -118,7 +120,25 @@ class AdminGuestPassListView(APIView):
         )
         status_filter = request.query_params.get("status")
         if status_filter:
-            queryset = queryset.filter(status=status_filter.upper())
+            normalized_status = status_filter.strip().upper()
+            now = timezone.now()
+            if normalized_status == GuestPass.Status.ACTIVE:
+                queryset = queryset.filter(
+                    status=GuestPass.Status.ACTIVE,
+                    cancelled_at__isnull=True,
+                    revoked_at__isnull=True,
+                    valid_from__lte=now,
+                    valid_until__gte=now,
+                )
+            elif normalized_status == GuestPass.Status.INACTIVE:
+                queryset = queryset.filter(
+                    status=GuestPass.Status.ACTIVE,
+                    cancelled_at__isnull=True,
+                    revoked_at__isnull=True,
+                    valid_until__lt=now,
+                )
+            else:
+                queryset = queryset.filter(status=normalized_status)
 
         serializer = GuestPassAdminReadSerializer(queryset, many=True)
         return Response(serializer.data)

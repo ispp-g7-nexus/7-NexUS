@@ -1,8 +1,22 @@
 from datetime import timedelta
 
 from rest_framework import serializers
+from django.utils import timezone
 
 from .models import GuestPass, GuestPassPolicy
+
+
+def get_effective_guest_pass_status(guest_pass: GuestPass) -> str:
+    if guest_pass.cancelled_at is not None:
+        return GuestPass.Status.CANCELLED
+    if guest_pass.revoked_at is not None:
+        return GuestPass.Status.REVOKED
+    if (
+        guest_pass.status == GuestPass.Status.ACTIVE
+        and guest_pass.valid_until < timezone.now()
+    ):
+        return GuestPass.Status.INACTIVE
+    return guest_pass.status
 
 
 class GuestPassCreateSerializer(serializers.Serializer):
@@ -49,6 +63,11 @@ class GuestPassCreateSerializer(serializers.Serializer):
 
 
 class GuestPassReadSerializer(serializers.ModelSerializer):
+    status = serializers.SerializerMethodField()
+
+    def get_status(self, obj: GuestPass) -> str:
+        return get_effective_guest_pass_status(obj)
+
     class Meta:
         model = GuestPass
         fields = [
@@ -64,6 +83,10 @@ class GuestPassReadSerializer(serializers.ModelSerializer):
 
 class GuestPassAdminReadSerializer(serializers.ModelSerializer):
     resident_name = serializers.SerializerMethodField()
+    status = serializers.SerializerMethodField()
+
+    def get_status(self, obj: GuestPass) -> str:
+        return get_effective_guest_pass_status(obj)
 
     class Meta:
         model = GuestPass
