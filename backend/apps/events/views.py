@@ -328,6 +328,7 @@ class EventListView(AuthenticatedView):
                     residence=request.residence,
                     host=request.user
                 )
+                EventParticipation.objects.create(event=event, user=request.user)
             return JsonResponse({'id': event.id, 'detail': 'Event created successfully'}, status=201)
         except Exception as e:
             return JsonResponse({"detail": str(e)}, status=400)
@@ -377,6 +378,7 @@ class EventDetailView(AuthenticatedView):
             location = str(body.get('location', event.location) or '').strip()
             requested_space_id = body.get('space_id')
             normalized_max_participants = event.max_participants
+            max_participants_provided = 'max_participants' in body
 
             with transaction.atomic():
                 previous_reservation = event.reservation
@@ -459,6 +461,21 @@ class EventDetailView(AuthenticatedView):
                     new_space = None
                     new_reservation = None
                     new_location = location
+
+                if (
+                    max_participants_provided
+                    and normalized_max_participants is not None
+                    and normalized_max_participants < event.participants_count
+                ):
+                    return JsonResponse(
+                        {
+                            "detail": (
+                                "El límite de participantes no puede ser inferior al número "
+                                f"actual de asistentes ({event.participants_count})."
+                            )
+                        },
+                        status=400,
+                    )
 
                 event.title = body.get('title', event.title)
                 event.description = body.get('description', event.description)
