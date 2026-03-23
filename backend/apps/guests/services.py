@@ -227,3 +227,20 @@ def get_upcoming_guest_passes_queryset(membership: Membership, residence):
         .select_related("resident__user", "resident__bedroom")
         .order_by("valid_from", "valid_until", "-created_at")
     )
+
+
+def get_guest_pass_history_queryset(membership: Membership, residence):
+    now = timezone.now()
+    return (
+        GuestPass.objects.filter(
+            residence=residence,
+            resident=membership,
+        )
+        .exclude(
+            status=GuestPass.Status.ACTIVE,
+            cancelled_at__isnull=True,
+            revoked_at__isnull=True,
+        )
+        .select_related("resident__user", "resident__bedroom")
+        .order_by("-valid_until", "-created_at")
+    )

@@ -19,6 +19,7 @@ from .services import (
     get_or_create_guest_pass_policy,
     get_resident_membership_for_user,
     get_upcoming_guest_passes_queryset,
+    get_guest_pass_history_queryset,
 )
 
 ERROR_NO_RESIDENCE = "No se ha determinado la residencia."
@@ -50,6 +51,14 @@ class ResidentUpcomingGuestPassListView(ResidentGuestPassBaseView):
     def get(self, request):
         membership, residence = self.get_membership(request)
         queryset = get_upcoming_guest_passes_queryset(membership, residence)
+        serializer = GuestPassReadSerializer(queryset, many=True)
+        return Response(serializer.data)
+
+
+class ResidentGuestPassHistoryListView(ResidentGuestPassBaseView):
+    def get(self, request):
+        membership, residence = self.get_membership(request)
+        queryset = get_guest_pass_history_queryset(membership, residence)
         serializer = GuestPassReadSerializer(queryset, many=True)
         return Response(serializer.data)
 

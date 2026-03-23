@@ -1,4 +1,4 @@
-import { CalendarClock, RefreshCw, ShieldCheck, Ticket, UserRoundPlus } from "lucide-react";
+import { CalendarClock, History, RefreshCw, ShieldCheck, Ticket, UserRoundPlus } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -16,6 +16,7 @@ import {
   getMyGuestPassPolicy,
   listMyActiveGuestPasses,
   listMyUpcomingGuestPasses,
+  listMyGuestPassHistory,
 } from "../../services/guestPasses";
 
 const DEFAULT_MAX_DURATION_HOURS = 24;
@@ -194,6 +195,7 @@ function GuestPassCard({
 export function ActiveGuestPassesPage() {
   const [activePasses, setActivePasses] = useState<GuestPass[]>([]);
   const [upcomingPasses, setUpcomingPasses] = useState<GuestPass[]>([]);
+  const [historyPasses, setHistoryPasses] = useState<GuestPass[]>([]);
   const [policy, setPolicy] = useState<GuestPassPolicy | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -205,12 +207,14 @@ export function ActiveGuestPassesPage() {
     setLoading(true);
     setError(null);
     try {
-      const [active, upcoming] = await Promise.all([
+      const [active, upcoming, history] = await Promise.all([
         listMyActiveGuestPasses(),
         listMyUpcomingGuestPasses(),
+        listMyGuestPassHistory(),
       ]);
       setActivePasses(active);
       setUpcomingPasses(upcoming);
+      setHistoryPasses(history);
     } catch (unknownError) {
       const message =
         unknownError instanceof Error
@@ -462,6 +466,50 @@ export function ActiveGuestPassesPage() {
                 badgeClassName="bg-[#0A84FF]/10 text-[#0A84FF] hover:bg-[#0A84FF]/10"
               />
             ))}
+          </div>
+        )}
+      </section>
+
+      <section className="space-y-4">
+        <header>
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <History className="h-5 w-5 text-muted-foreground" />
+            Historial de pases
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Pases completados, cancelados, revocados y otros estados históricos.
+          </p>
+        </header>
+
+        {loading ? (
+          <LoadingState />
+        ) : error ? (
+          <ErrorState message={error} onRetry={() => void loadPasses()} />
+        ) : historyPasses.length === 0 ? (
+          <EmptyState message="No tienes historial de pases de invitados." />
+        ) : (
+          <div className="space-y-4">
+            {historyPasses.map((pass) => {
+              const statusConfig = {
+                USED: { label: "Usado", badgeClass: "bg-blue-100 text-blue-700 hover:bg-blue-100" },
+                CANCELLED: { label: "Cancelado", badgeClass: "bg-gray-100 text-gray-600 hover:bg-gray-100" },
+                REVOKED: { label: "Revocado", badgeClass: "bg-red-100 text-red-700 hover:bg-red-100" },
+                REJECTED: { label: "Rechazado", badgeClass: "bg-orange-100 text-orange-700 hover:bg-orange-100" },
+                INACTIVE: { label: "Inactivo", badgeClass: "bg-yellow-100 text-yellow-700 hover:bg-yellow-100" },
+              };
+              const config = statusConfig[pass.status] || {
+                label: pass.status || "Desconocido",
+                badgeClass: "bg-gray-100 text-gray-600 hover:bg-gray-100",
+              };
+              return (
+                <GuestPassCard
+                  key={pass.id}
+                  pass={pass}
+                  statusLabel={config.label}
+                  badgeClassName={config.badgeClass}
+                />
+              );
+            })}
           </div>
         )}
       </section>
