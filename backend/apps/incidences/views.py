@@ -165,7 +165,7 @@ class IncidenceViewSet(viewsets.ModelViewSet):
             # Si el estudiante reporta en habitación y no puso número, 
             # le ponemos el de su perfil (o el "3º A" por ahora)
             if location_type == 'habitacion' and not room_number:
-                room_number = "3º A"
+                room_number = None
             
             serializer.save(student=user, room_number=room_number)
         

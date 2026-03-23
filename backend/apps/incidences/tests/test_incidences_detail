@@ -1,0 +1,64 @@
+from datetime import datetime, time, timedelta
+
+from django.contrib.auth import get_user_model
+from django.utils import timezone
+from django_tenants.test.cases import TenantTestCase
+from django_tenants.test.client import TenantClient
+
+from apps.residences.models import Incidence
+
+
+class IncidenceApiTests(TenantTestCase):
+    @classmethod
+    def get_test_tenant_domain(cls):
+        return "incidences.test.local"
+
+    @classmethod
+    def setup_tenant(cls, tenant):
+        tenant.name = "Tenant de Test"
+        tenant.slug = "tenant-test"
+        tenant.is_active = True
+        tenant.on_trial = True
+
+    @classmethod
+    def setup_domain(cls, domain):
+        domain.domain = cls.get_test_tenant_domain()
+        domain.is_primary = True
+
+    def setUp(self):
+        super().setUp()
+        self.client = TenantClient(self.tenant)
+        self.anonymous_client = TenantClient(self.tenant)
+
+        user_model = get_user_model()
+        self.user = user_model.objects.create_user(
+            username="student",
+            email="student@example.com",
+            password="demo1234",
+            first_name="Student",
+            last_name="Demo",
+        )
+        self.other_user = user_model.objects.create_user(
+            username="other",
+            email="other@example.com",
+            password="demo1234",
+            first_name="Other",
+            last_name="Demo",
+        )
+        self.third_user = user_model.objects.create_user(
+            username="third",
+            email="third@example.com",
+            password="demo1234",
+            first_name="Third",
+            last_name="Demo",
+        )
+
+        self.incidence = Incidence.objects.create(
+            title="Incidencia de prueba",
+            description="Descripción de la incidencia de prueba",
+            location_type="cocina",
+            room_number="101",
+            priority="low",
+            status="in_review",
+            created_by=self.user,
+        )
