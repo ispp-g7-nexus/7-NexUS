@@ -14,7 +14,6 @@ type BrandingFormState = {
   accent_color: string;
   logo_url: string;
   favicon_url: string;
-  custom_css: string;
 };
 
 const INITIAL_FORM: BrandingFormState = {
@@ -23,7 +22,6 @@ const INITIAL_FORM: BrandingFormState = {
   accent_color: "#2E7D32",
   logo_url: "",
   favicon_url: "",
-  custom_css: "",
 };
 
 function mapBrandingToForm(branding: ResidenceBranding): BrandingFormState {
@@ -33,7 +31,6 @@ function mapBrandingToForm(branding: ResidenceBranding): BrandingFormState {
     accent_color: branding.accent_color || INITIAL_FORM.accent_color,
     logo_url: branding.logo_url || "",
     favicon_url: branding.favicon_url || "",
-    custom_css: branding.custom_css || "",
   };
 }
 
@@ -81,7 +78,6 @@ export function AdminBrandingPage() {
     accent_color: form.accent_color,
     logo_url: form.logo_url.trim(),
     favicon_url: form.favicon_url.trim(),
-    custom_css: form.custom_css,
   });
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -191,19 +187,6 @@ export function AdminBrandingPage() {
                 />
               </label>
             </div>
-          </section>
-
-          <section>
-            <label className="space-y-2">
-              <span className="block text-sm font-semibold text-gray-900">CSS personalizado (opcional)</span>
-              <textarea
-                value={form.custom_css}
-                onChange={(event) => handleInputChange("custom_css", event.target.value)}
-                rows={8}
-                className="w-full rounded-lg border border-gray-200 p-3 text-sm outline-none focus:border-primary"
-                placeholder=".my-class { color: #0F4C81; }"
-              />
-            </label>
           </section>
 
           <div className="flex flex-wrap items-center justify-end gap-3 border-t border-gray-200 pt-6">
