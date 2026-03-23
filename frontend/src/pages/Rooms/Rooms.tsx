@@ -271,7 +271,7 @@ export function Rooms() {
           <img src={roomSvg} alt="Rooms" className="w-12 h-12" />
           <div>
             <h1 className="text-3xl font-bold">Habitaciones</h1>
-            <p className="text-muted-foreground">Gestiona las habitaciones</p>
+            <p className="text-gray-500">Gestiona las habitaciones</p>
           </div>
         </div>
         <Button onClick={openCreate}>
@@ -287,11 +287,11 @@ export function Rooms() {
       </div>
 
       {/* Toggle Lista / Mapa */}
-      <div className="flex items-center justify-center gap-1 bg-gray-100 p-1 rounded-lg">
-        <button type="button" aria-pressed={viewLayout === "list"} onClick={() => setViewLayout("list")} className={`flex items-center gap-1.5 px-4 py-1.5 rounded text-sm font-medium transition-all ${viewLayout === "list" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+      <div className="flex items-center justify-center gap-1 bg-gray-50 p-1 rounded-lg">
+        <button type="button" aria-pressed={viewLayout === "list"} onClick={() => setViewLayout("list")} className={`flex items-center gap-1.5 px-4 py-1.5 rounded text-sm font-medium transition-all ${viewLayout === "list" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-500"}`}>
           <List className="w-4 h-4" />Lista
         </button>
-        <button type="button" aria-pressed={viewLayout === "map"} onClick={() => setViewLayout("map")} className={`flex items-center gap-1.5 px-4 py-1.5 rounded text-sm font-medium transition-all ${viewLayout === "map" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+        <button type="button" aria-pressed={viewLayout === "map"} onClick={() => setViewLayout("map")} className={`flex items-center gap-1.5 px-4 py-1.5 rounded text-sm font-medium transition-all ${viewLayout === "map" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-500"}`}>
           <Grid3x3 className="w-4 h-4" />Mapa
         </button>
       </div>
@@ -310,18 +310,18 @@ export function Rooms() {
           </div>
 
           <Select1 value={filterEdificio} onValueChange={setFilterEdificio}>
-            <SelectTrigger className="h-11 min-w-[220px] rounded-xl border-slate-200 bg-white/95 px-3 shadow-sm transition-all hover:border-emerald-300 hover:shadow-md focus:ring-2 focus:ring-emerald-200 data-[state=open]:border-emerald-400 data-[state=open]:ring-emerald-100">
+            <SelectTrigger className="h-11 min-w-[220px] rounded-xl border-slate-200 bg-white/95 px-3 shadow-sm transition-all hover:border-primary/40 hover:shadow-md focus:ring-2 focus:ring-primary/20 data-[state=open]:border-primary data-[state=open]:ring-primary/10">
               <span className="flex items-center gap-2">
-                <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-100 bg-emerald-50 text-emerald-700">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 text-primary">
                   <Building2 className="h-4 w-4" />
                 </span>
                 <SelectValue placeholder="Todos los edificios" />
               </span>
             </SelectTrigger>
             <SelectContent className="rounded-2xl border-slate-200 bg-white/95 p-2 shadow-xl backdrop-blur">
-              <SelectItem className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 focus:bg-emerald-50 focus:text-emerald-800" value="todos">Todos los edificios</SelectItem>
+              <SelectItem className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 focus:bg-primary/10 focus:text-primary" value="todos">Todos los edificios</SelectItem>
               {buildingOptions.map((building) => (
-                <SelectItem key={building} value={building} className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 focus:bg-emerald-50 focus:text-emerald-800">
+                <SelectItem key={building} value={building} className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 focus:bg-primary/10 focus:text-primary">
                   {building}
                 </SelectItem>
               ))}
@@ -329,19 +329,19 @@ export function Rooms() {
           </Select1>
 
           <Select1 value={filterTipo} onValueChange={setFilterTipo}>
-            <SelectTrigger className="h-11 min-w-[220px] rounded-xl border-slate-200 bg-white/95 px-3 shadow-sm transition-all hover:border-emerald-300 hover:shadow-md focus:ring-2 focus:ring-emerald-200 data-[state=open]:border-emerald-400 data-[state=open]:ring-emerald-100">
+            <SelectTrigger className="h-11 min-w-[220px] rounded-xl border-slate-200 bg-white/95 px-3 shadow-sm transition-all hover:border-primary/40 hover:shadow-md focus:ring-2 focus:ring-primary/20 data-[state=open]:border-primary data-[state=open]:ring-primary/10">
               <span className="flex items-center gap-2">
-                <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-100 bg-emerald-50 text-emerald-700">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 text-primary">
                   <User className="h-4 w-4" />
                 </span>
                 <SelectValue placeholder="Todos los tipos" />
               </span>
             </SelectTrigger>
             <SelectContent className="rounded-2xl border-slate-200 bg-white/95 p-2 shadow-xl backdrop-blur">
-              <SelectItem className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 focus:bg-emerald-50 focus:text-emerald-800" value="todos">Todos los tipos</SelectItem>
-              <SelectItem className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 focus:bg-emerald-50 focus:text-emerald-800" value="Individual">Individual</SelectItem>
-              <SelectItem className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 focus:bg-emerald-50 focus:text-emerald-800" value="Doble">Doble</SelectItem>
-              <SelectItem className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 focus:bg-emerald-50 focus:text-emerald-800" value="Triple">Triple</SelectItem>
+              <SelectItem className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 focus:bg-primary/10 focus:text-primary" value="todos">Todos los tipos</SelectItem>
+              <SelectItem className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 focus:bg-primary/10 focus:text-primary" value="Individual">Individual</SelectItem>
+              <SelectItem className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 focus:bg-primary/10 focus:text-primary" value="Doble">Doble</SelectItem>
+              <SelectItem className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 focus:bg-primary/10 focus:text-primary" value="Triple">Triple</SelectItem>
             </SelectContent>
           </Select1>
         </CardContent>
@@ -388,8 +388,8 @@ export function Rooms() {
       {/* Mapa */}
       {viewLayout === "map" && (
         <div className="space-y-4">
-          <div className="flex items-center gap-4 text-sm text-gray-600">
-            <span className="flex items-center gap-1.5"><span className="w-4 h-4 rounded border-2 border-green-400 bg-green-50 inline-block" />Libre</span>
+          <div className="flex items-center gap-4 text-sm text-gray-500">
+            <span className="flex items-center gap-1.5"><span className="w-4 h-4 rounded border-2 border-primary/50 bg-primary/10 inline-block" />Libre</span>
             <span className="flex items-center gap-1.5"><span className="w-4 h-4 rounded border-2 border-yellow-400 bg-yellow-50 inline-block" />Parcial</span>
             <span className="flex items-center gap-1.5"><span className="w-4 h-4 rounded border-2 border-red-400 bg-red-50 inline-block" />Completa</span>
           </div>
@@ -397,8 +397,8 @@ export function Rooms() {
             .sort(([a], [b]) => a.localeCompare(b))
             .map(([building, floors]) => (
               <motion.div key={building} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-                <Card className="border border-gray-100 shadow-sm overflow-hidden">
-                  <div className="bg-[#509550] text-white px-4 py-2 flex items-center gap-2">
+                <Card className="border border-gray-200 shadow-sm overflow-hidden">
+                  <div className="bg-primary text-primary-foreground px-4 py-2 flex items-center gap-2">
                     <Building2 className="w-4 h-4" />
                     <span className="font-bold text-sm">Edificio {building}</span>
                   </div>
@@ -421,30 +421,30 @@ export function Rooms() {
           <div role="button" tabIndex={-1} aria-label="Cerrar detalle" className="fixed inset-0 bg-black/50" onClick={() => setSelectedRoom(null)} onKeyDown={(e) => { if (e.key === "Escape" || e.key === "Enter") setSelectedRoom(null); }} />
           <div className="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
             <div className="flex items-center gap-3 mb-4">
-              <div className={`p-2 rounded-xl ${selectedRoom.ocupantes_actuales > 0 ? "bg-red-100" : "bg-green-100"}`}>
-                <Bed className={`w-5 h-5 ${selectedRoom.ocupantes_actuales > 0 ? "text-red-600" : "text-green-600"}`} />
+              <div className={`p-2 rounded-xl ${selectedRoom.ocupantes_actuales > 0 ? "bg-red-100" : "bg-primary/10"}`}>
+                <Bed className={`w-5 h-5 ${selectedRoom.ocupantes_actuales > 0 ? "text-red-600" : "text-primary"}`} />
               </div>
               <div>
                 <h2 className="text-lg font-semibold leading-tight">Habitación {selectedRoom.numero}</h2>
-                <p className="text-sm text-muted-foreground">Edificio {selectedRoom.edificio} · Planta {selectedRoom.planta ?? "—"}</p>
+                <p className="text-sm text-gray-500">Edificio {selectedRoom.edificio} · Planta {selectedRoom.planta ?? "—"}</p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3 py-2">
-              <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+              <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
                 <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1">Tipo</p>
                 <p className="text-sm font-semibold">{selectedRoom.tipo}</p>
               </div>
-              <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+              <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
                 <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1">Ocupación</p>
                 <p className="text-sm font-semibold">{selectedRoom.ocupantes_actuales}/{selectedRoom.capacidad_maxima} ocupantes</p>
               </div>
-              <div className="col-span-2 bg-gray-50 p-3 rounded-xl border border-gray-100">
+              <div className="col-span-2 bg-gray-50 p-3 rounded-xl border border-gray-200">
                 <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1">Estado</p>
                 <Badge className={getRoomState(selectedRoom.ocupantes_actuales, selectedRoom.capacidad_maxima).badgeClass}>
                   {getRoomState(selectedRoom.ocupantes_actuales, selectedRoom.capacidad_maxima).label}
                 </Badge>
               </div>
-              <div className="col-span-2 bg-gray-50 p-3 rounded-xl border border-gray-100">
+              <div className="col-span-2 bg-gray-50 p-3 rounded-xl border border-gray-200">
                 <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-2">Residentes</p>
                 <ResidentsInlineList residents={selectedRoom.residentes} showEmail />
               </div>
@@ -521,7 +521,7 @@ export function Rooms() {
                 <select
                   value={form.tipo}
                   onChange={(e) => onChange("tipo", e.target.value)}
-                  className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all duration-300 hover:bg-green-50 hover:border-green-400"
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all duration-300 hover:bg-primary/10 hover:border-primary/50"
                 >
                   <option value="Individual">Individual</option>
                   <option value="Doble">Doble</option>
@@ -577,7 +577,7 @@ function groupByBuildingAndFloor(rooms: Bedroom[]): Record<string, Record<number
 const ROOM_STATES = {
   full:    { label: "Completa", badgeClass: "bg-red-100 text-red-700 border-0",       cellClass: "bg-red-50 border-red-400 hover:bg-red-100",        iconClass: "text-red-500",    textClass: "text-red-700"    },
   partial: { label: "Parcial",  badgeClass: "bg-yellow-100 text-yellow-700 border-0", cellClass: "bg-yellow-50 border-yellow-400 hover:bg-yellow-100", iconClass: "text-yellow-600", textClass: "text-yellow-700" },
-  free:    { label: "Libre",    badgeClass: "bg-green-100 text-green-700 border-0",   cellClass: "bg-green-50 border-green-400 hover:bg-green-100",   iconClass: "text-green-600",  textClass: "text-green-700"  },
+  free:    { label: "Libre",    badgeClass: "bg-primary/10 text-primary border-0",   cellClass: "bg-primary/10 border-primary/50 hover:bg-primary/20",   iconClass: "text-primary",  textClass: "text-primary"  },
 } as const;
 
 function getRoomState(ocupantes: number, capacidad: number) {
@@ -591,7 +591,7 @@ function FloorRow({ floor, rooms, onSelectRoom }: Readonly<{ floor: string; room
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
-        <div className="bg-gray-100 px-2 py-1 rounded text-xs font-bold text-gray-600">
+        <div className="bg-gray-50 px-2 py-1 rounded text-xs font-bold text-gray-500">
           {Number.parseInt(floor) === 0 ? "Planta baja" : `Planta ${floor}`}
         </div>
         <div className="flex-1 h-px bg-gray-200" />
@@ -645,11 +645,11 @@ function ResidentsInlineList({ residents, showEmail = false }: { readonly reside
     <ul className="min-w-0 space-y-0.5">
       {residents.map((resident) => (
         <li key={resident.id} className="min-w-0">
-          <p className="text-sm text-foreground truncate" title={resident.full_name}>
+          <p className="text-sm text-gray-900 truncate" title={resident.full_name}>
             {resident.full_name}
           </p>
           {showEmail && resident.email && (
-            <p className="text-xs text-muted-foreground truncate">{resident.email}</p>
+            <p className="text-xs text-gray-500 truncate">{resident.email}</p>
           )}
         </li>
       ))}

@@ -38,24 +38,23 @@ export function EventForm({
     handleSaveEvent: (e: React.FormEvent) => void;
     setIsCreateEventOpen: (open: boolean) => void;
 }) {
-    // Determine the minimum date string (e.g. "2023-11-20") based on local timezone
     const minDateStr = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000)
         .toISOString()
         .split('T')[0];
 
     return (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-card text-card-foreground border border-border mt-10 rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-lg animate-in fade-in zoom-in duration-200">
-                <div className="p-6 border-b border-border">
+            <div className="bg-white text-card-foreground border border-gray-200 mt-10 rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-lg animate-in fade-in zoom-in duration-200">
+                <div className="p-6 border-b border-gray-200">
                     <h3 className="text-xl font-semibold mb-1 tracking-tight">{isEditingEvent ? "Editar Evento" : "Nuevo Evento"}</h3>
-                    <p className="text-sm text-muted-foreground">{isEditingEvent ? "Modifica los detalles del evento." : "Organiza una actividad para compartir con otros residentes."}</p>
+                    <p className="text-sm text-gray-500">{isEditingEvent ? "Modifica los detalles del evento." : "Organiza una actividad para compartir con otros residentes."}</p>
                 </div>
                 <form onSubmit={handleSaveEvent} className="p-6 space-y-5">
                     <div className="space-y-2">
                         <label htmlFor="name" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Nombre del evento</label>
                         <input
                             id="name"
-                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             placeholder="Ej: Tarde de Juegos"
                             value={newEvent.name}
                             onChange={(e) => setNewEvent({ ...newEvent, name: e.target.value })}
@@ -66,7 +65,7 @@ export function EventForm({
                         <label htmlFor="description" className="text-sm font-medium leading-none">Descripción</label>
                         <textarea
                             id="description"
-                            className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y"
+                            className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y"
                             placeholder="Explica de qué trata el evento..."
                             value={newEvent.description}
                             onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
@@ -192,7 +191,7 @@ export function EventForm({
                     <div className="space-y-2">
                         <label htmlFor="photo" className="text-sm font-medium leading-none">URL de la foto</label>
                         <div className="relative">
-                            <span className="absolute left-3 top-2.5 text-muted-foreground text-sm">🖼️</span>
+                            <span className="absolute left-3 top-2.5 text-gray-500 text-sm">🖼️</span>
                             <input
                                 id="photo"
                                 className="flex h-10 w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -205,7 +204,7 @@ export function EventForm({
                     <div className="space-y-2">
                         <label htmlFor="labels" className="text-sm font-medium leading-none">Etiquetas (separadas por comas)</label>
                         <div className="relative">
-                            <span className="absolute left-3 top-2.5 text-muted-foreground text-sm">🏷️</span>
+                            <span className="absolute left-3 top-2.5 text-gray-500 text-sm">🏷️</span>
                             <input
                                 id="labels"
                                 className="flex h-10 w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -215,7 +214,7 @@ export function EventForm({
                             />
                         </div>
                     </div>
-                    <div className="flex items-center justify-end gap-3 pt-4 border-t border-border mt-6">
+                    <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 mt-6">
                         <button
                             type="button"
                             className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"

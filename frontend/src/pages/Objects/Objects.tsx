@@ -97,11 +97,11 @@ export function Objects({ onReservationSuccess }: ObjectsProps) {
 
   return (
     <section className="mx-auto flex w-full max-w-5xl flex-col gap-6 pb-24">
-      <header className="rounded-xl border border-border/80 bg-card p-4 shadow-sm sm:p-6">
+      <header className="rounded-xl border border-border/80 bg-white p-4 shadow-sm sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-2xl font-bold tracking-tight">Objetos disponibles</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-sm text-gray-500">
               Reserva objetos compartidos de tu residencia como bicicletas, libros y más.
             </p>
           </div>

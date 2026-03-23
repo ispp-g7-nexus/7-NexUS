@@ -130,6 +130,24 @@ export function StudentView({ onLogout }: StudentViewProps) {
     };
 
     useEffect(() => {
+        let mounted = true;
+        const loadBranding = async () => {
+            try {
+                const { brandingService } = await import("../services/branding");
+                const { applyGlobalBranding } = await import("../hooks/useTenantBranding");
+                const branding = await brandingService.get();
+                if (mounted && branding) {
+                    applyGlobalBranding(branding);
+                }
+            } catch {
+                // Branding is optional
+            }
+        };
+        loadBranding();
+        return () => { mounted = false; };
+    }, []);
+
+    useEffect(() => {
         authService.me().then((session) => {
             if (session.user?.email) {
                 setCurrentUserEmail(session.user.email);
@@ -141,6 +159,11 @@ export function StudentView({ onLogout }: StudentViewProps) {
         const normalizedCurrentUserEmail = currentUserEmail.trim().toLowerCase();
 
         const source = chatsService.subscribeToEvents((evt) => {
+            if (evt.event === "branding_updated" && evt.payload) {
+                import("../hooks/useTenantBranding").then((m) => m.applyGlobalBranding(evt.payload as any));
+                return;
+            }
+
             const isViewingGroupChats = activeTab === "community" && isCommunityChatActive && communityChatSubTab === "grupos";
             if (handleGroupLifecycleRealtimeEvent(evt, isViewingGroupChats)) {
                 return;
@@ -340,7 +363,7 @@ export function StudentView({ onLogout }: StudentViewProps) {
                     <NavButton icon={<AlertCircle className="w-5 h-5" />} label="Incidencias" active={activeTab === "incidences"} onClick={() => setActiveTab("incidences")} />
                     <NavButton icon={<User className="w-5 h-5" />} label="Social" active={activeTab === "community"} onClick={() => setActiveTab("community")} showIndicator={hasAnyChatNews} />
                     <div className="relative -top-5">
-                        <motion.button whileTap={{ scale: 0.95 }} onClick={() => setActiveTab("home")} className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-colors ${activeTab === "home" ? "bg-secondary-brand text-white" : "bg-white text-slate-400 border border-slate-100"}`}>
+                        <motion.button whileTap={{ scale: 0.95 }} onClick={() => setActiveTab("home")} className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-colors ${activeTab === "home" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground border border-border"}`}>
                             <Home className="w-6 h-6" />
                         </motion.button>
                     </div>
@@ -354,9 +377,9 @@ export function StudentView({ onLogout }: StudentViewProps) {
 
 function NavButton({ icon, label, active, onClick, showIndicator = false }: { icon: React.ReactNode, label: string, active: boolean, onClick: () => void, showIndicator?: boolean }) {
     return (
-        <button onClick={onClick} className={`relative flex flex-col items-center justify-center p-2 rounded-xl transition-colors ${active ? "text-[#4A7C59]" : "text-slate-400 hover:text-slate-600"}`}>
+        <button onClick={onClick} className={`relative flex flex-col items-center justify-center p-2 rounded-xl transition-all ${active ? "bg-primary text-primary-foreground font-bold px-3 shadow-md" : "text-muted-foreground hover:text-foreground"}`}>
             {showIndicator && (
-                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500" />
+                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-destructive border border-background" />
             )}
             {icon}
             <span className="text-[10px] font-medium mt-1">{label}</span>

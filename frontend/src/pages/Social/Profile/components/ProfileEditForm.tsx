@@ -185,7 +185,7 @@ export function ProfileEditForm({
           <h2 className="text-2xl font-bold text-gray-900">Editar Perfil</h2>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 transition"
+            className="text-gray-500 hover:text-gray-500 transition"
           >
             <X size={24} />
           </button>
@@ -200,11 +200,11 @@ export function ProfileEditForm({
 
             {/* Foto de Perfil */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label className="text-sm font-medium text-gray-500">
                 Foto de Perfil
               </Label>
               <div className="flex items-center gap-4">
-                <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden border-2 border-gray-300">
+                <div className="w-24 h-24 rounded-full bg-gray-50 flex items-center justify-center overflow-hidden border-2 border-gray-200">
                   {imagePreview ? (
                     <img
                       src={imagePreview}
@@ -235,7 +235,7 @@ export function ProfileEditForm({
             {/* Nombre y Apodo */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-sm font-medium text-gray-700">
+                <Label htmlFor="name" className="text-sm font-medium text-gray-500">
                   Nombre Completo *
                 </Label>
                 <Input
@@ -244,11 +244,11 @@ export function ProfileEditForm({
                   name="name"
                   value={formData.name}
                   disabled
-                  className="bg-gray-100 cursor-not-allowed"
+                  className="bg-gray-50 cursor-not-allowed"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="nickname" className="text-sm font-medium text-gray-700">
+                <Label htmlFor="nickname" className="text-sm font-medium text-gray-500">
                   Apodo
                 </Label>
                 <Input
@@ -261,7 +261,7 @@ export function ProfileEditForm({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="room" className="text-sm font-medium text-gray-700">
+                <Label htmlFor="room" className="text-sm font-medium text-gray-500">
                   Habitación
                 </Label>
                 <Input
@@ -269,14 +269,14 @@ export function ProfileEditForm({
                   type="text"
                   value={formData.room || formData.roomNumber || "Sin asignar"}
                   disabled
-                  className="bg-gray-100 cursor-not-allowed"
+                  className="bg-gray-50 cursor-not-allowed"
                 />
               </div>
             </div>
 
             {/* Sobre mí */}
             <div className="space-y-2">
-              <Label htmlFor="bio" className="text-sm font-medium text-gray-700">
+              <Label htmlFor="bio" className="text-sm font-medium text-gray-500">
                 Sobre mí ({formData.bio.length}/300)
               </Label>
               <textarea
@@ -286,7 +286,7 @@ export function ProfileEditForm({
                 onChange={handleInputChange}
                 maxLength={300}
                 rows={4}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
                 placeholder="Cuéntanos sobre ti. ¿De dónde eres? ¿Qué te apasiona?"
               />
             </div>
@@ -307,7 +307,7 @@ export function ProfileEditForm({
             </h3>
 
             <div className="space-y-3">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label className="text-sm font-medium text-gray-500">
                 Intereses Predefinidos
               </Label>
               <div className="flex flex-wrap gap-2">
@@ -318,7 +318,7 @@ export function ProfileEditForm({
                     onClick={() => toggleTag(interest, "interests")}
                     className={`px-4 py-2 rounded-full transition-all text-sm font-medium border-2 ${formData.interests.includes(interest)
                       ? "bg-green-600 text-white border-green-600"
-                      : "bg-gray-100 text-gray-700 border-gray-300 hover:border-green-400"
+                      : "bg-gray-50 text-gray-500 border-gray-200 hover:border-green-400"
                       }`}
                   >
                     {interest}
@@ -329,7 +329,7 @@ export function ProfileEditForm({
 
             {/* Intereses Personalizados */}
             <div className="space-y-3">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label className="text-sm font-medium text-gray-500">
                 Añadir Intereses Personalizados
               </Label>
               <div className="flex gap-2">
@@ -349,7 +349,7 @@ export function ProfileEditForm({
                 <Button
                   type="button"
                   onClick={addCustomInterest}
-                  className="bg-green-600 hover:bg-green-700 text-white px-3"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-3"
                 >
                   <Plus size={18} />
                 </Button>
@@ -385,7 +385,7 @@ export function ProfileEditForm({
 
             {/* Cronotipo */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label className="text-sm font-medium text-gray-500">
                 Cronotipo (Hábitos de sueño) *
               </Label>
               <div className="grid grid-cols-3 gap-2">
@@ -405,7 +405,7 @@ export function ProfileEditForm({
                     }
                     className={`p-3 rounded-lg border-2 transition font-medium ${formData.chronotype === option.value
                       ? "bg-green-600 text-white border-green-600"
-                      : "bg-gray-100 text-gray-700 border-gray-300 hover:border-green-400"
+                      : "bg-gray-50 text-gray-500 border-gray-200 hover:border-green-400"
                       }`}
                   >
                     {option.label}
@@ -416,7 +416,7 @@ export function ProfileEditForm({
 
             {/* Nivel de Estudio */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label className="text-sm font-medium text-gray-500">
                 Nivel de Estudio: {formData.studyLevel}/5
               </Label>
               <div className="flex items-center gap-4">
@@ -444,7 +444,7 @@ export function ProfileEditForm({
 
             {/* Sensibilidad al Ruido */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label className="text-sm font-medium text-gray-500">
                 Sensibilidad al Ruido: {formData.noiseSensitivity}/5
               </Label>
               <div className="flex items-center gap-4">
@@ -472,7 +472,7 @@ export function ProfileEditForm({
 
             {/* Preferencia de Temperatura */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label className="text-sm font-medium text-gray-500">
                 Preferencia de Temperatura *
               </Label>
               <div className="grid grid-cols-3 gap-2">
@@ -495,7 +495,7 @@ export function ProfileEditForm({
                     }
                     className={`p-3 rounded-lg border-2 transition font-medium ${formData.temperaturePreference === option.value
                       ? "bg-green-600 text-white border-green-600"
-                      : "bg-gray-100 text-gray-700 border-gray-300 hover:border-green-400"
+                      : "bg-gray-50 text-gray-500 border-gray-200 hover:border-green-400"
                       }`}
                   >
                     {option.label}
@@ -506,7 +506,7 @@ export function ProfileEditForm({
 
             {/* Nivel de Orden */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label className="text-sm font-medium text-gray-500">
                 Nivel de Orden *
               </Label>
               <div className="space-y-2">
@@ -516,7 +516,7 @@ export function ProfileEditForm({
                 ].map((option) => (
                   <label
                     key={option.value}
-                    className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition"
+                    className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition"
                   >
                     <input
                       type="radio"
@@ -548,7 +548,7 @@ export function ProfileEditForm({
             </h3>
 
             <div className="space-y-3">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label className="text-sm font-medium text-gray-500">
                 Características de tu Estilo de Vida
               </Label>
               <div className="flex flex-wrap gap-2">
@@ -559,7 +559,7 @@ export function ProfileEditForm({
                     onClick={() => toggleTag(option, "lifestyle")}
                     className={`px-4 py-2 rounded-full transition-all text-sm font-medium border-2 ${formData.lifestyle.includes(option)
                       ? "bg-purple-600 text-white border-purple-600"
-                      : "bg-gray-100 text-gray-700 border-gray-300 hover:border-purple-400"
+                      : "bg-gray-50 text-gray-500 border-gray-200 hover:border-purple-400"
                       }`}
                   >
                     {option}
@@ -576,7 +576,7 @@ export function ProfileEditForm({
             </h3>
 
             <div className="space-y-3">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label className="text-sm font-medium text-gray-500">
                 Géneros que te gustan 🎵
               </Label>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
@@ -587,7 +587,7 @@ export function ProfileEditForm({
                     onClick={() => toggleTag(genre, "musicGenres")}
                     className={`px-4 py-2 rounded-full transition-all text-sm font-medium border-2 ${formData.musicGenres.includes(genre)
                       ? "bg-pink-600 text-white border-pink-600"
-                      : "bg-gray-100 text-gray-700 border-gray-300 hover:border-pink-400"
+                      : "bg-gray-50 text-gray-500 border-gray-200 hover:border-pink-400"
                       }`}
                   >
                     {genre}
@@ -603,7 +603,7 @@ export function ProfileEditForm({
               Límites Infranqueables
             </h3>
 
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-500">
               Selecciona los elementos que NO puedes tolerar
             </p>
 
@@ -611,7 +611,7 @@ export function ProfileEditForm({
               {dealbreakersOptions.map((dealbreaker) => (
                 <label
                   key={dealbreaker}
-                  className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition"
+                  className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition"
                 >
                   <Checkbox
                     checked={formData.dealbreakers.includes(dealbreaker)}
@@ -639,7 +639,7 @@ export function ProfileEditForm({
           <button
             onClick={handleSubmit}
             disabled={isSaving}
-            className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 px-4 py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSaving ? "Guardando..." : "Guardar Cambios"}
           </button>

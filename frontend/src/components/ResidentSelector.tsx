@@ -137,7 +137,7 @@ export function ResidentSelector({
                 }
                 onChange={handleSelectAll}
                 aria-label="Seleccionar todos los residentes filtrados"
-                className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
               />
               Seleccionar todos ({selectedResidents.size}/{filteredResidents.length})
             </label>
@@ -154,7 +154,7 @@ export function ResidentSelector({
                   checked={selectedResidents.has(resident.id)}
                   onChange={() => handleToggleResident(resident.id)}
                   aria-label={`Seleccionar residente ${resident.full_name}`}
-                  className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                  className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
                 />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">
@@ -169,7 +169,7 @@ export function ResidentSelector({
 
         <Button
           size="sm"
-          className="w-full bg-green-600 hover:bg-green-700"
+          className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
           onClick={handleAddMembers}
           disabled={isAdding || selectedResidents.size === 0}
         >

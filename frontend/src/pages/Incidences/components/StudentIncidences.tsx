@@ -85,8 +85,8 @@ export default function StudentIncidences() {
           </PopoverTrigger>
           <PopoverContent align="end" className="w-80 p-0 rounded-[28px] overflow-hidden border-none shadow-2xl">
             <div className="bg-white p-4 border-b flex items-center justify-between">
-              <p className="text-xs font-bold uppercase tracking-[#0.2em] text-[#1B4D1C]">Notificaciones</p>
-              {notificationsLoading && <Loader2 className="w-3 h-3 animate-spin text-[#82D14C]" />}
+              <p className="text-xs font-bold uppercase tracking-[#0.2em] text-primary">Notificaciones</p>
+              {notificationsLoading && <Loader2 className="w-3 h-3 animate-spin text-primary" />}
             </div>
             <div className="max-h-80 overflow-y-auto p-2 bg-white">
               {notifications.length > 0 ? notifications.map((n) => (
@@ -131,7 +131,7 @@ export default function StudentIncidences() {
                           <div className="flex justify-between items-start mb-1.5">
                             <div className="flex-1 min-w-0 pr-2 text-left">
                               <h3 className={COMMON_UI_CLASSES.cardTitle}>{inc.title}</h3>
-                              {(inc as any).is_mine && <span className="text-[10px] font-bold text-[#1B4D1C] uppercase bg-[#EEF8E7] px-1.5 py-0.5 rounded-md inline-block">Tu reporte</span>}
+                              {(inc as any).is_mine && <span className="text-[10px] font-bold text-primary uppercase bg-primary/10 px-1.5 py-0.5 rounded-md inline-block">Tu reporte</span>}
                             </div>
                             <span className={`${COMMON_UI_CLASSES.statusBadge} ${config.student.colorClass}`}>{config.label}</span>
                           </div>
@@ -163,21 +163,21 @@ export default function StudentIncidences() {
           <div className="p-6 bg-white overflow-y-auto max-h-[75vh] space-y-6 pb-12 text-left">
             {selectedDetails && (
               <>
-                <section className="border-l-4 border-[#82D14C] pl-3 py-1"><h3 className="font-bold text-lg text-slate-800">{selectedDetails.title}</h3></section>
+                <section className="border-l-4 border-primary pl-3 py-1"><h3 className="font-bold text-lg text-slate-800">{selectedDetails.title}</h3></section>
                 <section className="space-y-2 text-left">
                     <div className="flex items-center gap-2"><MessageSquare size={14} className="text-slate-400" /><p className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Descripción</p></div>
                     <div className="bg-slate-50 p-4 rounded-[20px] border border-slate-100 italic text-sm text-slate-600">"{selectedDetails.description}"</div>
                 </section>
                 {selectedDetails.img && <section className="flex justify-center"><div className="rounded-[24px] overflow-hidden border border-slate-100 max-w-[220px] shadow-sm"><img src={selectedDetails.img} alt="Evidencia" className="w-full h-auto" /></div></section>}
                 <section className="pt-2">
-                  <p className="text-[10px] font-bold uppercase text-[#3A7A1C] tracking-widest mb-4 text-left">Gestión y Actualizaciones</p>
+                  <p className="text-[10px] font-bold uppercase text-primary tracking-widest mb-4 text-left">Gestión y Actualizaciones</p>
                   <div className="relative ml-2 space-y-6 border-l-2 border-slate-100 pl-8">
                     {selectedDetails.updates?.map((u: any) => (
                       <div key={u.id} className="relative">
                         <div className="absolute -left-[41px] top-1.5 h-4 w-4 rounded-full border-4 border-white bg-slate-200" />
-                        <div className="bg-[#eef8ee] p-4 rounded-[22px] text-left">
+                        <div className="bg-primary/10 p-4 rounded-[22px] text-left">
                           <div className="flex justify-between items-center mb-2 text-[9px] font-bold">
-                            <span className="text-slate-700 uppercase bg-[#b1e7b1] px-1.5 py-0.5 rounded">{u.author_name || 'Gestión'}</span>
+                            <span className="text-primary uppercase bg-primary/20 px-1.5 py-0.5 rounded">{u.author_name || 'Gestión'}</span>
                             <span className="text-slate-700">{new Date(u.created_at).toLocaleDateString()}</span>
                           </div>
                           <p className="text-sm text-slate-700 font-medium leading-relaxed">{formatUpdateText(u.text)}</p>
@@ -203,23 +203,23 @@ export default function StudentIncidences() {
 
 const UI_CLASSES = {
   ...COMMON_UI_CLASSES,
-  mainLayout: "flex flex-col h-screen bg-[#F6F7F9] overflow-hidden",
-  header: "bg-[#1B4D1C] p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg",
-  headerTitle: "text-white text-2xl font-bold",
+  mainLayout: "flex flex-col h-screen bg-background overflow-hidden",
+  header: "bg-primary p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg",
+  headerTitle: "text-primary-foreground text-2xl font-bold",
   bellContainer: "relative p-2 bg-white/10 rounded-full",
-  bellBadge: "absolute -right-1 -top-1 min-w-5 h-5 flex items-center justify-center rounded-full bg-[#82D14C] text-[10px] font-bold text-[#123313]",
+  bellBadge: "absolute -right-1 -top-1 min-w-5 h-5 flex items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground ring-2 ring-background",
   mainContent: "flex-1 overflow-y-auto p-4 md:p-6 pb-32 w-full",
   incidencesGrid: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5",
   card: "border-none shadow-sm rounded-[24px] overflow-hidden bg-white h-full flex flex-col hover:shadow-md transition-shadow",
   cardSideBar: "w-1.5 shrink-0",
-  cardTitle: "font-bold text-[16px] text-[#1A1C1E] mb-0.5",
+  cardTitle: "font-bold text-[16px] text-foreground mb-0.5",
   cardLocationRow: "flex items-center gap-1.5 opacity-70 mb-3",
   statusBadge: "text-[11px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider shadow-sm",
-  btnNotes: "bg-[#F0F5F0] h-8 px-4 rounded-xl text-[#1B4D1C] border-[#E3F2DA] border-2 font-bold text-[10px] uppercase hover:bg-[#82D14C] hover:text-white transition-all",
+  btnNotes: "bg-primary/10 h-8 px-4 rounded-xl text-primary border-primary/20 border-2 font-bold text-[10px] uppercase hover:bg-primary hover:text-primary-foreground transition-all",
   btnMineWrapper: "flex justify-end mb-6",
   btnMineBase: "flex items-center gap-2 px-6 py-3 rounded-full text-xs font-bold transition-all border shadow-sm",
-  btnMineActive: "bg-[#1B4D1C] text-white",
-  btnMineInactive: "bg-white text-[#1B4D1C]",
+  btnMineActive: "bg-primary text-primary-foreground",
+  btnMineInactive: "bg-white text-primary border-primary/20",
   filterGrid: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3",
   dialogForm: "max-w-[90vw] sm:max-w-[425px] rounded-[32px] p-0 border-none overflow-hidden",
 };
