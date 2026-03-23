@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Bell, MapPin, User, Wrench, MessageSquare, Loader2, Clock } from "lucide-react";
+import { Plus, Bell, MapPin, User, Wrench, MessageSquare, Loader2, Clock, Pencil, Trash2 } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent } from "../../../components/ui/card";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "../../../components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../components/ui/popover";
 import { fetchWithAuth, API_URL_INCIDENCES } from "../../../utils/api";
 import { IncidenceForm } from "./IncidenceForm";
+import { IncidenceService } from "../../../services/incidences";
 
-import { 
+import {
   IncidenceSelect, LOCATION_LABELS, PRIORITY_LABELS, STATUS_CONFIG,
   formatUpdateText, applyIncidenceFilters, formatNotificationTime,
   getLastReadNotificationsAt, saveLastReadNotificationsAt,
@@ -26,6 +27,9 @@ export default function StudentIncidences() {
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  const [incidenceToDelete, setIncidenceToDelete] = useState<BaseIncidence | null>(null);
+  const [incidenceToEdit, setIncidenceToEdit] = useState<BaseIncidence | null>(null);
+
   const [search, setSearch] = useState('');
   const [filterLocation, setFilterLocation] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -40,7 +44,6 @@ export default function StudentIncidences() {
       const data = await res.json();
       const all = Array.isArray(data.results) ? data.results : [];
       const lastReadAt = getLastReadNotificationsAt();
-
       if (markAsRead && all.length > 0) {
         saveLastReadNotificationsAt(all[0].created_at);
         setUnreadNotifications(0);
@@ -66,10 +69,28 @@ export default function StudentIncidences() {
     return () => clearInterval(interval);
   }, [loadIncidences, loadNotifications]);
 
+  const handleDelete = async () => {
+    if (!incidenceToDelete) return;
+    try {
+      await IncidenceService.delete(incidenceToDelete.id);
+      loadIncidences();
+      setIncidenceToDelete(null);
+    } catch (e) { alert("No se pudo eliminar la incidencia"); }
+  };
+
   const filteredIncidences = incidences.filter((inc) => {
-    if (!inc.student_name && inc.location_type === 'habitacion') return false; 
-    if (showOnlyMine && (inc as any).is_mine === false) return false;
-    return applyIncidenceFilters(inc, { search, location: filterLocation, status: filterStatus, priority: filterPriority });
+    if (showOnlyMine && !inc.is_mine) {
+      return false;
+    }
+    if (!inc.is_mine && inc.location_type === 'habitacion') {
+      return false;
+    }
+    return applyIncidenceFilters(inc, { 
+      search, 
+      location: filterLocation, 
+      status: filterStatus, 
+      priority: filterPriority 
+    });
   });
 
   return (
@@ -118,26 +139,46 @@ export default function StudentIncidences() {
             </button>
           </div>
 
-          {loading ? <p className={UI_CLASSES.loadingText}>Cargando...</p> : (
+          {loading ? <p className={UI_CLASSES.loadingText}>Cargando incidencias...</p> : (
             <div className={UI_CLASSES.incidencesGrid}>
               {filteredIncidences.map((inc) => {
                 const config = STATUS_CONFIG[inc.status] || STATUS_CONFIG.pending;
+                const style = config.student;
+
                 return (
                   <Card key={inc.id} className={UI_CLASSES.card}>
                     <CardContent className="p-0 flex h-full text-left">
-                      <div className={`${UI_CLASSES.cardSideBar} ${config.student.barClass}`} />
+                      <div className={`${UI_CLASSES.cardSideBar} ${style.barClass}`} />
                       <div className="pt-4 px-4 pb-3 flex-1 flex flex-col justify-between min-w-0">
                         <div>
                           <div className="flex justify-between items-start mb-1.5">
                             <div className="flex-1 min-w-0 pr-2 text-left">
                               <h3 className={UI_CLASSES.cardTitle}>{inc.title}</h3>
-                              {(inc as any).is_mine && <span className="text-[10px] font-bold text-[#1B4D1C] uppercase bg-[#EEF8E7] px-1.5 py-0.5 rounded-md inline-block">Tu reporte</span>}
+
+                              {inc.is_mine ? (
+                                <span className="text-[10px] font-bold text-[#1B4D1C] uppercase bg-[#EEF8E7] px-1.5 py-0.5 rounded-md inline-block">
+                                  Tu reporte
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-bold text-slate-500 uppercase bg-slate-100 px-1.5 py-0.5 rounded-md inline-block">
+                                  {inc.student_name}
+                                </span>
+                              )}
                             </div>
-                            <span className={`${UI_CLASSES.statusBadge} ${config.student.colorClass}`}>{config.label}</span>
+                            <div className="flex flex-col items-end gap-2">
+                              <span className={`${UI_CLASSES.statusBadge} ${style.colorClass}`}>{config.label}</span>
+                              {inc.is_mine && inc.status === 'pending' && (
+                                <div className="flex gap-1">
+                                  <button onClick={() => setIncidenceToEdit(inc)} className={UI_CLASSES.actionBtnSmall} title="Editar"><Pencil size={12} className="text-blue-500" /></button>
+                                  <button onClick={() => setIncidenceToDelete(inc)} className={UI_CLASSES.actionBtnSmall} title="Eliminar"><Trash2 size={12} className="text-red-500" /></button>
+                                </div>
+                              )}
+                            </div>
                           </div>
                           <div className={UI_CLASSES.cardLocationRow}><MapPin size={14} className="text-slate-400" /><span className="text-[11px] font-semibold text-slate-500 truncate">{LOCATION_LABELS[inc.location_type]} {inc.room_number ? `• Hab. ${inc.room_number}` : ''}</span></div>
                         </div>
-                        <div className="mt-4 pt-3 border-t">
+
+                        <div className="mt-4 pt-3 border-t border-slate-50">
                           <div className="flex items-center justify-between mb-2.5">
                             <div className="flex items-center gap-1.5 text-slate-600 truncate text-[11px] font-bold"><Wrench size={13} />{inc.assigned_staff_name || inc.assigned_external_name || 'Sin asignar'}</div>
                             <div className="flex items-center gap-1 text-slate-400 font-bold text-[10px]"><Clock size={10} />{new Date(inc.created_at).toLocaleDateString()}</div>
@@ -156,6 +197,26 @@ export default function StudentIncidences() {
 
       <button onClick={() => setIsFormOpen(true)} className={UI_CLASSES.btnFloating} aria-label="Nueva incidencia"><Plus size={32} strokeWidth={3} /></button>
 
+      {/* MODAL ELIMINAR CONFIRMACIÓN */}
+      <Dialog open={!!incidenceToDelete} onOpenChange={() => setIncidenceToDelete(null)}>
+        <DialogContent className="max-w-[400px] rounded-3xl p-6">
+          <DialogTitle className="text-center text-lg font-bold">¿Eliminar incidencia?</DialogTitle>
+          <DialogDescription className="text-center text-gray-500 mt-2">Esta acción no se puede deshacer. El reporte "{incidenceToDelete?.title}" será borrado.</DialogDescription>
+          <div className="flex gap-3 mt-6">
+            <Button variant="outline" onClick={() => setIncidenceToDelete(null)} className="flex-1 rounded-xl h-12 font-bold">Cancelar</Button>
+            <Button variant="destructive" onClick={handleDelete} className="flex-1 rounded-xl h-12 font-bold">Eliminar</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL EDITAR */}
+      <Dialog open={!!incidenceToEdit} onOpenChange={() => setIncidenceToEdit(null)}>
+        <DialogContent className={UI_CLASSES.dialogForm}>
+          <IncidenceForm initialData={incidenceToEdit} onSuccess={() => { loadIncidences(); setIncidenceToEdit(null); }} onClose={() => setIncidenceToEdit(null)} />
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL DETALLES (HISTORIAL) */}
       <Dialog open={isNotesOpen} onOpenChange={setIsNotesOpen}>
         <DialogContent className={UI_CLASSES.dialogNotes}>
           <DialogTitle className={UI_CLASSES.notesTitle}>Seguimiento de la incidencia</DialogTitle>
@@ -165,8 +226,8 @@ export default function StudentIncidences() {
               <>
                 <section className="border-l-4 border-[#82D14C] pl-3 py-1"><h3 className="font-bold text-lg text-slate-800">{selectedDetails.title}</h3></section>
                 <section className="space-y-2 text-left">
-                    <div className="flex items-center gap-2"><MessageSquare size={14} className="text-slate-400" /><p className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Descripción</p></div>
-                    <div className="bg-slate-50 p-4 rounded-[20px] border border-slate-100 italic text-sm text-slate-600">"{selectedDetails.description}"</div>
+                  <div className="flex items-center gap-2"><MessageSquare size={14} className="text-slate-400" /><p className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Descripción</p></div>
+                  <div className="bg-slate-50 p-4 rounded-[20px] border border-slate-100 italic text-sm text-slate-600">"{selectedDetails.description}"</div>
                 </section>
                 {selectedDetails.img && <section className="flex justify-center"><div className="rounded-[24px] overflow-hidden border border-slate-100 max-w-[220px] shadow-sm"><img src={selectedDetails.img} alt="Evidencia" className="w-full h-auto" /></div></section>}
                 <section className="pt-2">
@@ -191,9 +252,11 @@ export default function StudentIncidences() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* FORMULARIO NUEVA */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className={UI_CLASSES.dialogForm}>
-          <DialogTitle className="sr-only">Nueva</DialogTitle>
+          <DialogTitle className="sr-only">Nueva Incidencia</DialogTitle>
           <IncidenceForm onSuccess={() => { loadIncidences(); setIsFormOpen(false); }} onClose={() => setIsFormOpen(false)} />
         </DialogContent>
       </Dialog>
@@ -222,4 +285,5 @@ const UI_CLASSES = {
   btnMineInactive: "bg-white text-[#1B4D1C]",
   filterGrid: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3",
   dialogForm: "max-w-[90vw] sm:max-w-[425px] rounded-[32px] p-0 border-none overflow-hidden",
+  actionBtnSmall: "p-1.5 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors border border-slate-100"
 };

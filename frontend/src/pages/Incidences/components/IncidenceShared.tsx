@@ -101,7 +101,9 @@ export const COMMON_UI_CLASSES = {
   loadingText: "text-center text-slate-400 mt-20 text-sm font-bold animate-pulse",
   filterInput: "w-full px-5 py-2 rounded-2xl border border-slate-200 bg-white text-sm focus:ring-2 focus:ring-[#82D14C]/20 outline-none",
   btnFloating: "fixed bottom-24 right-8 w-16 h-16 bg-[#82D14C] hover:bg-[#74bc44] text-white rounded-full shadow-2xl flex items-center justify-center z-50 transition-transform active:scale-90",
-
+  actionBtn: "p-2 rounded-full transition-colors hover:bg-slate-100",
+  deleteBtn: "text-red-500 hover:bg-red-50",
+  editBtn: "text-blue-500 hover:bg-blue-50"
 };
 
 export const IncidenceSelect = ({ value, onChange, options, placeholder, className = "" }: any) => {
