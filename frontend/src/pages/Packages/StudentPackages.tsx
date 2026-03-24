@@ -1,4 +1,4 @@
-import { Clock, QrCode, Search, MapPin, LogOut, User } from "lucide-react";
+import { Clock, Search, MapPin, LogOut, User } from "lucide-react";
 import { Card, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -28,7 +28,7 @@ interface StudentPackagesProps {
   onLogout?: () => void;
 }
 
-export function StudentPackages({ packages = [], onShowQr, qrData, onGoToProfile, onLogout }: StudentPackagesProps) {
+export function StudentPackages({ packages = [], onGoToProfile, onLogout }: StudentPackagesProps) {
   const pendingPackages = packages.filter((p) => p.status !== "DELIVERED");
   const historyPackages = packages.filter((p) => p.status === "DELIVERED");
 
