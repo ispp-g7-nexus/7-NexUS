@@ -144,9 +144,9 @@ class Meal(models.Model):
         default=False
     )
 
-    image_url = models.URLField(
-        "URL de la imagen",
-        max_length=5000,
+    image = models.ImageField(
+        "Imagen",
+        upload_to='meals/%Y/%m/',
         blank=True,
         null=True
     )

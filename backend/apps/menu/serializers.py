@@ -16,7 +16,7 @@ class MealSerializer(serializers.ModelSerializer):
             'is_gluten_free',
             'is_vegetarian',
             'is_vegan',
-            'image_url',
+            'image',
         ]
 
     def to_representation(self, instance):
@@ -25,8 +25,7 @@ class MealSerializer(serializers.ModelSerializer):
         data['isGlutenFree'] = data.pop('is_gluten_free')
         data['isVegetarian'] = data.pop('is_vegetarian')
         data['isVegan'] = data.pop('is_vegan')
-        if 'image_url' in data:
-            data['imageUrl'] = data.pop('image_url')
+        data['image'] = data.pop('image')
         # Convertir id a string para consistencia con el frontend
         data['id'] = str(data['id'])
         return data
@@ -105,10 +104,10 @@ class MenuWeekListSerializer(serializers.ModelSerializer):
 class MenuWeekCreateSerializer(serializers.ModelSerializer):
 
     week_start = serializers.DateField(required=True)
-
+    image = serializers.ImageField(required=False, allow_null=True)
     class Meta:
         model = MenuWeek
-        fields = ['week_start']
+        fields = ['week_start', 'image']
 
     def validate(self, attrs):
         base_date = attrs.get('week_start')
@@ -156,19 +155,29 @@ class MealCreateSerializer(serializers.ModelSerializer):
             'is_gluten_free',
             'is_vegetarian',
             'is_vegan',
-            'image_url',
+            'image',
         ]
 
     def to_internal_value(self, data):
-        converted = dict(data)
-        if 'isGlutenFree' in converted:
-            converted['is_gluten_free'] = converted.pop('isGlutenFree')
-        if 'isVegetarian' in converted:
-            converted['is_vegetarian'] = converted.pop('isVegetarian')
-        if 'isVegan' in converted:
-            converted['is_vegan'] = converted.pop('isVegan')
-        if 'imageUrl' in converted:
-            converted['image_url'] = converted.pop('imageUrl')
+        # Convertimos el QueryDict (FormData) a un diccionario común
+        if hasattr(data, 'dict'):
+            converted = data.dict()
+        else:
+            converted = dict(data)
+
+        # ESTO ES LO QUE TE FALTA:
+        # Si en el FormData de React enviaste 'image', aquí la rescatamos
+        if 'image' in data:
+            converted['image'] = data['image']
+
+        # Manejo de booleanos (porque llegan como strings "true"/"false")
+        for field in ['is_gluten_free', 'is_vegetarian', 'is_vegan']:
+            # Mapeo de camelCase (React) a snake_case (Django)
+            frontend_key = field.replace('_g', 'G').replace('_v', 'V')
+            if frontend_key in converted:
+                val = converted.pop(frontend_key)
+                converted[field] = val in ['true', True, 'True']
+
         return super().to_internal_value(converted)
 
 class SpecialMenuRequestSerializer(serializers.ModelSerializer):

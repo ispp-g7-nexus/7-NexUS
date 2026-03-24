@@ -42,15 +42,15 @@ const getMealTypeIcon = (type: Meal['type']): JSX.Element => {
 const MealCard = ({ meal }: { meal: Meal }) => {
   return (
     <div className={`border rounded-xl p-4 overflow-hidden shadow-sm transition-all hover:shadow-md relative ${getMealTypeColor(meal.type)}`}>
-      {meal.imageUrl && (
+      {meal.image && (
         <div className="w-full h-40 mb-3 -mt-4 -mx-4 w-[calc(100%+2rem)] border-b border-black/5 relative group">
-          <img src={meal.imageUrl} alt={meal.name} className="w-full h-full object-cover" />
+          <img src={meal.image} alt={meal.name} className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
         </div>
       )}
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-3 flex-1">
-          <div className={`shrink-0 ${meal.imageUrl ? '-mt-8 p-1.5 bg-white/90 backdrop-blur rounded-lg shadow-sm border border-white/50 z-10 relative' : ''}`}>
+          <div className={`shrink-0 ${meal.image ? '-mt-8 p-1.5 bg-white/90 backdrop-blur rounded-lg shadow-sm border border-white/50 z-10 relative' : ''}`}>
             {getMealTypeIcon(meal.type)}
           </div>
           <div className="flex-1">
@@ -63,7 +63,7 @@ const MealCard = ({ meal }: { meal: Meal }) => {
       </div>
 
       {(meal.isGlutenFree || meal.isVegetarian || meal.isVegan) && (
-        <div className={`flex flex-wrap gap-2 mt-3 pt-3 border-t border-current border-opacity-20 ${meal.imageUrl ? 'relative z-10' : ''}`}>
+        <div className={`flex flex-wrap gap-2 mt-3 pt-3 border-t border-current border-opacity-20 ${meal.image ? 'relative z-10' : ''}`}>
           {meal.isVegetarian && (
             <span className="inline-flex items-center gap-1 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
               <Leaf className="w-3 h-3" />

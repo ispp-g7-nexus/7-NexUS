@@ -49,15 +49,15 @@ interface MealCardAdminProps {
 const MealCardAdmin = ({ meal, onEdit, onDelete }: MealCardAdminProps) => {
   return (
     <div className={`border rounded-xl p-4 overflow-hidden shadow-sm transition-all hover:shadow-md relative ${getMealTypeColor(meal.type)}`}>
-      {meal.imageUrl && (
+      {meal.image && (
         <div className="w-full h-40 mb-3 -mt-4 -mx-4 w-[calc(100%+2rem)] border-b border-black/5 relative group">
-          <img src={meal.imageUrl} alt={meal.name} className="w-full h-full object-cover" />
+          <img src={meal.image} alt={meal.name} className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
         </div>
       )}
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-3 flex-1">
-          <div className={`shrink-0 ${meal.imageUrl ? '-mt-8 p-1.5 bg-white/90 backdrop-blur rounded-lg shadow-sm border border-white/50 z-10 relative' : ''}`}>
+          <div className={`shrink-0 ${meal.image ? '-mt-8 p-1.5 bg-white/90 backdrop-blur rounded-lg shadow-sm border border-white/50 z-10 relative' : ''}`}>
             {getMealTypeIcon(meal.type)}
           </div>
           <div className="flex-1">
@@ -67,7 +67,7 @@ const MealCardAdmin = ({ meal, onEdit, onDelete }: MealCardAdminProps) => {
             )}
           </div>
         </div>
-        <div className={`flex gap-2 ml-4 shrink-0 ${meal.imageUrl ? '-mt-8 z-10 relative' : ''}`}>
+        <div className={`flex gap-2 ml-4 shrink-0 ${meal.image ? '-mt-8 z-10 relative' : ''}`}>
           <button
             onClick={() => onEdit(meal)}
             className="p-1.5 hover:bg-blue-100 rounded-md text-blue-600 transition-colors"
@@ -137,7 +137,8 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
   const [formData, setFormData] = useState<Meal>(
     meal || { allergens: [], name: '', type: 'lunch', description: '', isGlutenFree: false, isVegetarian: false, isVegan: false }
   );
-
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   // Reseteamos el form cuando se abre el modal con nuevos datos
   useEffect(() => {
     if (isOpen) {
@@ -146,6 +147,21 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
       );
     }
   }, [isOpen, meal]);
+
+  useEffect(() => {
+    if (!photoFile) {
+      setPreviewUrl(null);
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(photoFile);
+    setPreviewUrl(objectUrl);
+
+
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [photoFile]);
 
   if (!isOpen) return null;
 
@@ -228,22 +244,36 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
               placeholder="Ej: Gluten, Maní, Leche"
               className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            {formData.imageUrl && (
-              <div className="mt-3 h-32 rounded-lg border border-gray-200 overflow-hidden bg-gray-100 flex items-center justify-center">
-                <img
-                  src={formData.imageUrl}
-                  alt="Vista previa"
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                    const parent = e.currentTarget.parentElement;
-                    if (parent) {
-                      parent.innerHTML = '<span class="text-xs text-red-500 font-medium">No se puede cargar la imagen</span>';
-                    }
-                  }}
-                />
-              </div>
-            )}
+            {/* --- ESTE BLOQUE USA PREVIEWURL Y QUITA EL ERROR --- */}
+            <div className="flex flex-col gap-4 py-4">
+              <label className="text-sm font-medium">Imagen del plato</label>
+              
+              {/* Mostramos la foto si existe una previa o una ya guardada */}
+              {(previewUrl || meal.image) && (
+                <div className="relative w-full h-40 border rounded-md overflow-hidden bg-gray-100">
+                  <img 
+                    src={previewUrl || meal.image} 
+                    alt="Previsualización" 
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setPhotoFile(file);
+                    // Aquí le damos valor a la variable
+                    const url = URL.createObjectURL(file);
+                    setPreviewUrl(url); 
+                  }
+                }}
+                className="cursor-pointer"
+              />
+            </div>
           </div>
 
           {/* Opciones dietéticas */}
@@ -269,15 +299,6 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
                   className="w-4 h-4 rounded"
                 />
                 <span className="text-sm text-gray-500">Vegano</span>
-              </label>
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={formData.isGlutenFree || false}
-                  onChange={(e) => handleChange('isGlutenFree', e.target.checked)}
-                  className="w-4 h-4 rounded"
-                />
-                <span className="text-sm text-gray-700">Sin Gluten</span>
               </label>
               <label className="flex items-center gap-2">
                 <input
@@ -463,7 +484,9 @@ export function AdminMenuView() {
   const [editingDayId, setEditingDayId] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
   const [specialRequests, setSpecialRequests] = useState<any[]>([]);
-
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [, setPreviewUrl] = useState<string | null>(null);
+  
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [confirmConfig, setConfirmConfig] = useState<{
     isOpen: boolean;
@@ -587,24 +610,48 @@ export function AdminMenuView() {
   };
 
   const handleSaveMeal = async (meal: Meal, dayId: string) => {
-    setIsSaving(true);
-    try {
-      if (meal.id) {
-        await menuService.updateMeal(meal.id, meal);
-      } else {
-        await menuService.createMeal(dayId, meal);
-      }
-      setIsEditModalOpen(false);
-      showToast(meal.id ? 'Comida actualizada' : 'Comida agregada', 'success');
-      if (selectedWeekId) {
-        await loadWeekDetail(selectedWeekId);
-      }
-    } catch (err) {
-      showToast('Error al guardar: ' + (err instanceof Error ? err.message : 'Error desconocido'), 'error');
-    } finally {
-      setIsSaving(false);
+  setIsSaving(true);
+  try {
+    // Creamos el "sobre" para enviar datos + imagen
+    const formData = new FormData();
+
+    // Añadimos los campos de texto
+    formData.append('name', meal.name);
+    formData.append('description', meal.description || '');
+    formData.append('type', meal.type);
+    formData.append('isGlutenFree', String(meal.isGlutenFree));
+    formData.append('isVegetarian', String(meal.isVegetarian));
+    formData.append('isVegan', String(meal.isVegan));
+
+    // Si el usuario seleccionó una foto nueva, la añadimos
+    if (photoFile) {
+      // Usamos 'image' para que coincida con el Serializer de Django
+      formData.append('image', photoFile);
     }
-  };
+
+    // Enviamos el formData al servicio que acabamos de actualizar
+    if (meal.id) {
+      await menuService.updateMeal(meal.id, formData);
+    } else {
+      await menuService.createMeal(dayId, formData);
+    }
+
+    // Limpieza tras éxito
+    setIsEditModalOpen(false);
+    setPhotoFile(null); 
+    setPreviewUrl(null);
+    
+    showToast(meal.id ? 'Comida actualizada' : 'Comida agregada', 'success');
+    
+    if (selectedWeekId) {
+      await loadWeekDetail(selectedWeekId);
+    }
+  } catch (err) {
+    showToast('Error al guardar: ' + (err instanceof Error ? err.message : 'Error desconocido'), 'error');
+  } finally {
+    setIsSaving(false);
+  }
+};
 
   const handleCreateWeek = async (weekStart: string, weekEnd: string) => {
     setIsSaving(true);
@@ -685,6 +732,7 @@ export function AdminMenuView() {
     );
   };
 
+  
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex items-center justify-center">

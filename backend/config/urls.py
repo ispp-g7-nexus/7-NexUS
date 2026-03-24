@@ -57,3 +57,7 @@ urlpatterns = [
 
 if settings.MATCHING_ENABLED:
     urlpatterns.append(path("api/", include("apps.matching.urls")))
+
+from django.conf.urls.static import static
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

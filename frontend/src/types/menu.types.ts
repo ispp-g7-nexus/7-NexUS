@@ -1,4 +1,5 @@
 export interface Meal {
+  allergens: any;
   id?: string;
   name: string;
   description?: string;
@@ -6,7 +7,7 @@ export interface Meal {
   isGlutenFree?: boolean;
   isVegetarian?: boolean;
   isVegan?: boolean;
-  imageUrl?: string;
+  image?: string;
 }
 
 export interface MenuDay {

@@ -32,13 +32,22 @@ class MenuService {
     endpoint: string,
     options?: RequestInit
   ): Promise<T> {
+    const isFormData = options?.body instanceof FormData;
+
+    const headers: Record<string, string> = {
+      ...options?.headers as Record<string, string>,
+    };
+
+    if (!isFormData) {
+      headers['Content-Type'] = 'application/json';
+    }
+  if (options?.body instanceof FormData) {
+      delete headers['Content-Type']; 
+}
     const response = await fetch(`${API_URL}${endpoint}`, {
       ...options,
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        ...options?.headers,
-      },
+      headers,
     });
 
     if (!response.ok) {
@@ -109,22 +118,24 @@ class MenuService {
   }
 
   /**
-   * Crear una comida en un día específico.
+   * Crear una comida. 
+   * Cambiamos 'meal: Omit<Meal, "id">' por 'meal: any'
    */
-  async createMeal(dayId: string, meal: Omit<Meal, 'id'>): Promise<Meal> {
+  async createMeal(dayId: string, meal: any): Promise<Meal> {
     return this.request<Meal>(`/menu/days/${dayId}/meals/`, {
       method: 'POST',
-      body: JSON.stringify(meal),
+      body: meal instanceof FormData ? meal : JSON.stringify(meal),
     });
   }
 
   /**
-   * Actualizar una comida existente.
+   * Actualizar una comida. 
+   * Cambiamos 'meal: Partial<Meal>' por 'meal: any'
    */
-  async updateMeal(mealId: string, meal: Partial<Meal>): Promise<Meal> {
+  async updateMeal(mealId: string, meal: any): Promise<Meal> {
     return this.request<Meal>(`/menu/meals/${mealId}/`, {
       method: 'PATCH',
-      body: JSON.stringify(meal),
+      body: meal instanceof FormData ? meal : JSON.stringify(meal),
     });
   }
 

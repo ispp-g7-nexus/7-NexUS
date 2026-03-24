@@ -244,5 +244,5 @@ class SpecialMenuRequestViewSet(viewsets.ModelViewSet):
         if not resident:
             from rest_framework.exceptions import ValidationError
             raise ValidationError({"detail": "No hay residentes en la base de datos. Ejecuta el comando de la terminal."})
-
+        print(f"Archivos recibidos: {self.request.FILES}")
         serializer.save(resident=resident)
