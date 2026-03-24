@@ -4,11 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui
 import { getSpace, type AdminSpace } from "../../../services/adminSpaces";
 
 interface Props {
-  open: boolean;
-  spaceId: number | null;
-  onClose: () => void;
-  onEdit?: (space: AdminSpace) => void;
-  onDeactivate?: (space: AdminSpace) => void;
+  readonly open: boolean;
+  readonly spaceId: number | null;
+  readonly onClose: () => void;
+  readonly onEdit?: (space: AdminSpace) => void;
+  readonly onDeactivate?: (space: AdminSpace) => void;
 }
 
 export function SpaceDetailModal({ open, spaceId, onClose, onEdit, onDeactivate }: Props) {
@@ -43,50 +43,28 @@ export function SpaceDetailModal({ open, spaceId, onClose, onEdit, onDeactivate 
           <button onClick={onClose} className="text-gray-500">Cerrar</button>
         </CardHeader>
         <CardContent className="p-4">
-          {loading ? (
-            <p className="text-sm text-gray-500">Cargando...</p>
-          ) : !space ? (
-            <p className="text-sm text-red-500">No se encontró el espacio.</p>
-          ) : (
-            <div className="space-y-3">
-              <h3 className="text-base font-semibold">{space.name}</h3>
-              {space.description && <p className="text-sm text-gray-600">{space.description}</p>}
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div>
-                  <p className="text-xs text-gray-500">Aforo</p>
-                  <p className="font-semibold">{space.capacity}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Intervalo</p>
-                  <p className="font-semibold">{space.reservation_interval_minutes}m</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Apertura</p>
-                  <p className="font-semibold">{space.open_time.slice(0, 5)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Cierre</p>
-                  <p className="font-semibold">{space.close_time.slice(0, 5)}</p>
-                </div>
-              </div>
+          {(() => {
+            if (loading) {
+              return <p className="text-sm text-gray-500">Cargando...</p>;
+            }
 
-              <div className="flex gap-2 justify-end pt-2">
-                {onEdit && (
-                  <Button size="sm" onClick={() => space && onEdit(space)}>
-                    Editar
-                  </Button>
-                )}
-                {onDeactivate && (
-                  space.is_active ? (
+            if (space == null) {
+              return <p className="text-sm text-red-500">No se encontró el espacio.</p>;
+            }
+
+            const deactivateButton = onDeactivate
+              ? space.is_active
+                ? (
                     <Button
                       variant="outline"
                       size="sm"
                       className="text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/40"
-                      onClick={() => space && onDeactivate(space)}
+                      onClick={() => onDeactivate(space)}
                     >
                       Desactivar
                     </Button>
-                  ) : (
+                  )
+                : (
                     <Button
                       variant="outline"
                       size="sm"
@@ -96,10 +74,42 @@ export function SpaceDetailModal({ open, spaceId, onClose, onEdit, onDeactivate 
                       Ya inactivo
                     </Button>
                   )
-                )}
+              : null;
+
+            return (
+              <div className="space-y-3">
+                <h3 className="text-base font-semibold">{space.name}</h3>
+                {space.description && <p className="text-sm text-gray-600">{space.description}</p>}
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <p className="text-xs text-gray-500">Aforo</p>
+                    <p className="font-semibold">{space.capacity}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Intervalo</p>
+                    <p className="font-semibold">{space.reservation_interval_minutes}m</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Apertura</p>
+                    <p className="font-semibold">{space.open_time.slice(0, 5)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Cierre</p>
+                    <p className="font-semibold">{space.close_time.slice(0, 5)}</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 justify-end pt-2">
+                  {onEdit && (
+                    <Button size="sm" onClick={() => onEdit(space)}>
+                      Editar
+                    </Button>
+                  )}
+                  {deactivateButton}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </CardContent>
       </Card>
     </div>
