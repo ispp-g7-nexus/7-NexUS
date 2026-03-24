@@ -264,6 +264,129 @@ def _resolve_changed_memberships() -> set[int]:
     return {int(value) for value in values if value is not None}
 
 
+def _group_preferences_by_residence(
+    preferences: list[ResidentPreference],
+) -> dict[int, list[ResidentPreference]]:
+    grouped: dict[int, list[ResidentPreference]] = {}
+    for preference in preferences:
+        residence_id = preference.membership.residence_id
+        if residence_id is None:
+            continue
+        grouped.setdefault(residence_id, []).append(preference)
+    return grouped
+
+
+def _append_pair_examples(
+    *,
+    examples: list[TrainingExample],
+    schema_name: str,
+    residence_id: int,
+    resident_a: ResidentPreference,
+    resident_b: ResidentPreference,
+    label: float,
+) -> None:
+    feature_a = preference_to_feature_row(resident_a)
+    feature_b = preference_to_feature_row(resident_b)
+
+    examples.append(
+        TrainingExample(
+            schema_name=schema_name,
+            residence_id=residence_id,
+            query_membership_id=resident_a.membership_id,
+            candidate_membership_id=resident_b.membership_id,
+            query_features=feature_a,
+            candidate_features=feature_b,
+            label=label,
+        )
+    )
+    examples.append(
+        TrainingExample(
+            schema_name=schema_name,
+            residence_id=residence_id,
+            query_membership_id=resident_b.membership_id,
+            candidate_membership_id=resident_a.membership_id,
+            query_features=feature_b,
+            candidate_features=feature_a,
+            label=label,
+        )
+    )
+
+
+def _update_pair_stats(stats: dict[str, int], *, is_bad: bool) -> None:
+    stats["pairs_created"] += 2
+    if is_bad:
+        stats["bad_pairs"] += 2
+    else:
+        stats["good_pairs"] += 2
+
+
+def _collect_residence_pair_examples(
+    *,
+    schema_examples: list[TrainingExample],
+    schema_name: str,
+    residence_id: int,
+    residence_preferences: list[ResidentPreference],
+    changed_membership_ids: set[int],
+    stats: dict[str, int],
+) -> None:
+    total = len(residence_preferences)
+    if total < 2:
+        return
+
+    for left in range(total):
+        for right in range(left + 1, total):
+            resident_a = residence_preferences[left]
+            resident_b = residence_preferences[right]
+            is_bad = (
+                resident_a.membership_id in changed_membership_ids
+                or resident_b.membership_id in changed_membership_ids
+            )
+            _append_pair_examples(
+                examples=schema_examples,
+                schema_name=schema_name,
+                residence_id=residence_id,
+                resident_a=resident_a,
+                resident_b=resident_b,
+                label=0.0 if is_bad else 1.0,
+            )
+            _update_pair_stats(stats, is_bad=is_bad)
+
+
+def _collect_examples_for_schema(
+    schema_name: str,
+    stats: dict[str, int],
+) -> list[TrainingExample]:
+    with schema_context(schema_name):
+        changed_membership_ids = _resolve_changed_memberships()
+        preferences = list(
+            ResidentPreference.objects.select_related("membership")
+            .filter(
+                is_completed=True,
+                membership__is_active=True,
+                membership__role__name__iexact="Student",
+                membership__residence_id__isnull=False,
+                membership__residence__is_active=True,
+            )
+            .order_by("membership__residence_id", "membership_id")
+        )
+        stats["completed_preferences"] += len(preferences)
+
+        grouped = _group_preferences_by_residence(preferences)
+        stats["residences_scanned"] += len(grouped)
+
+        schema_examples: list[TrainingExample] = []
+        for residence_id, residence_preferences in grouped.items():
+            _collect_residence_pair_examples(
+                schema_examples=schema_examples,
+                schema_name=schema_name,
+                residence_id=residence_id,
+                residence_preferences=residence_preferences,
+                changed_membership_ids=changed_membership_ids,
+                stats=stats,
+            )
+        return schema_examples
+
+
 def build_examples_from_all_tenants() -> tuple[list[TrainingExample], dict[str, Any]]:
     examples: list[TrainingExample] = []
     stats = {
@@ -281,80 +404,28 @@ def build_examples_from_all_tenants() -> tuple[list[TrainingExample], dict[str, 
         if schema_name == public_schema_name:
             continue
         stats["schemas_scanned"] += 1
-
-        with schema_context(schema_name):
-            changed_membership_ids = _resolve_changed_memberships()
-            preferences = list(
-                ResidentPreference.objects.select_related("membership")
-                .filter(
-                    is_completed=True,
-                    membership__is_active=True,
-                    membership__role__name__iexact="Student",
-                    membership__residence_id__isnull=False,
-                    membership__residence__is_active=True,
-                )
-                .order_by("membership__residence_id", "membership_id")
-            )
-            stats["completed_preferences"] += len(preferences)
-
-            grouped: dict[int, list[ResidentPreference]] = {}
-            for preference in preferences:
-                residence_id = preference.membership.residence_id
-                if residence_id is None:
-                    continue
-                grouped.setdefault(residence_id, []).append(preference)
-
-            stats["residences_scanned"] += len(grouped)
-
-            for residence_id, residence_preferences in grouped.items():
-                total = len(residence_preferences)
-                if total < 2:
-                    continue
-
-                for left in range(total):
-                    for right in range(left + 1, total):
-                        resident_a = residence_preferences[left]
-                        resident_b = residence_preferences[right]
-
-                        is_bad = (
-                            resident_a.membership_id in changed_membership_ids
-                            or resident_b.membership_id in changed_membership_ids
-                        )
-                        label = 0.0 if is_bad else 1.0
-
-                        feature_a = preference_to_feature_row(resident_a)
-                        feature_b = preference_to_feature_row(resident_b)
-
-                        examples.append(
-                            TrainingExample(
-                                schema_name=schema_name,
-                                residence_id=residence_id,
-                                query_membership_id=resident_a.membership_id,
-                                candidate_membership_id=resident_b.membership_id,
-                                query_features=feature_a,
-                                candidate_features=feature_b,
-                                label=label,
-                            )
-                        )
-                        examples.append(
-                            TrainingExample(
-                                schema_name=schema_name,
-                                residence_id=residence_id,
-                                query_membership_id=resident_b.membership_id,
-                                candidate_membership_id=resident_a.membership_id,
-                                query_features=feature_b,
-                                candidate_features=feature_a,
-                                label=label,
-                            )
-                        )
-
-                        stats["pairs_created"] += 2
-                        if is_bad:
-                            stats["bad_pairs"] += 2
-                        else:
-                            stats["good_pairs"] += 2
+        examples.extend(_collect_examples_for_schema(schema_name, stats))
 
     return examples, stats
+
+
+def _update_best_validation_checkpoint(
+    *,
+    output_dir: Path,
+    model: TwoTowerModel,
+    model_config: TwoTowerConfig,
+    metadata: dict[str, Any],
+    val_loss: float,
+    epoch: int,
+    best_val_loss: float,
+    best_epoch: int,
+    patience_counter: int,
+    min_delta: float,
+) -> tuple[float, int, int]:
+    if val_loss < (best_val_loss - min_delta):
+        save_checkpoint(output_dir / "model.pt", model, model_config, metadata)
+        return val_loss, epoch, 0
+    return best_val_loss, best_epoch, patience_counter + 1
 
 
 def train_from_database(config: TrainingRunConfig) -> dict[str, Any]:
@@ -448,14 +519,18 @@ def train_from_database(config: TrainingRunConfig) -> dict[str, Any]:
         train_loss = train_loss_sum / train_examples if train_examples else 0.0
         val_loss = _evaluate(model, val_loader, criterion, device)
         history.append({"epoch": float(epoch), "train_loss": train_loss, "val_loss": val_loss})
-
-        if val_loss < (best_val_loss - config.early_stopping_min_delta):
-            best_val_loss = val_loss
-            best_epoch = epoch
-            patience_counter = 0
-            save_checkpoint(output_dir / "model.pt", model, model_config, metadata)
-        else:
-            patience_counter += 1
+        best_val_loss, best_epoch, patience_counter = _update_best_validation_checkpoint(
+            output_dir=output_dir,
+            model=model,
+            model_config=model_config,
+            metadata=metadata,
+            val_loss=val_loss,
+            epoch=epoch,
+            best_val_loss=best_val_loss,
+            best_epoch=best_epoch,
+            patience_counter=patience_counter,
+            min_delta=config.early_stopping_min_delta,
+        )
 
         logger.info(
             "epoch=%s train_loss=%.4f val_loss=%.4f patience=%s/%s",
