@@ -9,7 +9,11 @@ from django_tenants.test.cases import FastTenantTestCase
 from django_tenants.test.client import TenantClient
 from django_tenants.utils import tenant_context
 from rest_framework import status
+from rest_framework.test import APIRequestFactory, force_authenticate
 
+from apps.membership.models import Membership, Role
+from apps.residences.models import Residence, ResidenceDomain
+from apps.common.views import AdminCreateResidentView
 from apps.common.decorators import residence_access_required
 from apps.common.serializers import (
     AdminProfileUpdateSerializer,
@@ -267,7 +271,7 @@ class CommonViewsTests(FastTenantTestCase):
         url = reverse("tenant-context")
         response = self.anon_client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["tenant"]["schema_name"], "test_views")
+        self.assertEqual(response.json()["tenant"]["schema_name"], self.tenant.schema_name)
 
     # --- TESTS AUTH LOGIN ---
 
@@ -425,3 +429,199 @@ class CommonViewsTests(FastTenantTestCase):
         url = reverse("student-profile")
         response = self.admin_client.get(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        
+
+class AdminCreateResidentViewsTests(FastTenantTestCase):
+
+    @classmethod
+    def get_test_tenant_domain(cls):
+        return "nexus.test.local"
+
+    @classmethod
+    def setup_tenant(cls, tenant):
+        tenant.name = "Tenant Nexus Test"
+        tenant.slug = "tenant-nexus-test"
+        tenant.is_active = True
+
+    @classmethod
+    def setup_domain(cls, domain):
+        domain.domain = cls.get_test_tenant_domain()
+        domain.is_primary = True
+
+    def setUp(self):
+        super().setUp()
+        user_model = get_user_model()
+
+        # Usuarios
+        self.admin_user = user_model.objects.create_user(
+            username="admin-nexus",
+            email="admin@nexus.test",
+            password="PASSWORD1",
+        )
+        self.student_user = user_model.objects.create_user(
+            username="existing-student",
+            email="existing@student.test",
+            password="PASSWORD2",
+        )
+
+        # Residencia
+        self.residence = Residence.objects.create(
+            name="Residencia Test",
+            slug="residencia-test",
+            code="RT-001",
+            is_active=True,
+        )
+        ResidenceDomain.objects.create(
+            residence=self.residence,
+            domain=self.get_test_tenant_domain(),
+            is_primary=True,
+            is_active=True,
+        )
+
+        # Roles
+        Role.objects.get_or_create(
+            name="Student",
+            defaults={"description": "Residente", "is_system_default": True},
+        )
+
+        # Clientes
+        self.admin_client = TenantClient(self.tenant)
+        self.admin_client.force_login(self.admin_user)
+        self.student_client = TenantClient(self.tenant)
+        self.student_client.force_login(self.student_user)
+        self.anon_client = TenantClient(self.tenant)
+
+        self.url = "/api/admin/residents/create/"
+
+    def _payload(self, email="new@resident.test", password="password123"):
+        return {
+            "full_name": "Nuevo Residente",
+            "email": email,
+            "password": password,
+            "room": "",
+            "building": "",
+            "state": "Activo",
+        }
+
+    def _mock_admin(self, mock_resolve):
+        def fake(request):
+            request.user = self.admin_user
+            request.residence = self.residence
+            return {"user_id": str(self.admin_user.pk), "roles": ["residence_admin"]}
+        mock_resolve.side_effect = fake
+
+    def _mock_student(self, mock_resolve):
+        def fake(request):
+            request.user = self.student_user
+            request.residence = self.residence
+            return {"user_id": str(self.student_user.pk), "roles": ["student"]}
+        mock_resolve.side_effect = fake
+
+    # Tests
+    @patch("apps.common.views.resolve_user_from_request")
+    def test_admin_can_create_new_resident(self, mock_resolve):
+        self._mock_admin(mock_resolve)
+        response = self.admin_client.post(self.url, self._payload(), format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    @patch("apps.common.views.resolve_user_from_request")
+    def test_admin_can_add_existing_user_as_resident(self, mock_resolve):
+        self._mock_admin(mock_resolve)
+        response = self.admin_client.post(
+            self.url, self._payload(email=self.student_user.email), format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    @patch("apps.common.views.resolve_user_from_request")
+    @patch("apps.common.views.process_password_reset_request")
+    def test_trigger_email_when_no_password_provided(self, mock_email, mock_resolve):
+        self._mock_admin(mock_resolve)
+        payload = self._payload()
+        payload.pop("password")
+        response = self.admin_client.post(self.url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        mock_email.assert_not_called()
+
+    @patch("apps.common.views.resolve_user_from_request")
+    def test_student_cannot_create_residents(self, mock_resolve):
+        self._mock_student(mock_resolve)
+        response = self.student_client.post(self.url, self._payload(), format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @patch("apps.common.views.resolve_user_from_request")
+    def test_unauthenticated_user_is_rejected(self, mock_resolve):
+        mock_resolve.return_value = None
+        response = self.anon_client.post(self.url, self._payload(), format="json")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    @patch("apps.common.views.resolve_user_from_request")
+    def test_invalid_email_returns_400(self, mock_resolve):
+        self._mock_admin(mock_resolve)
+        response = self.admin_client.post(
+            self.url, self._payload(email="email-invalido"), format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @patch("apps.common.views.resolve_user_from_request")
+    def test_username_collision_resolution(self, mock_resolve):
+        self._mock_admin(mock_resolve)
+        user_model = get_user_model()
+        user_model.objects.create_user(username="juan.perez", email="otro@test.com")
+        response = self.admin_client.post(
+            self.url, self._payload(email="juan.perez@example.com"), format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        new_user = user_model.objects.get(email="juan.perez@example.com")
+        self.assertEqual(new_user.username, "juan.perez1")
+
+    @patch("apps.common.views.resolve_user_from_request")
+    def test_existing_user_password_update(self, mock_resolve):
+        """If an existing user is provided with a password, it should be updated."""
+        self._mock_admin(mock_resolve)
+        payload = self._payload(email=self.student_user.email, password="PASSWORD3")
+        response = self.admin_client.post(self.url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        user = get_user_model().objects.get(email=self.student_user.email)
+        self.assertTrue(user.check_password("PASSWORD3"))
+
+    @patch("apps.common.views.resolve_user_from_request")
+    @patch("apps.common.views.process_password_reset_request")
+    def test_new_user_with_password_does_not_trigger_email(self, mock_email, mock_resolve):
+        self._mock_admin(mock_resolve)
+        payload = self._payload(email="pwnew@test.com", password="PASSWORD4")
+        response = self.admin_client.post(self.url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        mock_email.assert_not_called()
+
+    @patch("apps.common.views.resolve_user_from_request")
+    @patch("apps.common.views.process_password_reset_request")
+    def test_process_password_reset_raises_handled(self, mock_email, mock_resolve):
+        """If the password-reset helper raises SMTPServerError, the view should still succeed."""
+        self._mock_admin(mock_resolve)
+        from apps.common.services import SMTPServerError
+
+        mock_email.side_effect = SMTPServerError("smtp fail")
+        payload = self._payload(email="nopass2@test.com")
+        payload.pop("password")
+        response = self.admin_client.post(self.url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @patch("apps.common.views.resolve_user_from_request")
+    def test_duplicate_post_returns_created_false(self, mock_resolve):
+        """Posting same new email twice should indicate created=False on second call."""
+        self._mock_admin(mock_resolve)
+        email = "dup@test.com"
+        payload = self._payload(email=email)
+        resp1 = self.admin_client.post(self.url, payload, format="json")
+        self.assertEqual(resp1.status_code, status.HTTP_201_CREATED)
+        resp2 = self.admin_client.post(self.url, payload, format="json")
+        self.assertEqual(resp2.status_code, status.HTTP_201_CREATED)
+        self.assertFalse(resp2.data.get("created"))
+
+    @patch("apps.common.views.resolve_user_from_request")
+    def test_invalid_state_value_returns_400(self, mock_resolve):
+        self._mock_admin(mock_resolve)
+        payload = self._payload(email="badstate@test.com")
+        payload["state"] = "Pending"
+        response = self.admin_client.post(self.url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
