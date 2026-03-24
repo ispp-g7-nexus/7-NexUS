@@ -136,7 +136,7 @@ const DayMenuCard = ({ day }: { day: MenuDay }) => {
   );
 };
 
-export function ResidentMenuView() {
+export function ResidentMenuView({ onGoToProfile, onLogout }: ResidentMenuViewProps) {
   const [menuWeek, setMenuWeek] = useState<MenuWeek | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -215,8 +215,6 @@ export function ResidentMenuView() {
         <div className="flex items-center gap-2">
           <NotificationBell />
           <Button
-            size="icon"
-            variant="ghost"
             className="text-primary-foreground hover:bg-primary-foreground/20 hover:scale-110 rounded-full transition-all"
             onClick={() => onGoToProfile?.()}
             aria-label="Ir al perfil"
@@ -225,8 +223,6 @@ export function ResidentMenuView() {
           </Button>
           {onLogout ? (
             <Button
-              size="icon"
-              variant="ghost"
               className="text-primary-foreground hover:bg-primary-foreground/20 hover:scale-110 rounded-full transition-all"
               onClick={onLogout}
               aria-label="Cerrar sesión"
