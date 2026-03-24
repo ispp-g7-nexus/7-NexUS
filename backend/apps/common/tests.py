@@ -578,17 +578,17 @@ class AdminCreateResidentViewsTests(FastTenantTestCase):
     def test_existing_user_password_update(self, mock_resolve):
         """If an existing user is provided with a password, it should be updated."""
         self._mock_admin(mock_resolve)
-        payload = self._payload(email=self.student_user.email, password="NewSecret123")
+        payload = self._payload(email=self.student_user.email, password="PASSWORD3")
         response = self.admin_client.post(self.url, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         user = get_user_model().objects.get(email=self.student_user.email)
-        self.assertTrue(user.check_password("NewSecret123"))
+        self.assertTrue(user.check_password("PASSWORD3"))
 
     @patch("apps.common.views.resolve_user_from_request")
     @patch("apps.common.views.process_password_reset_request")
     def test_new_user_with_password_does_not_trigger_email(self, mock_email, mock_resolve):
         self._mock_admin(mock_resolve)
-        payload = self._payload(email="pwnew@test.com", password="HasPass123")
+        payload = self._payload(email="pwnew@test.com", password="PASSWORD4")
         response = self.admin_client.post(self.url, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         mock_email.assert_not_called()
