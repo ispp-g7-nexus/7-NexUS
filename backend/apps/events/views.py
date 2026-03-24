@@ -24,6 +24,24 @@ def _normalize_event_type(raw_event_type) -> str | None:
     return event_type
 
 
+def _validate_required_text_fields(body):
+    title = str(body.get("title") or "").strip()
+    description = str(body.get("description") or "").strip()
+
+    if not title:
+        return None, None, JsonResponse(
+            {"detail": "El campo 'title' es obligatorio."},
+            status=400,
+        )
+    if not description:
+        return None, None, JsonResponse(
+            {"detail": "El campo 'description' es obligatorio."},
+            status=400,
+        )
+
+    return title, description, None
+
+
 def _parse_and_validate_times(start_time_str: str, end_time_str: str, *, validate_future: bool):
     if not start_time_str or not end_time_str:
         return None, None, JsonResponse(
@@ -513,6 +531,10 @@ class EventListView(AuthenticatedView):
         if not event_type:
             return JsonResponse({"detail": "Tipo de evento inválido."}, status=400)
 
+        title, description, required_fields_error = _validate_required_text_fields(body)
+        if required_fields_error:
+            return required_fields_error
+
         requested_space_id, space_id_error = _parse_space_id(
             body.get("space_id"),
             required=(event_type == Event.Type.INTERNAL),
@@ -555,8 +577,8 @@ class EventListView(AuthenticatedView):
                 return resources_error
 
             event = Event.objects.create(
-                title=body.get('title'),
-                description=body.get('description'),
+                title=title,
+                description=description,
                 start_time=start_time,
                 end_time=end_time,
                 event_type=event_type,
