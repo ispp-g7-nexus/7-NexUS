@@ -6,8 +6,12 @@ class IsAdminOrReadOnly(permissions.BasePermission):
     
     def has_object_permission(self, request, view, obj):
         user = request.user
-        user_roles = [r.lower() for r in user.memberships.filter(is_active=True).values_list('role__name', flat=True)]
-        is_admin = user.is_staff or "admin" in user_roles or "residence_admin" in user_roles
+        try:
+            user_roles = [r.lower() for r in user.memberships.filter(is_active=True).values_list('role__name', flat=True)]
+        except Exception:
+            user_roles = []
+
+        is_admin = (getattr(user, 'is_staff', False) is True) or "admin" in user_roles or "residence_admin" in user_roles
 
         if is_admin:
             return True
