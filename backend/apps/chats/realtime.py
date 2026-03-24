@@ -70,6 +70,33 @@ def publish_chat_event(residence_id: int, event: str, payload: dict | None = Non
 		return
 
 
+def _consume_local_message(local_queue: Queue[str] | None) -> str | None:
+	if local_queue is None:
+		return None
+	try:
+		local_data = local_queue.get(timeout=1.0)
+		return f"data: {local_data}\n\n"
+	except Empty:
+		return None
+
+
+def _consume_pubsub_message(pubsub) -> str | None:
+	if pubsub is None:
+		return None
+	message = pubsub.get_message(timeout=0.01)
+	if message and message.get("type") == "message":
+		data = message.get("data")
+		return f"data: {data}\n\n"
+	return None
+
+
+def _consume_ping(last_ping: float, keepalive_seconds: int) -> tuple[str | None, float]:
+	now = time.monotonic()
+	if now - last_ping >= keepalive_seconds:
+		return "event: ping\ndata: {}\n\n", now
+	return None, last_ping
+
+
 def stream_chat_events(residence_id: int, keepalive_seconds: int = 20) -> Generator[str, None, None]:
 	local_queue: Queue[str] | None = None
 	pubsub = None
@@ -89,23 +116,17 @@ def stream_chat_events(residence_id: int, keepalive_seconds: int = 20) -> Genera
 
 		last_ping = time.monotonic()
 		while True:
-			if local_queue is not None:
-				try:
-					local_data = local_queue.get(timeout=1.0)
-					yield f"data: {local_data}\n\n"
-				except Empty:
-					pass
+			local_payload = _consume_local_message(local_queue)
+			if local_payload is not None:
+				yield local_payload
 
-			if pubsub is not None:
-				message = pubsub.get_message(timeout=0.01)
-				if message and message.get("type") == "message":
-					data = message.get("data")
-					yield f"data: {data}\n\n"
+			redis_payload = _consume_pubsub_message(pubsub)
+			if redis_payload is not None:
+				yield redis_payload
 
-			now = time.monotonic()
-			if now - last_ping >= keepalive_seconds:
-				yield "event: ping\ndata: {}\n\n"
-				last_ping = now
+			ping_payload, last_ping = _consume_ping(last_ping, keepalive_seconds)
+			if ping_payload is not None:
+				yield ping_payload
 	except GeneratorExit:
 		return
 	finally:

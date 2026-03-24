@@ -3,6 +3,8 @@ from django.db import models
 
 from apps.residences.models import Residence
 
+MEMBERSHIP_MODEL = "membership.Membership"
+
 
 class ChatGroup(models.Model):
 	class LabelChoices(models.TextChoices):
@@ -52,7 +54,7 @@ class ChatGroupMember(models.Model):
 		related_name="memberships",
 	)
 	membership = models.ForeignKey(
-		"membership.Membership",
+		MEMBERSHIP_MODEL,
 		on_delete=models.CASCADE,
 		related_name="chat_group_memberships",
 	)
@@ -107,7 +109,7 @@ class GroupMessage(models.Model):
 		related_name="messages",
 	)
 	sender = models.ForeignKey(
-		"membership.Membership",
+		MEMBERSHIP_MODEL,
 		on_delete=models.CASCADE,
 		related_name="group_messages_sent",
 	)
@@ -130,12 +132,12 @@ class PrivateConversation(models.Model):
 		related_name="private_conversations",
 	)
 	member_one = models.ForeignKey(
-		"membership.Membership",
+		MEMBERSHIP_MODEL,
 		on_delete=models.CASCADE,
 		related_name="conversations_as_one",
 	)
 	member_two = models.ForeignKey(
-		"membership.Membership",
+		MEMBERSHIP_MODEL,
 		on_delete=models.CASCADE,
 		related_name="conversations_as_two",
 	)
@@ -191,7 +193,7 @@ class PrivateMessage(models.Model):
 		related_name="messages",
 	)
 	sender = models.ForeignKey(
-		"membership.Membership",
+		MEMBERSHIP_MODEL,
 		on_delete=models.CASCADE,
 		related_name="private_messages_sent",
 	)
@@ -204,4 +206,3 @@ class PrivateMessage(models.Model):
 
 	def __str__(self) -> str:
 		return f"Msg {self.id} en conv {self.conversation_id}"
-

@@ -34,6 +34,7 @@ from .serializers import (
 # Constantes para mensajes duplicados
 NO_MEMBERSHIP_MESSAGE = "No tienes membresía activa."
 CONVERSATION_NOT_FOUND_MESSAGE = "Conversación no encontrada."
+RESIDENCE_NOT_DETERMINED_MESSAGE = "No se ha determinado la residencia."
 
 
 class ServerSentEventsRenderer(BaseRenderer):
@@ -103,7 +104,7 @@ class ChatGroupViewSet(viewsets.ModelViewSet):
 	def perform_create(self, serializer):
 		residence = getattr(self.request, "residence", None)
 		if not residence:
-			raise ValidationError({"detail": "No se ha determinado la residencia."})
+			raise ValidationError({"detail": RESIDENCE_NOT_DETERMINED_MESSAGE})
 
 		actor_membership = self._get_actor_membership()
 		if not self._actor_is_residence_admin(actor_membership):
@@ -279,7 +280,7 @@ class ChatGroupLabelViewSet(viewsets.ModelViewSet):
 	def perform_create(self, serializer):
 		residence = getattr(self.request, "residence", None)
 		if not residence:
-			raise ValidationError({"detail": "No se ha determinado la residencia."})
+			raise ValidationError({"detail": RESIDENCE_NOT_DETERMINED_MESSAGE})
 		serializer.save(residence=residence)
 
 
@@ -622,7 +623,7 @@ class ChatEventsStreamView(APIView):
 	def get(self, request):
 		residence = getattr(request, "residence", None)
 		if not residence:
-			raise ValidationError({"detail": "No se ha determinado la residencia."})
+			raise ValidationError({"detail": RESIDENCE_NOT_DETERMINED_MESSAGE})
 
 		membership = Membership.objects.filter(
 			user=request.user,
