@@ -16,6 +16,8 @@ type BrandingFormState = {
   favicon_url: string;
 };
 
+const URL_MAX_LENGTH = 200;
+
 const INITIAL_FORM: BrandingFormState = {
   primary_color: "#0F4C81",
   secondary_color: "#F4B400",
@@ -40,6 +42,51 @@ export function AdminBrandingPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [updatedAt, setUpdatedAt] = useState<string>("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  // Apply live preview styles
+  useEffect(() => {
+    const styleId = "branding-preview-styles";
+    let style = document.getElementById(styleId) as HTMLStyleElement | null;
+    
+    if (!style) {
+      style = document.createElement("style");
+      style.id = styleId;
+      document.head.appendChild(style);
+    }
+
+    style.textContent = `
+      .branding-preview {
+        --preview-primary: ${form.primary_color};
+        --preview-secondary: ${form.secondary_color};
+        --preview-accent: ${form.accent_color};
+      }
+      .branding-preview .preview-btn-primary {
+        background-color: var(--preview-primary);
+      }
+      .branding-preview .preview-btn-primary:hover {
+        filter: brightness(0.9);
+      }
+      .branding-preview .preview-card {
+        border-color: var(--preview-primary);
+      }
+      .branding-preview .preview-card-header {
+        background-color: var(--preview-primary);
+      }
+      .branding-preview .preview-badge {
+        background-color: var(--preview-secondary);
+      }
+      .branding-preview .preview-accent-line {
+        background-color: var(--preview-accent);
+      }
+    `;
+
+    return () => {
+      if (style && style.parentNode) {
+        style.parentNode.removeChild(style);
+      }
+    };
+  }, [form.primary_color, form.secondary_color, form.accent_color]);
 
   useEffect(() => {
     const loadBranding = async () => {
@@ -60,16 +107,63 @@ export function AdminBrandingPage() {
     loadBranding();
   }, []);
 
+  const validateUrl = (url: string): string => {
+    const trimmed = url.trim();
+    if (!trimmed) return "";
+
+    if (trimmed.length > URL_MAX_LENGTH) {
+      return `La URL no debe exceder ${URL_MAX_LENGTH} caracteres (${trimmed.length} actual)`;
+    }
+
+    if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
+      return "La URL debe comenzar con http:// o https://";
+    }
+
+    return "";
+  };
+
   const handleColorChange = (field: keyof BrandingFormState, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+    if (fieldErrors[field]) {
+      setFieldErrors((prev) => ({ ...prev, [field]: "" }));
+    }
   };
 
   const handleInputChange = (field: keyof BrandingFormState, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+    
+    if (field === "logo_url" || field === "favicon_url") {
+      const error = validateUrl(value);
+      if (error) {
+        setFieldErrors((prev) => ({ ...prev, [field]: error }));
+      } else {
+        setFieldErrors((prev) => ({ ...prev, [field]: "" }));
+      }
+    } else if (fieldErrors[field]) {
+      setFieldErrors((prev) => ({ ...prev, [field]: "" }));
+    }
   };
 
   const handleReset = () => {
     setForm(initialForm);
+    setFieldErrors({});
+  };
+
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    if (form.logo_url) {
+      const error = validateUrl(form.logo_url);
+      if (error) errors.logo_url = error;
+    }
+
+    if (form.favicon_url) {
+      const error = validateUrl(form.favicon_url);
+      if (error) errors.favicon_url = error;
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const buildPayload = (): UpdateResidenceBrandingPayload => ({
@@ -82,6 +176,11 @@ export function AdminBrandingPage() {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (!validateForm()) {
+      toast.error("Por favor, corrige los errores del formulario.");
+      return;
+    }
 
     setSaving(true);
     try {
@@ -167,41 +266,121 @@ export function AdminBrandingPage() {
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <label className="space-y-2">
-                <span className="block text-sm font-medium text-gray-500">URL del logo</span>
+                <div className="flex items-center justify-between">
+                  <span className="block text-sm font-medium text-gray-700">URL del logo</span>
+                  <span className={`text-xs ${
+                    form.logo_url.length > URL_MAX_LENGTH
+                      ? "text-red-600 font-medium"
+                      : "text-gray-500"
+                  }`}>
+                    {form.logo_url.length} / {URL_MAX_LENGTH}
+                  </span>
+                </div>
                 <input
                   type="url"
                   value={form.logo_url}
                   onChange={(event) => handleInputChange("logo_url", event.target.value)}
-                  className="h-10 w-full rounded-lg border border-gray-200 px-3 text-sm outline-none focus:border-primary"
+                  maxLength={URL_MAX_LENGTH}
+                  className={`h-10 w-full rounded-lg border px-3 text-sm outline-none transition-colors ${
+                    fieldErrors.logo_url
+                      ? "border-red-500 bg-red-50 focus:border-red-600"
+                      : "border-gray-300 focus:border-green-500"
+                  }`}
                   placeholder="https://mi-residencia.com/logo.png"
                 />
+                {fieldErrors.logo_url && (
+                  <p className="text-xs text-red-600 font-medium mt-1">{fieldErrors.logo_url}</p>
+                )}
               </label>
               <label className="space-y-2">
-                <span className="block text-sm font-medium text-gray-500">URL del favicon</span>
+                <div className="flex items-center justify-between">
+                  <span className="block text-sm font-medium text-gray-700">URL del favicon</span>
+                  <span className={`text-xs ${
+                    form.favicon_url.length > URL_MAX_LENGTH
+                      ? "text-red-600 font-medium"
+                      : "text-gray-500"
+                  }`}>
+                    {form.favicon_url.length} / {URL_MAX_LENGTH}
+                  </span>
+                </div>
                 <input
                   type="url"
                   value={form.favicon_url}
                   onChange={(event) => handleInputChange("favicon_url", event.target.value)}
-                  className="h-10 w-full rounded-lg border border-gray-200 px-3 text-sm outline-none focus:border-primary"
+                  maxLength={URL_MAX_LENGTH}
+                  className={`h-10 w-full rounded-lg border px-3 text-sm outline-none transition-colors ${
+                    fieldErrors.favicon_url
+                      ? "border-red-500 bg-red-50 focus:border-red-600"
+                      : "border-gray-300 focus:border-green-500"
+                  }`}
                   placeholder="https://mi-residencia.com/favicon.ico"
                 />
+                {fieldErrors.favicon_url && (
+                  <p className="text-xs text-red-600 font-medium mt-1">{fieldErrors.favicon_url}</p>
+                )}
               </label>
             </div>
           </section>
 
-          <div className="flex flex-wrap items-center justify-end gap-3 border-t border-gray-200 pt-6">
+          <section className="branding-preview rounded-xl border border-gray-200 bg-gray-50 p-6">
+            <h3 className="mb-4 text-sm font-semibold text-gray-900">Previsualización</h3>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="preview-card rounded-lg border-2 border-gray-300 bg-white overflow-hidden">
+                  <div className="preview-card-header bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-3 text-white">
+                    <h4 className="text-sm font-semibold">Tarjeta de ejemplo</h4>
+                  </div>
+                  <div className="p-4 space-y-2">
+                    <p className="text-xs text-gray-600">Contenido de tarjeta con el color primario en el encabezado</p>
+                    <div className="preview-accent-line h-1 w-12 rounded"></div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col justify-center gap-3">
+                  <button className="preview-btn-primary rounded-lg px-4 py-2 text-sm font-medium text-white transition-all">
+                    Botón principal
+                  </button>
+                  <div className="flex items-center gap-2">
+                    <span className="preview-badge rounded-full px-3 py-1 text-xs font-semibold text-white">
+                      Badge secundario
+                    </span>
+                    <div className="h-8 w-8 preview-accent-line rounded-full"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-gray-200 bg-white p-4">
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="text-center">
+                    <div className="mx-auto h-12 w-12 preview-btn-primary rounded-lg mb-2"></div>
+                    <p className="text-xs font-medium text-gray-700">Primario</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="mx-auto h-12 w-12 preview-badge rounded-lg mb-2"></div>
+                    <p className="text-xs font-medium text-gray-700">Secundario</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="mx-auto h-12 w-12 preview-accent-line rounded-lg mb-2"></div>
+                    <p className="text-xs font-medium text-gray-700">Acento</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <div className="flex flex-wrap items-center justify-end gap-3 border-t border-gray-100 pt-6">
             <button
               type="button"
               onClick={handleReset}
               disabled={saving}
-              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
               Restablecer cambios
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
+              className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
               Guardar personalización
