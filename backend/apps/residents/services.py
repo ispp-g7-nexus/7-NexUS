@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from rest_framework.exceptions import ValidationError
+from typing import Any
 
 from apps.membership.models import Membership, Role
 from apps.common.services import process_password_reset_request
@@ -58,6 +59,77 @@ def _get_student_role() -> Role:
     return role
 
 
+def _split_full_name(full_name: str | None) -> tuple[str, str]:
+    names = (full_name or "").strip().split(None, 1)
+    first_name = names[0] if names else ""
+    last_name = names[1] if len(names) > 1 else ""
+    return first_name, last_name
+
+
+def _find_or_create_user_for_email(data: dict, email: str) -> tuple[Any, bool]:
+    user = UserModel.objects.filter(email__iexact=email).first()
+    created = False
+    if user:
+        return user, created
+
+    base_username = email.split("@", 1)[0][:30]
+    username = base_username
+    counter = 1
+    while UserModel.objects.filter(username=username).exists():
+        username = f"{base_username}{counter}"
+        counter += 1
+
+    first_name, last_name = _split_full_name(data.get("full_name"))
+    user = UserModel.objects.create(
+        username=username,
+        email=email,
+        first_name=first_name,
+        last_name=last_name,
+        is_active=True,
+    )
+    return user, True
+
+
+def _upsert_student_membership(user, student_role: Role, residence, bedroom) -> None:
+    existing_membership = Membership.objects.filter(
+        user=user, role=student_role, residence=residence
+    ).first()
+
+    if existing_membership is None:
+        Membership.objects.create(
+            user=user,
+            role=student_role,
+            residence=residence,
+            is_active=True,
+            bedroom=bedroom,
+        )
+        return
+
+    update_fields = {"is_active": True}
+    if bedroom is not None:
+        update_fields["bedroom"] = bedroom
+    for attr, val in update_fields.items():
+        setattr(existing_membership, attr, val)
+    existing_membership.save()
+
+
+def _apply_or_send_password(
+    *,
+    user,
+    password: str | None,
+    request,
+) -> None:
+    if password:
+        user.set_password(password)
+        user.save()
+        return
+
+    try:
+        process_password_reset_request(user.email, request)
+    except Exception:
+        pass
+
+
 def create_resident(data: dict, residence, request) -> dict:
     """
     Lógica de negocio para dar de alta a un residente.
@@ -82,67 +154,17 @@ def create_resident(data: dict, residence, request) -> dict:
         bedroom = _get_bedroom(bedroom_id, residence)
 
     if not user:
-        base_username = email.split("@", 1)[0][:30]
-        username = base_username
-        counter = 1
-        while UserModel.objects.filter(username=username).exists():
-            username = f"{base_username}{counter}"
-            counter += 1
-
-        names = (data.get("full_name") or "").strip().split(None, 1)
-        first_name = names[0] if names else ""
-        last_name = names[1] if len(names) > 1 else ""
-
-        user = UserModel.objects.create(
-            username=username,
-            email=email,
-            first_name=first_name,
-            last_name=last_name,
-            is_active=True,
-        )
-        created = True
-
-        passwd = data.get("password")
-        if passwd:
-            user.set_password(passwd)
-            user.save()
+        user, created = _find_or_create_user_for_email(data, email)
 
     student_role = _get_student_role()
-
-    existing_membership = Membership.objects.filter(
-        user=user, role=student_role, residence=residence
-    ).first()
-
-    if existing_membership is None:
-        Membership.objects.create(
-            user=user,
-            role=student_role,
-            residence=residence,
-            is_active=True,
-            bedroom=bedroom,
-        )
-    else:
-        # Fix #3: reactivar Membership inactiva (residente dado de baja y re-registrado)
-        # y actualizar habitación si se proporcionó
-        update_fields = {"is_active": True}
-        if bedroom is not None:
-            update_fields["bedroom"] = bedroom
-        for attr, val in update_fields.items():
-            setattr(existing_membership, attr, val)
-        existing_membership.save()
+    _upsert_student_membership(user, student_role, residence, bedroom)
 
     _sync_user_active_status(user)
-
-    passwd = data.get("password")
-    if passwd:
-        if not created:
-            user.set_password(passwd)
-            user.save()
-    else:
-        try:
-            process_password_reset_request(user.email, request)
-        except Exception:
-            pass
+    _apply_or_send_password(
+        user=user,
+        password=data.get("password"),
+        request=request,
+    )
 
     return {"created": created, "email": user.email}
 

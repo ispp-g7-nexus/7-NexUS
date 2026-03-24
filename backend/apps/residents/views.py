@@ -16,6 +16,8 @@ from .services import (
     update_resident,
 )
 
+RESIDENT_NOT_FOUND_MESSAGE = "Residente no encontrado."
+
 
 class ResidentViewSet(viewsets.ViewSet):
     """
@@ -50,7 +52,7 @@ class ResidentViewSet(viewsets.ViewSet):
         residence = self._get_residence(request)
         resident = get_resident(pk, residence)
         if not resident:
-            raise NotFound("Residente no encontrado.")
+            raise NotFound(RESIDENT_NOT_FOUND_MESSAGE)
         return Response(ResidentReadSerializer(resident).data)
 
     def create(self, request):
@@ -75,7 +77,7 @@ class ResidentViewSet(viewsets.ViewSet):
         residence = self._get_residence(request)
         result = update_resident(pk, serializer.validated_data, residence)
         if not result:
-            raise NotFound("Residente no encontrado.")
+            raise NotFound(RESIDENT_NOT_FOUND_MESSAGE)
         return Response(ResidentReadSerializer(result).data)
 
     def destroy(self, request, pk=None):
@@ -83,5 +85,5 @@ class ResidentViewSet(viewsets.ViewSet):
         residence = self._get_residence(request)
         deleted = delete_resident(pk, residence)
         if not deleted:
-            raise NotFound("Residente no encontrado.")
+            raise NotFound(RESIDENT_NOT_FOUND_MESSAGE)
         return Response(status=status.HTTP_204_NO_CONTENT)
