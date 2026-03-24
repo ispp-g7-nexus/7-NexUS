@@ -6,7 +6,7 @@ import requests
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.db import IntegrityError, connection, transaction
+from django.db import IntegrityError, transaction
 from django.test import override_settings
 from django.utils import timezone
 from django_tenants.test.cases import TenantTestCase
@@ -14,6 +14,7 @@ from django_tenants.test.client import TenantClient
 
 from apps.bedrooms.models import Bedroom
 from apps.common.services import build_access_token
+from apps.common.testing import TenantSchemaCleanupMixin
 from apps.membership.models import Membership, Role
 from apps.packages.models import Package
 from apps.packages.services import _resolve_name_candidates
@@ -50,7 +51,11 @@ class DummyInvalidJsonFireworksResponse:
     FIREWORKS_LABEL_MODEL="accounts/test/models/kimi",
     PACKAGE_QR_TOKEN_MAX_AGE_SECONDS=300,
 )
-class PackageApiTests(TenantTestCase):
+class PackageApiTests(TenantSchemaCleanupMixin, TenantTestCase):
+    @classmethod
+    def get_test_schema_name(cls):
+        return "test_packages_api"
+
     @classmethod
     def get_test_tenant_domain(cls):
         return "packages.test.local"
@@ -66,22 +71,6 @@ class PackageApiTests(TenantTestCase):
     def setup_domain(cls, domain):
         domain.domain = cls.get_test_tenant_domain()
         domain.is_primary = True
-
-    @classmethod
-    def tearDownClass(cls):
-        # Keep tenant schema in search_path while deleting to avoid reverse
-        # relation checks against tenant-only tables in public schema.
-        try:
-            connection.set_tenant(cls.tenant)
-            if getattr(cls, "domain", None):
-                cls.domain.delete()
-            cls.tenant.__class__.objects.filter(pk=cls.tenant.pk).delete()
-            cls.tenant._drop_schema(force_drop=True)
-        finally:
-            connection.set_schema_to_public()
-            cls.remove_allowed_test_domain()
-            if hasattr(cls, "cls_atomics"):
-                super(TenantTestCase, cls).tearDownClass()
 
     def setUp(self):
         super().setUp()
