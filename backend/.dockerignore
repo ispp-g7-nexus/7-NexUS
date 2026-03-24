@@ -2,9 +2,12 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+.env
+.env.*
 .coverage
 coverage.xml
 .pytest_cache/
+.venv/
 venv/
 *.sqlite3
 celerybeat-schedule
