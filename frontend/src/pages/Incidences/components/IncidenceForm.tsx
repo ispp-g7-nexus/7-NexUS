@@ -23,13 +23,12 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
   const [loading, setLoading] = useState(false)
   const [locationType, setLocationType] = useState<string>("")
   const [urgent, setUrgent] = useState<boolean>(false)
-  const [staffId, setStaffId] = useState("")
-  const [externalName, setExternalName] = useState("")
+  const [staffId] = useState("")
+  const [externalName] = useState("")
   const [areaError, setAreaError] = useState(false)
   const [base64Image, setBase64Image] = useState<string | null>(null)
-  const [rooms, setRooms] = useState<any[]>([])
-  const [selectedRoomId, setSelectedRoomId] = useState<string>("")
-
+  const [, setRooms] = useState<any[]>([])
+  
   useEffect(() => {
     if (isAdmin) {
       fetchWithAuth('/api/bedrooms/').then(res => res.json()).then(data => setRooms(data));
