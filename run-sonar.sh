@@ -52,13 +52,13 @@ if [ -n "${SONAR_DOCKER_NETWORK}" ]; then
   DOCKER_ARGS+=(--network "${SONAR_DOCKER_NETWORK}")
 fi
 
-if [ -n "${SONAR_DOCKER_USER}" ]; then
+if [[ -n "${SONAR_DOCKER_USER}" ]]; then
   DOCKER_ARGS+=(--user "${SONAR_DOCKER_USER}")
 fi
 
 # coverage.py dentro del contenedor backend suele generar <source>/app</source>.
 # El scanner corre en /usr/src, así que normalizamos para que Sonar pueda mapear rutas.
-if [ -f "${ROOT_DIR}/backend/coverage.xml" ]; then
+if [[ -f "${ROOT_DIR}/backend/coverage.xml" ]]; then
   tmp_coverage_file="$(mktemp "${ROOT_DIR}/backend/coverage.XXXXXX.xml")"
   sed 's#<source>/app</source>#<source>/usr/src/backend</source>#g' \
     "${ROOT_DIR}/backend/coverage.xml" > "${tmp_coverage_file}"

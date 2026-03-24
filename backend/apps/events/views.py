@@ -491,6 +491,36 @@ def _apply_event_updates(event: Event, body, *, start_time: datetime, end_time: 
     event.max_participants = update_state["normalized_max_participants"]
     event.save()
 
+
+def _validate_put_request(request, event, raw_body):
+    can_edit = event.host == request.user or getattr(request.user, 'is_staff', False)
+    if not can_edit:
+        return None, JsonResponse({"detail": "Unauthorized"}, status=403)
+    try:
+        return json.loads(raw_body), None
+    except json.JSONDecodeError:
+        return None, JsonResponse(
+            {"detail": "El cuerpo de la petición no es JSON válido."},
+            status=400,
+        )
+
+
+def _validate_event_times_and_overlap(body, event, request_user):
+    start_time, end_time, time_error = _parse_and_validate_times(
+        body.get('start_time'),
+        body.get('end_time'),
+        validate_future=False,
+    )
+    if time_error:
+        return None, None, time_error
+
+    times_changed = start_time != event.start_time or end_time != event.end_time
+    if times_changed and _has_participation_overlap(request_user, start_time, end_time, exclude_event=event):
+        return None, None, JsonResponse({"detail": "Ya asistes a otro evento en ese horario."}, status=400)
+
+    return start_time, end_time, None
+
+
 @method_decorator(csrf_exempt, name='dispatch')
 class AuthenticatedView(View):
     def dispatch(self, request, *args, **kwargs):
@@ -510,7 +540,7 @@ class EventListView(AuthenticatedView):
     def get(self, request):
         if not hasattr(request, 'residence') or not request.residence:
             return JsonResponse({"detail": "No residence context."}, status=400)
-            
+
         events = Event.objects.filter(residence=request.residence).select_related('host', 'space')
         data = [_serialize_event(event, request.user) for event in events]
         return JsonResponse(data, safe=False)
@@ -594,6 +624,7 @@ class EventListView(AuthenticatedView):
             EventParticipation.objects.create(event=event, user=request.user)
         return JsonResponse({'id': event.id, 'detail': 'Event created successfully'}, status=201)
 
+
 class EventDetailView(AuthenticatedView):
     def get(self, request, event_id):
         event = get_object_or_404(
@@ -602,75 +633,44 @@ class EventDetailView(AuthenticatedView):
             residence=request.residence,
         )
         return JsonResponse(_serialize_event(event, request.user))
-        
+
     def put(self, request, event_id):
         event = get_object_or_404(Event, id=event_id, residence=request.residence)
-        can_edit = event.host == request.user or getattr(request.user, 'is_staff', False)
-        if not can_edit:
-            return JsonResponse({"detail": "Unauthorized"}, status=403)
 
-        try:
-            body = json.loads(request.body)
-        except json.JSONDecodeError:
-            return JsonResponse(
-                {"detail": "El cuerpo de la petición no es JSON válido."},
-                status=400,
-            )
+        body, error = _validate_put_request(request, event, request.body)
+        if error:
+            return error
 
         event_type = _normalize_event_type(body.get('event_type', event.event_type))
         if not event_type:
             return JsonResponse({"detail": "Tipo de evento inválido."}, status=400)
 
-        start_time, end_time, time_error = _parse_and_validate_times(
-            body.get('start_time'),
-            body.get('end_time'),
-            validate_future=False,
-        )
-        if time_error:
-            return time_error
-
-        if (
-            (start_time != event.start_time or end_time != event.end_time)
-            and _has_participation_overlap(
-                request.user,
-                start_time,
-                end_time,
-                exclude_event=event,
-            )
-        ):
-            return JsonResponse({"detail": "Ya asistes a otro evento en ese horario."}, status=400)
+        start_time, end_time, error = _validate_event_times_and_overlap(body, event, request.user)
+        if error:
+            return error
 
         location = str(body.get('location', event.location) or '').strip()
         requested_space_id = None
         if "space_id" in body:
-            requested_space_id, space_id_error = _parse_space_id(
-                body.get("space_id"),
-                required=False,
-            )
-            if space_id_error:
-                return space_id_error
+            requested_space_id, error = _parse_space_id(body.get("space_id"), required=False)
+            if error:
+                return error
 
         with transaction.atomic():
             previous_reservation = event.reservation
             if event_type == Event.Type.INTERNAL:
-                update_state, update_error = _resolve_internal_update_state(
-                    request=request,
-                    event=event,
-                    body=body,
-                    start_time=start_time,
-                    end_time=end_time,
-                    location=location,
-                    requested_space_id=requested_space_id,
+                update_state, error = _resolve_internal_update_state(
+                    request=request, event=event, body=body,
+                    start_time=start_time, end_time=end_time,
+                    location=location, requested_space_id=requested_space_id,
                 )
             else:
-                update_state, update_error = _resolve_external_update_state(
-                    body=body,
-                    event=event,
-                    location=location,
+                update_state, error = _resolve_external_update_state(
+                    body=body, event=event, location=location,
                     requested_space_id=requested_space_id,
                 )
-            if update_error:
-                return update_error
+            if error:
+                return error
 
             limit_error = _validate_participants_limit_for_update(
                 normalized_max_participants=update_state["normalized_max_participants"],
@@ -681,12 +681,8 @@ class EventDetailView(AuthenticatedView):
                 return limit_error
 
             _apply_event_updates(
-                event,
-                body,
-                start_time=start_time,
-                end_time=end_time,
-                event_type=event_type,
-                update_state=update_state,
+                event, body, start_time=start_time, end_time=end_time,
+                event_type=event_type, update_state=update_state,
             )
 
             if previous_reservation and previous_reservation.id != event.reservation_id:
@@ -696,7 +692,6 @@ class EventDetailView(AuthenticatedView):
 
     def delete(self, request, event_id):
         event = get_object_or_404(Event, id=event_id, residence=request.residence)
-        # Check permissions
         can_edit = event.host == request.user or getattr(request.user, 'is_staff', False)
         if not can_edit:
             return JsonResponse({"detail": "Unauthorized"}, status=403)
@@ -709,17 +704,17 @@ class EventDetailView(AuthenticatedView):
 
         return JsonResponse({"detail": "Event deleted"}, status=200)
 
+
 class EventJoinView(AuthenticatedView):
     def post(self, request, event_id):
         if getattr(request.user, 'is_staff', False):
             return JsonResponse({"detail": "Los administradores no pueden inscribirse en eventos."}, status=403)
-            
+
         event = get_object_or_404(Event, id=event_id, residence=request.residence)
-        
+
         if not event.can_join():
             return JsonResponse({"detail": "El evento ha alcanzado el límite de participantes."}, status=400)
 
-        # Validar superposición
         overlapping_participating = EventParticipation.objects.exclude(event=event).filter(
             user=request.user,
             event__start_time__lt=event.end_time,
@@ -735,14 +730,16 @@ class EventJoinView(AuthenticatedView):
         except IntegrityError:
             return JsonResponse({"detail": "Ya estás inscrito en este evento."}, status=400)
 
+
 class EventLeaveView(AuthenticatedView):
     def post(self, request, event_id):
         event = get_object_or_404(Event, id=event_id, residence=request.residence)
         deleted, _ = EventParticipation.objects.filter(event=event, user=request.user).delete()
-        
+
         if deleted:
             return JsonResponse({"detail": "Has abandonado el evento."}, status=200)
         return JsonResponse({"detail": "No estás inscrito en este evento."}, status=400)
+
 
 class EventParticipantsView(AuthenticatedView):
     def get(self, request, event_id):

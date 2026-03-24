@@ -66,29 +66,42 @@ def _resolve_fallback_residence_for_portal(user, portal: str):
 
 
 def _find_or_create_user_for_resident(data: dict):
+    import uuid
+    from django.db import IntegrityError as DjangoIntegrityError
+
     email = data["email"].lower()
     user = UserModel.objects.filter(email__iexact=email).first()
     created = False
 
     if not user:
-        base_username = email.split("@", 1)[0][:30]
-        username = base_username
-        counter = 1
-        while UserModel.objects.filter(username=username).exists():
-            username = f"{base_username}{counter}"
-            counter += 1
-
         names = (data.get("full_name") or "").strip().split(None, 1)
         first_name = names[0] if names else ""
         last_name = names[1] if len(names) > 1 else ""
-        user = UserModel.objects.create(
-            username=username,
-            email=email,
-            first_name=first_name,
-            last_name=last_name,
-            is_active=True,
-        )
-        created = True
+        base_username = email.split("@", 1)[0][:30]
+
+        for attempt in range(20):
+            username = base_username if attempt == 0 else f"{base_username}{attempt}"
+            try:
+                user = UserModel.objects.create(
+                    username=username,
+                    email=email,
+                    first_name=first_name,
+                    last_name=last_name,
+                    is_active=True,
+                )
+                created = True
+                break
+            except DjangoIntegrityError:
+                continue
+        else:
+            user = UserModel.objects.create(
+                username=f"{base_username}_{uuid.uuid4().hex[:6]}",
+                email=email,
+                first_name=first_name,
+                last_name=last_name,
+                is_active=True,
+            )
+            created = True
     elif not user.is_active:
         user.is_active = True
         user.save(update_fields=["is_active"])
@@ -132,7 +145,8 @@ def _apply_resident_password_or_reset(
         user.set_password(passwd)
         user.save(update_fields=["password"])
         return
-    process_password_reset_request(user.email, request)
+    email = user.email
+    transaction.on_commit(lambda: process_password_reset_request(email, request))
 
 
 class TenantContextView(APIView):
