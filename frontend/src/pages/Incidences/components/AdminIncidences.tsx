@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Clock, ChevronRight, MapPin, Plus, Send, Wrench } from 'lucide-react';
+import { Clock, ChevronRight, MapPin, Plus, Send, Wrench, Pencil, Trash2 } from 'lucide-react';
 import { IncidenceService, IncidenceStatus } from '../../../services/incidences';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../../../components/ui/dialog';
 import { IncidenceForm } from './IncidenceForm';
 import { useStaff } from '../../Staff/hooks/useStaff';
 import { Label } from "../../../components/ui/label";
+import { Button } from '../../../components/ui/button';
 
 import {
   LOCATION_LABELS, IncidenceSelect, PRIORITY_LABELS, STATUS_CONFIG,
@@ -20,26 +21,40 @@ interface ManageModalProps {
 const ManageIncidenceModal = ({ incidence, onClose, onRefresh }: ManageModalProps) => {
   const { staff, loading: loadingStaff } = useStaff();
   const [status, setStatus] = useState(incidence.status);
-  const [staffId, setStaffId] = useState<number | string>(incidence.assigned_staff || '');
+
+  const [staffId, setStaffId] = useState<number | string>(() => {
+    if (incidence.assigned_staff) return String(incidence.assigned_staff);
+    if (incidence.assigned_external_name) return "external_placeholder";
+    return 'none';
+  });
+
   const [externalName, setExternalName] = useState(incidence.assigned_external_name || '');
   const [newComment, setNewComment] = useState('');
   const [saving, setSaving] = useState(false);
 
   const staffOptions = staff.reduce((acc, m) => ({
     ...acc, [String(m.id)]: m.full_name
-  }), { "external_placeholder": "+ Personal Externo" });
+  }), {
+    "none": "Sin asignar",
+    "external_placeholder": "+ Personal Externo"
+  });
 
   const handleSave = async () => {
     setSaving(true);
     try {
       await IncidenceService.update(incidence.id, {
         status: status as IncidenceStatus,
-        assigned_staff: staffId && staffId !== "external_placeholder" && staffId !== "all" ? Number(staffId) : null,
+        assigned_staff: (staffId === "external_placeholder" || staffId === "none") ? null : Number(staffId),
         assigned_external_name: staffId === "external_placeholder" ? externalName : "",
         quick_comment: newComment.trim() || undefined
       });
-      onRefresh(); onClose();
-    } catch (e) { console.error(e); } finally { setSaving(false); }
+      onRefresh();
+      onClose();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const locationDisplay = incidence.location_type === 'habitacion'
@@ -50,7 +65,7 @@ const ManageIncidenceModal = ({ incidence, onClose, onRefresh }: ManageModalProp
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className={UI_CLASSES.dialogNotes}>
         <DialogTitle className={UI_CLASSES.notesTitle}>Gestionar Incidencia</DialogTitle>
-        <DialogDescription className="sr-only">Panel administrativo</DialogDescription>
+        <DialogDescription className="sr-only">Actualizar estado o asignar personal</DialogDescription>
         <div className="p-6 bg-white overflow-y-auto max-h-[85vh] space-y-6 pb-12 text-left">
           <p className="text-slate-500 text-sm font-medium">{incidence.title} • {locationDisplay}</p>
 
@@ -61,20 +76,27 @@ const ManageIncidenceModal = ({ incidence, onClose, onRefresh }: ManageModalProp
                   type="button"
                   className="rounded-[24px] overflow-hidden border max-w-[200px] bg-slate-50 cursor-zoom-in"
                   onClick={() => window.open(incidence.img, '_blank')}
-                  aria-label="Ver evidencia ampliada"
+                  aria-label="Ver evidencia"
                 >
-                  <img
-                    src={incidence.img}
-                    alt="Evidencia"
-                    className="w-full h-auto object-contain max-h-[160px]"
-                  />
+                  <img src={incidence.img} alt="Evidencia" className="w-full h-auto object-contain max-h-[160px]" />
                 </button>
               </section>
             )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2"><Label className={UI_CLASSES.label}>Estado Actual</Label><IncidenceSelect value={status} onChange={(v: any) => setStatus(v)} options={STATUS_CONFIG} placeholder="Estado" /></div>
-              <div className="space-y-2"><Label className={UI_CLASSES.label}>Asignar Técnico</Label><IncidenceSelect value={String(staffId)} onChange={(v: any) => { setStaffId(v); if (v !== "external_placeholder") setExternalName(""); }} options={staffOptions} placeholder={loadingStaff ? "Cargando..." : "Seleccionar"} /></div>
+              <div className="space-y-2">
+                <Label className={UI_CLASSES.label}>Estado Actual</Label>
+                <IncidenceSelect value={status} onChange={(v: any) => setStatus(v)} options={STATUS_CONFIG} placeholder="Estado" />
+              </div>
+              <div className="space-y-2">
+                <Label className={UI_CLASSES.label}>Asignar Responsable</Label>
+                <IncidenceSelect
+                  value={String(staffId)}
+                  onChange={(v: any) => { setStaffId(v); if (v !== "external_placeholder") setExternalName(""); }}
+                  options={staffOptions}
+                  placeholder={loadingStaff ? "Cargando..." : "Seleccionar"}
+                />
+              </div>
             </div>
 
             {staffId === "external_placeholder" && (
@@ -110,8 +132,8 @@ const ManageIncidenceModal = ({ incidence, onClose, onRefresh }: ManageModalProp
             </div>
           </div>
           <div className="flex gap-3 mt-4 pt-4 border-t">
-            <button onClick={onClose} className={UI_CLASSES.btnSecondary}>Cancelar</button>
-            <button onClick={handleSave} disabled={saving} className={UI_CLASSES.btnPrimary}>{saving ? 'Guardando...' : 'Actualizar'}</button>
+            <button type="button" onClick={onClose} className={UI_CLASSES.btnSecondary}>Cancelar</button>
+            <button type="button" onClick={handleSave} disabled={saving} className={UI_CLASSES.btnPrimary}>{saving ? 'Guardando...' : 'Actualizar'}</button>
           </div>
         </div>
       </DialogContent>
@@ -129,19 +151,42 @@ export const AdminIncidences = () => {
   const [filterPriority, setFilterPriority] = useState('all');
   const [selectedIncidence, setSelectedIncidence] = useState<BaseIncidence | null>(null);
 
-  const loadData = async () => { try { setLoading(true); const d = await IncidenceService.getAll(); setIncidences(d as BaseIncidence[]); } finally { setLoading(false); } };
+  const [incidenceToDelete, setIncidenceToDelete] = useState<BaseIncidence | null>(null);
+  const [incidenceToEdit, setIncidenceToEdit] = useState<BaseIncidence | null>(null);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const d = await IncidenceService.getAll();
+      setIncidences(d as BaseIncidence[]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => { loadData(); }, []);
+
+  const handleDelete = async () => {
+    if (!incidenceToDelete) return;
+    try {
+      await IncidenceService.delete(incidenceToDelete.id);
+      loadData();
+      setIncidenceToDelete(null);
+    } catch (e) {
+      alert("Error al borrar la incidencia");
+    }
+  };
 
   const filtered = incidences.filter((inc) => applyIncidenceFilters(inc, { search, location: filterLocation, status: filterStatus, priority: filterPriority }));
 
   return (
     <div className={UI_CLASSES.mainLayout}>
-
       <main className={UI_CLASSES.mainContent}>
-        <div className="mb-6">
+        <div className="mb-6 text-left">
           <h2 className="text-2xl font-bold text-gray-900">Incidencias</h2>
-          <p className="text-sm text-gray-500 mt-1">Crea y visualiza las incidencias</p>
+          <p className="text-sm text-gray-500 mt-1">Gestión administrativa del centro</p>
         </div>
+
         <div className="w-full space-y-6">
           <div className={UI_CLASSES.filterGrid}>
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar incidencia..." className={UI_CLASSES.filterInput} />
@@ -149,6 +194,7 @@ export const AdminIncidences = () => {
             <IncidenceSelect value={filterStatus} onChange={setFilterStatus} options={STATUS_CONFIG} placeholder="Estados" />
             <IncidenceSelect value={filterPriority} onChange={setFilterPriority} options={PRIORITY_LABELS} placeholder="Prioridad" />
           </div>
+
           {loading ? <p className={UI_CLASSES.loadingText}>Cargando panel administrativo...</p> : (
             <div className={UI_CLASSES.incidencesGrid}>
               {filtered.map((inc) => {
@@ -158,22 +204,58 @@ export const AdminIncidences = () => {
                     <div className="flex justify-between border-b pb-4 mb-4">
                       <div className="flex gap-3 text-left">
                         <div className={UI_CLASSES.avatar}>{inc.student_name?.charAt(0)}</div>
-                        <div><h3 className={UI_CLASSES.cardStudentName}>{inc.student_name}</h3><div className={UI_CLASSES.cardDate}><Clock size={12} /> {new Date(inc.created_at).toLocaleDateString()}</div></div>
+                        <div>
+                          <h3 className={UI_CLASSES.cardStudentName}>{inc.student_name}</h3>
+                          <div className={UI_CLASSES.cardDate}><Clock size={12} /> {new Date(inc.created_at).toLocaleDateString()}</div>
+                        </div>
                       </div>
-                      <span className={`${UI_CLASSES.priorityBadge} ${inc.priority === 'high' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>{PRIORITY_LABELS[inc.priority]}</span>
+                      <div className="flex flex-col items-end gap-2">
+                        <div className="flex gap-1">
+                          {inc.is_mine && inc.status === 'pending' && (
+                            <>
+                              <button
+                                onClick={() => setIncidenceToEdit(inc)}
+                                className={UI_CLASSES.actionBtnSmall}
+                                title="Editar contenido"
+                              >
+                                <Pencil size={12} className="text-blue-500" />
+                              </button>
+                              <button
+                                onClick={() => setIncidenceToDelete(inc)}
+                                className={UI_CLASSES.actionBtnSmall}
+                                title="Eliminar reporte"
+                              >
+                                <Trash2 size={12} className="text-red-500" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                        <span className={`${UI_CLASSES.priorityBadge} ${inc.priority === 'high' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>
+                          {PRIORITY_LABELS[inc.priority]}
+                        </span>
+                      </div>
                     </div>
+
                     <div className="text-left flex-1 flex flex-col justify-between">
                       <div>
                         <h2 className={UI_CLASSES.cardTitle}>{inc.title}</h2>
-                        <div className={UI_CLASSES.cardLocation}><MapPin size={14} /> {LOCATION_LABELS[inc.location_type]} {inc.room_number || ''}</div>
+                        <div className={UI_CLASSES.cardLocation}>
+                          <MapPin size={14} />
+                          {LOCATION_LABELS[inc.location_type] || inc.location_type}
+                          {inc.location_type === 'habitacion' && inc.room_number ? ` • Hab. ${inc.room_number}` : ''}
+                        </div>
                         <div className="flex flex-wrap gap-2 mt-4">
                           <span className={`${cfg.admin.bg} ${cfg.admin.text} ${UI_CLASSES.statusBadge}`}>{cfg.label}</span>
                           {(inc.assigned_staff_name || inc.assigned_external_name) && (
-                            <span className={UI_CLASSES.technicianBadge}><Wrench size={13} /> {inc.assigned_staff_name || `${inc.assigned_external_name} (Ext)`}</span>
+                            <span className={UI_CLASSES.technicianBadge}>
+                              <Wrench size={13} /> {inc.assigned_staff_name || `${inc.assigned_external_name} (Ext)`}
+                            </span>
                           )}
                         </div>
                       </div>
-                      <button onClick={() => setSelectedIncidence(inc)} className={UI_CLASSES.btnManage + " mt-6 self-end"}>Gestionar <ChevronRight size={18} /></button>
+                      <button onClick={() => setSelectedIncidence(inc)} className={UI_CLASSES.btnManage + " mt-6 self-end"}>
+                        Gestionar <ChevronRight size={18} />
+                      </button>
                     </div>
                   </div>
                 );
@@ -181,10 +263,58 @@ export const AdminIncidences = () => {
             </div>
           )}
         </div>
-        {selectedIncidence && <ManageIncidenceModal incidence={selectedIncidence} onClose={() => setSelectedIncidence(null)} onRefresh={loadData} />}
+
+        {/* MODAL ELIMINAR CONFIRMACIÓN */}
+        <Dialog open={!!incidenceToDelete} onOpenChange={() => setIncidenceToDelete(null)}>
+          <DialogContent className="max-w-[400px] rounded-3xl p-6">
+            <DialogTitle className="text-center font-bold">¿Eliminar incidencia?</DialogTitle>
+            <DialogDescription className="text-center text-gray-500 mt-2">
+              Esta acción no se puede deshacer. Vas a borrar el reporte: <strong>{incidenceToDelete?.title}</strong>.
+            </DialogDescription>
+            <div className="flex gap-3 mt-6">
+              <Button variant="outline" onClick={() => setIncidenceToDelete(null)} className="flex-1 rounded-xl h-12 font-bold">Cancelar</Button>
+              <Button variant="destructive" onClick={handleDelete} className="flex-1 rounded-xl h-12 font-bold">Eliminar</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* MODAL EDITAR  */}
+        <Dialog open={!!incidenceToEdit} onOpenChange={() => setIncidenceToEdit(null)}>
+          <DialogContent className="max-w-[425px] rounded-[32px] p-0 border-none overflow-hidden">
+            <DialogTitle className="sr-only">Editar incidencia</DialogTitle>
+            <IncidenceForm
+              isAdmin
+              initialData={incidenceToEdit}
+              onSuccess={() => { loadData(); setIncidenceToEdit(null); }}
+              onClose={() => setIncidenceToEdit(null)}
+            />
+          </DialogContent>
+        </Dialog>
+
+        {/* MODAL GESTIONAR */}
+        {selectedIncidence && (
+          <ManageIncidenceModal
+            incidence={selectedIncidence}
+            onClose={() => setSelectedIncidence(null)}
+            onRefresh={loadData}
+          />
+        )}
       </main>
-      <button onClick={() => setIsFormOpen(true)} className={UI_CLASSES.btnFloating}><Plus size={32} /></button>
-      <Dialog open={isFormOpen} onOpenChange={(o) => setIsFormOpen(o)}><DialogContent className="max-w-[425px] rounded-[32px] p-0 border-none overflow-hidden"><IncidenceForm isAdmin onSuccess={() => { loadData(); setIsFormOpen(false); }} onClose={() => setIsFormOpen(false)} /></DialogContent></Dialog>
+
+      <button onClick={() => setIsFormOpen(true)} className={UI_CLASSES.btnFloating} aria-label="Nueva incidencia">
+        <Plus size={32} />
+      </button>
+
+      <Dialog open={isFormOpen} onOpenChange={(o) => setIsFormOpen(o)}>
+        <DialogContent className="max-w-[425px] rounded-[32px] p-0 border-none overflow-hidden">
+          <DialogTitle className="sr-only">Nueva incidencia</DialogTitle>
+          <IncidenceForm
+            isAdmin
+            onSuccess={() => { loadData(); setIsFormOpen(false); }}
+            onClose={() => setIsFormOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
@@ -214,5 +344,6 @@ const UI_CLASSES = {
   btnManage: "text-primary font-black text-xs flex items-center gap-1 uppercase tracking-widest hover:gap-2 transition-all",
   btnFloating: "fixed bottom-24 right-8 w-16 h-16 bg-primary text-primary-foreground rounded-full shadow-2xl flex items-center justify-center z-50 transition-transform active:scale-90",
   historyScrollArea: "bg-slate-50 border border-slate-100 rounded-2xl p-3 max-h-40 overflow-y-auto space-y-2 mb-2",
-  historyBubble: "bg-white p-3 rounded-xl border border-slate-90 shadow-sm"
+  historyBubble: "bg-white p-3 rounded-xl border border-slate-90 shadow-sm",
+  actionBtnSmall: "p-1.5 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors border border-slate-100"
 };
