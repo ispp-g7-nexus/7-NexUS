@@ -13,7 +13,7 @@ from django.apps import apps
 from django.conf import settings
 from django_tenants.utils import get_public_schema_name, schema_context
 from torch import nn
-from torch.utils.data import DataLoader, Dataset, random_split
+from torch.utils.data import DataLoader, Dataset
 
 from apps.membership.models import Membership
 from apps.onboarding.models import ResidentPreference
@@ -428,6 +428,50 @@ def _update_best_validation_checkpoint(
     return best_val_loss, best_epoch, patience_counter + 1
 
 
+def _pair_group_key(example: TrainingExample) -> tuple[str, int, int, int]:
+    lower_id, upper_id = sorted(
+        (example.query_membership_id, example.candidate_membership_id)
+    )
+    return (example.schema_name, example.residence_id, lower_id, upper_id)
+
+
+def _split_examples_by_pair_group(
+    examples: list[TrainingExample],
+    *,
+    val_fraction: float,
+    seed: int,
+) -> tuple[list[TrainingExample], list[TrainingExample]]:
+    grouped_examples: dict[tuple[str, int, int, int], list[TrainingExample]] = {}
+    for example in examples:
+        grouped_examples.setdefault(_pair_group_key(example), []).append(example)
+
+    group_keys = list(grouped_examples.keys())
+    if len(group_keys) < 2:
+        raise ValueError("Training split needs at least two unique membership pairs.")
+
+    rng = random.Random(seed)
+    rng.shuffle(group_keys)
+
+    val_group_count = max(1, int(len(group_keys) * val_fraction))
+    if val_group_count >= len(group_keys):
+        val_group_count = len(group_keys) - 1
+
+    val_group_keys = set(group_keys[:val_group_count])
+    train_examples: list[TrainingExample] = []
+    val_examples: list[TrainingExample] = []
+
+    for group_key, group_rows in grouped_examples.items():
+        if group_key in val_group_keys:
+            val_examples.extend(group_rows)
+        else:
+            train_examples.extend(group_rows)
+
+    if not train_examples or not val_examples:
+        raise ValueError("Training split produced an empty train or validation set.")
+
+    return train_examples, val_examples
+
+
 def train_from_database(config: TrainingRunConfig) -> dict[str, Any]:
     random.seed(config.seed)
     torch.manual_seed(config.seed)
@@ -447,22 +491,51 @@ def train_from_database(config: TrainingRunConfig) -> dict[str, Any]:
     preprocessor = TrainingPreprocessor()
     preprocessor.fit(all_feature_rows)
 
-    query_cat, query_num = preprocessor.transform([example.query_features for example in examples])
-    candidate_cat, candidate_num = preprocessor.transform([example.candidate_features for example in examples])
-    labels = torch.tensor([example.label for example in examples], dtype=torch.float32)
-
-    dataset = PairDataset(query_cat, query_num, candidate_cat, candidate_num, labels)
-    val_size = max(1, int(len(dataset) * config.val_fraction))
-    train_size = len(dataset) - val_size
-    if train_size < 1:
-        train_size = len(dataset) - 1
-        val_size = 1
-
-    train_dataset, val_dataset = random_split(
-        dataset,
-        [train_size, val_size],
-        generator=torch.Generator().manual_seed(config.seed),
+    train_examples, val_examples = _split_examples_by_pair_group(
+        examples,
+        val_fraction=config.val_fraction,
+        seed=config.seed,
     )
+
+    train_query_cat, train_query_num = preprocessor.transform(
+        [example.query_features for example in train_examples]
+    )
+    train_candidate_cat, train_candidate_num = preprocessor.transform(
+        [example.candidate_features for example in train_examples]
+    )
+    train_labels = torch.tensor(
+        [example.label for example in train_examples],
+        dtype=torch.float32,
+    )
+
+    val_query_cat, val_query_num = preprocessor.transform(
+        [example.query_features for example in val_examples]
+    )
+    val_candidate_cat, val_candidate_num = preprocessor.transform(
+        [example.candidate_features for example in val_examples]
+    )
+    val_labels = torch.tensor(
+        [example.label for example in val_examples],
+        dtype=torch.float32,
+    )
+
+    train_dataset = PairDataset(
+        train_query_cat,
+        train_query_num,
+        train_candidate_cat,
+        train_candidate_num,
+        train_labels,
+    )
+    val_dataset = PairDataset(
+        val_query_cat,
+        val_query_num,
+        val_candidate_cat,
+        val_candidate_num,
+        val_labels,
+    )
+
+    train_size = len(train_examples)
+    val_size = len(val_examples)
     train_loader = DataLoader(train_dataset, batch_size=config.batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=config.batch_size, shuffle=False)
 
