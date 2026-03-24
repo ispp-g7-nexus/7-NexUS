@@ -1,10 +1,11 @@
-import { Clock, Search, MapPin } from "lucide-react";
+import { Clock, QrCode, Search, MapPin, LogOut, User } from "lucide-react";
 import { Card, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Badge } from "../../components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "../../components/ui/dialog";
+import { NotificationBell } from "../../components/announcement/NotificationBell";
 
 export type SimplePackage = {
   id: number;
@@ -23,9 +24,11 @@ interface StudentPackagesProps {
   onShowQr?: () => void;
   onMarkViewed?: () => void;
   qrData?: { token: string; expires_at?: string; resident_name?: string } | null;
+  onGoToProfile?: () => void;
+  onLogout?: () => void;
 }
 
-export function StudentPackages({ packages = [] }: StudentPackagesProps) {
+export function StudentPackages({ packages = [], onShowQr, qrData, onGoToProfile, onLogout }: StudentPackagesProps) {
   const pendingPackages = packages.filter((p) => p.status !== "DELIVERED");
   const historyPackages = packages.filter((p) => p.status === "DELIVERED");
 
@@ -35,9 +38,32 @@ export function StudentPackages({ packages = [] }: StudentPackagesProps) {
       {/* Header */}
       <header className="bg-primary p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg sticky top-0 z-20">
         <h1 className="text-primary-foreground text-2xl font-bold">Paquetería</h1>
-        <div className="w-1/3 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar por remitente o tracking..." className="pl-10 bg-white border-none shadow-sm h-10 rounded-xl" />
+        <div className="flex items-center gap-2">
+          <div className="hidden md:block w-64 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Buscar por remitente o tracking..." className="pl-10 bg-white border-none shadow-sm h-10 rounded-xl" />
+          </div>
+          <NotificationBell />
+          <Button
+            size="icon"
+            variant="ghost"
+            className="text-primary-foreground hover:bg-primary-foreground/20 hover:scale-110 rounded-full transition-all"
+            onClick={() => onGoToProfile?.()}
+            aria-label="Ir al perfil"
+          >
+            <User className="w-5 h-5" />
+          </Button>
+          {onLogout ? (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="text-primary-foreground hover:bg-primary-foreground/20 hover:scale-110 rounded-full transition-all"
+              onClick={onLogout}
+              aria-label="Cerrar sesión"
+            >
+              <LogOut className="w-5 h-5" />
+            </Button>
+          ) : null}
         </div>
       </header>
 

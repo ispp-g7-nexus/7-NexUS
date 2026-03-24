@@ -77,9 +77,9 @@ export function NotificationBell({ onMarkAsRead, className }: NotificationBellPr
       aria-label="Ver notificaciones de avisos"
       onClick={handleBellClick}
       disabled={loading}
-      className={cn("relative p-2 bg-white/10 rounded-full", className)}
+      className={cn("relative h-9 w-9 inline-flex items-center justify-center rounded-full text-primary-foreground transition-colors hover:bg-primary-foreground/20", className)}
     >
-      <Bell className="w-6 h-6 text-white" />
+      <Bell className="w-5 h-5 text-current" />
       {hasNotifications && (
         <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-background" />
       )}
