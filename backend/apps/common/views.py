@@ -268,12 +268,12 @@ class AdminCreateResidentView(APIView):
     y envía un correo de restablecimiento para que el residente configure su contraseña.
     """
 
+    permission_classes = [AllowAny]
+
     def post(self, request):
         serializer = AdminCreateResidentSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-
-        from apps.common.utils.jwt_auth import resolve_user_from_request
 
         caller = resolve_user_from_request(request)
         if not caller:
