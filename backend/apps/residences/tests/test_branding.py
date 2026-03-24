@@ -35,12 +35,12 @@ class ResidenceBrandingTests(FastTenantTestCase):
         self.admin_user = user_model.objects.create_user(
             username="admin",
             email="admin@test.com",
-            password="demo1234",
+            password="demo1234", #NOSONAR
         )
         self.resident_user = user_model.objects.create_user(
             username="resident",
             email="resident@test.com",
-            password="demo1234",
+            password="demo1234", #NOSONAR
         )
 
         # Create residence
