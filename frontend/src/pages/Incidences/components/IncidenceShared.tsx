@@ -13,7 +13,13 @@ export interface BaseIncidence {
   description?: string;
   img?: string;
   student_name?: string;
-  room_number?: string;
+  room_number?: {
+    id: number;
+    numero: string;
+    planta?: number;
+    edificio?: string;
+    tipo?: string;
+  };
   location_type: string;
   status: any;
   priority: 'low' | 'high';

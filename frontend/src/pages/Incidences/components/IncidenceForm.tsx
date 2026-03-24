@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import { AlertTriangle, Camera, Info, X } from "lucide-react"
 import { Button } from "../../../components/ui/button"
 import { Input } from "../../../components/ui/input"
@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectTrigger, SelectItem, SelectValue } from ".
 import { DialogDescription } from "../../../components/ui/dialog"
 import { IncidenceService, type LocationType } from "../../../services/incidences"
 import { useStaff } from "../../Staff/hooks/useStaff"
+import { fetchWithAuth } from "../../../utils/api"
 
 interface IncidenceFormProps {
   onSuccess: () => void
@@ -26,7 +27,15 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false }: Incidence
   const [staffId, setStaffId] = useState("")
   const [externalName, setExternalName] = useState("")
   const [base64Image, setBase64Image] = useState<string | null>(null)
+  const [rooms, setRooms] = useState<any[]>([])
+  const [selectedRoomId, setSelectedRoomId] = useState<string>("")
 
+  useEffect(() => {
+    if (isAdmin) {
+      fetchWithAuth('/api/bedrooms/').then(res => res.json()).then(data => setRooms(data));
+    }
+  }, [isAdmin]);
+  
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
@@ -48,6 +57,7 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false }: Incidence
       description: formData.get("description") as string,
       location_type: locationType as LocationType,
       priority: (urgent ? "high" : "low") as 'low' | 'high',
+      room_number: locationType === "habitacion" && selectedRoomId ? Number(selectedRoomId) : null,
       assigned_staff: isAdmin && staffId && !["external", "none"].includes(staffId) ? Number(staffId) : null,
       assigned_external_name: isAdmin && staffId === "external" ? externalName : "",
       img: base64Image,

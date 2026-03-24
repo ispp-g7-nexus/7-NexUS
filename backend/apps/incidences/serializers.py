@@ -1,4 +1,7 @@
 from rest_framework import serializers
+
+from apps.bedrooms.serializers import BedroomSerializer
+from apps.membership.models import Membership
 from .models import Incidence, IncidenceUpdate
 
 class IncidenceUpdateSerializer(serializers.ModelSerializer):
@@ -10,6 +13,7 @@ class IncidenceUpdateSerializer(serializers.ModelSerializer):
 
 class IncidenceSerializer(serializers.ModelSerializer):
     updates = IncidenceUpdateSerializer(many=True, read_only=True)
+    room_number = BedroomSerializer(read_only=True)
     is_mine = serializers.SerializerMethodField()
     
     assigned_staff_name = serializers.CharField(
@@ -50,6 +54,7 @@ class IncidenceSerializer(serializers.ModelSerializer):
 class AdminIncidenceSerializer(serializers.ModelSerializer):
     updates = IncidenceUpdateSerializer(many=True, read_only=True)
     student_name = serializers.SerializerMethodField()
+    room_number = BedroomSerializer(read_only=True)
     assigned_staff_name = serializers.CharField(
         source='assigned_staff.user.get_full_name', 
         read_only=True,

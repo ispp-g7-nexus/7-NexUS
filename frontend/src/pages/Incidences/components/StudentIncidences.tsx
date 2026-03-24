@@ -7,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "../../../components/ui/
 import { fetchWithAuth, API_URL_INCIDENCES } from "../../../utils/api";
 import { IncidenceForm } from "./IncidenceForm";
 
-import { 
+import {
   IncidenceSelect, LOCATION_LABELS, PRIORITY_LABELS, STATUS_CONFIG,
   formatUpdateText, applyIncidenceFilters, formatNotificationTime,
   getLastReadNotificationsAt, saveLastReadNotificationsAt,
@@ -67,7 +67,9 @@ export default function StudentIncidences() {
   }, [loadIncidences, loadNotifications]);
 
   const filteredIncidences = incidences.filter((inc) => {
-    if (!inc.student_name && inc.location_type === 'habitacion') return false; 
+    if (inc.location_type === 'habitacion' && (inc as any).is_mine === false) {
+      return false;
+    }
     if (showOnlyMine && (inc as any).is_mine === false) return false;
     return applyIncidenceFilters(inc, { search, location: filterLocation, status: filterStatus, priority: filterPriority });
   });
@@ -135,14 +137,28 @@ export default function StudentIncidences() {
                             </div>
                             <span className={`${COMMON_UI_CLASSES.statusBadge} ${config.student.colorClass}`}>{config.label}</span>
                           </div>
-                          <div className={COMMON_UI_CLASSES.cardLocationRow}><MapPin size={14} className="text-slate-400" /><span className="text-[11px] font-semibold text-slate-500 truncate">{LOCATION_LABELS[inc.location_type]} {inc.room_number ? `• Hab. ${inc.room_number}` : ''}</span></div>
+                          <div className={COMMON_UI_CLASSES.cardLocationRow}>
+                            <MapPin size={14} className="text-slate-400" />
+                            <span className="text-[11px] font-semibold text-slate-500 truncate">
+                              {LOCATION_LABELS[inc.location_type]} {inc.room_number?.numero ? `• Hab. ${inc.room_number.numero}` : ''}
+                            </span>
+                          </div>
                         </div>
                         <div className="mt-4 pt-3 border-t">
                           <div className="flex items-center justify-between mb-2.5">
-                            <div className="flex items-center gap-1.5 text-slate-600 truncate text-[11px] font-bold"><Wrench size={13} />{inc.assigned_staff_name || inc.assigned_external_name || 'Sin asignar'}</div>
-                            <div className="flex items-center gap-1 text-slate-400 font-bold text-[10px]"><Clock size={10} />{new Date(inc.created_at).toLocaleDateString()}</div>
+                            <div className="flex items-center gap-1.5 text-slate-600 truncate text-[11px] font-bold">
+                              <Wrench size={13} />{inc.assigned_staff_name || inc.assigned_external_name || 'Sin asignar'}</div>
+                            <div className="flex items-center gap-1 text-slate-400 font-bold text-[10px]">
+                              <Clock size={10} />{new Date(inc.created_at).toLocaleDateString()}</div>
                           </div>
-                          <div className="flex justify-end"><Button variant="outline" onClick={async () => { const res = await fetchWithAuth(`${API_URL_INCIDENCES}${inc.id}/`); if (res.ok) { setSelectedDetails(await res.json()); setIsNotesOpen(true); } }} className={COMMON_UI_CLASSES.btnNotes}>VER DETALLES</Button></div>
+                          <div className="flex justify-end">
+                            <Button variant="outline" onClick={async () => {
+                              const res = await fetchWithAuth(`${API_URL_INCIDENCES}${inc.id}/`);
+                              if (res.ok) { setSelectedDetails(await res.json()); setIsNotesOpen(true); }
+                            }}
+                              className={COMMON_UI_CLASSES.btnNotes}>VER DETALLES
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </CardContent>
@@ -165,8 +181,8 @@ export default function StudentIncidences() {
               <>
                 <section className="border-l-4 border-primary pl-3 py-1"><h3 className="font-bold text-lg text-slate-800">{selectedDetails.title}</h3></section>
                 <section className="space-y-2 text-left">
-                    <div className="flex items-center gap-2"><MessageSquare size={14} className="text-slate-400" /><p className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Descripción</p></div>
-                    <div className="bg-slate-50 p-4 rounded-[20px] border border-slate-100 italic text-sm text-slate-600">"{selectedDetails.description}"</div>
+                  <div className="flex items-center gap-2"><MessageSquare size={14} className="text-slate-400" /><p className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Descripción</p></div>
+                  <div className="bg-slate-50 p-4 rounded-[20px] border border-slate-100 italic text-sm text-slate-600">"{selectedDetails.description}"</div>
                 </section>
                 {selectedDetails.img && <section className="flex justify-center"><div className="rounded-[24px] overflow-hidden border border-slate-100 max-w-[220px] shadow-sm"><img src={selectedDetails.img} alt="Evidencia" className="w-full h-auto" /></div></section>}
                 <section className="pt-2">

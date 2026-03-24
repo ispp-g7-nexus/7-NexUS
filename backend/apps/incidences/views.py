@@ -155,20 +155,33 @@ class IncidenceViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        
+        residence = getattr(self.request, "residence", None)
+        location_type = self.request.data.get('location_type')
+
         if user.is_staff:
+        # Los admins/staff pueden crear incidencias para sí mismos 
+        # (o podrías ampliar esto para que creen a nombre de otros)
             serializer.save(student=user)
         else:
-            location_type = self.request.data.get('location_type')
-            room_number = self.request.data.get('room_number')
-            
-            # Si el estudiante reporta en habitación y no puso número, 
-            # le ponemos el de su perfil (o el "3º A" por ahora)
-            if location_type == 'habitacion' and not room_number:
-                room_number = None
-            
-            serializer.save(student=user, room_number=room_number)
+            assigned_room = None
         
+        if location_type == 'habitacion':
+            # Buscamos la membresía activa del estudiante en ESTA residencia
+            membership = user.memberships.filter(
+                residence=residence, 
+                is_active=True,
+                role__name__iexact="Student"
+            ).first()
+            
+            if membership and membership.bedroom:
+                assigned_room = membership.bedroom
+            else:
+                # Si no tiene habitación asignada en su perfil, 
+                # podrías lanzar un error o dejarlo como None.
+                logger.warning(f"Estudiante {user.id} intentó reportar en habitación pero no tiene una asignada.")
+
+        # Guardamos la incidencia con la habitación detectada automáticamente
+        serializer.save(student=user, room_number=assigned_room)    
 
     def perform_update(self, serializer):
         instance = self.get_object()

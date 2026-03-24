@@ -11,7 +11,7 @@ export interface Incidence {
   title: string;
   description: string;
   location_type: LocationType;
-  room_number: string | null;
+  room_number: BedroomDetail | null;
   status: IncidenceStatus;
   priority: PriorityLevel;
   student: number; 
@@ -26,6 +26,7 @@ export interface Incidence {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  is_mine?: boolean;
 }
 
 export interface IncidenceUpdate {
@@ -36,13 +37,22 @@ export interface IncidenceUpdate {
   created_at: string;
 }
 
+export interface BedroomDetail {
+  id: number;
+  numero: string;
+  planta?: number;
+  edificio?: string;
+  tipo?: string;
+  capacidad_maxima?: number;
+}
+
 // --- DTOs PARA PETICIONES ---
 
 export interface CreateIncidenceDTO {
   title: string;
   description: string;
   location_type: LocationType;
-  room_number?: string | null;
+  room_number?: number | null;
   priority?: PriorityLevel; 
 }
 
