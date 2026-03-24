@@ -59,7 +59,7 @@ fi
 # coverage.py dentro del contenedor backend suele generar <source>/app</source>.
 # El scanner corre en /usr/src, así que normalizamos para que Sonar pueda mapear rutas.
 if [ -f "${ROOT_DIR}/backend/coverage.xml" ]; then
-  tmp_coverage_file="$(mktemp)"
+  tmp_coverage_file="$(mktemp "${ROOT_DIR}/backend/coverage.XXXXXX.xml")"
   sed 's#<source>/app</source>#<source>/usr/src/backend</source>#g' \
     "${ROOT_DIR}/backend/coverage.xml" > "${tmp_coverage_file}"
   mv "${tmp_coverage_file}" "${ROOT_DIR}/backend/coverage.xml"
