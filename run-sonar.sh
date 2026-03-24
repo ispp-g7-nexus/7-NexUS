@@ -6,6 +6,7 @@ SCANNER_IMAGE="${SONAR_SCANNER_IMAGE:-sonarsource/sonar-scanner-cli:latest}"
 SONAR_HOST_URL="${SONAR_HOST_URL:-http://localhost:9000}"
 SONAR_TOKEN="${SONAR_TOKEN:-}"
 SONAR_DOCKER_NETWORK="${SONAR_DOCKER_NETWORK:-}"
+SONAR_DOCKER_USER="${SONAR_DOCKER_USER:-}"
 
 if ! command -v docker >/dev/null 2>&1; then
   echo "Docker no esta disponible en PATH."
@@ -49,6 +50,16 @@ fi
 
 if [ -n "${SONAR_DOCKER_NETWORK}" ]; then
   DOCKER_ARGS+=(--network "${SONAR_DOCKER_NETWORK}")
+fi
+
+if [ -n "${SONAR_DOCKER_USER}" ]; then
+  DOCKER_ARGS+=(--user "${SONAR_DOCKER_USER}")
+fi
+
+# coverage.py dentro del contenedor backend suele generar <source>/app</source>.
+# El scanner corre en /usr/src, así que normalizamos para que Sonar pueda mapear rutas.
+if [ -f "${ROOT_DIR}/backend/coverage.xml" ]; then
+  sed -i 's#<source>/app</source>#<source>/usr/src/backend</source>#g' "${ROOT_DIR}/backend/coverage.xml"
 fi
 
 echo "Ejecutando scanner contra ${SONAR_HOST_URL}"

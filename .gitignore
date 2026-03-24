@@ -25,10 +25,11 @@ Thumbs.db
 
 # Build / logs
 *.log
+backend/.coverage
+backend/coverage.xml
 backend/staticfiles/
 volumes/
 frontend/node_modules/
 frontend/dist/
 .sonar/
 node_modules/
-
