@@ -231,3 +231,48 @@ class ObjectAvailabilityApiTests(FastTenantTestCase):
 
         self.assertEqual(response.status_code, 403)
         self.assertEqual(Object.objects.count(), 3)
+
+    def test_model_methods(self):
+        obj_str = str(self.object_available)
+        self.assertIsInstance(obj_str, str)
+        
+        rental = self._create_active_rental_now(self.object_available, self.user)
+        rental_str = str(rental) 
+        self.assertIsInstance(rental_str, str)
+
+    def test_seed_objects_command(self):
+        from django.core.management import call_command
+        call_command('seed_objects')
+
+    def test_create_object_invalid_json(self):
+        response = self.client.post("/api/objects/", data="not a json", content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("JSON inválido", response.json()["detail"])
+
+    def test_delete_object_not_found(self):
+        response = self.client.delete("/api/objects/9999/")
+        self.assertEqual(response.status_code, 404)
+
+    def test_delete_object_unauthorized(self):
+        self.client.force_login(self.other_user)
+        response = self.client.delete(f"/api/objects/{self.object_available.id}/")
+        self.assertEqual(response.status_code, 403)
+
+    def test_reserve_in_the_past(self):
+        import json
+        past_date = timezone.now() - timedelta(days=1)
+        response = self.client.post(
+            f"/api/objects/{self.object_available.id}/reserve/",
+            data=json.dumps({
+                "start_date": past_date.isoformat(),
+                "end_date": (past_date + timedelta(hours=1)).isoformat()
+            }),
+            content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("pasado", response.json()["detail"])
+
+    def test_cancel_non_existent_rental(self):
+        response = self.client.post(f"/api/objects/{self.object_available.id}/cancel/", data={})
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("No existe reserva", response.json()["detail"])
