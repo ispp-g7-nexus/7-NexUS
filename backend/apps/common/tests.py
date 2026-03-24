@@ -456,12 +456,12 @@ class AdminCreateResidentViewsTests(FastTenantTestCase):
         self.admin_user = user_model.objects.create_user(
             username="admin-nexus",
             email="admin@nexus.test",
-            password="demo1234",
+            password="PASSWORD1",
         )
         self.student_user = user_model.objects.create_user(
             username="existing-student",
             email="existing@student.test",
-            password="demo1234",
+            password="PASSWORD2",
         )
 
         # Residencia
