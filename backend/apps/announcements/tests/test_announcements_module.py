@@ -12,6 +12,7 @@ from apps.residences.models import Residence, ResidenceDomain
 from apps.common.services import build_access_token
 from apps.membership.models import Membership, Role
 
+PASSWORD = "demo1234" # NOSONAR
 
 class AnnouncementModuleTests(FastTenantTestCase):
     @classmethod
@@ -74,18 +75,16 @@ class AnnouncementModuleTests(FastTenantTestCase):
             )
 
             # Crear usuarios
-            TEST_PASSWORD = os.environ.get('TEST_PASSWORD', 'demo1234')
-
             self.admin_user = user_model.objects.create_user(
                 username="admin",
                 email="admin@test.com",
-                password=TEST_PASSWORD,
+                password=PASSWORD,
                 is_staff=True,
             )
             self.resident_user = user_model.objects.create_user(
                 username="resident",
                 email="resident@test.com",
-                password=TEST_PASSWORD,
+                password=PASSWORD,
             )
 
             # Asignar rol "admin" al admin_user
