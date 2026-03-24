@@ -197,16 +197,265 @@ def _normalize_internal_event_limit(raw_value, space_capacity: int):
 
     return parsed_limit, None
 
+
+def _has_participation_overlap(user, start_time: datetime, end_time: datetime, *, exclude_event=None) -> bool:
+    qs = EventParticipation.objects.filter(
+        user=user,
+        event__start_time__lt=end_time,
+        event__end_time__gt=start_time
+    )
+    if exclude_event is not None:
+        qs = qs.exclude(event=exclude_event)
+    return qs.exists()
+
+
+def _validate_location_constraints(event_type: str, location: str, space_id):
+    if event_type == Event.Type.INTERNAL:
+        if not space_id:
+            return JsonResponse(
+                {"detail": "Debes seleccionar un espacio común para eventos internos."},
+                status=400,
+            )
+        if location:
+            return JsonResponse(
+                {"detail": "Los eventos internos no deben incluir ubicación externa."},
+                status=400,
+            )
+        return None
+
+    if not location:
+        return JsonResponse(
+            {"detail": "Debes indicar una ubicación para eventos externos."},
+            status=400,
+        )
+    if space_id:
+        return JsonResponse(
+            {"detail": "Los eventos externos no pueden asociar un espacio común."},
+            status=400,
+        )
+    return None
+
+
+def _resolve_event_creation_resources(
+    *,
+    request,
+    body,
+    event_type: str,
+    start_time: datetime,
+    end_time: datetime,
+):
+    if event_type == Event.Type.INTERNAL:
+        space = get_object_or_404(
+            CommonSpace,
+            id=int(body.get("space_id")),
+            residence=request.residence,
+            is_active=True,
+        )
+        normalized_max_participants, limit_error = _normalize_internal_event_limit(
+            body.get("max_participants"),
+            space.capacity,
+        )
+        if limit_error:
+            return None, None, None, limit_error
+
+        if _space_has_active_overlap(
+            residence=request.residence,
+            space_id=space.id,
+            start_time=start_time,
+            end_time=end_time,
+        ):
+            return None, None, None, JsonResponse(
+                {"detail": "El espacio común ya está reservado en esa franja horaria."},
+                status=400,
+            )
+
+        reservation, reservation_error = _create_reservation_through_spaces_module(
+            request=request,
+            residence=request.residence,
+            space_id=space.id,
+            start_time=start_time,
+            end_time=end_time,
+        )
+        if reservation_error:
+            transaction.set_rollback(True)
+            return None, None, None, reservation_error
+        return reservation.space, reservation, normalized_max_participants, None
+
+    normalized_max_participants, limit_error = _parse_max_participants(
+        body.get("max_participants")
+    )
+    if limit_error:
+        return None, None, None, limit_error
+    return None, None, normalized_max_participants, None
+
+
+def _resolve_internal_update_state(
+    *,
+    request,
+    event: Event,
+    body,
+    start_time: datetime,
+    end_time: datetime,
+    location: str,
+    requested_space_id,
+):
+    target_space_id = requested_space_id if requested_space_id is not None else event.space_id
+    if not target_space_id:
+        return None, JsonResponse(
+            {"detail": "Debes seleccionar un espacio común para eventos internos."},
+            status=400,
+        )
+    if location:
+        return None, JsonResponse(
+            {"detail": "Los eventos internos no deben incluir ubicación externa."},
+            status=400,
+        )
+
+    target_space = get_object_or_404(
+        CommonSpace,
+        id=int(target_space_id),
+        residence=request.residence,
+        is_active=True,
+    )
+    normalized_max_participants, limit_error = _normalize_internal_event_limit(
+        body.get("max_participants", event.max_participants),
+        target_space.capacity,
+    )
+    if limit_error:
+        return None, limit_error
+
+    needs_new_reservation = (
+        event.event_type != Event.Type.INTERNAL
+        or not event.reservation_id
+        or int(target_space_id) != (event.space_id or 0)
+        or start_time != event.start_time
+        or end_time != event.end_time
+    )
+
+    if needs_new_reservation and event.reservation_id:
+        event.reservation.status = SpaceReservation.Status.CANCELLED
+        event.reservation.save(update_fields=["status", "updated_at"])
+
+    new_reservation = event.reservation
+    new_space = event.space
+    if needs_new_reservation:
+        if _space_has_active_overlap(
+            residence=request.residence,
+            space_id=target_space.id,
+            start_time=start_time,
+            end_time=end_time,
+            exclude_reservation_id=event.reservation_id,
+        ):
+            transaction.set_rollback(True)
+            return None, JsonResponse(
+                {"detail": "El espacio común ya está reservado en esa franja horaria."},
+                status=400,
+            )
+
+        new_reservation, reservation_error = _create_reservation_through_spaces_module(
+            request=request,
+            residence=request.residence,
+            space_id=target_space.id,
+            start_time=start_time,
+            end_time=end_time,
+        )
+        if reservation_error:
+            transaction.set_rollback(True)
+            return None, reservation_error
+        new_space = new_reservation.space
+    elif not event.reservation_id:
+        return None, JsonResponse(
+            {"detail": "El evento interno debe tener una reserva asociada."},
+            status=400,
+        )
+
+    return {
+        "new_space": new_space,
+        "new_reservation": new_reservation,
+        "new_location": "",
+        "normalized_max_participants": normalized_max_participants,
+    }, None
+
+
+def _resolve_external_update_state(
+    *,
+    body,
+    event: Event,
+    location: str,
+    requested_space_id,
+):
+    if not location:
+        return None, JsonResponse(
+            {"detail": "Debes indicar una ubicación para eventos externos."},
+            status=400,
+        )
+    if requested_space_id:
+        return None, JsonResponse(
+            {"detail": "Los eventos externos no pueden asociar un espacio común."},
+            status=400,
+        )
+
+    normalized_max_participants, limit_error = _parse_max_participants(
+        body.get("max_participants", event.max_participants)
+    )
+    if limit_error:
+        return None, limit_error
+
+    return {
+        "new_space": None,
+        "new_reservation": None,
+        "new_location": location,
+        "normalized_max_participants": normalized_max_participants,
+    }, None
+
+
+def _validate_participants_limit_for_update(
+    *,
+    max_participants_provided: bool,
+    normalized_max_participants,
+    current_participants_count: int,
+):
+    if (
+        max_participants_provided
+        and normalized_max_participants is not None
+        and normalized_max_participants < current_participants_count
+    ):
+        return JsonResponse(
+            {
+                "detail": (
+                    "El límite de participantes no puede ser inferior al número "
+                    f"actual de asistentes ({current_participants_count})."
+                )
+            },
+            status=400,
+        )
+    return None
+
+
+def _apply_event_updates(event: Event, body, *, start_time: datetime, end_time: datetime, event_type: str, update_state: dict):
+    event.title = body.get("title", event.title)
+    event.description = body.get("description", event.description)
+    event.start_time = start_time
+    event.end_time = end_time
+    event.event_type = event_type
+    event.location = update_state["new_location"]
+    event.space = update_state["new_space"]
+    event.reservation = update_state["new_reservation"]
+    event.image_url = body.get("image_url", event.image_url)
+    event.tags = body.get("tags", event.tags)
+    event.max_participants = update_state["normalized_max_participants"]
+    event.save()
+
 @method_decorator(csrf_exempt, name='dispatch')
 class AuthenticatedView(View):
     def dispatch(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
             user_data = resolve_user_from_request(request)
             if user_data:
-                User = get_user_model()
+                user_model = get_user_model()
                 try:
-                    request.user = User.objects.get(id=user_data['id'])
-                except User.DoesNotExist:
+                    request.user = user_model.objects.get(id=user_data['id'])
+                except user_model.DoesNotExist:
                     return JsonResponse({"detail": "User not found."}, status=401)
             else:
                 return JsonResponse({"detail": "Authentication credentials were not provided."}, status=401)
@@ -224,114 +473,66 @@ class EventListView(AuthenticatedView):
     def post(self, request):
         if not hasattr(request, 'residence') or not request.residence:
             return JsonResponse({"detail": "No residence context."}, status=400)
-            
+
         try:
             body = json.loads(request.body)
-            
-            event_type = _normalize_event_type(body.get('event_type'))
-            if not event_type:
-                return JsonResponse({"detail": "Tipo de evento inválido."}, status=400)
-
-            start_time, end_time, time_error = _parse_and_validate_times(
-                body.get('start_time'),
-                body.get('end_time'),
-                validate_future=True,
-            )
-            if time_error:
-                return time_error
-
-            # Validar superposición de horarios solo para asistencia
-            overlapping_participating = EventParticipation.objects.filter(
-                user=request.user,
-                event__start_time__lt=end_time,
-                event__end_time__gt=start_time
-            ).exists()
-            
-            if overlapping_participating:
-                return JsonResponse({"detail": "Ya asistes a otro evento en ese horario."}, status=400)
-
-            location = str(body.get('location') or '').strip()
-            space_id = body.get('space_id')
-
-            if event_type == Event.Type.INTERNAL:
-                if not space_id:
-                    return JsonResponse({"detail": "Debes seleccionar un espacio común para eventos internos."}, status=400)
-                if location:
-                    return JsonResponse({"detail": "Los eventos internos no deben incluir ubicación externa."}, status=400)
-            else:
-                if not location:
-                    return JsonResponse({"detail": "Debes indicar una ubicación para eventos externos."}, status=400)
-                if space_id:
-                    return JsonResponse({"detail": "Los eventos externos no pueden asociar un espacio común."}, status=400)
-
-            normalized_max_participants = None
-
-            with transaction.atomic():
-                reservation = None
-                space = None
-
-                if event_type == Event.Type.INTERNAL:
-                    space = get_object_or_404(
-                        CommonSpace,
-                        id=int(space_id),
-                        residence=request.residence,
-                        is_active=True,
-                    )
-                    normalized_max_participants, limit_error = _normalize_internal_event_limit(
-                        body.get('max_participants'),
-                        space.capacity,
-                    )
-                    if limit_error:
-                        return limit_error
-
-                    if _space_has_active_overlap(
-                        residence=request.residence,
-                        space_id=space.id,
-                        start_time=start_time,
-                        end_time=end_time,
-                    ):
-                        return JsonResponse(
-                            {"detail": "El espacio común ya está reservado en esa franja horaria."},
-                            status=400,
-                        )
-
-                    reservation, reservation_error = _create_reservation_through_spaces_module(
-                        request=request,
-                        residence=request.residence,
-                        space_id=space.id,
-                        start_time=start_time,
-                        end_time=end_time,
-                    )
-                    if reservation_error:
-                        transaction.set_rollback(True)
-                        return reservation_error
-                    space = reservation.space
-                else:
-                    normalized_max_participants, limit_error = _parse_max_participants(
-                        body.get('max_participants')
-                    )
-                    if limit_error:
-                        return limit_error
-
-                event = Event.objects.create(
-                    title=body.get('title'),
-                    description=body.get('description'),
-                    start_time=start_time,
-                    end_time=end_time,
-                    event_type=event_type,
-                    location=location if event_type == Event.Type.EXTERNAL else '',
-                    space=space,
-                    reservation=reservation,
-                    image_url=body.get('image_url'),
-                    tags=body.get('tags'),
-                    max_participants=normalized_max_participants,
-                    residence=request.residence,
-                    host=request.user
-                )
-                EventParticipation.objects.create(event=event, user=request.user)
-            return JsonResponse({'id': event.id, 'detail': 'Event created successfully'}, status=201)
         except Exception as e:
             return JsonResponse({"detail": str(e)}, status=400)
+
+        event_type = _normalize_event_type(body.get('event_type'))
+        if not event_type:
+            return JsonResponse({"detail": "Tipo de evento inválido."}, status=400)
+
+        start_time, end_time, time_error = _parse_and_validate_times(
+            body.get('start_time'),
+            body.get('end_time'),
+            validate_future=True,
+        )
+        if time_error:
+            return time_error
+
+        if _has_participation_overlap(request.user, start_time, end_time):
+            return JsonResponse({"detail": "Ya asistes a otro evento en ese horario."}, status=400)
+
+        location = str(body.get('location') or '').strip()
+        location_error = _validate_location_constraints(
+            event_type=event_type,
+            location=location,
+            space_id=body.get("space_id"),
+        )
+        if location_error:
+            return location_error
+
+        with transaction.atomic():
+            space, reservation, normalized_max_participants, resources_error = (
+                _resolve_event_creation_resources(
+                    request=request,
+                    body=body,
+                    event_type=event_type,
+                    start_time=start_time,
+                    end_time=end_time,
+                )
+            )
+            if resources_error:
+                return resources_error
+
+            event = Event.objects.create(
+                title=body.get('title'),
+                description=body.get('description'),
+                start_time=start_time,
+                end_time=end_time,
+                event_type=event_type,
+                location=location if event_type == Event.Type.EXTERNAL else '',
+                space=space,
+                reservation=reservation,
+                image_url=body.get('image_url'),
+                tags=body.get('tags'),
+                max_participants=normalized_max_participants,
+                residence=request.residence,
+                host=request.user
+            )
+            EventParticipation.objects.create(event=event, user=request.user)
+        return JsonResponse({'id': event.id, 'detail': 'Event created successfully'}, status=201)
 
 class EventDetailView(AuthenticatedView):
     def get(self, request, event_id):
@@ -347,159 +548,82 @@ class EventDetailView(AuthenticatedView):
         can_edit = event.host == request.user or getattr(request.user, 'is_staff', False)
         if not can_edit:
             return JsonResponse({"detail": "Unauthorized"}, status=403)
-            
+
         try:
             body = json.loads(request.body)
-
-            event_type = _normalize_event_type(body.get('event_type', event.event_type))
-            if not event_type:
-                return JsonResponse({"detail": "Tipo de evento inválido."}, status=400)
-
-            start_time, end_time, time_error = _parse_and_validate_times(
-                body.get('start_time'),
-                body.get('end_time'),
-                validate_future=False,
-            )
-            if time_error:
-                return time_error
-                
-            # Validar superposición de horarios solo si las fechas cambiaron
-            if start_time != event.start_time or end_time != event.end_time:
-                # Validar superposición de horarios solo para asistencia
-                overlapping_participating = EventParticipation.objects.exclude(event=event).filter(
-                    user=request.user,
-                    event__start_time__lt=end_time,
-                    event__end_time__gt=start_time
-                ).exists()
-                
-                if overlapping_participating:
-                    return JsonResponse({"detail": "Ya asistes a otro evento en ese horario."}, status=400)
-
-            location = str(body.get('location', event.location) or '').strip()
-            requested_space_id = body.get('space_id')
-            normalized_max_participants = event.max_participants
-            max_participants_provided = 'max_participants' in body
-
-            with transaction.atomic():
-                previous_reservation = event.reservation
-                new_reservation = event.reservation
-                new_space = event.space
-                new_location = event.location
-
-                if event_type == Event.Type.INTERNAL:
-                    if requested_space_id is None:
-                        requested_space_id = event.space_id
-                    if not requested_space_id:
-                        return JsonResponse({"detail": "Debes seleccionar un espacio común para eventos internos."}, status=400)
-                    if location:
-                        return JsonResponse({"detail": "Los eventos internos no deben incluir ubicación externa."}, status=400)
-
-                    target_space = get_object_or_404(
-                        CommonSpace,
-                        id=int(requested_space_id),
-                        residence=request.residence,
-                        is_active=True,
-                    )
-                    normalized_max_participants, limit_error = _normalize_internal_event_limit(
-                        body.get('max_participants', event.max_participants),
-                        target_space.capacity,
-                    )
-                    if limit_error:
-                        return limit_error
-
-                    needs_new_reservation = (
-                        event.event_type != Event.Type.INTERNAL
-                        or not event.reservation_id
-                        or int(requested_space_id) != (event.space_id or 0)
-                        or start_time != event.start_time
-                        or end_time != event.end_time
-                    )
-
-                    if needs_new_reservation and event.reservation_id:
-                        event.reservation.status = SpaceReservation.Status.CANCELLED
-                        event.reservation.save(update_fields=['status', 'updated_at'])
-
-                    if needs_new_reservation:
-                        if _space_has_active_overlap(
-                            residence=request.residence,
-                            space_id=target_space.id,
-                            start_time=start_time,
-                            end_time=end_time,
-                            exclude_reservation_id=event.reservation_id,
-                        ):
-                            transaction.set_rollback(True)
-                            return JsonResponse(
-                                {"detail": "El espacio común ya está reservado en esa franja horaria."},
-                                status=400,
-                            )
-
-                        new_reservation, reservation_error = _create_reservation_through_spaces_module(
-                            request=request,
-                            residence=request.residence,
-                            space_id=target_space.id,
-                            start_time=start_time,
-                            end_time=end_time,
-                        )
-                        if reservation_error:
-                            transaction.set_rollback(True)
-                            return reservation_error
-                        new_space = new_reservation.space
-                    elif not event.reservation_id:
-                        return JsonResponse({"detail": "El evento interno debe tener una reserva asociada."}, status=400)
-
-                    new_location = ''
-                else:
-                    if not location:
-                        return JsonResponse({"detail": "Debes indicar una ubicación para eventos externos."}, status=400)
-                    if requested_space_id:
-                        return JsonResponse({"detail": "Los eventos externos no pueden asociar un espacio común."}, status=400)
-                    normalized_max_participants, limit_error = _parse_max_participants(
-                        body.get('max_participants', event.max_participants)
-                    )
-                    if limit_error:
-                        return limit_error
-                    new_space = None
-                    new_reservation = None
-                    new_location = location
-
-                if (
-                    max_participants_provided
-                    and normalized_max_participants is not None
-                    and normalized_max_participants < event.participants_count
-                ):
-                    return JsonResponse(
-                        {
-                            "detail": (
-                                "El límite de participantes no puede ser inferior al número "
-                                f"actual de asistentes ({event.participants_count})."
-                            )
-                        },
-                        status=400,
-                    )
-
-                event.title = body.get('title', event.title)
-                event.description = body.get('description', event.description)
-                event.start_time = start_time
-                event.end_time = end_time
-                event.event_type = event_type
-                event.location = new_location
-                event.space = new_space
-                event.reservation = new_reservation
-                event.image_url = body.get('image_url', event.image_url)
-                event.tags = body.get('tags', event.tags)
-                event.max_participants = normalized_max_participants
-                event.save()
-
-                should_remove_old_reservation = (
-                    previous_reservation
-                    and previous_reservation.id != event.reservation_id
-                )
-                if should_remove_old_reservation:
-                    previous_reservation.delete()
-
-            return JsonResponse({'id': event.id, 'detail': 'Event updated successfully'}, status=200)
         except Exception as e:
             return JsonResponse({"detail": str(e)}, status=400)
+
+        event_type = _normalize_event_type(body.get('event_type', event.event_type))
+        if not event_type:
+            return JsonResponse({"detail": "Tipo de evento inválido."}, status=400)
+
+        start_time, end_time, time_error = _parse_and_validate_times(
+            body.get('start_time'),
+            body.get('end_time'),
+            validate_future=False,
+        )
+        if time_error:
+            return time_error
+
+        if (
+            (start_time != event.start_time or end_time != event.end_time)
+            and _has_participation_overlap(
+                request.user,
+                start_time,
+                end_time,
+                exclude_event=event,
+            )
+        ):
+            return JsonResponse({"detail": "Ya asistes a otro evento en ese horario."}, status=400)
+
+        location = str(body.get('location', event.location) or '').strip()
+        requested_space_id = body.get('space_id')
+        max_participants_provided = 'max_participants' in body
+
+        with transaction.atomic():
+            previous_reservation = event.reservation
+            if event_type == Event.Type.INTERNAL:
+                update_state, update_error = _resolve_internal_update_state(
+                    request=request,
+                    event=event,
+                    body=body,
+                    start_time=start_time,
+                    end_time=end_time,
+                    location=location,
+                    requested_space_id=requested_space_id,
+                )
+            else:
+                update_state, update_error = _resolve_external_update_state(
+                    body=body,
+                    event=event,
+                    location=location,
+                    requested_space_id=requested_space_id,
+                )
+            if update_error:
+                return update_error
+
+            limit_error = _validate_participants_limit_for_update(
+                max_participants_provided=max_participants_provided,
+                normalized_max_participants=update_state["normalized_max_participants"],
+                current_participants_count=event.participants_count,
+            )
+            if limit_error:
+                return limit_error
+
+            _apply_event_updates(
+                event,
+                body,
+                start_time=start_time,
+                end_time=end_time,
+                event_type=event_type,
+                update_state=update_state,
+            )
+
+            if previous_reservation and previous_reservation.id != event.reservation_id:
+                previous_reservation.delete()
+
+        return JsonResponse({'id': event.id, 'detail': 'Event updated successfully'}, status=200)
 
     def delete(self, request, event_id):
         event = get_object_or_404(Event, id=event_id, residence=request.residence)
