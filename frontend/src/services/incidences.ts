@@ -8,7 +8,8 @@ export interface Incidence {
   title: string;
   description: string;
   location_type: LocationType;
-  room_number: BedroomDetail | null;
+  room_number: number | null;
+  room_number_detail?: BedroomDetail | null;
   status: IncidenceStatus;
   priority: PriorityLevel;
   student: number;
