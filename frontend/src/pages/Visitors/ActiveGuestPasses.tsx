@@ -7,6 +7,7 @@ import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
+import { Select1, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { Textarea } from "../../components/ui/textarea";
 import {
   createMyGuestPass,
@@ -21,6 +22,7 @@ import {
 
 const DEFAULT_MAX_DURATION_HOURS = 24;
 const DEFAULT_MAX_CONCURRENT_PASSES = 3;
+const TIME_SLOT_INTERVAL_MINUTES = 30;
 
 type GuestPassFormState = {
   guest_first_name: string;
@@ -40,10 +42,58 @@ function toDateTimeLocalValue(date: Date): string {
   return normalized.toISOString().slice(0, 16);
 }
 
+function toDateInputValue(date: Date): string {
+  return toDateTimeLocalValue(date).slice(0, 10);
+}
+
+function splitDateTimeLocal(value: string): { datePart: string; timePart: string } {
+  if (!value) {
+    return { datePart: "", timePart: "" };
+  }
+  const [datePart = "", timePart = ""] = value.split("T");
+  return { datePart, timePart: timePart.slice(0, 5) };
+}
+
+function combineDateAndTimeLocal(datePart: string, timePart: string): string {
+  if (!datePart) {
+    return "";
+  }
+  if (!timePart) {
+    return `${datePart}T`;
+  }
+  return `${datePart}T${timePart}`;
+}
+
+function buildTimeSlotValues(slotMinutes: number): string[] {
+  const slots: string[] = [];
+  for (let minutes = 0; minutes < 24 * 60; minutes += slotMinutes) {
+    const hourPart = String(Math.floor(minutes / 60)).padStart(2, "0");
+    const minutePart = String(minutes % 60).padStart(2, "0");
+    slots.push(`${hourPart}:${minutePart}`);
+  }
+  return slots;
+}
+
+const TIME_SLOT_VALUES = buildTimeSlotValues(TIME_SLOT_INTERVAL_MINUTES);
+
+function getAvailableTimeSlots(selectedDate: string, minDateTimeExclusive: Date): string[] {
+  if (!selectedDate) {
+    return [];
+  }
+
+  return TIME_SLOT_VALUES.filter((timeValue) => {
+    const candidateDate = parseDateTimeLocal(combineDateAndTimeLocal(selectedDate, timeValue));
+    if (!candidateDate) {
+      return false;
+    }
+    return candidateDate.getTime() > minDateTimeExclusive.getTime();
+  });
+}
+
 function buildInitialFormState(): GuestPassFormState {
-  const start = new Date();
-  const roundedMinutes = Math.ceil(start.getMinutes() / 5) * 5;
-  start.setMinutes(roundedMinutes, 0, 0);
+  const slotMs = TIME_SLOT_INTERVAL_MINUTES * 60 * 1000;
+  const start = new Date(Math.ceil(Date.now() / slotMs) * slotMs);
+  start.setSeconds(0, 0);
   const end = new Date(start.getTime() + 60 * 60 * 1000);
 
   return {
@@ -79,6 +129,7 @@ function validateForm(
 ): GuestPassFormErrors {
   const errors: GuestPassFormErrors = {};
   const maxDurationMs = maxDurationHours * 60 * 60 * 1000;
+  const now = new Date();
 
   if (!state.guest_first_name.trim()) {
     errors.guest_first_name = "El nombre del invitado es obligatorio.";
@@ -104,6 +155,12 @@ function validateForm(
   }
 
   if (start && end) {
+    if (start < now) {
+      errors.valid_from = "La fecha/hora de inicio no puede ser anterior al momento actual.";
+    }
+    if (end < now) {
+      errors.valid_until = "La fecha/hora de fin no puede ser anterior al momento actual.";
+    }
     if (end <= start) {
       errors.valid_until = "La fecha/hora de fin debe ser posterior a la de inicio.";
     } else if (end.getTime() - start.getTime() > maxDurationMs) {
@@ -274,6 +331,70 @@ interface GuestPassSectionProps {
   readonly onRefresh?: () => void;
 }
 
+interface TimeSelectProps {
+  readonly id: string;
+  readonly selectedDate: string;
+  readonly selectedTime: string;
+  readonly slots: string[];
+  readonly disabled?: boolean;
+  readonly placeholder: string;
+  readonly emptyMessage: string;
+  readonly onSelect: (timeValue: string) => void;
+}
+
+function TimeSelect({
+  id,
+  selectedDate,
+  selectedTime,
+  slots,
+  disabled = false,
+  placeholder,
+  emptyMessage,
+  onSelect,
+}: TimeSelectProps) {
+  if (!selectedDate) {
+    return (
+      <div className="flex h-10 items-center rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 text-sm text-slate-500">
+        Selecciona una fecha primero
+      </div>
+    );
+  }
+
+  if (slots.length === 0) {
+    return (
+      <div className="flex h-10 items-center rounded-xl border border-dashed border-amber-300 bg-amber-50 px-3 text-sm text-amber-700">
+        {emptyMessage}
+      </div>
+    );
+  }
+
+  return (
+    <Select1
+      value={slots.includes(selectedTime) ? selectedTime : undefined}
+      onValueChange={onSelect}
+      disabled={disabled}
+    >
+      <SelectTrigger
+        id={id}
+        className="h-10 rounded-xl border-slate-200 bg-white/95 px-3 shadow-sm transition-all hover:border-primary/40 hover:shadow-md focus:ring-2 focus:ring-primary/20 data-[state=open]:border-primary data-[state=open]:ring-primary/10"
+      >
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent className="max-h-72 rounded-2xl border-slate-200 bg-white/95 p-2 shadow-xl backdrop-blur">
+        {slots.map((timeValue) => (
+          <SelectItem
+            key={timeValue}
+            value={timeValue}
+            className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 focus:bg-primary/10 focus:text-primary"
+          >
+            {timeValue}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select1>
+  );
+}
+
 function GuestPassSection({
   title,
   description,
@@ -336,6 +457,18 @@ function CreateGuestPassForm({
 }) {
   const maxDuration = policy?.max_duration_hours ?? DEFAULT_MAX_DURATION_HOURS;
   const maxConcurrent = policy?.max_concurrent_passes ?? DEFAULT_MAX_CONCURRENT_PASSES;
+  const now = new Date();
+  const todayDate = toDateInputValue(now);
+
+  const { datePart: startDate, timePart: startTime } = splitDateTimeLocal(form.valid_from);
+  const { datePart: endDate, timePart: endTime } = splitDateTimeLocal(form.valid_until);
+
+  const startTimeOptions = getAvailableTimeSlots(startDate, now);
+  const parsedStart = parseDateTimeLocal(form.valid_from);
+  const minEndDateTime =
+    parsedStart && parsedStart.getTime() > now.getTime() ? parsedStart : now;
+  const endTimeOptions = getAvailableTimeSlots(endDate, minEndDateTime);
+  const minEndDate = startDate || todayDate;
 
   return (
     <Card className="border-border/80 shadow-sm">
@@ -388,30 +521,90 @@ function CreateGuestPassForm({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
-              <Label htmlFor="guest-valid-from">Fecha/hora inicio</Label>
-              <Input
-                id="guest-valid-from"
-                type="datetime-local"
-                value={form.valid_from}
-                onChange={(event) => onFieldChange("valid_from", event.target.value)}
-                aria-invalid={Boolean(formErrors.valid_from)}
-                required
-              />
+              <Label htmlFor="guest-valid-from-date">Fecha/hora inicio</Label>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Input
+                  id="guest-valid-from-date"
+                  type="date"
+                  value={startDate}
+                  min={todayDate}
+                  onChange={(event) => {
+                    const nextDate = event.target.value;
+                    const availableTimes = getAvailableTimeSlots(nextDate, new Date());
+                    const nextTime = availableTimes.includes(startTime)
+                      ? startTime
+                      : (availableTimes[0] ?? "");
+                    onFieldChange("valid_from", combineDateAndTimeLocal(nextDate, nextTime));
+                  }}
+                  aria-invalid={Boolean(formErrors.valid_from)}
+                  required
+                />
+                <TimeSelect
+                  id="guest-valid-from-time"
+                  selectedDate={startDate}
+                  selectedTime={startTimeOptions.includes(startTime) ? startTime : ""}
+                  slots={startTimeOptions}
+                  disabled={!startDate}
+                  placeholder="Selecciona hora"
+                  emptyMessage="Sin horas disponibles para este día."
+                  onSelect={(timeValue) =>
+                    onFieldChange("valid_from", combineDateAndTimeLocal(startDate, timeValue))
+                  }
+                />
+              </div>
+              {startDate && startTimeOptions.length === 0 ? (
+                <p className="text-xs text-amber-700">
+                  No quedan horas futuras para esta fecha. Selecciona otro día.
+                </p>
+              ) : null}
               {formErrors.valid_from ? (
                 <p className="text-xs text-red-600">{formErrors.valid_from}</p>
               ) : null}
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="guest-valid-until">Fecha/hora fin</Label>
-              <Input
-                id="guest-valid-until"
-                type="datetime-local"
-                value={form.valid_until}
-                onChange={(event) => onFieldChange("valid_until", event.target.value)}
-                aria-invalid={Boolean(formErrors.valid_until)}
-                required
-              />
+              <Label htmlFor="guest-valid-until-date">Fecha/hora fin</Label>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Input
+                  id="guest-valid-until-date"
+                  type="date"
+                  value={endDate}
+                  min={minEndDate}
+                  onChange={(event) => {
+                    const nextDate = event.target.value;
+                    const latestNow = new Date();
+                    const latestStart = parseDateTimeLocal(form.valid_from);
+                    const minDateTime =
+                      latestStart && latestStart.getTime() > latestNow.getTime()
+                        ? latestStart
+                        : latestNow;
+                    const availableTimes = getAvailableTimeSlots(nextDate, minDateTime);
+                    const nextTime = availableTimes.includes(endTime)
+                      ? endTime
+                      : (availableTimes[0] ?? "");
+                    onFieldChange("valid_until", combineDateAndTimeLocal(nextDate, nextTime));
+                  }}
+                  aria-invalid={Boolean(formErrors.valid_until)}
+                  required
+                />
+                <TimeSelect
+                  id="guest-valid-until-time"
+                  selectedDate={endDate}
+                  selectedTime={endTimeOptions.includes(endTime) ? endTime : ""}
+                  slots={endTimeOptions}
+                  disabled={!endDate}
+                  placeholder="Selecciona hora"
+                  emptyMessage="Sin horas disponibles para este rango."
+                  onSelect={(timeValue) =>
+                    onFieldChange("valid_until", combineDateAndTimeLocal(endDate, timeValue))
+                  }
+                />
+              </div>
+              {endDate && endTimeOptions.length === 0 ? (
+                <p className="text-xs text-amber-700">
+                  No hay horas válidas para esta fecha y rango. Ajusta inicio o elige otro día.
+                </p>
+              ) : null}
               {formErrors.valid_until ? (
                 <p className="text-xs text-red-600">{formErrors.valid_until}</p>
               ) : null}
