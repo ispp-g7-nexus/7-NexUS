@@ -1,3 +1,5 @@
+import string
+import random
 from django.core.exceptions import ValidationError
 from django.conf import settings
 from django.db import models
@@ -6,6 +8,8 @@ from django.utils import timezone
 from apps.membership.models import Membership
 from apps.residences.models import Residence
 
+def generate_delivery_code():
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
 
 class Package(models.Model):
     class Status(models.TextChoices):
@@ -28,6 +32,7 @@ class Package(models.Model):
     building_snapshot = models.CharField(max_length=100, blank=True)
     carrier = models.CharField(max_length=120, blank=True)
     tracking_number = models.CharField(max_length=120, blank=True)
+    delivery_code = models.CharField(max_length=5, default=generate_delivery_code)
     notes = models.TextField(blank=True)
     status = models.CharField(
         max_length=20,

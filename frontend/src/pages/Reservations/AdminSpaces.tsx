@@ -17,22 +17,31 @@ import {
 
 import { SpaceFormSheet } from "./components/SpaceFormSheet";
 import { SpaceReservationsDrawer } from "./components/SpaceReservationsDrawer";
+import SpaceDetailModal from "./components/SpaceDetailModal";
 
 import { isApiError } from "../../services/reservations";
 function SpaceCard({
   space,
-  onEdit,
-  onDeactivate,
   onViewReservations,
+  onViewDetail,
 }: {
   space: AdminSpace;
-  onEdit: (space: AdminSpace) => void;
-  onDeactivate: (space: AdminSpace) => void;
   onViewReservations: (space: AdminSpace) => void;
+  onViewDetail: (space: AdminSpace) => void;
 }) {
   return (
-    <article className="rounded-xl border border-border/80 bg-white p-5 shadow-sm flex flex-col gap-4">
-      <div className="flex items-start justify-between gap-3">
+    <article className="relative overflow-hidden rounded-xl border border-border/80 bg-white p-5 shadow-sm flex flex-col gap-4 hover:shadow-md">
+      <button
+        type="button"
+        className="absolute inset-0 z-10"
+        aria-label={`Ver detalles de ${space.name}`}
+        onClick={() => onViewDetail(space)}
+      >
+        <span className="sr-only">Ver detalles</span>
+      </button>
+
+      <div className="relative z-0 pointer-events-none">
+        <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="text-base font-semibold text-gray-900 truncate">{space.name}</h3>
@@ -72,21 +81,13 @@ function SpaceCard({
       </div>
 
       <div className="flex gap-2 flex-wrap">
-        <Button variant="outline" size="sm" onClick={() => onViewReservations(space)}>
+        <Button className="pointer-events-auto" variant="outline" size="sm" onClick={() => onViewReservations(space)}>
           Ver reservas
         </Button>
-        <Button variant="outline" size="sm" onClick={() => onEdit(space)}>
-          Editar
+        <Button className="pointer-events-auto" variant="nexus" size="sm" onClick={() => onViewDetail(space)}>
+          Ver detalles
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/40"
-          onClick={() => onDeactivate(space)}
-          disabled={!space.is_active}
-        >
-          {space.is_active ? "Desactivar" : "Ya inactivo"}
-        </Button>
+      </div>
       </div>
     </article>
   );
@@ -108,6 +109,9 @@ export function AdminSpaces() {
   const [reservations, setReservations] = useState<AdminSpaceReservation[]>([]);
   const [loadingReservations, setLoadingReservations] = useState(false);
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "cancelled">("active");
+  // Detail modal
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailSpaceId, setDetailSpaceId] = useState<number | null>(null);
 
   const loadSpaces = async () => {
     setLoading(true);
@@ -188,6 +192,11 @@ export function AdminSpaces() {
     await loadReservations(space, "active");
   };
 
+  const handleViewDetail = (space: AdminSpace) => {
+    setDetailSpaceId(space.id);
+    setDetailOpen(true);
+  };
+
   const handleStatusFilterChange = async (filter: "all" | "active" | "cancelled") => {
     setStatusFilter(filter);
     if (drawerSpace) await loadReservations(drawerSpace, filter);
@@ -248,9 +257,8 @@ export function AdminSpaces() {
             <SpaceCard
               key={space.id}
               space={space}
-              onEdit={handleOpenEdit}
-              onDeactivate={handleDeactivate}
               onViewReservations={handleViewReservations}
+              onViewDetail={handleViewDetail}
             />
           ))}
         </div>
@@ -274,6 +282,13 @@ export function AdminSpaces() {
         statusFilter={statusFilter}
         onStatusFilterChange={handleStatusFilterChange}
         onClose={() => setDrawerOpen(false)}
+      />
+      <SpaceDetailModal
+        open={detailOpen}
+        spaceId={detailSpaceId}
+        onClose={() => setDetailOpen(false)}
+        onEdit={(s) => { setDetailOpen(false); handleOpenEdit(s); }}
+        onDeactivate={(s) => { setDetailOpen(false); void handleDeactivate(s); }}
       />
     </section>
   );

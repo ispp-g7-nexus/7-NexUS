@@ -52,7 +52,7 @@ class IncidenceSerializer(serializers.ModelSerializer):
         
         if self.instance:
             user_roles = [r.lower() for r in user.memberships.filter(is_active=True).values_list('role__name', flat=True)]
-            is_admin = "admin" in user_roles or "residence_admin" in user_roles or user.is_staff
+            is_admin = "admin" in user_roles or "residence_admin" in user_roles or (getattr(user, 'is_staff', False) is True)
             is_owner = self.instance.student_id == user.id
 
             if not is_admin:

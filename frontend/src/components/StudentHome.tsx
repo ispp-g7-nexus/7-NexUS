@@ -9,6 +9,7 @@ import {
     Package,
     AlertCircle,
     QrCode,
+    User,
     Users,
     Utensils,
     Wifi
@@ -89,7 +90,7 @@ const getInitialSeenIds = (): string[] => {
         return [];
     }
 
-    return parseSeenIds(window.localStorage.getItem(HOME_NOTIFICATIONS_SEEN_IDS_KEY));
+    return parseSeenIds(globalThis.localStorage.getItem(HOME_NOTIFICATIONS_SEEN_IDS_KEY));
 };
 
 const getInitialDismissedIncidenceIds = (): string[] => {
@@ -97,12 +98,12 @@ const getInitialDismissedIncidenceIds = (): string[] => {
         return [];
     }
 
-    return parseSeenIds(window.localStorage.getItem(HOME_INCIDENCES_DISMISSED_IDS_KEY));
+    return parseSeenIds(globalThis.localStorage.getItem(HOME_INCIDENCES_DISMISSED_IDS_KEY));
 };
 
 const saveStoredIds = (key: string, ids: string[]) => {
     if (typeof window !== "undefined") {
-        window.localStorage.setItem(key, JSON.stringify(ids));
+        globalThis.localStorage.setItem(key, JSON.stringify(ids));
     }
 };
 
@@ -173,7 +174,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
     const [seenNotificationIds, setSeenNotificationIds] = useState<string[]>(getInitialSeenIds);
     const [dismissedIncidenceIds, setDismissedIncidenceIds] = useState<string[]>(getInitialDismissedIncidenceIds);
     const [unviewedAnnouncements, setUnviewedAnnouncements] = useState(0);
-    const [unreadPackages, setUnreadPackages] = useState<number>(0);
+    const [pendingPackages, setPendingPackages] = useState<number>(0);
     const [currentUserId, setCurrentUserId] = useState<number | null>(null);
     const [isSessionUserResolved, setIsSessionUserResolved] = useState(false);
     const notificationsRequestIdRef = useRef(0);
@@ -292,93 +293,110 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
             });
     }, [currentUserId, isSessionUserResolved]);
 
+    const buildPackageItems = useCallback((count: number): HomeNotification[] => {
+        if (count <= 0) return [];
+        return [{
+            id: "packages-unread",
+            title: "[Paquetes] Tienes paquetes pendientes",
+            description: `Tienes ${count} paquete${count === 1 ? "" : "s"} esperándote en recepción.`,
+            time: "Ahora",
+            type: "info" as const,
+            source: "packages" as const,
+            createdAt: new Date().toISOString(),
+        }];
+    }, []);
+
     const loadHomeNotifications = useCallback(async (silent = false) => {
         const requestId = ++notificationsRequestIdRef.current;
-        try {
-            if (!silent) {
-                setIsNotificationsLoading(true);
-            }
+        
+        // 1. Gestión de estado inicial
+        if (!silent) setIsNotificationsLoading(true);
 
-            const [announcementsResult, unviewedResult, incidencesResult, eventsResult] = await Promise.allSettled([
+        try {
+            // 2. Ejecución paralela de peticiones
+            const [
+                announcementsRes, 
+                unviewedRes, 
+                incidencesRes, 
+                eventsRes, 
+                packagesRes
+            ] = await Promise.allSettled([
                 announcementService.getAnnouncements(),
                 announcementService.getUnviewedCount(),
                 fetchWithAuth(`${API_URL_INCIDENCES}notifications/`),
                 fetchWithAuth(API_URL),
+                packagesService.getPendingCount(),
             ]);
 
-            if (requestId === notificationsRequestIdRef.current && unviewedResult.status === "fulfilled") {
-                setUnviewedAnnouncements(unviewedResult.value.count);
+            // Evitar actualizaciones si el componente cambió de estado o hubo una petición nueva
+            if (requestId !== notificationsRequestIdRef.current) return;
+
+            // 3. Procesamiento individual (Funciones puras de mapeo)
+            const mergedNotifications: HomeNotification[] = [
+                ...(announcementsRes.status === "fulfilled" ? buildAnnouncementItems(announcementsRes.value) : []),
+                ...(packagesRes.status === "fulfilled" ? buildPackageItems(packagesRes.value || 0) : []),
+            ];
+
+            // 4. Procesamiento de respuestas tipo Fetch (Incidencias y Eventos)
+            if (incidencesRes.status === "fulfilled" && incidencesRes.value.ok) {
+                const data = await incidencesRes.value.json();
+                mergedNotifications.push(...buildIncidenceItems(data.results || []));
             }
 
-            const mergedNotifications: HomeNotification[] = [];
-
-            if (announcementsResult.status === "fulfilled") {
-                mergedNotifications.push(...buildAnnouncementItems(announcementsResult.value));
-            }
-
-            if (incidencesResult.status === "fulfilled" && incidencesResult.value.ok) {
-                const data = await incidencesResult.value.json();
-                const incidenceNotifications = Array.isArray(data.results) ? data.results : [];
-                mergedNotifications.push(...buildIncidenceItems(incidenceNotifications));
-            }
-
-            if (eventsResult.status === "fulfilled" && eventsResult.value.ok) {
-                const eventsData = await eventsResult.value.json();
+            if (eventsRes.status === "fulfilled" && eventsRes.value.ok) {
+                const eventsData = await eventsRes.value.json();
                 mergedNotifications.push(...buildEventItems(Array.isArray(eventsData) ? eventsData : []));
             }
 
-            const sortedNotifications = mergedNotifications
+            // 5. Actualización de contadores
+            if (unviewedRes.status === "fulfilled") {
+                setUnviewedAnnouncements(unviewedRes.value.count);
+            }
+
+            // 6. Ordenación y Límite
+            const sorted = mergedNotifications
                 .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
                 .slice(0, NOTIFICATIONS_LIMIT);
 
-            if (requestId === notificationsRequestIdRef.current) {
-                setNotifications(sortedNotifications);
-            }
+            setNotifications(sorted);
+
         } catch (error) {
-            console.error("Error cargando notificaciones del panel central:", error);
+            console.error("Error cargando notificaciones:", error);
         } finally {
             if (requestId === notificationsRequestIdRef.current && !silent) {
                 setIsNotificationsLoading(false);
             }
         }
-    }, [buildAnnouncementItems, buildIncidenceItems, buildEventItems]);
-
+    }, [buildAnnouncementItems, buildIncidenceItems, buildEventItems, buildPackageItems]);
     useEffect(() => {
         loadHomeNotifications();
-        const intervalId = window.setInterval(() => loadHomeNotifications(true), NOTIFICATIONS_POLL);
+        const intervalId = globalThis.setInterval(() => loadHomeNotifications(true), NOTIFICATIONS_POLL);
 
-        return () => window.clearInterval(intervalId);
+        return () => globalThis.clearInterval(intervalId);
     }, [loadHomeNotifications]);
 
-    // Paquetes: contador no leídos
+    // Paquetes: contador pendientes de recoger
     useEffect(() => {
         let mounted = true;
-        const loadUnread = async () => {
+        const loadPending = async () => {
             try {
-                const data = await packagesService.getUnreadCount();
-                if (mounted) setUnreadPackages(data || 0);
+                const data = await packagesService.getPendingCount();
+                if (mounted) setPendingPackages(data || 0);
             } catch (err) {
-                if (mounted) setUnreadPackages(0);
+                console.error("Error al cargar los paquetes pendientes:", err);
+                if (mounted) setPendingPackages(0);
             }
         };
 
-        loadUnread();
-        const pid = window.setInterval(loadUnread, NOTIFICATIONS_POLL);
+        loadPending();
+        const pid = globalThis.setInterval(loadPending, NOTIFICATIONS_POLL);
         return () => {
             mounted = false;
-            window.clearInterval(pid);
+            globalThis.clearInterval(pid);
         };
     }, []);
 
-    // Escucha evento cuando la página Packages marca paquetes como vistos
-    useEffect(() => {
-        const handler = (_ev: Event) => {
-            setUnreadPackages(0);
-        };
 
-        window.addEventListener('packages:markedAsViewed', handler as EventListener);
-        return () => window.removeEventListener('packages:markedAsViewed', handler as EventListener);
-    }, []);
 
     // --- FUNCIONES INTERNAS ---
     const handleNotificationsOpenChange = (open: boolean) => {
@@ -410,6 +428,15 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
         }
     };
 
+    const getNotificationIcon = (source: string) => {
+        switch (source) {
+            case "announcements": return <Megaphone className="w-5 h-5 text-blue-600" />;
+            case "incidences": return <AlertCircle className="w-5 h-5 text-orange-600" />;
+            case "packages": return <Package className="w-5 h-5 text-green-600" />;
+            default: return <Calendar className="w-5 h-5 text-purple-600" />;
+        }
+    };
+
     return (
         <div className="bg-[#F5F5F5] min-h-full">
             <div className="bg-primary pt-12 pb-24 px-6 rounded-b-[2.5rem] relative">
@@ -430,7 +457,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                     <div className="flex gap-2">
                         <Popover open={isNotificationsOpen} onOpenChange={handleNotificationsOpenChange}>
                             <PopoverTrigger asChild>
-                                <Button size="icon" variant="ghost" className="text-primary-foreground hover:bg-primary-foreground/20 rounded-full relative">
+                                <Button size="icon" variant="ghost" className="text-primary-foreground hover:bg-primary-foreground/20 hover:scale-110 rounded-full transition-all relative">
                                     <Bell className="w-6 h-6" />
                                     {hasUnreadNotifications && (
                                         <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-destructive rounded-full border-2 border-primary" />
@@ -453,15 +480,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                                             notifications.map((notification) => (
                                                 <NotificationCard
                                                     key={notification.id}
-                                                    icon={
-                                                        notification.source === "announcements" ? (
-                                                            <Megaphone className="w-5 h-5 text-blue-600" />
-                                                        ) : notification.source === "incidences" ? (
-                                                            <AlertCircle className="w-5 h-5 text-orange-600" />
-                                                        ) : (
-                                                            <Calendar className="w-5 h-5 text-purple-600" />
-                                                        )
-                                                    }
+                                                    icon={getNotificationIcon(notification.source)}
                                                     title={notification.title}
                                                     description={notification.description}
                                                     time={notification.time}
@@ -484,8 +503,17 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                                 </div>
                             </PopoverContent>
                         </Popover>
+                        <Button
+                            size="icon"
+                            variant="ghost"
+                            className="text-primary-foreground hover:bg-primary-foreground/20 hover:scale-110 rounded-full transition-all"
+                            onClick={() => onNavigate("community")}
+                            aria-label="Ir al perfil"
+                        >
+                            <User className="w-5 h-5" />
+                        </Button>
                         {onLogout && (
-                            <Button size="icon" variant="ghost" className="text-primary-foreground hover:bg-primary-foreground/20 rounded-full" onClick={onLogout}>
+                            <Button size="icon" variant="ghost" className="text-primary-foreground hover:bg-primary-foreground/20 hover:scale-110 rounded-full transition-all" onClick={onLogout}>
                                 <LogOut className="w-5 h-5" />
                             </Button>
                         )}
@@ -523,7 +551,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                     <QuickAction icon={<MessageSquare className="w-6 h-6" />} label="Avisos" color="bg-primary text-primary-foreground" onClick={() => onNavigate("announcements")} />
                     <QuickAction icon={<Utensils className="w-6 h-6" />} label="Menú" color="bg-primary text-primary-foreground" onClick={() => onNavigate("menu")} />
                     <QuickAction icon={<Wifi className="w-6 h-6" />} label="WiFi" color="bg-primary text-primary-foreground" onClick={() => setIsWifiDialogOpen(true)} />
-                    <QuickAction icon={<Package className="w-6 h-6" />} label="Paquetes" color="bg-primary text-primary-foreground" onClick={() => onNavigate("packages")} badge={unreadPackages > 0 ? unreadPackages : undefined} />
+                    <QuickAction icon={<Package className="w-6 h-6" />} label="Paquetes" color="bg-primary text-primary-foreground" onClick={() => onNavigate("packages")} badge={pendingPackages > 0 ? pendingPackages : undefined} />
                     <QuickAction icon={<Users className="w-6 h-6" />} label="Invitados" color="bg-primary text-primary-foreground" onClick={() => onNavigate("visitors")} />
                 </div>
             </div>

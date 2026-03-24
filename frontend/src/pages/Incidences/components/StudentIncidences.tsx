@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Bell, MapPin, User, Wrench, MessageSquare, Loader2, Clock, Pencil, Trash2 } from "lucide-react";
+import { Plus, Bell, MapPin, User, Wrench, MessageSquare, Loader2, Clock, Pencil, Trash2, LogOut } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent } from "../../../components/ui/card";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "../../../components/ui/dialog";
@@ -16,7 +16,12 @@ import {
 } from "./IncidenceShared";
 import "../Incidences.css";
 
-export default function StudentIncidences() {
+interface StudentIncidencesProps {
+  onGoToProfile?: () => void;
+  onLogout?: () => void;
+}
+
+export default function StudentIncidences({ onGoToProfile, onLogout }: StudentIncidencesProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [incidences, setIncidences] = useState<BaseIncidence[]>([]);
   const [selectedDetails, setSelectedDetails] = useState<BaseIncidence | null>(null);
@@ -91,31 +96,55 @@ export default function StudentIncidences() {
     <div className={UI_CLASSES.mainLayout}>
       <header className={UI_CLASSES.header}>
         <h1 className={UI_CLASSES.headerTitle}>Incidencias</h1>
-        <Popover open={isNotificationsOpen} onOpenChange={(open) => { setIsNotificationsOpen(open); if (open) loadNotifications(true); }}>
-          <PopoverTrigger asChild>
-            <button type="button" className={UI_CLASSES.bellContainer} aria-label="Notificaciones">
-              <Bell className="w-6 h-6 text-white" />
-              {unreadNotifications > 0 && <span className={UI_CLASSES.bellBadge}>{unreadNotifications}</span>}
-            </button>
-          </PopoverTrigger>
-          <PopoverContent align="end" className="w-80 p-0 rounded-[28px] overflow-hidden border-none shadow-2xl">
-            <div className="bg-white p-4 border-b flex items-center justify-between">
-              <p className="text-xs font-bold uppercase tracking-[#0.2em] text-[#1B4D1C]">Notificaciones</p>
-              {notificationsLoading && <Loader2 className="w-3 h-3 animate-spin text-[#82D14C]" />}
-            </div>
-            <div className="max-h-80 overflow-y-auto p-2 bg-white">
-              {notifications.length > 0 ? notifications.map((n) => (
-                <div key={n.id} className="p-3 mb-1 rounded-2xl bg-slate-50 border border-slate-100">
-                  <div className="flex justify-between items-start mb-1 text-left">
-                    <p className="text-xs font-bold text-slate-800">{n.title}</p>
-                    <span className="text-[9px] text-slate-400">{formatNotificationTime(n.created_at)}</span>
+        <div className="flex items-center gap-2">
+          <Popover open={isNotificationsOpen} onOpenChange={(open) => { setIsNotificationsOpen(open); if (open) loadNotifications(true); }}>
+            <PopoverTrigger asChild>
+              <Button type="button" size="icon" variant="ghost" className={UI_CLASSES.topIconButton} aria-label="Notificaciones">
+                <Bell className="w-5 h-5" />
+                {unreadNotifications > 0 && <span className={UI_CLASSES.bellBadge}>{unreadNotifications}</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-80 p-0 rounded-[28px] overflow-hidden border-none shadow-2xl">
+              <div className="bg-white p-4 border-b flex items-center justify-between">
+                <p className="text-xs font-bold uppercase tracking-[#0.2em] text-[#1B4D1C]">Notificaciones</p>
+                {notificationsLoading && <Loader2 className="w-3 h-3 animate-spin text-[#82D14C]" />}
+              </div>
+              <div className="max-h-80 overflow-y-auto p-2 bg-white">
+                {notifications.length > 0 ? notifications.map((n) => (
+                  <div key={n.id} className="p-3 mb-1 rounded-2xl bg-slate-50 border border-slate-100">
+                    <div className="flex justify-between items-start mb-1 text-left">
+                      <p className="text-xs font-bold text-slate-800">{n.title}</p>
+                      <span className="text-[9px] text-slate-400">{formatNotificationTime(n.created_at)}</span>
+                    </div>
+                    <p className="text-xs text-slate-600 mt-1 text-left">{n.message}</p>
                   </div>
-                  <p className="text-xs text-slate-600 mt-1 text-left">{n.message}</p>
-                </div>
-              )) : <p className="text-center py-6 text-xs text-slate-400">Sin notificaciones</p>}
-            </div>
-          </PopoverContent>
-        </Popover>
+                )) : <p className="text-center py-6 text-xs text-slate-400">Sin notificaciones</p>}
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className={UI_CLASSES.topIconButton}
+            aria-label="Ir al perfil"
+            onClick={() => onGoToProfile?.()}
+          >
+            <User className="w-5 h-5" />
+          </Button>
+          {onLogout ? (
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className={UI_CLASSES.topIconButton}
+              aria-label="Cerrar sesión"
+              onClick={onLogout}
+            >
+              <LogOut className="w-5 h-5" />
+            </Button>
+          ) : null}
+        </div>
       </header>
 
       <main className={UI_CLASSES.mainContent}>
@@ -275,9 +304,9 @@ export default function StudentIncidences() {
 const UI_CLASSES = {
   ...COMMON_UI_CLASSES,
   mainLayout: "flex flex-col h-screen bg-[#F6F7F9] overflow-hidden",
-  header: "bg-[#1B4D1C] p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg",
-  headerTitle: "text-white text-2xl font-bold",
-  bellContainer: "relative p-2 bg-white/10 rounded-full",
+  header: "bg-primary p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg",
+  headerTitle: "text-primary-foreground text-2xl font-bold",
+  topIconButton: "relative text-primary-foreground hover:bg-primary-foreground/20 hover:scale-110 rounded-full transition-all",
   bellBadge: "absolute -right-1 -top-1 min-w-5 h-5 flex items-center justify-center rounded-full bg-[#82D14C] text-[10px] font-bold text-[#123313]",
   mainContent: "flex-1 overflow-y-auto p-4 md:p-6 pb-32 w-full",
   incidencesGrid: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5",

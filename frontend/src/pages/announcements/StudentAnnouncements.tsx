@@ -1,12 +1,19 @@
 import { useState, useEffect } from "react";
+import { LogOut, User } from "lucide-react";
 import { AnnouncementCard } from "../../components/announcement/AnnouncementCard";
 import { AnnouncementFilters } from "../../components/announcement/AnnouncementFilters";
 import { NotificationBell } from "../../components/announcement/NotificationBell";
+import { Button } from "../../components/ui/button";
 import announcementService from "../../services/announcement.service";
 import { AnnouncementList } from "../../types/announcement.types";
 
 
-export function StudentAnnouncements() {
+interface StudentAnnouncementsProps {
+  onGoToProfile?: () => void;
+  onLogout?: () => void;
+}
+
+export function StudentAnnouncements({ onGoToProfile, onLogout }: StudentAnnouncementsProps) {
   const [announcements, setAnnouncements] = useState<AnnouncementList[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -36,7 +43,29 @@ export function StudentAnnouncements() {
       {/* Header */}
       <header className="bg-primary  p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg sticky top-0 z-20">
         <h1 className="text-primary-foreground text-2xl font-bold">Avisos</h1>
-        <NotificationBell onMarkAsRead={loadAnnouncements} className="relative p-2 bg-white/10 rounded-full text-white hover:text-white" />
+        <div className="flex items-center gap-2">
+          <NotificationBell onMarkAsRead={loadAnnouncements} />
+          <Button
+            size="icon"
+            variant="ghost"
+            className="text-primary-foreground hover:bg-primary-foreground/20 hover:scale-110 rounded-full transition-all"
+            onClick={() => onGoToProfile?.()}
+            aria-label="Ir al perfil"
+          >
+            <User className="w-5 h-5" />
+          </Button>
+          {onLogout ? (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="text-primary-foreground hover:bg-primary-foreground/20 hover:scale-110 rounded-full transition-all"
+              onClick={onLogout}
+              aria-label="Cerrar sesión"
+            >
+              <LogOut className="w-5 h-5" />
+            </Button>
+          ) : null}
+        </div>
       </header>
 
       {/* Filtros */}
