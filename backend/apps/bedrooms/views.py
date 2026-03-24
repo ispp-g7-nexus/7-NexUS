@@ -13,6 +13,8 @@ from .models import Bedroom
 from .serializers import BedroomSerializer, ResidentSerializer
 from .services import delete_bedroom, list_available_bedrooms
 
+NO_RESIDENCE_CONTEXT_DETAIL = "No residence context."
+
 
 @method_decorator(csrf_exempt, name="dispatch")
 class AdminRequiredView(View):
@@ -20,10 +22,10 @@ class AdminRequiredView(View):
 		if not getattr(request, "user", None) or not request.user.is_authenticated:
 			user_data = resolve_user_from_request(request)
 			if user_data:
-				User = get_user_model()
+				user_model = get_user_model()
 				try:
-					request.user = User.objects.get(id=user_data["id"])
-				except User.DoesNotExist:
+					request.user = user_model.objects.get(id=user_data["id"])
+				except user_model.DoesNotExist:
 					return JsonResponse({"detail": "User not found."}, status=401)
 			else:
 				return JsonResponse({"detail": "Authentication credentials were not provided."}, status=401)
@@ -48,7 +50,7 @@ class BedroomListView(AdminRequiredView):
 
 	def get(self, request, *args, **kwargs):
 		if not hasattr(request, "residence") or not request.residence:
-			return JsonResponse({"detail": "No residence context."}, status=400)
+			return JsonResponse({"detail": NO_RESIDENCE_CONTEXT_DETAIL}, status=400)
 
 		filters = {}
 		tipo = request.GET.get("tipo")
@@ -67,7 +69,7 @@ class BedroomListView(AdminRequiredView):
 class BedroomCreateView(AdminRequiredView):
 	def post(self, request):
 		if not hasattr(request, "residence") or not request.residence:
-			return JsonResponse({"detail": "No residence context."}, status=400)
+			return JsonResponse({"detail": NO_RESIDENCE_CONTEXT_DETAIL}, status=400)
 
 		if not getattr(request.user, "is_staff", False):
 			return JsonResponse({"detail": "Unauthorized"}, status=403)
@@ -91,7 +93,7 @@ class BedroomCreateView(AdminRequiredView):
 class BedroomRetrieveView(AdminRequiredView):
 	def get(self, request, bedroom_id):
 		if not hasattr(request, "residence") or not request.residence:
-			return JsonResponse({"detail": "No residence context."}, status=400)
+			return JsonResponse({"detail": NO_RESIDENCE_CONTEXT_DETAIL}, status=400)
 
 		queryset = BedroomListView._with_active_student_residents(
 			Bedroom.objects.filter(residence=request.residence)
@@ -104,7 +106,7 @@ class BedroomRetrieveView(AdminRequiredView):
 class BedroomUpdateView(AdminRequiredView):
 	def put(self, request, bedroom_id):
 		if not hasattr(request, "residence") or not request.residence:
-			return JsonResponse({"detail": "No residence context."}, status=400)
+			return JsonResponse({"detail": NO_RESIDENCE_CONTEXT_DETAIL}, status=400)
 
 		bedroom = get_object_or_404(Bedroom, id=bedroom_id, residence=request.residence)
 		if not getattr(request.user, "is_staff", False):
@@ -147,7 +149,7 @@ class AvailableBedroomsView(AdminRequiredView):
 		ese residente no cuenta como ocupante (útil al editar).
 		"""
 		if not hasattr(request, "residence") or not request.residence:
-			return JsonResponse({"detail": "No residence context."}, status=400)
+			return JsonResponse({"detail": NO_RESIDENCE_CONTEXT_DETAIL}, status=400)
 		exclude_param = request.GET.get("exclude_resident_id")
 		exclude_id = int(exclude_param) if exclude_param and exclude_param.isdigit() else None
 		data = list_available_bedrooms(request.residence, exclude_membership_id=exclude_id)
@@ -157,7 +159,7 @@ class AvailableBedroomsView(AdminRequiredView):
 class BedroomResidentsDetailView(AdminRequiredView):
 	def get(self, request, bedroom_id):
 		if not hasattr(request, "residence") or not request.residence:
-			return JsonResponse({"detail": "No residence context."}, status=400)
+			return JsonResponse({"detail": NO_RESIDENCE_CONTEXT_DETAIL}, status=400)
 
 		bedroom = get_object_or_404(Bedroom, id=bedroom_id, residence=request.residence)
 		qs = bedroom.residents.filter(is_active=True, role__name="Student").select_related('user')
@@ -168,7 +170,7 @@ class BedroomResidentsDetailView(AdminRequiredView):
 class BedroomResidentsView(AdminRequiredView):
 	def get(self, request):		
 		if not hasattr(request, 'residence') or not request.residence:
-			return JsonResponse({"detail": "No residence context."}, status=400)
+			return JsonResponse({"detail": NO_RESIDENCE_CONTEXT_DETAIL}, status=400)
 		qs = Membership.objects.filter(
 			role__name__iexact="Student",
 			is_active=True,
@@ -177,10 +179,12 @@ class BedroomResidentsView(AdminRequiredView):
 		data = []
 		for m in qs:
 			user = m.user
+			full_name_getter = getattr(user, "get_full_name", None)
+			full_name = full_name_getter() if callable(full_name_getter) else str(user)
 			data.append({
 				'id': m.id,
 				'user_id': user.id,
-				'full_name': getattr(user, 'get_full_name', lambda: str(user))(),
+				'full_name': full_name,
 				'email': getattr(user, 'email', None),
 				'residence_id': m.residence_id,
 			})
@@ -190,7 +194,7 @@ class BedroomResidentsView(AdminRequiredView):
 class BuildingListView(AdminRequiredView):
     def get(self, request, *args, **kwargs):
         if not hasattr(request, "residence") or not request.residence:
-            return JsonResponse({"detail": "No residence context."}, status=400)
+            return JsonResponse({"detail": NO_RESIDENCE_CONTEXT_DETAIL}, status=400)
         
         buildings = Bedroom.objects.filter(residence=request.residence).values_list("edificio", flat=True).distinct()
         return JsonResponse(list(buildings), safe=False)

@@ -120,11 +120,14 @@ class BedroomSerializer(serializers.ModelSerializer):
             Bedroom.Tipo.TRIPLE: 3,
         }
 
-        if tipo in expected_capacity:
-            if capacidad != expected_capacity[tipo]:
-                raise serializers.ValidationError({
-                    "capacidad_maxima": f"For tipo '{tipo}' capacity must be {expected_capacity[tipo]}"
-                })
+        if tipo in expected_capacity and capacidad != expected_capacity[tipo]:
+            raise serializers.ValidationError(
+                {
+                    "capacidad_maxima": (
+                        f"For tipo '{tipo}' capacity must be {expected_capacity[tipo]}"
+                    )
+                }
+            )
 
         return attrs
 
