@@ -1,6 +1,11 @@
 import os
 
-from .base import *  # noqa: F401,F403
+from . import base as base_settings
+
+for _setting_name in dir(base_settings):
+    if _setting_name.isupper():
+        globals()[_setting_name] = getattr(base_settings, _setting_name)
+del _setting_name
 
 DEBUG = True
 ALLOWED_HOSTS = ["*"]
