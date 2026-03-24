@@ -19,6 +19,8 @@ from apps.residences.models import Residence
 
 from .models import CommonSpace, SpaceReservation
 
+NO_RESIDENCE_CONTEXT_DETAIL = "No residence context."
+
 
 def _serialize_space(space: CommonSpace) -> dict:
     return {
@@ -120,11 +122,17 @@ def _compute_available_slots(
             capacity=space.capacity,
         )
 
+        slot_status = "available"
+        if is_past:
+            slot_status = "past"
+        elif is_occupied:
+            slot_status = "occupied"
+
         slots.append(
             {
                 "start_time": current.isoformat(),
                 "end_time": slot_end.isoformat(),
-                "status": "past" if is_past else ("occupied" if is_occupied else "available"),
+                "status": slot_status,
             }
         )
 
@@ -184,10 +192,10 @@ class AuthenticatedView(View):
         if not request.user.is_authenticated:
             user_data = resolve_user_from_request(request)
             if user_data:
-                User = get_user_model()
+                user_model = get_user_model()
                 try:
-                    request.user = User.objects.get(id=user_data["id"])
-                except User.DoesNotExist:
+                    request.user = user_model.objects.get(id=user_data["id"])
+                except user_model.DoesNotExist:
                     return JsonResponse({"detail": "User not found."}, status=401)
             else:
                 return JsonResponse(
@@ -207,7 +215,7 @@ class SpaceListView(AuthenticatedView):
     def get(self, request):
         residence = _validate_residence(request)
         if not residence:
-            return JsonResponse({"detail": "No residence context."}, status=400)
+            return JsonResponse({"detail": NO_RESIDENCE_CONTEXT_DETAIL}, status=400)
 
         spaces = CommonSpace.objects.filter(residence=residence, is_active=True)
         data = [_serialize_space(space) for space in spaces]
@@ -218,7 +226,7 @@ class SpaceAvailabilityView(AuthenticatedView):
     def get(self, request, space_id: int):
         residence = _validate_residence(request)
         if not residence:
-            return JsonResponse({"detail": "No residence context."}, status=400)
+            return JsonResponse({"detail": NO_RESIDENCE_CONTEXT_DETAIL}, status=400)
 
         date_str = request.GET.get("date", "").strip()
         if not date_str:
@@ -268,7 +276,7 @@ class SpaceReservationCreateView(AuthenticatedView):
     def post(self, request, space_id: int):
         residence = _validate_residence(request)
         if not residence:
-            return JsonResponse({"detail": "No residence context."}, status=400)
+            return JsonResponse({"detail": NO_RESIDENCE_CONTEXT_DETAIL}, status=400)
 
         try:
             payload = json.loads(request.body or "{}")
@@ -405,7 +413,7 @@ class MyReservationsView(AuthenticatedView):
     def get(self, request):
         residence = _validate_residence(request)
         if not residence:
-            return JsonResponse({"detail": "No residence context."}, status=400)
+            return JsonResponse({"detail": NO_RESIDENCE_CONTEXT_DETAIL}, status=400)
 
         reservations = (
             SpaceReservation.objects.filter(
@@ -424,7 +432,7 @@ class SpaceReservationCancelView(AuthenticatedView):
     def post(self, request, reservation_id: int):
         residence = _validate_residence(request)
         if not residence:
-            return JsonResponse({"detail": "No residence context."}, status=400)
+            return JsonResponse({"detail": NO_RESIDENCE_CONTEXT_DETAIL}, status=400)
 
         reservation = get_object_or_404(
             SpaceReservation.objects.select_related("space", "user"),
@@ -548,6 +556,86 @@ class AdminSpaceListCreateView(AdminRequiredMixin, AuthenticatedView):
         return JsonResponse(_serialize_space(space), status=201)
 
 
+def _apply_space_name_update(space, payload, residence, space_id):
+    if "name" not in payload:
+        return None
+
+    name = str(payload["name"]).strip()
+    if not name:
+        return JsonResponse(
+            {"detail": "El nombre no puede estar vacío."}, status=400
+        )
+    if (
+        CommonSpace.objects.filter(residence=residence, name=name)
+        .exclude(id=space_id)
+        .exists()
+    ):
+        return JsonResponse(
+            {"detail": "Ya existe un espacio con ese nombre."}, status=400
+        )
+    space.name = name
+    return None
+
+
+def _apply_space_capacity_update(space, payload):
+    if "capacity" not in payload:
+        return None
+
+    try:
+        cap = int(payload["capacity"])
+        if cap < 1:
+            raise ValueError
+        space.capacity = cap
+    except (ValueError, TypeError):
+        return JsonResponse(
+            {"detail": "capacity debe ser un entero positivo."}, status=400
+        )
+    return None
+
+
+def _apply_space_times_update(space, payload):
+    from datetime import time as dt_time
+
+    if "open_time" in payload:
+        try:
+            space.open_time = dt_time.fromisoformat(str(payload["open_time"]))
+        except ValueError:
+            return JsonResponse(
+                {"detail": "Formato de open_time inválido."}, status=400
+            )
+
+    if "close_time" in payload:
+        try:
+            space.close_time = dt_time.fromisoformat(str(payload["close_time"]))
+        except ValueError:
+            return JsonResponse(
+                {"detail": "Formato de close_time inválido."}, status=400
+            )
+
+    if space.close_time <= space.open_time:
+        return JsonResponse(
+            {"detail": "close_time debe ser posterior a open_time."}, status=400
+        )
+    return None
+
+
+def _apply_space_interval_update(space, payload):
+    if "reservation_interval_minutes" not in payload:
+        return None
+
+    try:
+        interval = int(payload["reservation_interval_minutes"])
+        if interval < 1:
+            raise ValueError
+        space.reservation_interval_minutes = interval
+    except (ValueError, TypeError):
+        return JsonResponse(
+            {"detail": "reservation_interval_minutes debe ser un entero positivo."},
+            status=400,
+        )
+    return None
+
+
 class AdminSpaceDetailView(AdminRequiredMixin, AuthenticatedView):
     def patch(self, request, space_id: int):
         """Edita parcialmente un espacio."""
@@ -559,75 +647,27 @@ class AdminSpaceDetailView(AdminRequiredMixin, AuthenticatedView):
         except json.JSONDecodeError:
             return JsonResponse({"detail": "JSON inválido."}, status=400)
 
-        from datetime import time as dt_time
-
-        if "name" in payload:
-            name = str(payload["name"]).strip()
-            if not name:
-                return JsonResponse(
-                    {"detail": "El nombre no puede estar vacío."}, status=400
-                )
-            if (
-                CommonSpace.objects.filter(residence=residence, name=name)
-                .exclude(id=space_id)
-                .exists()
-            ):
-                return JsonResponse(
-                    {"detail": "Ya existe un espacio con ese nombre."}, status=400
-                )
-            space.name = name
+        name_error = _apply_space_name_update(space, payload, residence, space_id)
+        if name_error:
+            return name_error
 
         if "description" in payload:
             space.description = str(payload["description"]).strip()
 
-        if "capacity" in payload:
-            try:
-                cap = int(payload["capacity"])
-                if cap < 1:
-                    raise ValueError
-                space.capacity = cap
-            except (ValueError, TypeError):
-                return JsonResponse(
-                    {"detail": "capacity debe ser un entero positivo."}, status=400
-                )
-
-        if "open_time" in payload:
-            try:
-                space.open_time = dt_time.fromisoformat(str(payload["open_time"]))
-            except ValueError:
-                return JsonResponse(
-                    {"detail": "Formato de open_time inválido."}, status=400
-                )
-
-        if "close_time" in payload:
-            try:
-                space.close_time = dt_time.fromisoformat(str(payload["close_time"]))
-            except ValueError:
-                return JsonResponse(
-                    {"detail": "Formato de close_time inválido."}, status=400
-                )
+        capacity_error = _apply_space_capacity_update(space, payload)
+        if capacity_error:
+            return capacity_error
 
         if "is_active" in payload:
             space.is_active = bool(payload["is_active"])
 
-        if space.close_time <= space.open_time:
-            return JsonResponse(
-                {"detail": "close_time debe ser posterior a open_time."}, status=400
-            )
+        time_error = _apply_space_times_update(space, payload)
+        if time_error:
+            return time_error
 
-        if "reservation_interval_minutes" in payload:
-            try:
-                interval = int(payload["reservation_interval_minutes"])
-                if interval < 1:
-                    raise ValueError
-                space.reservation_interval_minutes = interval
-            except (ValueError, TypeError):
-                return JsonResponse(
-                    {
-                        "detail": "reservation_interval_minutes debe ser un entero positivo."
-                    },
-                    status=400,
-                )
+        interval_error = _apply_space_interval_update(space, payload)
+        if interval_error:
+            return interval_error
 
         space.save()
         return JsonResponse(_serialize_space(space))
@@ -679,7 +719,7 @@ class AdminSpaceNotificationsView(AdminRequiredMixin, AuthenticatedView):
     def get(self, request):
         residence = _validate_residence(request)
         if not residence:
-            return JsonResponse({"detail": "No residence context."}, status=400)
+            return JsonResponse({"detail": NO_RESIDENCE_CONTEXT_DETAIL}, status=400)
 
         now = timezone.now()
         reservations = (
