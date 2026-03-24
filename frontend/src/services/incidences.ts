@@ -1,7 +1,4 @@
 import { fetchWithAuth } from '../utils/api';
-
-// --- INTERFACES DE DATOS (Sincronizadas con Django) ---
-
 export type IncidenceStatus = 'pending' | 'reviewing' | 'in_progress' | 'resolved';
 export type PriorityLevel = 'low' | 'high';
 export type LocationType = 'habitacion' | 'baño' | 'cocina' | 'comedor' | 'exterior' | 'salas_comunes';
@@ -14,13 +11,13 @@ export interface Incidence {
   room_number: string | null;
   status: IncidenceStatus;
   priority: PriorityLevel;
-  student: number; 
-  student_name?: string; 
-  
-  assigned_staff: number | null;       
-  assigned_staff_name?: string;          
+  student: number;
+  student_name?: string;
+
+  assigned_staff: number | null;
+  assigned_staff_name?: string;
   assigned_staff_job?: string;
-  assigned_external_name?: string;        
+  assigned_external_name?: string;
 
   admin_notes: string | null;
   is_active: boolean;
@@ -36,28 +33,31 @@ export interface IncidenceUpdate {
   created_at: string;
 }
 
-// --- DTOs PARA PETICIONES ---
-
 export interface CreateIncidenceDTO {
   title: string;
   description: string;
   location_type: LocationType;
   room_number?: string | null;
-  priority?: PriorityLevel; 
+  priority?: PriorityLevel;
 }
 
 export interface UpdateIncidenceDTO {
+  title?: string;
+  description?: string;
+  location_type?: LocationType;
+  img?: string | null;
+  priority?: PriorityLevel;
   status?: IncidenceStatus;
   assigned_staff?: number | null;
-  assigned_external_name?: string; 
+  assigned_external_name?: string;
   admin_notes?: string;
-  quick_comment?: string; 
+  quick_comment?: string;
+  room_number?: string | null;
 }
 
-// --- EL SERVICIO ---
 
 export const IncidenceService = {
-  
+
   /**
    * Obtener todas las incidencias (Vista Admin)
    */
@@ -85,7 +85,13 @@ export const IncidenceService = {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail || 'Error al actualizar');
+      console.error("DEBUG BACKEND ERROR:", errorData); 
+
+      const details = Object.entries(errorData)
+        .map(([key, value]) => `${key}: ${Array.isArray(value) ? value[0] : value}`)
+        .join(", ");
+
+      throw new Error(details || 'Error al actualizar');
     }
     return response.json();
   },
@@ -110,5 +116,12 @@ export const IncidenceService = {
     const response = await fetchWithAuth(`/api/incidences/${incidenceId}/updates/`);
     if (!response.ok) throw new Error('Error al cargar el historial');
     return response.json();
-  }
+  },
+
+  delete: async (id: number): Promise<void> => {
+    const response = await fetchWithAuth(`/api/incidences/${id}/`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) throw new Error('Error al eliminar la incidencia');
+  },
 };

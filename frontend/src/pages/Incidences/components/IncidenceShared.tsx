@@ -119,7 +119,9 @@ export const COMMON_UI_CLASSES = {
   dialogNotes: "max-w-[95vw] sm:max-w-[500px] rounded-[30px] p-0 border-none overflow-hidden shadow-2xl",
   notesTitle: "p-5 bg-white border-b border-slate-50 font-bold text-primary text-[11px] text-center uppercase tracking-widest",
   btnFloating: "fixed bottom-24 right-8 w-16 h-16 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full shadow-2xl flex items-center justify-center z-50 transition-transform active:scale-90",
-
+  actionBtn: "p-2 rounded-full transition-colors hover:bg-slate-100",
+  deleteBtn: "text-red-500 hover:bg-red-50",
+  editBtn: "text-blue-500 hover:bg-blue-50"
 };
 
 export const IncidenceSelect = ({ value, onChange, options, placeholder, className = "" }: any) => {
