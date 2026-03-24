@@ -21,14 +21,14 @@ class ResidenceBrandingSerializer(serializers.ModelSerializer):
             "logo_url": {
                 "error_messages": {
                     "invalid": "La URL del logo debe ser válida (ej: https://ejemplo.com/logo.png)",
-                    "max_length": "La URL del logo no debe exceder 200 caracteres (actualmente: {input_len})",
+                    "max_length": "La URL del logo no debe exceder {max_length} caracteres",
                     "blank": "Este campo es opcional pero si se proporciona debe contener una URL válida",
                 }
             },
             "favicon_url": {
                 "error_messages": {
                     "invalid": "La URL del favicon debe ser válida (ej: https://ejemplo.com/favicon.ico)",
-                    "max_length": "La URL del favicon no debe exceder 200 caracteres (actualmente: {input_len})",
+                    "max_length": "La URL del favicon no debe exceder {max_length} caracteres",
                     "blank": "Este campo es opcional pero si se proporciona debe contener una URL válida",
                 }
             },
