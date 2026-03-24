@@ -1,3 +1,5 @@
+import os
+
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django_tenants.test.cases import FastTenantTestCase
@@ -72,16 +74,18 @@ class AnnouncementModuleTests(FastTenantTestCase):
             )
 
             # Crear usuarios
+            TEST_PASSWORD = os.environ.get('TEST_PASSWORD', 'demo1234')
+
             self.admin_user = user_model.objects.create_user(
                 username="admin",
                 email="admin@test.com",
-                password="demo1234",
+                password=TEST_PASSWORD,
                 is_staff=True,
             )
             self.resident_user = user_model.objects.create_user(
                 username="resident",
                 email="resident@test.com",
-                password="demo1234",
+                password=TEST_PASSWORD,
             )
 
             # Asignar rol "admin" al admin_user
