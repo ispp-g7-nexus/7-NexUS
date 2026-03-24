@@ -1,11 +1,17 @@
 import json
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django_tenants.test.cases import FastTenantTestCase
 from django_tenants.test.client import TenantClient
+from rest_framework.exceptions import NotFound, ValidationError
 
+from apps.chats import realtime
 from apps.chats.models import ChatGroup, ChatGroupLabel, ChatGroupMember, GroupMessage, PrivateConversation, PrivateMessage
+from apps.chats.permissions import IsAuthenticatedResident, IsChatGroupManager, IsResidenceAdmin
+from apps.chats.serializers import AddChatMemberSerializer, ChatGroupCreateUpdateSerializer, ChatGroupLabelSerializer, ChatGroupSerializer, PrivateConversationSerializer, SendMessageSerializer, StartConversationSerializer
+from apps.chats.views import ChatEventsStreamView, MyGroupsViewSet, PrivateConversationViewSet, ServerSentEventsRenderer
 from apps.common.services import build_access_token
 from apps.membership.models import Membership, Role
 from apps.residences.models import Residence, ResidenceDomain
@@ -164,6 +170,31 @@ class ChatsModuleTests(FastTenantTestCase):
         self.assertFalse(created_2)
         self.assertEqual(conv_1.id, conv_2.id)
         self.assertLess(conv_1.member_one_id, conv_1.member_two_id)
+
+    def test_models_string_representations(self):
+        label = ChatGroupLabel.objects.create(residence=self.residence, name="etiqueta")
+        group_message = GroupMessage.objects.create(
+            group=self.group,
+            sender=self.admin_membership,
+            content="mensaje",
+        )
+        private_conversation, _ = PrivateConversation.get_or_create_conversation(
+            residence=self.residence,
+            member_a=self.student_membership,
+            member_b=self.student_two_membership,
+        )
+        private_message = PrivateMessage.objects.create(
+            conversation=private_conversation,
+            sender=self.student_membership,
+            content="privado",
+        )
+
+        self.assertEqual(str(self.group), "General")
+        self.assertIn(":", str(self.admin_group_member))
+        self.assertEqual(str(label), "etiqueta")
+        self.assertIn("Msg", str(group_message))
+        self.assertIn("Conversación", str(private_conversation))
+        self.assertIn("Msg", str(private_message))
 
     # Views
 
@@ -515,6 +546,239 @@ class ChatsModuleTests(FastTenantTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "text/event-stream")
+
+    # Unit branches
+
+    def test_permissions_unit_branches(self):
+        is_admin = IsResidenceAdmin()
+        is_manager = IsChatGroupManager()
+        is_resident = IsAuthenticatedResident()
+
+        anonymous = SimpleNamespace(is_authenticated=False)
+        request_anon = SimpleNamespace(user=anonymous, residence=self.residence)
+        self.assertFalse(is_admin.has_permission(request_anon, SimpleNamespace()))
+        self.assertFalse(is_manager.has_permission(request_anon, SimpleNamespace(action="list")))
+        self.assertFalse(is_resident.has_permission(request_anon, SimpleNamespace()))
+
+        request_no_residence = SimpleNamespace(user=self.admin_user, residence=None)
+        self.assertFalse(is_admin.has_permission(request_no_residence, SimpleNamespace()))
+        self.assertFalse(is_manager.has_permission(request_no_residence, SimpleNamespace(action="list")))
+        self.assertFalse(is_resident.has_permission(request_no_residence, SimpleNamespace()))
+
+        request_student = SimpleNamespace(user=self.student_user, residence=self.residence)
+        self.assertFalse(is_manager.has_permission(request_student, SimpleNamespace(action="create")))
+        self.assertTrue(is_manager.has_permission(request_student, SimpleNamespace(action="list")))
+
+    def test_serializers_unit_branches(self):
+        label_serializer = ChatGroupLabelSerializer(context={})
+        self.assertEqual(label_serializer.validate_name("  social  "), "social")
+        with self.assertRaises(Exception):
+            label_serializer.validate_name("   ")
+
+        group_serializer = ChatGroupCreateUpdateSerializer(context={})
+        self.assertEqual(group_serializer.validate_name("  Grupo  "), "Grupo")
+        with self.assertRaises(Exception):
+            group_serializer.validate_name("   ")
+
+        request_ctx = SimpleNamespace(residence=self.residence)
+        add_member_serializer = AddChatMemberSerializer(context={"request": request_ctx})
+        with self.assertRaises(Exception):
+            add_member_serializer.validate_email("not-found@chats.test")
+        with self.assertRaises(Exception):
+            add_member_serializer.validate_email(self.no_membership_user.email)
+
+        chat_serializer = ChatGroupSerializer(context={})
+        self.assertTrue(chat_serializer.get_current_user_can_interact(self.group))
+
+        req_without_membership = SimpleNamespace(user=self.no_membership_user, residence=self.residence)
+        chat_serializer = ChatGroupSerializer(context={"request": req_without_membership})
+        self.assertFalse(chat_serializer.get_current_user_can_interact(self.group))
+
+        req_not_in_group = SimpleNamespace(user=self.student_two_user, residence=self.residence)
+        chat_serializer = ChatGroupSerializer(context={"request": req_not_in_group})
+        self.assertFalse(chat_serializer.get_current_user_can_interact(self.group))
+
+        conversation, _ = PrivateConversation.get_or_create_conversation(
+            residence=self.residence,
+            member_a=self.student_membership,
+            member_b=self.student_two_membership,
+        )
+        private_serializer = PrivateConversationSerializer(context={})
+        self.assertIsNone(private_serializer.get_last_message(conversation))
+        self.assertEqual(private_serializer.get_unread_count(conversation), 0)
+
+        start_serializer = StartConversationSerializer(
+            context={
+                "request": SimpleNamespace(residence=self.residence),
+                "my_membership": self.student_membership,
+            }
+        )
+        with self.assertRaises(Exception):
+            start_serializer.validate_membership_id(self.admin_membership.id)
+
+        send_serializer = SendMessageSerializer()
+        self.assertEqual(send_serializer.validate_content("  hola  "), "hola")
+
+    def test_realtime_local_subscriber_and_publish_helpers(self):
+        q = realtime._subscribe_local(self.residence.id)
+        self.assertIn(q, realtime._local_subscribers[self.residence.id])
+
+        realtime._publish_local(self.residence.id, "payload")
+        self.assertEqual(q.get(timeout=1), "payload")
+
+        realtime._unsubscribe_local(self.residence.id, q)
+        self.assertNotIn(self.residence.id, realtime._local_subscribers)
+
+        realtime._unsubscribe_local(self.residence.id, q)
+
+    @patch("apps.chats.realtime._get_redis_client")
+    @patch("apps.chats.realtime._publish_local")
+    def test_publish_chat_event_branches(self, publish_local_mock, redis_client_mock):
+        realtime.publish_chat_event(0, "ignored", {})
+        publish_local_mock.assert_not_called()
+
+        redis_client_mock.return_value.publish.side_effect = realtime.redis.RedisError("down")
+        realtime.publish_chat_event(self.residence.id, "ev", {"x": 1})
+        publish_local_mock.assert_called_once()
+
+    def test_realtime_publish_local_handles_queue_errors(self):
+        class BrokenQueue:
+            def put_nowait(self, _):
+                raise RuntimeError("boom")
+
+        realtime._local_subscribers[self.residence.id].add(BrokenQueue())
+        realtime._publish_local(self.residence.id, "x")
+        realtime._local_subscribers.clear()
+
+    @patch("apps.chats.realtime._get_redis_client")
+    def test_stream_chat_events_with_redis_pubsub(self, redis_client_mock):
+        class PubSubStub:
+            def __init__(self):
+                self._calls = 0
+                self.closed = False
+
+            def subscribe(self, _channel):
+                return None
+
+            def get_message(self, timeout=0.01):
+                self._calls += 1
+                if self._calls == 1:
+                    return {"type": "message", "data": "payload"}
+                return None
+
+            def close(self):
+                self.closed = True
+
+        pubsub = PubSubStub()
+        redis_client_mock.return_value.pubsub.return_value = pubsub
+
+        generator = realtime.stream_chat_events(self.residence.id, keepalive_seconds=9999)
+        first_chunk = next(generator)
+        second_chunk = next(generator)
+        self.assertEqual(first_chunk, "retry: 5000\n\n")
+        self.assertEqual(second_chunk, "data: payload\n\n")
+        generator.close()
+        self.assertTrue(pubsub.closed)
+
+    @patch("apps.chats.realtime._subscribe_local")
+    @patch("apps.chats.realtime._unsubscribe_local")
+    @patch("apps.chats.realtime._get_redis_client")
+    def test_stream_chat_events_fallback_local_and_ping(self, redis_client_mock, unsubscribe_mock, subscribe_mock):
+        redis_client_mock.side_effect = realtime.redis.RedisError("down")
+        queue_obj = realtime.Queue()
+        queue_obj.put("local-payload")
+        subscribe_mock.return_value = queue_obj
+
+        with patch("apps.chats.realtime.time.monotonic", side_effect=[0, 2, 4, 6]):
+            generator = realtime.stream_chat_events(self.residence.id, keepalive_seconds=1)
+            first_chunk = next(generator)
+            second_chunk = next(generator)
+            third_chunk = next(generator)
+            self.assertEqual(first_chunk, "retry: 5000\n\n")
+            self.assertEqual(second_chunk, "data: local-payload\n\n")
+            self.assertEqual(third_chunk, "event: ping\ndata: {}\n\n")
+            generator.close()
+
+        unsubscribe_mock.assert_called_once()
+
+    def test_renderer_and_events_filtering_helper(self):
+        renderer = ServerSentEventsRenderer()
+        self.assertEqual(renderer.render(None), b"")
+        self.assertEqual(renderer.render(b"abc"), b"abc")
+
+        ChatGroupMember.objects.create(
+            group=self.group,
+            membership=self.student_membership,
+            is_admin=False,
+            can_interact=True,
+        )
+        chunks = [
+            "event: ping\n\n",
+            "data: not-json\n\n",
+            'data: {"event": "other", "payload": {}}\n\n',
+            'data: {"event": "group_message_created", "payload": {"group_id": "bad"}}\n\n',
+            f'data: {{"event": "group_message_created", "payload": {{"group_id": {self.group.id}}}}}\n\n',
+        ]
+
+        with patch("apps.chats.views.stream_chat_events", return_value=iter(chunks)):
+            view = ChatEventsStreamView()
+            result = list(view._stream_events_for_membership(self.residence.id, self.student_membership.id))
+
+        self.assertEqual(len(result), 4)
+
+    def test_view_unit_not_found_and_validation_branches(self):
+        private_view = PrivateConversationViewSet()
+
+        request_without_residence = SimpleNamespace(user=self.student_user, residence=None)
+        self.assertIsNone(private_view._get_membership(request_without_residence))
+
+        no_membership_request = SimpleNamespace(user=self.no_membership_user, residence=self.residence)
+        self.assertEqual(private_view.list(no_membership_request).data, [])
+
+        with self.assertRaises(NotFound):
+            private_view.retrieve(no_membership_request, pk=self.group.id)
+        with self.assertRaises(ValidationError):
+            private_view.start(no_membership_request)
+        with self.assertRaises(NotFound):
+            private_view.messages(no_membership_request, pk=self.group.id)
+
+        student_request = SimpleNamespace(user=self.student_user, residence=self.residence, method="GET", data={})
+        with self.assertRaises(NotFound):
+            private_view.retrieve(student_request, pk=999999)
+        with self.assertRaises(NotFound):
+            private_view.messages(student_request, pk=999999)
+
+        my_groups_view = MyGroupsViewSet()
+        my_groups_view.request = request_without_residence
+        self.assertEqual(my_groups_view.get_queryset().count(), 0)
+
+        my_groups_view.request = no_membership_request
+        self.assertEqual(my_groups_view.get_queryset().count(), 0)
+
+        with self.assertRaises(ValidationError):
+            my_groups_view.leave(no_membership_request, pk=self.group.id)
+
+        student_simple_request = SimpleNamespace(user=self.student_user, residence=self.residence, method="GET", data={})
+        with self.assertRaises(NotFound):
+            my_groups_view.leave(student_simple_request, pk=999999)
+        with self.assertRaises(NotFound):
+            my_groups_view.messages(student_simple_request, pk=999999)
+
+        chat_member = self._add_student_to_group()
+        chat_member.can_interact = False
+        chat_member.interaction_disabled_at = None
+        chat_member.save(update_fields=["can_interact", "interaction_disabled_at"])
+        GroupMessage.objects.create(group=self.group, sender=self.admin_membership, content="old")
+        self.assertEqual(
+            self.student_client.get(self._url(f"/my-groups/{self.group.id}/messages/")).status_code,
+            200,
+        )
+        chat_member.refresh_from_db()
+        self.assertIsNotNone(chat_member.interaction_disabled_at)
+
+        events_view = ChatEventsStreamView()
+        with self.assertRaises(ValidationError):
+            events_view.get(SimpleNamespace(user=self.student_user, residence=None))
 
     # Permissions
 
