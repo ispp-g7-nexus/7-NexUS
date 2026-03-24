@@ -73,12 +73,15 @@ class PackageApiTests(TenantTestCase):
         # relation checks against tenant-only tables in public schema.
         try:
             connection.set_tenant(cls.tenant)
-            cls.domain.delete()
+            if getattr(cls, "domain", None):
+                cls.domain.delete()
             cls.tenant.__class__.objects.filter(pk=cls.tenant.pk).delete()
             cls.tenant._drop_schema(force_drop=True)
         finally:
             connection.set_schema_to_public()
             cls.remove_allowed_test_domain()
+            if hasattr(cls, "cls_atomics"):
+                super(TenantTestCase, cls).tearDownClass()
 
     def setUp(self):
         super().setUp()
