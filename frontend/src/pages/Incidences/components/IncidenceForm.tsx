@@ -25,6 +25,7 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
   const [urgent, setUrgent] = useState<boolean>(false)
   const [staffId, setStaffId] = useState("")
   const [externalName, setExternalName] = useState("")
+  const [areaError, setAreaError] = useState(false)
   const [base64Image, setBase64Image] = useState<string | null>(null)
   const [rooms, setRooms] = useState<any[]>([])
   const [selectedRoomId, setSelectedRoomId] = useState<string>("")
@@ -61,14 +62,12 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
     const payload: any = {
       title: formData.get("title") as string,
       description: formData.get("description") as string,
-      location_type: locationType as LocationType,
+      location_type: locationType,
       priority: (urgent ? "high" : "low") as 'low' | 'high',
       room_number: locationType === "habitacion" && selectedRoomId ? Number(selectedRoomId) : null,
       assigned_staff: isAdmin && staffId && !["external", "none"].includes(staffId) ? Number(staffId) : null,
       assigned_external_name: isAdmin && staffId === "external" ? externalName : "",
       img: base64Image,
-      location_type: locationType,
-      priority: urgent ? "high" : "low"
     };
 
     if (locationType === 'habitacion') {

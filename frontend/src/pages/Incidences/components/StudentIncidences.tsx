@@ -173,7 +173,7 @@ export default function StudentIncidences() {
                           <div className={COMMON_UI_CLASSES.cardLocationRow}>
                             <MapPin size={14} className="text-slate-400" />
                             <span className="text-[11px] font-semibold text-slate-500 truncate">
-                              {LOCATION_LABELS[inc.location_type]} {inc.room_number?.numero ? `• Hab. ${inc.room_number.numero}` : ''}
+                              {LOCATION_LABELS[inc.location_type]}
                             </span>
                           </div>
                         </div>
@@ -192,7 +192,6 @@ export default function StudentIncidences() {
                               className={COMMON_UI_CLASSES.btnNotes}>VER DETALLES
                             </Button>
                           </div>
-                          <div className="flex justify-end"><Button variant="outline" onClick={async () => { const res = await fetchWithAuth(`${API_URL_INCIDENCES}${inc.id}/`); if (res.ok) { setSelectedDetails(await res.json()); setIsNotesOpen(true); } }} className={UI_CLASSES.btnNotes}>VER DETALLES</Button></div>
                         </div>
                       </div>
                     </CardContent>

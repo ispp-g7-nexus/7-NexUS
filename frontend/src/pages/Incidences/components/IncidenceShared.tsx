@@ -13,7 +13,8 @@ export interface BaseIncidence {
   description?: string;
   img?: string;
   student_name?: string;
-  room_number?: {
+  room_number?: number | null;
+  room_number_detail?: {
     id: number;
     numero: string;
     planta?: number;
