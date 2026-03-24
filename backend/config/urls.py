@@ -11,8 +11,10 @@ from apps.common.views import (
 from django.conf import settings
 from django.http import JsonResponse
 from django.urls import include, path
+from django.views.decorators.http import require_GET
 
 
+@require_GET
 def healthcheck(_request):
     return JsonResponse({"status": "ok"})
 

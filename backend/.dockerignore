@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.coverage
+coverage.xml
+.pytest_cache/
+venv/
+*.sqlite3
+celerybeat-schedule
