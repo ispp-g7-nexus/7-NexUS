@@ -138,7 +138,6 @@ class ResidenceBrandingTests(FastTenantTestCase):
 
     def test_get_branding_admin_with_existing_record(self):
         """Admin should get existing branding data."""
-        # Create branding
         branding = ResidenceBranding.objects.create(
             residence=self.residence,
             primary_color="#FF0000",
@@ -191,7 +190,7 @@ class ResidenceBrandingTests(FastTenantTestCase):
         self.assertEqual(data["secondary_color"], "#00FF00")
         self.assertEqual(data["accent_color"], "#0000FF")
 
-        # Verify persisted
+        # Verify persistence
         branding = ResidenceBranding.objects.get(residence=self.residence)
         self.assertEqual(branding.primary_color, "#FF0000")
         self.assertEqual(branding.secondary_color, "#00FF00")
@@ -210,7 +209,7 @@ class ResidenceBrandingTests(FastTenantTestCase):
         self.assertEqual(data["logo_url"], "https://example.com/logo.png")
         self.assertEqual(data["favicon_url"], "https://example.com/favicon.ico")
 
-        # Verify persisted
+        # Verify persistence
         branding = ResidenceBranding.objects.get(residence=self.residence)
         self.assertEqual(branding.logo_url, "https://example.com/logo.png")
         self.assertEqual(branding.favicon_url, "https://example.com/favicon.ico")
@@ -329,7 +328,6 @@ class ResidenceBrandingTests(FastTenantTestCase):
 
     def test_patch_branding_partial_update(self):
         """Partial updates should preserve existing values."""
-        # First, set all values
         initial_payload = {
             "primary_color": "#FF0000",
             "secondary_color": "#00FF00",
@@ -339,7 +337,6 @@ class ResidenceBrandingTests(FastTenantTestCase):
         }
         self._patch_json(self.admin_client, initial_payload)
 
-        # Then, update only primary color
         update_payload = {
             "primary_color": "#AABBCC",
         }
@@ -348,7 +345,6 @@ class ResidenceBrandingTests(FastTenantTestCase):
 
         data = response.json()
         self.assertEqual(data["primary_color"], "#AABBCC")
-        # Other values should be preserved
         self.assertEqual(data["secondary_color"], "#00FF00")
         self.assertEqual(data["accent_color"], "#0000FF")
         self.assertEqual(data["logo_url"], "https://example.com/logo.png")
@@ -378,7 +374,6 @@ class ResidenceBrandingTests(FastTenantTestCase):
 
     def test_get_branding_only_residence_specific(self):
         """Each residence should have its own branding."""
-        # Create another residence
         other_residence = Residence.objects.create(
             name="Other Residence",
             slug="other-residence",
@@ -387,19 +382,16 @@ class ResidenceBrandingTests(FastTenantTestCase):
             is_active=True,
         )
 
-        # Create branding for first residence
         ResidenceBranding.objects.create(
             residence=self.residence,
             primary_color="#FF0000",
         )
 
-        # Create branding for second residence
         ResidenceBranding.objects.create(
             residence=other_residence,
             primary_color="#00FF00",
         )
 
-        # Admin of first residence should see first residence's branding
         response = self.admin_client.get(self._get_branding_url())
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = response.json()
