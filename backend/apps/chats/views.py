@@ -1,7 +1,7 @@
 import json
 
 from django.db.models import Prefetch, Q
-from django.http import StreamingHttpResponse
+from django.http import Http404, StreamingHttpResponse
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -54,6 +54,12 @@ class ServerSentEventsRenderer(BaseRenderer):
 
 class ChatGroupViewSet(viewsets.ModelViewSet):
 	permission_classes = [IsChatGroupManager]
+
+	def get_object(self):
+		try:
+			return super().get_object()
+		except Http404 as exc:
+			raise NotFound("Grupo no encontrado.") from exc
 
 	def _get_actor_membership(self):
 		residence = getattr(self.request, "residence", None)
