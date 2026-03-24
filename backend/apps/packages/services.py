@@ -481,12 +481,11 @@ def _resolve_resident_match(
 
     room_matches = _filter_memberships_by_location(memberships, room, building)
 
-    if len(room_matches) == 1 and confidence >= RESIDENT_MATCH_CONFIDENCE_THRESHOLD:
-        return _build_match_response(
-            room_matches[0].id, "unique_room_match", [], confidence
-        )
-
     if len(room_matches) == 1:
+        if confidence >= RESIDENT_MATCH_CONFIDENCE_THRESHOLD:
+            return _build_match_response(
+                room_matches[0].id, "unique_room_match", [], confidence
+            )
         return _build_match_response(None, "low_confidence", room_matches, confidence)
 
     if len(room_matches) > 1:

@@ -211,7 +211,7 @@ function buildResidentOptions(
   );
 }
 
-function PackageStatusBadge({ status }: { status: PackageStatus }) {
+function PackageStatusBadge({ status }: { readonly status: PackageStatus }) {
   return (
     <Badge variant={status === "DELIVERED" ? "success" : "warning"}>
       {getPackageStatusLabel(status)}
@@ -226,11 +226,11 @@ function PackagesStatCard({
   iconClassName,
   iconBgClassName,
 }: {
-  label: string;
-  value: number;
-  icon: ReactNode;
-  iconClassName?: string;
-  iconBgClassName?: string;
+  readonly label: string;
+  readonly value: number;
+  readonly icon: ReactNode;
+  readonly iconClassName?: string;
+  readonly iconBgClassName?: string;
 }) {
   return (
     <Card className="border-gray-100 shadow-sm">
@@ -260,11 +260,11 @@ function PackageCard({
   onDelete,
   onDeliver,
 }: {
-  packageItem: PackageAdminItem;
-  onView: (packageItem: PackageAdminItem) => void;
-  onEdit: (packageItem: PackageAdminItem) => void;
-  onDelete: (packageItem: PackageAdminItem) => void;
-  onDeliver: (packageItem: PackageAdminItem) => void;
+  readonly packageItem: PackageAdminItem;
+  readonly onView: (packageItem: PackageAdminItem) => void;
+  readonly onEdit: (packageItem: PackageAdminItem) => void;
+  readonly onDelete: (packageItem: PackageAdminItem) => void;
+  readonly onDeliver: (packageItem: PackageAdminItem) => void;
 }) {
   return (
     <Card className="border-gray-100 shadow-sm transition-shadow hover:shadow-md">
@@ -375,8 +375,8 @@ function PackageDetailsDialog({
   packageItem,
   onClose,
 }: {
-  packageItem: PackageAdminItem | null;
-  onClose: () => void;
+  readonly packageItem: PackageAdminItem | null;
+  readonly onClose: () => void;
 }) {
   return (
     <Dialog open={packageItem !== null} onOpenChange={(open) => !open && onClose()}>
@@ -476,9 +476,9 @@ function DeletePackageDialog({
   onClose,
   onConfirm,
 }: {
-  packageItem: PackageAdminItem | null;
-  onClose: () => void;
-  onConfirm: (id: number) => Promise<boolean>;
+  readonly packageItem: PackageAdminItem | null;
+  readonly onClose: () => void;
+  readonly onConfirm: (id: number) => Promise<boolean>;
 }) {
   const [submitting, setSubmitting] = useState(false);
 
@@ -539,9 +539,9 @@ function DeliveryDialog({
   onClose,
   onConfirm,
 }: {
-  packageItem: PackageAdminItem | null;
-  onClose: () => void;
-  onConfirm: (id: number) => Promise<boolean>;
+  readonly packageItem: PackageAdminItem | null;
+  readonly onClose: () => void;
+  readonly onConfirm: (id: number) => Promise<boolean>;
 }) {
   const [submitting, setSubmitting] = useState(false);
 
@@ -619,8 +619,8 @@ function PackagePreviewCard({
   preview,
   onSelectCandidate,
 }: {
-  preview: PackageLabelPreview;
-  onSelectCandidate: (candidate: PackageResidentCandidate) => void;
+  readonly preview: PackageLabelPreview;
+  readonly onSelectCandidate: (candidate: PackageResidentCandidate) => void;
 }) {
   return (
     <div className="space-y-3 rounded-xl border border-emerald-100 bg-emerald-50/60 p-4">
@@ -699,9 +699,9 @@ function ResidentAutocomplete({
   value,
   onChange,
 }: {
-  residents: Resident[];
-  value: string;
-  onChange: (value: string) => void;
+  readonly residents: Resident[];
+  readonly value: string;
+  readonly onChange: (value: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -821,12 +821,12 @@ function PackageFormDialog({
   onCreate,
   onUpdate,
 }: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  packageItem: PackageAdminItem | null;
-  residents: Resident[];
-  onCreate: (payload: CreatePackagePayload) => Promise<boolean>;
-  onUpdate: (id: number, payload: UpdatePackagePayload) => Promise<boolean>;
+  readonly open: boolean;
+  readonly onOpenChange: (open: boolean) => void;
+  readonly packageItem: PackageAdminItem | null;
+  readonly residents: Resident[];
+  readonly onCreate: (payload: CreatePackagePayload) => Promise<boolean>;
+  readonly onUpdate: (id: number, payload: UpdatePackagePayload) => Promise<boolean>;
 }) {
   const isEdit = packageItem !== null;
   const [form, setForm] = useState<PackageFormState>(EMPTY_FORM);
