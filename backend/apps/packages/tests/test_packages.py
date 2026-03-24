@@ -678,6 +678,78 @@ class PackageApiTests(TenantTestCase):
         request_payload = mocked_post.call_args.kwargs["json"]
         self.assertEqual(request_payload["response_format"]["type"], "json_schema")
 
+    @override_settings(
+        FIREWORKS_API_KEY="test-fireworks-key",
+        FIREWORKS_LABEL_MODEL="accounts/test/models/kimi",
+    )
+    @patch("apps.packages.services.requests.post")
+    def test_label_preview_matches_resident_when_ocr_name_has_extra_surname(
+        self, mocked_post
+    ):
+        user_model = get_user_model()
+        pablo_user = user_model.objects.create_user(
+            username="pablo-perez",
+            email="pablo.perez@example.com",
+            password=TEST_PASSWORD,
+            first_name="Pablo",
+            last_name="P\u00e9rez",
+        )
+        pablo_bedroom = Bedroom.objects.create(
+            numero="109",
+            edificio="A",
+            capacidad_maxima=1,
+            tipo=Bedroom.Tipo.INDIVIDUAL,
+            residence=self.residence,
+            is_active=True,
+        )
+        pablo_membership = Membership.objects.create(
+            user=pablo_user,
+            role=self.student_role,
+            residence=self.residence,
+            is_active=True,
+            bedroom=pablo_bedroom,
+        )
+
+        mocked_post.return_value = DummyFireworksResponse(
+            {
+                "choices": [
+                    {
+                        "message": {
+                            "content": json.dumps(
+                                {
+                                    "recipient_name": "Pablo Perez Gaspar",
+                                    "room": "",
+                                    "building": "",
+                                    "carrier": "",
+                                    "tracking_number": "ES2388219344",
+                                    "notes": "",
+                                    "confidence": 0.85,
+                                }
+                            )
+                        }
+                    }
+                ]
+            }
+        )
+
+        response = self.admin_client.post(
+            "/api/packages/label-preview/",
+            data={"label_image": self._label_image()},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(
+            payload["resident_match"]["resident_id"], pablo_membership.id
+        )
+        self.assertEqual(
+            payload["resident_match"]["reason"], "resident_name_subset_match"
+        )
+        self.assertEqual(payload["suggested_fields"]["recipient_name"], "Pablo P\u00e9rez")
+        self.assertEqual(payload["suggested_fields"]["room"], "109")
+        self.assertEqual(payload["suggested_fields"]["building"], "A")
+        self.assertEqual(payload["candidate_residents"], [])
+
     @patch("apps.packages.services.requests.post")
     def test_label_preview_rejects_non_image_uploads(self, mocked_post):
         response = self.admin_client.post(

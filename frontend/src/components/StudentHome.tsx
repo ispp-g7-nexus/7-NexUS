@@ -9,6 +9,7 @@ import {
     Package,
     AlertCircle,
     QrCode,
+    User,
     Users,
     Utensils,
     Wifi
@@ -430,7 +431,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                     <div className="flex gap-2">
                         <Popover open={isNotificationsOpen} onOpenChange={handleNotificationsOpenChange}>
                             <PopoverTrigger asChild>
-                                <Button size="icon" variant="ghost" className="text-primary-foreground hover:bg-primary-foreground/20 rounded-full relative">
+                                <Button size="icon" variant="ghost" className="text-primary-foreground hover:bg-primary-foreground/20 hover:scale-110 rounded-full transition-all relative">
                                     <Bell className="w-6 h-6" />
                                     {hasUnreadNotifications && (
                                         <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-destructive rounded-full border-2 border-primary" />
@@ -484,8 +485,17 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                                 </div>
                             </PopoverContent>
                         </Popover>
+                        <Button
+                            size="icon"
+                            variant="ghost"
+                            className="text-primary-foreground hover:bg-primary-foreground/20 hover:scale-110 rounded-full transition-all"
+                            onClick={() => onNavigate("community")}
+                            aria-label="Ir al perfil"
+                        >
+                            <User className="w-5 h-5" />
+                        </Button>
                         {onLogout && (
-                            <Button size="icon" variant="ghost" className="text-primary-foreground hover:bg-primary-foreground/20 rounded-full" onClick={onLogout}>
+                            <Button size="icon" variant="ghost" className="text-primary-foreground hover:bg-primary-foreground/20 hover:scale-110 rounded-full transition-all" onClick={onLogout}>
                                 <LogOut className="w-5 h-5" />
                             </Button>
                         )}

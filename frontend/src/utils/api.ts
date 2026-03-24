@@ -20,12 +20,18 @@ export function getCookie(name: string): string | null {
 export async function fetchWithAuth(url: string, options: RequestInit = {}) {
     // Set up headers
     const headers = new Headers(options.headers || {});
+    const isFormDataBody =
+        typeof FormData !== "undefined" && options.body instanceof FormData;
 
     // Always include credentials to send session cookies
     options.credentials = 'include';
 
     // Default to JSON if not set and method is writing data
-    if ((options.method || 'GET').toUpperCase() !== 'GET' && !headers.has('Content-Type')) {
+    if (
+        (options.method || 'GET').toUpperCase() !== 'GET' &&
+        !headers.has('Content-Type') &&
+        !isFormDataBody
+    ) {
         headers.set('Content-Type', 'application/json');
     }
 
