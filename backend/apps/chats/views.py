@@ -135,6 +135,10 @@ class ChatGroupViewSet(viewsets.ModelViewSet):
 
 	def update(self, request, *args, **kwargs):
 		partial = kwargs.pop("partial", False)
+		actor_membership = self._get_actor_membership()
+		if not self._actor_is_residence_admin(actor_membership):
+			raise PermissionDenied("No tienes permisos para gestionar este grupo.")
+		
 		instance = self.get_object()
 		write_serializer = self.get_serializer(instance, data=request.data, partial=partial)
 		write_serializer.is_valid(raise_exception=True)
@@ -174,6 +178,10 @@ class ChatGroupViewSet(viewsets.ModelViewSet):
 
 	@action(detail=True, methods=["post"], url_path="members")
 	def add_member(self, request, pk=None):
+		actor_membership = self._get_actor_membership()
+		if not self._actor_is_residence_admin(actor_membership):
+			raise PermissionDenied("No tienes permisos para gestionar este grupo.")
+		
 		group = self.get_object()
 		serializer = AddChatMemberSerializer(data=request.data, context={"request": request})
 		serializer.is_valid(raise_exception=True)
@@ -208,6 +216,10 @@ class ChatGroupViewSet(viewsets.ModelViewSet):
 
 	@action(detail=True, methods=["patch"], url_path=r"members/(?P<member_id>[^/.]+)")
 	def update_member(self, request, pk=None, member_id=None):
+		actor_membership = self._get_actor_membership()
+		if not self._actor_is_residence_admin(actor_membership):
+			raise PermissionDenied("No tienes permisos para gestionar este grupo.")
+		
 		group = self.get_object()
 		serializer = UpdateChatMemberSerializer(data=request.data)
 		serializer.is_valid(raise_exception=True)
@@ -242,6 +254,10 @@ class ChatGroupViewSet(viewsets.ModelViewSet):
 
 	@update_member.mapping.delete
 	def remove_member(self, request, pk=None, member_id=None):
+		actor_membership = self._get_actor_membership()
+		if not self._actor_is_residence_admin(actor_membership):
+			raise PermissionDenied("No tienes permisos para gestionar este grupo.")
+		
 		group = self.get_object()
 		member = group.memberships.select_related("membership__user").filter(id=member_id).first()
 		if not member:
