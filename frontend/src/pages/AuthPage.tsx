@@ -25,6 +25,11 @@ export function AuthPage() {
                 const session = await authService.me();
                 if (!session.authenticated || !session.user) {
                     localStorage.removeItem('userRole');
+                    // Limpiar todos los estados cuando no hay sesión
+                    setShowStudentLogin(false);
+                    setShowAdminLogin(false);
+                    setShowRulesModal(false);
+                    setShowPreferencesForm(false);
                     return;
                 }
 
@@ -35,9 +40,30 @@ export function AuthPage() {
                 }
 
                 localStorage.setItem('userRole', role);
+                
+                // Verificar si estudiante tiene el formulario de preferencias completado
+                if (role === 'student') {
+                    try {
+                        const preferences = await preferencesService.getMyPreferences();
+                        if (!preferences.is_completed) {
+                            // Mostrar el formulario de preferencias
+                            setShowPreferencesForm(true);
+                            return;
+                        }
+                    } catch {
+                        // Si hay error al obtener preferencias en la restauración, solo navegar
+                        // El dashboard o el servidor manejará la situación
+                    }
+                }
+                
                 navigate('/dashboard');
             } catch {
                 localStorage.removeItem('userRole');
+                // Limpiar todos los estados si hay error durante la restauración
+                setShowStudentLogin(false);
+                setShowAdminLogin(false);
+                setShowRulesModal(false);
+                setShowPreferencesForm(false);
             }
         };
 
@@ -61,11 +87,12 @@ export function AuthPage() {
 
     const checkPreferencesAndFinalize = async () => {
         try {
-            const { is_completed } = await preferencesService.checkCompletion();
-            if (!is_completed) {
+            const preferences = await preferencesService.getMyPreferences();
+            if (!preferences.is_completed) {
                 setShowPreferencesForm(true);
             } else {
                 await finalizeLogin('student');
+                setShowPreferencesForm(false);
             }
         } catch {
             setShowPreferencesForm(true);
