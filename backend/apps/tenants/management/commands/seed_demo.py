@@ -59,16 +59,16 @@ class Command(BaseCommand):
         last_name: str,
         is_staff: bool,
     ):
-        UserModel = get_user_model()
+        user_model = get_user_model()
         normalized_email = email.strip().lower()
         username = normalized_email
 
-        user = UserModel.objects.filter(email__iexact=normalized_email).first()
+        user = user_model.objects.filter(email__iexact=normalized_email).first()
         if not user:
-            user = UserModel.objects.filter(username=username).first()
+            user = user_model.objects.filter(username=username).first()
 
         if not user:
-            user = UserModel(username=username)
+            user = user_model(username=username)
 
         user.username = username
         user.email = normalized_email
@@ -106,12 +106,6 @@ class Command(BaseCommand):
             "student_email",
             "DEMO_STUDENT_EMAIL",
             f"estudiante@{domain}",
-        ).lower()
-        student2_email = self._env_or_option(
-            options,
-            "student2_email",
-            "DEMO_STUDENT_2_EMAIL",
-            f"estudiante2@{domain}",
         ).lower()
         demo_password = self._env_or_option(
             options, "password", "DEMO_USERS_PASSWORD", "demo1234"

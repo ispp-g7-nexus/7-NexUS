@@ -8,6 +8,8 @@ from datetime import timedelta
 import random
 
 User = get_user_model()
+MAIN_COMMON_ROOM = "Sala Común Principal"
+MULTIPURPOSE_ROOM = "Aula Multiusos"
 
 class Command(BaseCommand):
     help = "Crea eventos de prueba para testing de funcionalidades en residencia"
@@ -86,7 +88,7 @@ class Command(BaseCommand):
                         'description': 'Únete a nosotros para una noche divertida con juegos de mesa clásicos y modernos. Perfecto para conocer a otros residentes y pasar un buen rato.',
                         'start_time': timezone.now() + timedelta(days=2, hours=20),
                         'end_time': timezone.now() + timedelta(days=2, hours=23),
-                        'location': 'Sala Común Principal',
+                        'location': MAIN_COMMON_ROOM,
                         'max_participants': 25,
                         'tags': 'social,entretenimiento,juegos',
                         'image_url': 'https://plus.unsplash.com/premium_photo-1718879381673-32a65784d27c?fm=jpg&q=60&w=3000&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8anVlZ29zJTIwZGUlMjBtZXNhfGVufDB8fDB8fHww'
@@ -136,7 +138,7 @@ class Command(BaseCommand):
                         'description': 'Demuestra tu talento vocal en nuestra noche de karaoke. Canciones en español, inglés y otros idiomas disponibles.',
                         'start_time': timezone.now() + timedelta(days=10, hours=21),
                         'end_time': timezone.now() + timedelta(days=10, hours=23),
-                        'location': 'Sala Común Principal',
+                        'location': MAIN_COMMON_ROOM,
                         'max_participants': 30,
                         'tags': 'música,entretenimiento,karaoke',
                         'image_url': 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400'
@@ -156,7 +158,7 @@ class Command(BaseCommand):
                         'description': 'Mejora tu CV y practica entrevistas de trabajo con profesionales de RRHH. Incluye feedback personalizado y consejos prácticos.',
                         'start_time': timezone.now() + timedelta(days=12, hours=17),
                         'end_time': timezone.now() + timedelta(days=12, hours=19),
-                        'location': 'Aula Multiusos',
+                        'location': MULTIPURPOSE_ROOM,
                         'max_participants': 18,
                         'tags': 'profesional,cv,entrevistas',
                         'image_url': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400'
@@ -207,7 +209,7 @@ class Command(BaseCommand):
                         'description': 'Aprendimos pasos básicos de salsa, bachata y merengue. Una tarde llena de ritmo y diversión para todos los niveles.',
                         'start_time': timezone.now() - timedelta(days=15, hours=18),
                         'end_time': timezone.now() - timedelta(days=15, hours=20),
-                        'location': 'Sala Común Principal',
+                        'location': MAIN_COMMON_ROOM,
                         'max_participants': 22,
                         'tags': 'baile,latino,música',
                         'image_url': 'https://images.unsplash.com/photo-1547036967-23d11aacaee0?w=400'
@@ -217,7 +219,7 @@ class Command(BaseCommand):
                         'description': 'Debate sobre el impacto de la IA en el futuro laboral. Intercambio de ideas y perspectivas entre estudiantes de diferentes carreras.',
                         'start_time': timezone.now() - timedelta(days=18, hours=19),
                         'end_time': timezone.now() - timedelta(days=18, hours=21),
-                        'location': 'Aula Multiusos',
+                        'location': MULTIPURPOSE_ROOM,
                         'max_participants': 15,
                         'tags': 'debate,tecnología,académico',
                         'image_url': 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=400'
@@ -237,7 +239,7 @@ class Command(BaseCommand):
                         'description': 'Curso básico de primeros auxilios con profesionales sanitarios. Aprendimos RCP, vendajes y actuación ante emergencias.',
                         'start_time': timezone.now() - timedelta(days=25, hours=16),
                         'end_time': timezone.now() - timedelta(days=25, hours=18),
-                        'location': 'Aula Multiusos',
+                        'location': MULTIPURPOSE_ROOM,
                         'max_participants': 20,
                         'tags': 'salud,primeros auxilios,formación',
                         'image_url': 'https://images.unsplash.com/photo-1559757175-0eb30cd8c063?w=400'
