@@ -366,8 +366,8 @@ class ResidenceBrandingTests(FastTenantTestCase):
     def test_patch_branding_http_protocol_accepted(self):
         """HTTP protocol should be accepted (not just HTTPS)."""
         payload = {
-            "logo_url": "http://example.com/logo.png",
-            "favicon_url": "http://example.com/favicon.ico",
+            "logo_url": "http://example.com/logo.png", #NOSONAR
+            "favicon_url": "http://example.com/favicon.ico", #NOSONAR
         }
         response = self._patch_json(self.admin_client, payload)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
