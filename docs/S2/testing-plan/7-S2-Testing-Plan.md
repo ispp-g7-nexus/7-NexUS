@@ -151,7 +151,7 @@ Principios aplicables a cualquier componente:
 |--------------------|--------------------|
 | **Páginas principales** | Renderizado, navegación, estado, integración |
 | **Componentes de UI** | Props, eventos, estados, accesibilidad |
-| **Hooks custom** | Lógica de estado y efectos |
+| **Hooks custom** | Lógica de estado y utilidades|
 | **Servicios/APIs** | Llamadas, manejo de errores, cache |
 | **Utilities** | Funciones puras, transformadores, validadores |
 
