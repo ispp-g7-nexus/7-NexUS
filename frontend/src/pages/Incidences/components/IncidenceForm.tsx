@@ -23,17 +23,25 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
   const [locationType, setLocationType] = useState<string>(initialData?.location_type || "")
   const [urgent, setUrgent] = useState<boolean>(initialData?.priority === 'high')
   const [base64Image, setBase64Image] = useState<string | null>(initialData?.img || null)
+  const [areaError, setAreaError] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setLoading(true);
     const formData = new FormData(e.currentTarget);
+
+    if (!locationType) {
+      setAreaError(true);
+      return;
+    }
+
+    setAreaError(false);
+    setLoading(true);
 
     const payload: any = {
       title: formData.get("title") as string,
       description: formData.get("description") as string,
       location_type: locationType,
-      priority: urgent ? "high" : "low" 
+      priority: urgent ? "high" : "low"
     };
 
     if (locationType === 'habitacion') {
@@ -54,7 +62,7 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
       } else {
         await IncidenceService.create(payload);
       }
-      onSuccess(); 
+      onSuccess();
       onClose();
     } catch (error: any) {
       alert("Fallo: " + error.message);
@@ -83,8 +91,16 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
         <div className="space-y-1.5 text-left">
           <Label className={UI_CLASSES.label}>Área</Label>
           <Select onValueChange={setLocationType} defaultValue={locationType} required>
-            <SelectTrigger className={UI_CLASSES.selectTrigger}><SelectValue placeholder="Selecciona el área" /></SelectTrigger>
-            <SelectContent className="rounded-2xl">
+            <SelectTrigger
+              className={`${UI_CLASSES.selectTrigger} ${areaError && !locationType ? 'border-2 border-red-500 bg-red-50' : ''}`}
+            >
+              <SelectValue placeholder="Selecciona el área" />
+            </SelectTrigger>
+            {areaError && !locationType && (
+              <p className="text-[11px] text-red-500 font-bold mt-1 ml-1">
+                ⚠️ Por favor, selecciona un área
+              </p>
+            )}            <SelectContent className="rounded-2xl">
               {!isAdmin && <SelectItem value="habitacion">Mi Habitación</SelectItem>}
               <SelectItem value="baño">Baño Común</SelectItem>
               <SelectItem value="cocina">Cocina</SelectItem>

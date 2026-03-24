@@ -42,18 +42,28 @@ class IncidenceSerializer(serializers.ModelSerializer):
         user = request.user
         
         if self.instance:
-            if self.instance.student_id != user.id:
-                for f in ['title', 'description', 'location_type', 'img', 'room_number']:
-                    if f in data and data[f] != getattr(self.instance, f):
-                        raise serializers.ValidationError({f: "Solo el creador puede modificar esto."})
-
             user_roles = [r.lower() for r in user.memberships.filter(is_active=True).values_list('role__name', flat=True)]
-            if "admin" not in user_roles and not user.is_staff:
-                for f in ['status', 'priority', 'assigned_staff', 'assigned_external_name']:
+            is_admin = "admin" in user_roles or "residence_admin" in user_roles or user.is_staff
+            is_owner = self.instance.student_id == user.id
+
+            if not is_admin:
+                if not is_owner:
+                    for f in ['title', 'description', 'location_type', 'img', 'room_number']:
+                        if f in data and data[f] != getattr(self.instance, f):
+                            raise serializers.ValidationError({f: "Solo el creador puede modificar esto."})
+
+                for f in ['status', 'assigned_staff', 'assigned_external_name']:
                     if f in data:
                         val_actual = self.instance.assigned_staff_id if f == 'assigned_staff' else getattr(self.instance, f)
                         if data[f] != val_actual:
-                            raise serializers.ValidationError({f: "No tienes permiso para modificar la gestión."})
+                            raise serializers.ValidationError({f: "Solo un administrador puede modificar el estado o asignación."})
+
+                if 'priority' in data and data['priority'] != self.instance.priority:
+                    if not is_owner:
+                        raise serializers.ValidationError({"priority": "No tienes permiso para cambiar la prioridad de otros."})
+                    if self.instance.status != 'pending':
+                        raise serializers.ValidationError({"priority": "No puedes cambiar la urgencia de una incidencia que ya está siendo procesada."})
+
         return data
 
 class AdminIncidenceSerializer(IncidenceSerializer):
