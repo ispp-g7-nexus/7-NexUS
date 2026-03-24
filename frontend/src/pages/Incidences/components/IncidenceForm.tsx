@@ -35,7 +35,7 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
     }
   }, [isAdmin]);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  /* const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
       const reader = new FileReader()
@@ -44,7 +44,7 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
       }
       reader.readAsDataURL(file)
     }
-  }
+  } */
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
