@@ -176,6 +176,32 @@ def _parse_max_participants(raw_value):
     return parsed, None
 
 
+def _parse_space_id(raw_value, *, required: bool):
+    if raw_value in (None, ""):
+        if required:
+            return None, JsonResponse(
+                {"detail": "Debes seleccionar un espacio común válido."},
+                status=400,
+            )
+        return None, None
+
+    try:
+        parsed = int(raw_value)
+    except (TypeError, ValueError):
+        return None, JsonResponse(
+            {"detail": "space_id debe ser un entero válido."},
+            status=400,
+        )
+
+    if parsed <= 0:
+        return None, JsonResponse(
+            {"detail": "space_id debe ser un entero positivo."},
+            status=400,
+        )
+
+    return parsed, None
+
+
 def _normalize_internal_event_limit(raw_value, space_capacity: int):
     parsed_limit, parse_error = _parse_max_participants(raw_value)
     if parse_error:
@@ -239,15 +265,16 @@ def _validate_location_constraints(event_type: str, location: str, space_id):
 def _resolve_event_creation_resources(
     *,
     request,
-    body,
     event_type: str,
+    body,
+    requested_space_id,
     start_time: datetime,
     end_time: datetime,
 ):
     if event_type == Event.Type.INTERNAL:
         space = get_object_or_404(
             CommonSpace,
-            id=int(body.get("space_id")),
+            id=requested_space_id,
             residence=request.residence,
             is_active=True,
         )
@@ -299,7 +326,9 @@ def _resolve_internal_update_state(
     location: str,
     requested_space_id,
 ):
-    target_space_id = requested_space_id if requested_space_id is not None else event.space_id
+    target_space_id = (
+        requested_space_id if requested_space_id is not None else event.space_id
+    )
     if not target_space_id:
         return None, JsonResponse(
             {"detail": "Debes seleccionar un espacio común para eventos internos."},
@@ -313,7 +342,7 @@ def _resolve_internal_update_state(
 
     target_space = get_object_or_404(
         CommonSpace,
-        id=int(target_space_id),
+        id=target_space_id,
         residence=request.residence,
         is_active=True,
     )
@@ -327,7 +356,7 @@ def _resolve_internal_update_state(
     needs_new_reservation = (
         event.event_type != Event.Type.INTERNAL
         or not event.reservation_id
-        or int(target_space_id) != (event.space_id or 0)
+        or target_space_id != (event.space_id or 0)
         or start_time != event.start_time
         or end_time != event.end_time
     )
@@ -411,13 +440,11 @@ def _resolve_external_update_state(
 
 def _validate_participants_limit_for_update(
     *,
-    max_participants_provided: bool,
     normalized_max_participants,
     current_participants_count: int,
 ):
     if (
-        max_participants_provided
-        and normalized_max_participants is not None
+        normalized_max_participants is not None
         and normalized_max_participants < current_participants_count
     ):
         return JsonResponse(
@@ -476,12 +503,22 @@ class EventListView(AuthenticatedView):
 
         try:
             body = json.loads(request.body)
-        except Exception as e:
-            return JsonResponse({"detail": str(e)}, status=400)
+        except json.JSONDecodeError:
+            return JsonResponse(
+                {"detail": "El cuerpo de la petición no es JSON válido."},
+                status=400,
+            )
 
         event_type = _normalize_event_type(body.get('event_type'))
         if not event_type:
             return JsonResponse({"detail": "Tipo de evento inválido."}, status=400)
+
+        requested_space_id, space_id_error = _parse_space_id(
+            body.get("space_id"),
+            required=(event_type == Event.Type.INTERNAL),
+        )
+        if space_id_error:
+            return space_id_error
 
         start_time, end_time, time_error = _parse_and_validate_times(
             body.get('start_time'),
@@ -498,7 +535,7 @@ class EventListView(AuthenticatedView):
         location_error = _validate_location_constraints(
             event_type=event_type,
             location=location,
-            space_id=body.get("space_id"),
+            space_id=requested_space_id,
         )
         if location_error:
             return location_error
@@ -507,8 +544,9 @@ class EventListView(AuthenticatedView):
             space, reservation, normalized_max_participants, resources_error = (
                 _resolve_event_creation_resources(
                     request=request,
-                    body=body,
                     event_type=event_type,
+                    body=body,
+                    requested_space_id=requested_space_id,
                     start_time=start_time,
                     end_time=end_time,
                 )
@@ -551,8 +589,11 @@ class EventDetailView(AuthenticatedView):
 
         try:
             body = json.loads(request.body)
-        except Exception as e:
-            return JsonResponse({"detail": str(e)}, status=400)
+        except json.JSONDecodeError:
+            return JsonResponse(
+                {"detail": "El cuerpo de la petición no es JSON válido."},
+                status=400,
+            )
 
         event_type = _normalize_event_type(body.get('event_type', event.event_type))
         if not event_type:
@@ -578,8 +619,14 @@ class EventDetailView(AuthenticatedView):
             return JsonResponse({"detail": "Ya asistes a otro evento en ese horario."}, status=400)
 
         location = str(body.get('location', event.location) or '').strip()
-        requested_space_id = body.get('space_id')
-        max_participants_provided = 'max_participants' in body
+        requested_space_id = None
+        if "space_id" in body:
+            requested_space_id, space_id_error = _parse_space_id(
+                body.get("space_id"),
+                required=False,
+            )
+            if space_id_error:
+                return space_id_error
 
         with transaction.atomic():
             previous_reservation = event.reservation
@@ -604,11 +651,11 @@ class EventDetailView(AuthenticatedView):
                 return update_error
 
             limit_error = _validate_participants_limit_for_update(
-                max_participants_provided=max_participants_provided,
                 normalized_max_participants=update_state["normalized_max_participants"],
                 current_participants_count=event.participants_count,
             )
             if limit_error:
+                transaction.set_rollback(True)
                 return limit_error
 
             _apply_event_updates(

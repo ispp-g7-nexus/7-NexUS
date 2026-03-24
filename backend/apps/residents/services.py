@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from rest_framework.exceptions import ValidationError
 from typing import Any
 
@@ -121,13 +122,10 @@ def _apply_or_send_password(
 ) -> None:
     if password:
         user.set_password(password)
-        user.save()
+        user.save(update_fields=["password"])
         return
 
-    try:
-        process_password_reset_request(user.email, request)
-    except Exception:
-        pass
+    process_password_reset_request(user.email, request)
 
 
 def create_resident(data: dict, residence, request) -> dict:
@@ -143,30 +141,31 @@ def create_resident(data: dict, residence, request) -> dict:
 
     Retorna un dict con { 'created': bool, 'email': str }.
     """
-    email = data["email"].lower()
-    user = UserModel.objects.filter(email__iexact=email).first()
-    created = False
+    with transaction.atomic():
+        email = data["email"].lower()
+        user = UserModel.objects.filter(email__iexact=email).first()
+        created = False
 
-    # Validar habitación antes de crear/buscar el usuario para fallar pronto
-    bedroom = None
-    bedroom_id = data.get("bedroom_id")
-    if bedroom_id is not None:
-        bedroom = _get_bedroom(bedroom_id, residence)
+        # Validar habitación antes de crear/buscar el usuario para fallar pronto
+        bedroom = None
+        bedroom_id = data.get("bedroom_id")
+        if bedroom_id is not None:
+            bedroom = _get_bedroom(bedroom_id, residence)
 
-    if not user:
-        user, created = _find_or_create_user_for_email(data, email)
+        if not user:
+            user, created = _find_or_create_user_for_email(data, email)
 
-    student_role = _get_student_role()
-    _upsert_student_membership(user, student_role, residence, bedroom)
+        student_role = _get_student_role()
+        _upsert_student_membership(user, student_role, residence, bedroom)
 
-    _sync_user_active_status(user)
-    _apply_or_send_password(
-        user=user,
-        password=data.get("password"),
-        request=request,
-    )
+        _sync_user_active_status(user)
+        _apply_or_send_password(
+            user=user,
+            password=data.get("password"),
+            request=request,
+        )
 
-    return {"created": created, "email": user.email}
+        return {"created": created, "email": user.email}
 
 
 def _membership_to_dict(membership) -> dict:

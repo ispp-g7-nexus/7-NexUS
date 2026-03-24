@@ -1,6 +1,7 @@
 # apps/common/views.py
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -36,16 +37,25 @@ def _resolve_fallback_residence_for_portal(user, portal: str):
     fallback_residence = None
 
     if portal == "student":
-        member = Membership.objects.filter(
-            user=user, role__name__iexact="Student", is_active=True
-        ).first()
+        member = (
+            Membership.objects.filter(
+                user=user,
+                role__name__iexact="Student",
+                is_active=True,
+                residence__isnull=False,
+            )
+            .order_by("-updated_at", "-created_at", "-id")
+            .first()
+        )
         if member and member.residence:
             has_any_access = True
             fallback_residence = member.residence
         return has_any_access, fallback_residence
 
-    member_list = Membership.objects.filter(user=user, is_active=True).exclude(
-        role__name__iexact="Student"
+    member_list = (
+        Membership.objects.filter(user=user, is_active=True)
+        .exclude(role__name__iexact="Student")
+        .order_by("-updated_at", "-created_at", "-id")
     )
     if member_list.exists():
         has_any_access = True
@@ -92,30 +102,32 @@ def _ensure_student_membership(user, residence) -> None:
             "is_system_default": True,
         },
     )
-    membership_exists = Membership.objects.filter(
+    membership = Membership.objects.filter(
         user=user,
         role=student_role,
         residence=residence,
-    ).exists()
-    if not membership_exists:
+    ).first()
+    if not membership:
         Membership.objects.create(
             user=user,
             role=student_role,
             residence=residence,
             is_active=True,
         )
+        return
+
+    if not membership.is_active:
+        membership.is_active = True
+        membership.save(update_fields=["is_active", "updated_at"])
 
 
 def _apply_resident_password_or_reset(user, data: dict, request) -> None:
-    try:
-        passwd = data.get("password")
-        if passwd:
-            user.set_password(passwd)
-            user.save()
-            return
-        process_password_reset_request(user.email, request)
-    except Exception:
-        pass
+    passwd = data.get("password")
+    if passwd:
+        user.set_password(passwd)
+        user.save(update_fields=["password"])
+        return
+    process_password_reset_request(user.email, request)
 
 
 class TenantContextView(APIView):
@@ -370,9 +382,10 @@ class AdminCreateResidentView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        user, created = _find_or_create_user_for_resident(data)
-        _ensure_student_membership(user, residence)
-        _apply_resident_password_or_reset(user, data, request)
+        with transaction.atomic():
+            user, created = _find_or_create_user_for_resident(data)
+            _ensure_student_membership(user, residence)
+            _apply_resident_password_or_reset(user, data, request)
 
         return Response(
             {"ok": True, "created": created, "email": user.email},
