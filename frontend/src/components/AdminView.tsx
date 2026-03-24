@@ -184,8 +184,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
             const nextCount = Number.isFinite(previousCount) && previousCount > 0 ? previousCount + 1 : 1;
             parsed[String(groupId)] = nextCount;
             localStorage.setItem(storageKey, JSON.stringify(parsed));
-        } catch {
-        }
+        } catch { /* empty */ }
     };
 
     const buildGroupMessageEventKey = (evt: ChatRealtimeEvent): string | null => {
@@ -271,7 +270,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
 
         const source = chatsService.subscribeToEvents((evt) => {
             if (evt.event === "branding_updated" && evt.payload) {
-                import("../hooks/useTenantBranding").then((m) => m.applyGlobalBranding(evt.payload as any));
+                import("../hooks/useTenantBranding").then((m) => m.applyGlobalBranding(evt.payload as unknown as ResidenceBranding));
                 return;
             }
 
@@ -429,7 +428,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
                                 {todayCapitalized}
                             </p>
                             <h2 className="text-2xl font-medium text-gray-900">
-                                Buenos días, <span className="text-primary font-medium">Administrador</span>
+                                Bienvenido/a, <span className="text-primary font-medium">{currentUser?.name ? currentUser.name : "Administrador"}</span>
                             </h2>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

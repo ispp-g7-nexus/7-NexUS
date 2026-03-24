@@ -190,17 +190,30 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                 const session = await authService.me();
                 setCurrentUserId(parseUserId(session.user?.id));
                 if (session.user) {
-                    // Extraemos el nombre (puedes cambiarlo a session.user.first_name si tu backend lo envía)
-                    const rawName = session.user.username || session.user.email || "Estudiante";
-                    // Limpiamos el nombre por si es un email (ej: maria@nexus.com -> maria)
-                    const cleanName = rawName.split('@')[0].replace(/[._-]/g, ' ');
-                    const capitalizedName = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
+                    // Usar el nombre real si está disponible
+                    const firstName = session.user.first_name?.trim() || '';
+                    const lastName = session.user.last_name?.trim() || '';
+                    let displayName = '';
+                    if (firstName || lastName) {
+                        displayName = `${firstName} ${lastName}`.trim();
+                    } else {
+                        // Fallback a username/email si no hay nombre real
+                        const rawName = session.user.username || session.user.email || "Estudiante";
+                        displayName = rawName.split('@')[0].replace(/[._-]/g, ' ');
+                        displayName = displayName.charAt(0).toUpperCase() + displayName.slice(1);
+                    }
 
-                    // Sacamos las iniciales para el Avatar
-                    const initials = cleanName.substring(0, 2).toUpperCase();
+                    // Iniciales para el avatar
+                    let initials = '';
+                    if (firstName || lastName) {
+                        initials = ((firstName.charAt(0) || '') + (lastName.charAt(0) || '')).toUpperCase();
+                    } else {
+                        const cleanName = displayName.replace(/ /g, '');
+                        initials = cleanName.substring(0, 2).toUpperCase();
+                    }
 
                     setUserData({
-                        name: capitalizedName,
+                        name: displayName,
                         initials: initials,
                         // Nota: Si en el futuro tu backend envía la habitación en el me(), cámbialo aquí.
                         // Por ahora ponemos un texto dinámico o genérico.
