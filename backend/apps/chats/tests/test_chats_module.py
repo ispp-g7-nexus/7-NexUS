@@ -16,6 +16,8 @@ from apps.common.services import build_access_token
 from apps.membership.models import Membership, Role
 from apps.residences.models import Residence, ResidenceDomain
 
+TEST_PASSWORD = "demo1234"  # NOSONAR
+
 
 class ChatsModuleTests(FastTenantTestCase):
     @classmethod
@@ -41,23 +43,23 @@ class ChatsModuleTests(FastTenantTestCase):
         self.admin_user = user_model.objects.create_user(
             username="admin-chat",
             email="admin@chats.test",
-            password="demo1234",
+            password=TEST_PASSWORD,
             is_staff=True,
         )
         self.student_user = user_model.objects.create_user(
             username="student-chat",
             email="student@chats.test",
-            password="demo1234",
+            password=TEST_PASSWORD,
         )
         self.student_two_user = user_model.objects.create_user(
             username="student-two-chat",
             email="student2@chats.test",
-            password="demo1234",
+            password=TEST_PASSWORD,
         )
         self.no_membership_user = user_model.objects.create_user(
             username="outsider-chat",
             email="outsider@chats.test",
-            password="demo1234",
+            password=TEST_PASSWORD,
         )
 
         self.residence = Residence.objects.create(
