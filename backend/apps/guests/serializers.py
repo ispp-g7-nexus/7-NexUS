@@ -42,8 +42,27 @@ class GuestPassCreateSerializer(serializers.Serializer):
     def validate(self, attrs):
         valid_from = attrs["valid_from"]
         valid_until = attrs["valid_until"]
+        now = timezone.now()
         max_duration_hours = self.context.get("max_duration_hours", 24)
         max_duration = timedelta(hours=max_duration_hours)
+
+        if valid_from < now:
+            raise serializers.ValidationError(
+                {
+                    "valid_from": (
+                        "La fecha/hora de inicio no puede ser anterior al momento actual."
+                    )
+                }
+            )
+
+        if valid_until < now:
+            raise serializers.ValidationError(
+                {
+                    "valid_until": (
+                        "La fecha/hora de fin no puede ser anterior al momento actual."
+                    )
+                }
+            )
 
         if valid_until <= valid_from:
             raise serializers.ValidationError(

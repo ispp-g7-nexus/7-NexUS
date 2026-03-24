@@ -131,6 +131,18 @@ def create_guest_pass_for_resident(
     comment: str | None = "",
     policy: GuestPassPolicy | None = None,
 ) -> GuestPass:
+    now = timezone.now()
+
+    if valid_from < now:
+        raise ValidationError(
+            {"valid_from": "La fecha/hora de inicio no puede ser anterior al momento actual."}
+        )
+
+    if valid_until < now:
+        raise ValidationError(
+            {"valid_until": "La fecha/hora de fin no puede ser anterior al momento actual."}
+        )
+
     if valid_until <= valid_from:
         raise ValidationError(
             {"valid_until": "La fecha de fin debe ser posterior a la de inicio."}

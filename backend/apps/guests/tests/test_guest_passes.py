@@ -415,6 +415,38 @@ class GuestPassesApiTests(TenantTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("valid_until", response.json())
 
+    def test_create_rejects_when_start_datetime_is_in_the_past(self):
+        now = timezone.now()
+        payload = self._build_create_payload(
+            valid_from=now - timedelta(minutes=10),
+            valid_until=now + timedelta(hours=1),
+        )
+
+        response = self.resident_client.post(
+            self.create_url,
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("valid_from", response.json())
+
+    def test_create_rejects_when_end_datetime_is_in_the_past(self):
+        now = timezone.now()
+        payload = self._build_create_payload(
+            valid_from=now + timedelta(hours=1),
+            valid_until=now - timedelta(minutes=5),
+        )
+
+        response = self.resident_client.post(
+            self.create_url,
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("valid_until", response.json())
+
     def test_create_rejects_when_new_pass_exceeds_concurrency_limit(self):
         now = timezone.now().replace(minute=0, second=0, microsecond=0)
         new_start = now + timedelta(hours=2)
