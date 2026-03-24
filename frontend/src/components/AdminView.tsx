@@ -428,7 +428,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
                                 {todayCapitalized}
                             </p>
                             <h2 className="text-2xl font-medium text-gray-900">
-                                Buenos días, <span className="text-primary font-medium">Administrador</span>
+                                Bienvenido/a, <span className="text-primary font-medium">{currentUser?.name ? currentUser.name : "Administrador"}</span>
                             </h2>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
