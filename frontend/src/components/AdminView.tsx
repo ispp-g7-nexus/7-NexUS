@@ -549,7 +549,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
                     <div className="flex items-center gap-2">
                         <Popover open={isNotificationsOpen} onOpenChange={handleNotificationsOpenChange}>
                             <PopoverTrigger asChild>
-                                <Button variant="ghost" size="icon" className="text-gray-500 w-9 h-9 relative">
+                                <Button variant="ghost" size="icon" className="text-gray-500 w-9 h-9 relative hover:text-primary hover:bg-primary/10 rounded-lg transition-all">
                                     <Bell className="w-5 h-5" />
                                     {hasUnreadNotifications && <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white" />}
                                 </Button>
@@ -602,6 +602,36 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
                                 </div>
                             </PopoverContent>
                         </Popover>
+
+                        <Button
+                            size="icon"
+                            variant="ghost"
+                            className="text-gray-500 w-9 h-9 hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
+                            onClick={() => setActiveTab("dashboard")}
+                            title="Panel de Control"
+                        >
+                            <LayoutDashboard className="w-5 h-5" />
+                        </Button>
+
+                        <Button
+                            size="icon"
+                            variant="ghost"
+                            className="text-gray-500 w-9 h-9 hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
+                            onClick={() => setActiveTab("profile")}
+                            title="Mi Perfil"
+                        >
+                            <User className="w-5 h-5" />
+                        </Button>
+
+                        <Button
+                            size="icon"
+                            variant="ghost"
+                            className="text-gray-500 w-9 h-9 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                            onClick={onLogout}
+                            title="Cerrar Sesión"
+                        >
+                            <LogOut className="w-5 h-5" />
+                        </Button>
 
                         <Sheet>
                             <SheetTrigger asChild>

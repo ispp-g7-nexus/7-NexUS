@@ -1,8 +1,12 @@
-import { Clock, Flame, Leaf } from "lucide-react";
+import { Clock, Flame, Leaf, LogOut, User } from "lucide-react";
 import { MenuWeek, MenuDay, Meal } from "../../types/menu.types";
+import { NotificationBell } from "../../components/announcement/NotificationBell";
+import { Button } from "../../components/ui/button";
 
 interface ResidentMenuViewProps {
   menuWeek?: MenuWeek;
+  onGoToProfile?: () => void;
+  onLogout?: () => void;
 }
 
 const getMealTypeLabel = (type: Meal['type']): string => {
@@ -119,7 +123,7 @@ const DayMenuCard = ({ day }: { day: MenuDay }) => {
   );
 };
 
-export function ResidentMenuView({ menuWeek }: ResidentMenuViewProps) {
+export function ResidentMenuView({ menuWeek, onGoToProfile, onLogout }: ResidentMenuViewProps) {
   const mockMenuWeek: MenuWeek = menuWeek || {
     weekStart: '2026-03-09',
     weekEnd: '2026-03-15',
@@ -237,6 +241,29 @@ export function ResidentMenuView({ menuWeek }: ResidentMenuViewProps) {
       {/* Header */}
       <header className="bg-primary p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg sticky top-0 z-20">
         <h1 className="text-primary-foreground text-2xl font-bold">Menú</h1>
+        <div className="flex items-center gap-2">
+          <NotificationBell />
+          <Button
+            size="icon"
+            variant="ghost"
+            className="text-primary-foreground hover:bg-primary-foreground/20 hover:scale-110 rounded-full transition-all"
+            onClick={() => onGoToProfile?.()}
+            aria-label="Ir al perfil"
+          >
+            <User className="w-5 h-5" />
+          </Button>
+          {onLogout ? (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="text-primary-foreground hover:bg-primary-foreground/20 hover:scale-110 rounded-full transition-all"
+              onClick={onLogout}
+              aria-label="Cerrar sesión"
+            >
+              <LogOut className="w-5 h-5" />
+            </Button>
+          ) : null}
+        </div>
       </header>
       
       <div className="min-h-screen bg-background pt-6">
