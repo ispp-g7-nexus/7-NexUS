@@ -8,19 +8,18 @@ import { Label } from "../../../components/ui/label"
 import { Checkbox } from "../../../components/ui/checkbox"
 import { Select, SelectContent, SelectTrigger, SelectItem, SelectValue } from "../../../components/ui/select2"
 import { DialogDescription } from "../../../components/ui/dialog"
-import { IncidenceService, type LocationType } from "../../../services/incidences"
-import { useStaff } from "../../Staff/hooks/useStaff"
+import { IncidenceService } from "../../../services/incidences"
+import { BaseIncidence } from "./IncidenceShared"
 import { fetchWithAuth } from "../../../utils/api"
 
 interface IncidenceFormProps {
   onSuccess: () => void
   onClose: () => void
   isAdmin?: boolean
+  initialData?: BaseIncidence | null
 }
 
-export function IncidenceForm({ onSuccess, onClose, isAdmin = false }: IncidenceFormProps) {
-  const { staff = [], loading: loadingStaff } = useStaff();
-  
+export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData }: IncidenceFormProps) {
   const [loading, setLoading] = useState(false)
   const [locationType, setLocationType] = useState<string>("")
   const [urgent, setUrgent] = useState<boolean>(false)
@@ -48,11 +47,18 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false }: Incidence
   }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setLoading(true)
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
 
-    const formData = new FormData(e.currentTarget)
-    const payload = {
+    if (!locationType) {
+      setAreaError(true);
+      return;
+    }
+
+    setAreaError(false);
+    setLoading(true);
+
+    const payload: any = {
       title: formData.get("title") as string,
       description: formData.get("description") as string,
       location_type: locationType as LocationType,
@@ -61,48 +67,67 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false }: Incidence
       assigned_staff: isAdmin && staffId && !["external", "none"].includes(staffId) ? Number(staffId) : null,
       assigned_external_name: isAdmin && staffId === "external" ? externalName : "",
       img: base64Image,
+      location_type: locationType,
+      priority: urgent ? "high" : "low"
+    };
+
+    if (locationType === 'habitacion') {
+      payload.room_number = initialData?.room_number || "Pendiente";
+    } else {
+      payload.room_number = "";
+    }
+
+    if (base64Image && base64Image.startsWith("data:image")) {
+      payload.img = base64Image;
+    } else if (base64Image === null && initialData?.img) {
+      payload.img = "";
     }
 
     try {
-      await IncidenceService.create(payload)
-      onSuccess()
-      onClose()
-    } catch (error) {
-      console.error("Error al crear:", error)
-      alert("Error: Revisa los campos obligatorios")
+      if (initialData) {
+        await IncidenceService.update(initialData.id, payload);
+      } else {
+        await IncidenceService.create(payload);
+      }
+      onSuccess();
+      onClose();
+    } catch (error: any) {
+      alert("Fallo: " + error.message);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <form onSubmit={handleSubmit} className={UI_CLASSES.form}>
       <div className={UI_CLASSES.header}>
-        <h2 className={UI_CLASSES.title}>Nueva Incidencia</h2>
+        <h2 className={UI_CLASSES.title}>{initialData ? "Editar Incidencia" : "Nueva Incidencia"}</h2>
         <DialogDescription className={UI_CLASSES.description}>
-          Reporta cualquier problema o incidencia en tu residencia
+          {initialData ? "Modifica los detalles del reporte" : "Reporta cualquier problema o incidencia en tu residencia"}
         </DialogDescription>
       </div>
 
       <div className={UI_CLASSES.body}>
+        {/* Campo Título */}
         <div className="space-y-1.5 text-left">
           <Label htmlFor="title" className={UI_CLASSES.label}>¿Qué sucede?</Label>
-          <Input
-            id="title"
-            name="title"
-            placeholder="Ej: Fuga de agua o bombilla fundida"
-            required
-            className={UI_CLASSES.input}
-          />
+          <Input id="title" name="title" defaultValue={initialData?.title} required className={UI_CLASSES.input} />
         </div>
 
+        {/* Campo Área */}
         <div className="space-y-1.5 text-left">
-          <Label htmlFor="area-select" className={UI_CLASSES.label}>Área</Label>
-          <Select onValueChange={setLocationType} required>
-            <SelectTrigger id="area-select" className={UI_CLASSES.selectTrigger}>
+          <Label className={UI_CLASSES.label}>Área</Label>
+          <Select onValueChange={setLocationType} defaultValue={locationType} required>
+            <SelectTrigger
+              className={`${UI_CLASSES.selectTrigger} ${areaError && !locationType ? 'border-2 border-red-500 bg-red-50' : ''}`}
+            >
               <SelectValue placeholder="Selecciona el área" />
             </SelectTrigger>
-            <SelectContent className="rounded-2xl shadow-xl">
+            {areaError && !locationType && (
+              <p className="text-[11px] text-red-500 font-bold mt-1 ml-1">
+                ⚠️ Por favor, selecciona un área
+              </p>
+            )}            <SelectContent className="rounded-2xl">
               {!isAdmin && <SelectItem value="habitacion">Mi Habitación</SelectItem>}
               <SelectItem value="baño">Baño Común</SelectItem>
               <SelectItem value="cocina">Cocina</SelectItem>
@@ -111,113 +136,46 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false }: Incidence
               <SelectItem value="exterior">Zonas Exteriores</SelectItem>
             </SelectContent>
           </Select>
-
-          {locationType === "habitacion" && (
-            <div className={UI_CLASSES.infoBox}>
-              <Info className="w-4 h-4 shrink-0" />
-              <p className="text-[11px] font-medium italic">
-                Detectaremos tu habitación automáticamente desde tu perfil.
-              </p>
-            </div>
-          )}
         </div>
 
+        {/* Campo Descripción */}
         <div className="space-y-1.5 text-left">
-          <Label htmlFor="description" className={UI_CLASSES.label}>Descripción detallada</Label>
-          <textarea
-            id="description"
-            name="description"
-            placeholder="Cuéntanos más detalles del problema..."
-            required
-            className={UI_CLASSES.textarea}
-          />
+          <Label className={UI_CLASSES.label}>Descripción detallada</Label>
+          <textarea id="description" name="description" defaultValue={initialData?.description} required className={UI_CLASSES.textarea} />
         </div>
 
-        {isAdmin && (
-          <div className="space-y-4 pt-2 border-t border-gray-100 text-left">
-            <Label htmlFor="staff-assign" className={UI_CLASSES.label}>Asignar Responsable</Label>
-            <Select onValueChange={setStaffId}>
-              <SelectTrigger id="staff-assign" className={UI_CLASSES.selectTrigger}>
-                <SelectValue placeholder={loadingStaff ? "Cargando..." : "Sin asignar"} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Dejar sin asignar</SelectItem>
-                {staff.map((m: any) => (
-                  <SelectItem key={m.id} value={String(m.id)}>{m.full_name}</SelectItem>
-                ))}
-                <SelectItem value="external" className="text-emerald-600 font-bold">+ Externo</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            {staffId === "external" && (
-              <div className="animate-in fade-in slide-in-from-top-1">
-                <Label htmlFor="external-name" className={UI_CLASSES.label}>Nombre empresa</Label>
-                <Input 
-                  id="external-name"
-                  value={externalName} 
-                  onChange={(e) => setExternalName(e.target.value)} 
-                  placeholder="Nombre de la empresa externa" 
-                  className={UI_CLASSES.input} 
-                  required 
-                />
-              </div>
-            )}
-          </div>
-        )}
-
+        {/* Campo Foto */}
         <div className="space-y-2 text-left">
-          <Label className={UI_CLASSES.label}>Adjuntar Foto (Opcional)</Label>
+          <Label className={UI_CLASSES.label}>Foto (Opcional)</Label>
           {base64Image ? (
             <div className="relative w-full h-40 rounded-2xl overflow-hidden border-2 border-green-100">
-              <img src={base64Image} alt="Vista previa de la incidencia" className="w-full h-full object-cover" />
-              <button
-                type="button"
-                onClick={() => setBase64Image(null)}
-                className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 transition-colors"
-                aria-label="Eliminar imagen"
-              >
-                <X size={16} />
-              </button>
+              <img src={base64Image} alt="Preview" className="w-full h-full object-cover" />
+              <button type="button" onClick={() => setBase64Image(null)} className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full shadow-lg"><X size={16} /></button>
             </div>
           ) : (
             <label className={UI_CLASSES.imageUploadPlaceholder}>
               <Camera className="w-6 h-6 mb-1 opacity-40" />
               <span className="text-xs font-medium opacity-60">Subir foto</span>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="hidden"
-              />
+              <input type="file" accept="image/*" onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) { const r = new FileReader(); r.onloadend = () => setBase64Image(r.result as string); r.readAsDataURL(file); }
+              }} className="hidden" />
             </label>
           )}
         </div>
 
+        {/* Campo Urgencia */}
         <div className={UI_CLASSES.urgentBox}>
-          <Checkbox
-            id="urgent"
-            checked={urgent}
-            onCheckedChange={(val) => setUrgent(Boolean(val))}
-            className="data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
-          />
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-orange-600" />
-            <Label htmlFor="urgent" className="text-orange-800 text-sm font-bold cursor-pointer">
-              Es una urgencia
-            </Label>
-          </div>
+          <Checkbox id="urgent" checked={urgent} onCheckedChange={(val) => setUrgent(Boolean(val))} />
+          <Label htmlFor="urgent" className="text-orange-800 text-sm font-bold flex items-center gap-2 cursor-pointer">
+            <AlertTriangle className="w-4 h-4" /> Es una urgencia
+          </Label>
         </div>
       </div>
 
       <div className={UI_CLASSES.footer}>
-        <Button
-          type="submit"
-          disabled={loading}
-          variant="nexus"
-          size="xl"
-          className="w-full"
-        >
-          {loading ? "Enviando reporte..." : "Enviar Reporte"}
+        <Button type="submit" disabled={loading} variant="nexus" size="xl" className="w-full">
+          {loading ? "Procesando..." : (initialData ? "Guardar Cambios" : "Enviar Reporte")}
         </Button>
       </div>
     </form>
@@ -236,7 +194,6 @@ const UI_CLASSES = {
   input: "bg-gray-50 border-none rounded-2xl h-14 px-4 focus-visible:ring-green-400 font-normal",
   selectTrigger: "bg-gray-50 border-none rounded-2xl h-14 px-4 text-gray-500 focus:ring-green-400 font-normal",
   textarea: "w-full bg-gray-50 border-none rounded-2xl min-h-[100px] p-4 focus-visible:ring-green-400 resize-none text-sm font-normal",
-  infoBox: "flex items-center gap-2 mt-2 ml-1 text-green-900 bg-green-50 p-3 rounded-xl border border-green-100",
   urgentBox: "flex items-center space-x-3 p-4 bg-orange-50/50 rounded-2xl border border-orange-100",
   imageUploadPlaceholder: "flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
 };
