@@ -28,7 +28,7 @@ interface StudentPackagesProps {
   onLogout?: () => void;
 }
 
-export function StudentPackages({ packages = [] }: StudentPackagesProps) {
+export function StudentPackages({ packages = [] }: Readonly<StudentPackagesProps>) {
   const [query, setQuery] = useState("");
 
   const normalize = (s?: string) => (s ?? "").toLowerCase();
