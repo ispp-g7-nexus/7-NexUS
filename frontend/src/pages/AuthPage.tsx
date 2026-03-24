@@ -35,6 +35,23 @@ export function AuthPage() {
                 }
 
                 localStorage.setItem('userRole', role);
+                
+                // Verificar si estudiante tiene el formulario de preferencias completado
+                if (role === 'student') {
+                    try {
+                        const { is_completed } = await preferencesService.checkCompletion();
+                        if (!is_completed) {
+                            // Mostrar el formulario de preferencias
+                            setShowPreferencesForm(true);
+                            return;
+                        }
+                    } catch {
+                        // Si hay error, mostrar el formulario de preferencias
+                        setShowPreferencesForm(true);
+                        return;
+                    }
+                }
+                
                 navigate('/dashboard');
             } catch {
                 localStorage.removeItem('userRole');
