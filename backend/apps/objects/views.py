@@ -16,6 +16,7 @@ from apps.membership.models import Membership
 
 
 OBJECT_NAME_PATTERN = re.compile(r"^[\w\-\.\(\), ]+$")
+NO_RESIDENCE_CONTEXT_DETAIL = "No residence context."
 
 
 def _is_admin_for_residence(user, residence) -> bool:
@@ -74,10 +75,10 @@ class AuthenticatedView(View):
         if not request.user.is_authenticated:
             user_data = resolve_user_from_request(request)
             if user_data:
-                User = get_user_model()
+                user_model = get_user_model()
                 try:
-                    request.user = User.objects.get(id=user_data['id'])
-                except User.DoesNotExist:
+                    request.user = user_model.objects.get(id=user_data['id'])
+                except user_model.DoesNotExist:
                     return JsonResponse({"detail": "User not found."}, status=401)
             else:
                 return JsonResponse({"detail": "Authentication credentials were not provided."}, status=401)
@@ -87,7 +88,7 @@ class AuthenticatedView(View):
 class ObjectListView(AuthenticatedView):
     def get(self, request):
         if not hasattr(request, 'residence') or not request.residence:
-            return JsonResponse({"detail": "No residence context."}, status=400)
+            return JsonResponse({"detail": NO_RESIDENCE_CONTEXT_DETAIL}, status=400)
 
         objs = Object.objects.filter(residence=request.residence).annotate(
             rentals_count=Count("rentals")
@@ -97,7 +98,7 @@ class ObjectListView(AuthenticatedView):
 
     def post(self, request):
         if not hasattr(request, 'residence') or not request.residence:
-            return JsonResponse({"detail": "No residence context."}, status=400)
+            return JsonResponse({"detail": NO_RESIDENCE_CONTEXT_DETAIL}, status=400)
         if not request.user.is_staff:
             return JsonResponse({"detail": "No tienes permisos para crear objetos."}, status=403)
         try:
@@ -125,7 +126,7 @@ class ObjectListView(AuthenticatedView):
 
 def get_residence_object(request, object_id):
     if not hasattr(request, 'residence') or not request.residence:
-        return None, JsonResponse({"detail": "No residence context."}, status=400)
+        return None, JsonResponse({"detail": NO_RESIDENCE_CONTEXT_DETAIL}, status=400)
     try:
         return Object.objects.get(id=object_id, residence=request.residence), None
     except Object.DoesNotExist:
@@ -135,7 +136,7 @@ def get_residence_object(request, object_id):
 class ObjectDetailView(AuthenticatedView):
     def get(self, request, object_id):
         if not hasattr(request, 'residence') or not request.residence:
-            return JsonResponse({"detail": "No residence context."}, status=400)
+            return JsonResponse({"detail": NO_RESIDENCE_CONTEXT_DETAIL}, status=400)
         obj, error_response = get_residence_object(request, object_id)
         if error_response:
             return error_response
@@ -143,7 +144,7 @@ class ObjectDetailView(AuthenticatedView):
 
     def delete(self, request, object_id):
         if not hasattr(request, 'residence') or not request.residence:
-            return JsonResponse({"detail": "No residence context."}, status=400)
+            return JsonResponse({"detail": NO_RESIDENCE_CONTEXT_DETAIL}, status=400)
         obj, error_response = get_residence_object(request, object_id)
         if error_response:
             return error_response
@@ -161,7 +162,7 @@ class ObjectDetailView(AuthenticatedView):
 class ObjectReserveView(AuthenticatedView):
     def post(self, request, object_id):
         if not hasattr(request, 'residence') or not request.residence:
-            return JsonResponse({"detail": "No residence context."}, status=400)
+            return JsonResponse({"detail": NO_RESIDENCE_CONTEXT_DETAIL}, status=400)
 
         try:
             body = json.loads(request.body or "{}")
@@ -211,7 +212,7 @@ class ObjectReserveView(AuthenticatedView):
 class ObjectCancelView(AuthenticatedView):
     def post(self, request, object_id):
         if not hasattr(request, 'residence') or not request.residence:
-            return JsonResponse({"detail": "No residence context."}, status=400)
+            return JsonResponse({"detail": NO_RESIDENCE_CONTEXT_DETAIL}, status=400)
 
         obj, error_response = get_residence_object(request, object_id)
         if error_response:
@@ -238,7 +239,7 @@ class ObjectCancelView(AuthenticatedView):
 class ObjectRentalsView(AuthenticatedView):
     def get(self, request, object_id):
         if not hasattr(request, 'residence') or not request.residence:
-            return JsonResponse({"detail": "No residence context."}, status=400)
+            return JsonResponse({"detail": NO_RESIDENCE_CONTEXT_DETAIL}, status=400)
         obj, error_response = get_residence_object(request, object_id)
         if error_response:
             return error_response
@@ -261,7 +262,7 @@ class ObjectRentalsView(AuthenticatedView):
 class UserReservationsView(AuthenticatedView):
     def get(self, request):
         if not hasattr(request, 'residence') or not request.residence:
-            return JsonResponse({"detail": "No residence context."}, status=400)
+            return JsonResponse({"detail": NO_RESIDENCE_CONTEXT_DETAIL}, status=400)
 
         rentals = ObjectRental.objects.filter(
             user=request.user,
@@ -292,7 +293,7 @@ class AdminObjectNotificationsView(AuthenticatedView):
     def get(self, request):
         residence = getattr(request, "residence", None)
         if not residence:
-            return JsonResponse({"detail": "No residence context."}, status=400)
+            return JsonResponse({"detail": NO_RESIDENCE_CONTEXT_DETAIL}, status=400)
 
         if not _is_admin_for_residence(request.user, residence):
             return JsonResponse({"detail": "No tienes permisos de administrador."}, status=403)

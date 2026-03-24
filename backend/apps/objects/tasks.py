@@ -30,7 +30,7 @@ def send_return_reminders():
             'object_name': r.object.name,
             'end_date': r.end_date.isoformat(),
         })
-        # TODO: send email/notification to r.user
+        # Pendiente de integrar envío real de notificaciones (email/push).
 
     # For now return the list for visibility in task runs
     return {'count': len(reminders), 'reminders': reminders} 
