@@ -68,7 +68,6 @@ El plan abarca todas las funcionalidades del sistema: autenticación, gestión d
 
 - **Garantizar la funcionalidad** de todas las características en cada sprint
 - **Validar la integración** entre todos los módulos del sistema
-- **Asegurar el rendimiento** para soportar múltiples residencias y usuarios
 - **Verificar la seguridad** y cumplimiento GDPR/RGPD en toda la plataforma
 - **Mantener la calidad** del código mediante cobertura continua
 - **Facilitar el mantenimiento** con tests como documentación viva
@@ -78,7 +77,6 @@ El plan abarca todas las funcionalidades del sistema: autenticación, gestión d
 - Alcanzar al menos un **80% de cobertura de código** en cada módulo funcional
 - Reducir a 0 los **errores críticos en producción**
 - Garantizar **compatibilidad** con navegadores modernos y dispositivos móviles
-- Verificar que el sistema pueda soportar **múltiples residencias y usuarios concurrentes**
 
 ---
 
@@ -153,7 +151,7 @@ Principios aplicables a cualquier componente:
 |--------------------|--------------------|
 | **Páginas principales** | Renderizado, navegación, estado, integración |
 | **Componentes de UI** | Props, eventos, estados, accesibilidad |
-| **Hooks custom** | Lógica de estado, efectos, performance |
+| **Hooks custom** | Lógica de estado y utilidades|
 | **Servicios/APIs** | Llamadas, manejo de errores, cache |
 | **Utilities** | Funciones puras, transformadores, validadores |
 
@@ -181,13 +179,15 @@ Los siguientes elementos **NO requieren testing exhaustivo**:
 
 #### 4.1.1 Pruebas Unitarias
 
-**Backend (pytest y pytest-django)**
+**Backend (tests estándar de Django)**
 - **Modelos**: Validación de datos, relaciones entre entidades y métodos personalizados
 - **Vistas**: Lógica asociada a cada endpoint, permisos y códigos de respuesta
 - **Servicios**: Lógica de negocio y operaciones del dominio
 - **Serializers**: Validación y transformación de datos entre API y modelo
 
-**Frontend (Jest)**
+Los tests unitarios de backend se implementarán con clases estándar de Django y `django-tenants`, principalmente **TenantTestCase**, **FastTenantTestCase** y, cuando sea necesario, **TestCase**, con ejecución mediante `manage.py test`.
+
+**Frontend (Vitest)**
 - **Componentes**: Renderizado, props, eventos y cambios de estado
 - **Hooks**: Gestión del estado y efectos secundarios
 - **Servicios**: Llamadas a la API y gestión de errores
@@ -195,7 +195,7 @@ Los siguientes elementos **NO requieren testing exhaustivo**:
 
 #### 4.1.2 Pruebas de Integración
 
-**Backend (pytest y pytest-django)**
+**Backend (tests estándar de Django)**
 
 Se verificarán flujos completos de interacción con la API:
 
@@ -205,17 +205,30 @@ Se verificarán flujos completos de interacción con la API:
 
 También se validará que los principales endpoints funcionen correctamente cuando interactúan con la base de datos y otros servicios internos.
 
-#### 4.1.3 Pruebas de Rendimiento
+Para estos escenarios se usarán principalmente **TenantTestCase** y **FastTenantTestCase** en módulos multi-tenant, además de **TestCase** en pruebas que no requieren contexto de tenant.
 
-Las pruebas de carga se realizarán utilizando **k6** para evaluar el comportamiento del sistema bajo distintos niveles de uso.
+### 4.2 Detalle por Módulo y Prioridad
 
-Se evaluarán principalmente:
+La prioridad define el orden de implementación y ejecución de tests en cada sprint: **P1 (módulos clave y delicados)**, **P2 (resto de módulos)** y **P3 (módulos secundarios)**.
 
-- **Carga normal**: simulación de usuarios concurrentes representativos del uso esperado
-- **Pruebas de estrés**: incremento progresivo de usuarios hasta identificar los límites del sistema
-- **Endpoints críticos**: autenticación, reservas y listados principales
-- **Tiempo de respuesta** de las APIs más utilizadas
-- **Estabilidad del sistema** ante múltiples peticiones simultáneas
+Regla general de prioridad técnica:
+- La prioridad principal es por criticidad funcional (P1, P2 y P3).
+- Cuando coincidan tareas de la misma prioridad, **backend** se ejecuta antes que **frontend**.
+- El frontend se complementa con pruebas informales funcionales durante desarrollo y revisión. La automatización de pruebas con Vitest se realizará únicamente si hay suficiente tiempo.
+
+| Grupo de módulos | Prioridad |
+|------------------|-----------|
+| **Autenticación, autorización, perfiles y seguridad** (common, membership, residents, residences, tenants) | P1 |
+| **Reservas, incidencias y operaciones críticas** (spaces, objects, incidences) | P1 |
+| **Asignación y lógica de alojamiento** (matching, bedrooms) | P2 |
+| **Comunicación y vida en residencia** (announcements, events, chats, guests) | P2 |
+| **Paquetería** (packages) | P2 |
+| **Módulos administrativos secundarios**| P3 |
+
+Regla de ejecución por sprint:
+- **P1**: se cubre primero y no puede quedar sin tests antes de cierre de sprint.
+- **P2**: idealmente se cubre tras P1, pero se permitirá su ejecución en paralelo para facilitar el trabajo a los distintos grupos de trabajo.
+- **P3**: se cubre tras estabilizar P1 y P2.
 
 ---
 
@@ -226,10 +239,11 @@ Se evaluarán principalmente:
 **En paralelo con desarrollo de funcionalidad:**
 - **Testing unitario**: Tests durante el desarrollo
 - **Testing de integración**: Tests después de integrar módulos
-- **Testing de rendimiento**: Tests al final del sprint
 
 
 ### 5.2 Criterios de Priorización
+
+La planificación de testing sigue esta regla combinada: primero la criticidad funcional (P1, P2 y P3) y, a igualdad de prioridad, primero **backend** y después **frontend**. Así mismo, se tendrán en cuenta los riesgos y el feedback recibido para ajustar las prioridades definidas cuando sea necesario.
 
 #### 5.2.1 Priorización por Riesgo
 1. **Módulos con datos sensibles** (autenticación, perfiles personales)
@@ -244,7 +258,6 @@ Se evaluarán principalmente:
 - **Bugs encontrados** en producción por módulo
 - **Complejidad descubierta** durante implementación  
 - **Feedback de QA** y testing informal
-- **Rendimiento** observado en entorno real
 
 ---
 
@@ -254,10 +267,10 @@ Se evaluarán principalmente:
 
 | Categoría | Cobertura mínima | Herramienta |
 |-----------|-----------------|-------------|
-| **Backend (módulos críticos)** | 80% | pytest y pytest-cov |
-| **Backend (módulos de soporte)** | 75% | pytest y pytest-cov |
-| **Frontend (componentes principales)** | 80% | Jest |
-| **Frontend (componentes de soporte)** | 70% | Jest |
+| **Backend (módulos críticos)** | 80% | TenantTestCase/FastTenantTestCase/TestCase + coverage.py |
+| **Backend (módulos de soporte)** | 75% | TenantTestCase/FastTenantTestCase/TestCase + coverage.py |
+| **Frontend (componentes principales)** | 80% | Vitest |
+| **Frontend (componentes de soporte)** | 70% | Vitest |
 
 ### 6.2 Criterios de Calidad
 
@@ -266,8 +279,12 @@ Se evaluarán principalmente:
 - **Menos de 5 bugs menores** por módulo
 - **Validación completa** de inputs y outputs
 
+Se consideran **errores menores** aquellos que no bloquean el flujo principal o suponen una condición de suspenso ni comprometen seguridad o integridad de datos. Ejemplos:
+- Problemas de **usabilidad** (texto poco claro, orden confuso en un formulario, acción poco visible)
+- Desalineaciones visuales o inconsistencias de estilos
+- Mensajes de error mejorables sin impacto funcional
+
 #### 6.2.2 No Funcionales  
-- **Respuesta rápida** de páginas principales (tras una carga inicial)
 - **Navegación fluida** entre vistas
 - **0 errores de seguridad** en endpoints
 
@@ -275,7 +292,7 @@ Se evaluarán principalmente:
 
 | Métrica | Objetivo | Herramienta |
 |---------|---------|-------------|
-| **Cobertura de código** | 80% promedio | pytest-cov, Jest |
+| **Cobertura de código** | 80% promedio | coverage.py, Vitest |
 | **Errores críticos detectados en producción** | Ausencia de errores críticos | Feedback de usuarios piloto |
 
 ---
@@ -284,6 +301,6 @@ Se evaluarán principalmente:
 
 Este plan de pruebas establece las bases para mantener un nivel adecuado de calidad en el desarrollo del proyecto NexUS.
 
-La estrategia definida combina pruebas unitarias, de integración y de rendimiento con el objetivo de detectar errores durante el desarrollo y reducir su impacto en producción.
+La estrategia definida combina pruebas unitarias y de integración con el objetivo de detectar errores durante el desarrollo y reducir su impacto en producción.
 
 El uso de herramientas automatizadas permitirá ejecutar las pruebas de forma continua durante el ciclo de desarrollo, facilitando el mantenimiento del sistema y la evolución futura del proyecto.

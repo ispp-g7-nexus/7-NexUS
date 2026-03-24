@@ -79,6 +79,10 @@ export function listAdminSpaces(): Promise<AdminSpace[]> {
   return requestJson<AdminSpace[]>(`${ADMIN_SPACES_BASE}/`);
 }
 
+export function getSpace(spaceId: number): Promise<AdminSpace> {
+  return requestJson<AdminSpace>(`${ADMIN_SPACES_BASE}/${spaceId}/`);
+}
+
 export function createSpace(payload: CreateSpacePayload): Promise<AdminSpace> {
   return requestJson<AdminSpace>(`${ADMIN_SPACES_BASE}/`, {
     method: "POST",
