@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.forms import ValidationError
 from apps.tenants.models import Client
 
 
@@ -43,6 +44,16 @@ class MenuWeek(models.Model):
         "Última modificación",
         auto_now=True
     )
+    def clean(self):
+        super().clean()
+        if self.week_start and self.week_end and self.week_end < self.week_start:
+            raise ValidationError({
+                'week_end': 'La fecha de fin debe ser posterior o igual a la fecha de inicio.'
+            })
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
     class Meta:
         verbose_name = "Menú semanal"

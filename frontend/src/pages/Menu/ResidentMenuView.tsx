@@ -1,4 +1,4 @@
-import { Clock, Flame, Leaf, LogOut, User, Loader2, Send } from "lucide-react";
+import { Clock, Flame, Leaf, LogOut, User, Loader2, Send, MessageSquare } from "lucide-react";
 import { useState, useEffect, JSX } from "react";
 import { MenuWeek, MenuDay, Meal } from "../../types/menu.types";
 import { NotificationBell } from "../../components/announcement/NotificationBell";
@@ -142,7 +142,7 @@ export function ResidentMenuView({ onGoToProfile, onLogout }: ResidentMenuViewPr
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [requestText, setRequestText] = useState("");
-  
+
   useEffect(() => {
     const loadMenu = async () => {
       try {
@@ -269,6 +269,48 @@ export function ResidentMenuView({ onGoToProfile, onLogout }: ResidentMenuViewPr
         </div>
       </div>
     </div>
+    {/* Botón de Petición Especial */}
+<div className="mt-4 pt-4 border-t border-gray-100">
+  {/* Botón flotante corregido */}
+<div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-40 w-full max-w-xs px-4">
+  <button
+    onClick={() => setIsModalOpen(true)}
+    className="w-full flex items-center justify-center gap-2 py-3 bg-orange-500 text-white rounded-full font-bold shadow-lg hover:bg-orange-600 transition-transform active:scale-95"
+  >
+    <MessageSquare size={20} />
+    Petición especial
+  </button>
+</div>
+  {isModalOpen && (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+      <h3 className="text-xl font-bold text-gray-900 mb-4">Nueva petición especial</h3>
+      
+      <textarea
+        className="w-full border border-gray-200 rounded-xl p-3 h-32 focus:ring-2 focus:ring-orange-500 outline-none resize-none"
+        placeholder="Ej: Sin sal, alérgico a los frutos secos, etc..."
+        value={requestText}
+        onChange={(e) => setRequestText(e.target.value)}
+      />
+
+      <div className="flex gap-3 mt-6">
+        <button
+          onClick={() => setIsModalOpen(false)}
+          className="flex-1 py-2 text-gray-600 font-medium hover:bg-gray-50 rounded-lg transition-colors"
+        >
+          Cancelar
+        </button>
+        <button
+          onClick={handleSendRequest}
+          disabled={!requestText.trim()}
+          className="flex-1 py-2 bg-orange-500 text-white font-bold rounded-lg hover:bg-orange-600 disabled:opacity-50 transition-colors"
+        >
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+</div>
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl animate-in fade-in zoom-in duration-200">

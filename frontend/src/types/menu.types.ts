@@ -1,5 +1,5 @@
 export interface Meal {
-  allergens: any;
+  allergens?: string[];
   id?: string;
   name: string;
   description?: string;

@@ -3,6 +3,8 @@ from apps.common.utils.jwt_auth import resolve_user_from_request
 
 
 def _normalize_roles(raw_roles):
+    if isinstance(raw_roles, str):
+        raw_roles = [r.strip() for r in raw_roles.split(",") if r.strip()]
     normalized_roles = set()
     for role in raw_roles or []:
         if not isinstance(role, str):

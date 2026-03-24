@@ -104,10 +104,9 @@ class MenuWeekListSerializer(serializers.ModelSerializer):
 class MenuWeekCreateSerializer(serializers.ModelSerializer):
 
     week_start = serializers.DateField(required=True)
-    image = serializers.ImageField(required=False, allow_null=True)
     class Meta:
         model = MenuWeek
-        fields = ['week_start', 'image']
+        fields = ['week_start']
 
     def validate(self, attrs):
         base_date = attrs.get('week_start')
@@ -159,20 +158,16 @@ class MealCreateSerializer(serializers.ModelSerializer):
         ]
 
     def to_internal_value(self, data):
-        # Convertimos el QueryDict (FormData) a un diccionario común
         if hasattr(data, 'dict'):
             converted = data.dict()
         else:
             converted = dict(data)
 
-        # ESTO ES LO QUE TE FALTA:
-        # Si en el FormData de React enviaste 'image', aquí la rescatamos
+
         if 'image' in data:
             converted['image'] = data['image']
 
-        # Manejo de booleanos (porque llegan como strings "true"/"false")
         for field in ['is_gluten_free', 'is_vegetarian', 'is_vegan']:
-            # Mapeo de camelCase (React) a snake_case (Django)
             frontend_key = field.replace('_g', 'G').replace('_v', 'V')
             if frontend_key in converted:
                 val = converted.pop(frontend_key)
@@ -186,4 +181,4 @@ class SpecialMenuRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = SpecialMenuRequest
         fields = ['id', 'resident', 'resident_name', 'date', 'description', 'status', 'created_at']
-        read_only_fields = ['resident', 'status', 'created_at']
+        read_only_fields = ['resident', 'created_at']

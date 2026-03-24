@@ -46,18 +46,30 @@ interface MealCardAdminProps {
   onDelete: (mealId?: string) => void;
 }
 
-const MealCardAdmin = ({ meal, onEdit, onDelete }: MealCardAdminProps) => {
+const MealCardAdmin = ({ meal, onEdit, onDelete }: MealCardAdminProps) => {  
   return (
-    <div className={`border rounded-xl p-4 overflow-hidden shadow-sm transition-all hover:shadow-md relative ${getMealTypeColor(meal.type)}`}>
-      {meal.image && (
-        <div className="w-full h-40 mb-3 -mt-4 -mx-4 w-[calc(100%+2rem)] border-b border-black/5 relative group">
-          <img src={meal.image} alt={meal.name} className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
-        </div>
-      )}
-      <div className="flex items-start justify-between mb-2">
+      <div className={`border rounded-xl p-4 overflow-hidden shadow-sm transition-all hover:shadow-md relative ${getMealTypeColor(meal.type)}`}>
+  {meal?.image && (
+    <div className="w-full h-40 mb-3 -mt-4 -mx-4 w-[calc(100%+2rem)] border-b border-black/5 relative group">
+      <img 
+        src={meal.image}
+        alt={meal.name} 
+        className="w-full h-full object-cover" 
+        onError={(e) => {
+          const target = e.target as HTMLImageElement;
+          if (!target.src.includes('http://localhost:8000')) {
+            target.src = `http://localhost:8000${meal.image}`;
+          } else {
+            target.src = 'https://via.placeholder.com/150?text=Error+Imagen';
+          }
+        }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
+    </div>
+  )}
+      <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-3 flex-1">
-          <div className={`shrink-0 ${meal.image ? '-mt-8 p-1.5 bg-white/90 backdrop-blur rounded-lg shadow-sm border border-white/50 z-10 relative' : ''}`}>
+          <div className={`shrink-0 ${meal.image ? 'p-1.5 bg-white/90 backdrop-blur rounded-lg shadow-sm border border-white/50 z-10 relative' : ''}`}>
             {getMealTypeIcon(meal.type)}
           </div>
           <div className="flex-1">
@@ -67,7 +79,7 @@ const MealCardAdmin = ({ meal, onEdit, onDelete }: MealCardAdminProps) => {
             )}
           </div>
         </div>
-        <div className={`flex gap-2 ml-4 shrink-0 ${meal.image ? '-mt-8 z-10 relative' : ''}`}>
+        <div className={`flex gap-2 ml-4 shrink-0 ${meal.image ? ' z-10 relative' : ''}`}>
           <button
             onClick={() => onEdit(meal)}
             className="p-1.5 hover:bg-blue-100 rounded-md text-blue-600 transition-colors"
@@ -129,7 +141,7 @@ interface EditMealModalProps {
   dayId?: string;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (meal: Meal, dayId: string) => void;
+  onSave: (meal: Meal, dayId: string, photoFile: File | null) => void;
   isSaving?: boolean;
 }
 
@@ -139,7 +151,6 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
   );
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  // Reseteamos el form cuando se abre el modal con nuevos datos
   useEffect(() => {
     if (isOpen) {
       setFormData(
@@ -244,16 +255,14 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
               placeholder="Ej: Gluten, Maní, Leche"
               className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            {/* --- ESTE BLOQUE USA PREVIEWURL Y QUITA EL ERROR --- */}
             <div className="flex flex-col gap-4 py-4">
               <label className="text-sm font-medium">Imagen del plato</label>
               
-              {/* Mostramos la foto si existe una previa o una ya guardada */}
-              {(previewUrl || meal.image) && (
+              {(previewUrl || meal?.image) && (
                 <div className="relative w-full h-40 border rounded-md overflow-hidden bg-gray-100">
-                  <img 
-                    src={previewUrl || meal.image} 
-                    alt="Previsualización" 
+                  <img
+                    src={previewUrl || meal?.image}
+                    alt="Previsualización"
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -266,7 +275,6 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
                   const file = e.target.files?.[0];
                   if (file) {
                     setPhotoFile(file);
-                    // Aquí le damos valor a la variable
                     const url = URL.createObjectURL(file);
                     setPreviewUrl(url); 
                   }
@@ -325,7 +333,7 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
           <button
             onClick={() => {
               if (dayId) {
-                onSave(formData, dayId);
+                onSave(formData, dayId, photoFile);
               }
             }}
             disabled={isSaving || !formData.name.trim()}
@@ -484,9 +492,9 @@ export function AdminMenuView() {
   const [editingDayId, setEditingDayId] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
   const [specialRequests, setSpecialRequests] = useState<any[]>([]);
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [, setPhotoFile] = useState<File | null>(null);
   const [, setPreviewUrl] = useState<string | null>(null);
-  
+
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [confirmConfig, setConfirmConfig] = useState<{
     isOpen: boolean;
@@ -609,13 +617,11 @@ export function AdminMenuView() {
     );
   };
 
-  const handleSaveMeal = async (meal: Meal, dayId: string) => {
+  const handleSaveMeal = async (meal: Meal, dayId: string, photo: File | null) => {
   setIsSaving(true);
   try {
-    // Creamos el "sobre" para enviar datos + imagen
     const formData = new FormData();
 
-    // Añadimos los campos de texto
     formData.append('name', meal.name);
     formData.append('description', meal.description || '');
     formData.append('type', meal.type);
@@ -623,20 +629,16 @@ export function AdminMenuView() {
     formData.append('isVegetarian', String(meal.isVegetarian));
     formData.append('isVegan', String(meal.isVegan));
 
-    // Si el usuario seleccionó una foto nueva, la añadimos
-    if (photoFile) {
-      // Usamos 'image' para que coincida con el Serializer de Django
-      formData.append('image', photoFile);
+    if (photo) {
+      formData.append('image', photo);
     }
 
-    // Enviamos el formData al servicio que acabamos de actualizar
     if (meal.id) {
       await menuService.updateMeal(meal.id, formData);
     } else {
       await menuService.createMeal(dayId, formData);
     }
 
-    // Limpieza tras éxito
     setIsEditModalOpen(false);
     setPhotoFile(null); 
     setPreviewUrl(null);
