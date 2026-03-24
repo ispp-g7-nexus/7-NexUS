@@ -29,23 +29,17 @@ class IncidenceViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         user = self.request.user
-        queryset = Incidence.objects.select_related('student', 'assigned_staff__user').all()
+        queryset = Incidence.objects.filter(is_active=True).select_related('student', 'assigned_staff__user')
 
-        if user.is_superuser:
-            return queryset
+        if user.is_staff: return queryset
         
-        user_role_names = list(user.memberships.filter(is_active=True).values_list('role__name', flat=True))
-        roles_lower = [r.lower() for r in user_role_names]
-
-        if "admin" in roles_lower:
-            return queryset
-
-        if "student" not in roles_lower:
-            return queryset.filter(Q(assigned_staff__user=user) | Q(student=user))
-
+        roles = [r.lower() for r in user.memberships.filter(is_active=True).values_list('role__name', flat=True)]
+        if "admin" in roles: return queryset
+        
         return queryset.filter(
             Q(student=user) | ~Q(location_type='habitacion')
-        )
+        ).distinct()
+    
 
     def get_location_label(self, incidence):
         return self.LOCATION_LABELS.get(incidence.location_type, incidence.location_type)
@@ -169,7 +163,6 @@ class IncidenceViewSet(viewsets.ModelViewSet):
             
             serializer.save(student=user, room_number=room_number)
         
-
     def perform_update(self, serializer):
         instance = self.get_object()
         old_status = instance.status
@@ -178,44 +171,40 @@ class IncidenceViewSet(viewsets.ModelViewSet):
 
         def get_current_assignee(obj):
             if obj.assigned_staff:
-                # Usamos select_related o chequeo de nulidad para evitar errores
                 return obj.assigned_staff.user.get_full_name() or obj.assigned_staff.user.username
-            return obj.assigned_external_name
+            return obj.assigned_external_name or ""
 
-        
         old_assignee = get_current_assignee(instance)
-        
-        
         new_assignee = get_current_assignee(updated_incidence)
         new_status = updated_incidence.status
         quick_comment = self.request.data.get('quick_comment')
 
         log_parts = []
-
         if old_status != new_status:
-            old_label = self.get_status_label(old_status)
-            new_label = self.get_status_label(new_status)
-            log_parts.append(f"Estado cambiado de {old_label} a {new_label}.")
+            log_parts.append(f"Estado cambiado a {self.get_status_label(new_status)}.")
 
         if old_assignee != new_assignee:
-            if not old_assignee and new_assignee:
-                log_parts.append(f"Asignada a: {new_assignee}.")
-            elif old_assignee and new_assignee:
-                log_parts.append(f"Cambio de técnico: de {old_assignee} a {new_assignee}.")
-            elif old_assignee and not new_assignee:
-                log_parts.append(f"Se ha retirado la asignación de {old_assignee}.")
+            if new_assignee: log_parts.append(f"Asignada a: {new_assignee}.")
+            else: log_parts.append("Se ha retirado la asignación.")
 
         if quick_comment:
             log_parts.append(f"Nota: {quick_comment}")
 
         if log_parts:
             full_log_text = " ".join(log_parts)
-        IncidenceUpdate.objects.create(
-            incidence=updated_incidence,
-            author_name=self.request.user.get_full_name() or self.request.user.username,
-            text=full_log_text
-        )
+            IncidenceUpdate.objects.create(
+                incidence=updated_incidence,
+                author_name=self.request.user.get_full_name() or self.request.user.username,
+                text=full_log_text
+            )
 
         
     def perform_destroy(self, instance):
-        instance.delete()
+        instance.is_active = False
+        instance.save()
+        
+        IncidenceUpdate.objects.create(
+            incidence=instance,
+            author_name=self.request.user.get_full_name() or self.request.user.username,
+            text="Incidencia marcada como eliminada/cancelada."
+        )
