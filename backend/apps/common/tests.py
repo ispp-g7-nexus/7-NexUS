@@ -578,14 +578,40 @@ class AdminCreateResidentViewsTests(FastTenantTestCase):
         self.assertEqual(new_user.username, "juan.perez1")
 
     @patch("apps.common.views.resolve_user_from_request")
-    def test_existing_user_password_update(self, mock_resolve):
-        """If an existing user is provided with a password, it should be updated."""
+    @patch("apps.common.views.process_password_reset_request")
+    def test_existing_user_password_is_not_overwritten(self, mock_reset, mock_resolve):
         self._mock_admin(mock_resolve)
+        old_password = "PASSWORD2"
         payload = self._payload(email=self.student_user.email, password="PASSWORD3")
+
         response = self.admin_client.post(self.url, payload, format="json")
+
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         user = get_user_model().objects.get(email=self.student_user.email)
-        self.assertTrue(user.check_password("PASSWORD3"))
+        self.assertTrue(user.check_password(old_password))
+        self.assertFalse(user.check_password("PASSWORD3"))
+        mock_reset.assert_called_once()
+        called_email, called_request = mock_reset.call_args.args
+        self.assertEqual(called_email, user.email)
+        self.assertEqual(called_request.path, self.url)
+
+    @patch("apps.common.views.resolve_user_from_request")
+    @patch("apps.common.views.process_password_reset_request")
+    def test_existing_inactive_user_is_reactivated(self, mock_reset, mock_resolve):
+        self._mock_admin(mock_resolve)
+        self.student_user.is_active = False
+        self.student_user.save(update_fields=["is_active"])
+
+        payload = self._payload(email=self.student_user.email, password="PASSWORD3")
+        response = self.admin_client.post(self.url, payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        user = get_user_model().objects.get(email=self.student_user.email)
+        self.assertTrue(user.is_active)
+        mock_reset.assert_called_once()
+        called_email, called_request = mock_reset.call_args.args
+        self.assertEqual(called_email, user.email)
+        self.assertEqual(called_request.path, self.url)
 
     @patch("apps.common.views.resolve_user_from_request")
     @patch("apps.common.views.process_password_reset_request")

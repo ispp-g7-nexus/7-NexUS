@@ -89,6 +89,9 @@ def _find_or_create_user_for_resident(data: dict):
             is_active=True,
         )
         created = True
+    elif not user.is_active:
+        user.is_active = True
+        user.save(update_fields=["is_active"])
 
     return user, created
 
@@ -121,9 +124,11 @@ def _ensure_student_membership(user, residence) -> None:
         membership.save(update_fields=["is_active", "updated_at"])
 
 
-def _apply_resident_password_or_reset(user, data: dict, request) -> None:
+def _apply_resident_password_or_reset(
+    user, data: dict, request, *, created: bool
+) -> None:
     passwd = data.get("password")
-    if passwd:
+    if created and passwd:
         user.set_password(passwd)
         user.save(update_fields=["password"])
         return
@@ -385,7 +390,7 @@ class AdminCreateResidentView(APIView):
         with transaction.atomic():
             user, created = _find_or_create_user_for_resident(data)
             _ensure_student_membership(user, residence)
-            _apply_resident_password_or_reset(user, data, request)
+            _apply_resident_password_or_reset(user, data, request, created=created)
 
         return Response(
             {"ok": True, "created": created, "email": user.email},
