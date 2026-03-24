@@ -1,20 +1,21 @@
-import { AlertCircle, BedDouble, Bell, BookOpen, Briefcase, Calendar, Home, LayoutDashboard, LogOut, Menu, MessageSquare, Palette, Shield, User, UserCheck, Users, Utensils } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { AlertCircle, BedDouble, Bell, BookOpen, Briefcase, Calendar, Home, LayoutDashboard, LogOut, Menu, MessageSquare, Package, Palette, Shield, User, UserCheck, Users, Utensils } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { chatsService, type ChatRealtimeEvent } from "../services/chats";
+import { authService } from "../services/auth";
+import { Events } from "../pages/Social/Events/Events";
+import { Residents } from "../pages/Residents/Residents";
 import logo from "../assets/logo.png";
 import { AdminChats } from "../pages/Chats/AdminChats";
 import { AdminIncidences } from "../pages/Incidences/components/AdminIncidences";
 import { AdminMenuView } from "../pages/Menu/AdminMenuView";
-import { Residents } from "../pages/Residents/Residents";
 import RolesPage from "../pages/RolesPage";
 import Rooms from "../pages/Rooms/Rooms";
-import { Events } from "../pages/Social/Events/Events";
 import { Staff } from "../pages/Staff/Staff";
 import { AdminGuestPassListPage } from "../pages/Visitors/AdminGuestPassList";
 import { AdminGuestPassPolicyPage } from "../pages/Visitors/AdminGuestPassPolicy";
 import { AdminAnnouncements } from "../pages/announcements/AdminAnnouncements";
-import { authService } from "../services/auth";
 import { listBedrooms } from "../services/bedrooms";
-import { chatsService, type ChatRealtimeEvent } from "../services/chats";
 import { listAdminGuestPasses } from "../services/guestPasses";
 import { IncidenceService } from "../services/incidences";
 import { residentsService } from "../services/residents";
@@ -22,6 +23,8 @@ import { roleService } from "../services/roles";
 import { staffService } from "../services/staff";
 import { AdminProfile } from "./AdminProfile";
 import { AdminReservations } from "./AdminReservations";
+import { AdminPackages } from "../pages/Packages/AdminPackages";
+
 import { StatCard } from "./statCard";
 import { AdminBrandingPage } from "../pages/Branding/AdminBrandingPage";
 import { brandingService, type ResidenceBranding } from "../services/branding";
@@ -30,13 +33,46 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet";
 import { useAdminNotifications, type AdminNotificationSource } from "./useAdminNotifications";
 
-
 interface AdminViewProps {
     readonly onLogout: () => void;
     readonly currentUser: { name: string; email: string } | null;
 }
 
-type AdminTab = "dashboard" | "rooms" | "students" | "incidences" | "reservations" | "kitchen" | "analytics" | "staff" | "announcements" | "visitors" | "events" | "roles" | "profile" | "chats" | "branding";
+type AdminTab = "dashboard" | "rooms" | "students" | "incidences" | "reservations" | "kitchen" | "analytics" | "staff" | "announcements" | "visitors" | "events" | "roles" | "profile" | "chats" | "packages" | "branding";
+
+const ADMIN_TABS: AdminTab[] = [
+    "dashboard",
+    "rooms",
+    "students",
+    "incidences",
+    "reservations",
+    "kitchen",
+    "analytics",
+    "staff",
+    "announcements",
+    "visitors",
+    "events",
+    "roles",
+    "profile",
+    "chats",
+    "packages",
+    "branding",
+];
+
+const isAdminTab = (value: string): value is AdminTab => {
+    return ADMIN_TABS.includes(value as AdminTab);
+};
+
+const getAdminTabFromPath = (pathname: string): AdminTab => {
+    const [, dashboardSegment, maybeTab] = pathname.split("/");
+    if (dashboardSegment !== "dashboard") {
+        return "dashboard";
+    }
+    if (!maybeTab) {
+        return "dashboard";
+    }
+    return isAdminTab(maybeTab) ? maybeTab : "dashboard";
+};
 
 const formatRelativeTime = (isoDate: string) => {
     const parsedTime = Date.parse(isoDate);
@@ -71,7 +107,10 @@ const getTabByNotificationSource = (source: AdminNotificationSource): AdminTab =
 };
 
 export function AdminView({ onLogout, currentUser }: AdminViewProps) {
-    const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
+    const navigate = useNavigate();
+    const location = useLocation();
+    const [activeTab, setActiveTab] = useState<AdminTab>(() => getAdminTabFromPath(location.pathname));
+
     const [totalChats, setTotalChats] = useState<number>(0);
     const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
     const [unreadChatKeys, setUnreadChatKeys] = useState<Set<string>>(new Set());
@@ -163,11 +202,12 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
     };
 
     const [totalActiveGuests, setTotalActiveGuests] = useState<number>(0);
-            useEffect(() => {
-                listAdminGuestPasses("active")
-                    .then((data) => setTotalActiveGuests(data.length))
-                    .catch(() => setTotalActiveGuests(0));
-            }, []);
+    
+    useEffect(() => {
+        listAdminGuestPasses("active")
+            .then((data) => setTotalActiveGuests(data.length))
+            .catch(() => setTotalActiveGuests(0));
+    }, []);
 
     const loadChatsCount = async () => {
         try {
@@ -177,6 +217,11 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
             console.error('Error loading chats count:', error);
             setTotalChats(0);
         }
+    };
+
+    const goToTab = (tab: AdminTab) => {
+        setActiveTab(tab);
+        navigate(tab === "dashboard" ? "/dashboard" : `/dashboard/${tab}`);
     };
 
     useEffect(() => {
@@ -293,6 +338,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
             setUnreadChatKeys(new Set());
         }
     }, [activeTab]);
+
     const [reservationsSubTab, setReservationsSubTab] = useState("espacios");
     const {
         notifications,
@@ -308,29 +354,30 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
         handleNavbarModuleAccess,
     } = useAdminNotifications();
 
-const [totalResidents, setTotalResidents] = useState<number>(0);
-const [occupiedRoomsPercent, setOccupiedRoomsPercent] = useState<string>('—');
-const [totalStaff, setTotalStaff] = useState<number>(0);
-const [pendingIncidences, setPendingIncidences] = useState<number>(0);
-const [totalRoles, setTotalRoles] = useState<number>(0);
-useEffect(() => {
-    if (activeTab !== "dashboard") return;
+    const [totalResidents, setTotalResidents] = useState<number>(0);
+    const [occupiedRoomsPercent, setOccupiedRoomsPercent] = useState<string>('—');
+    const [totalStaff, setTotalStaff] = useState<number>(0);
+    const [pendingIncidences, setPendingIncidences] = useState<number>(0);
+    const [totalRoles, setTotalRoles] = useState<number>(0);
 
-    residentsService.list().then((d) => setTotalResidents(d.length)).catch(() => setTotalResidents(0));
+    useEffect(() => {
+        if (activeTab !== "dashboard") return;
 
-    listBedrooms().then((d) => {
-        const totalPlazas = d.reduce((sum, r) => sum + r.capacidad_maxima, 0);
-        const plazasOcupadas = d.reduce((sum, r) => sum + r.ocupantes_actuales, 0);
-        const pct = totalPlazas > 0 ? Math.round((plazasOcupadas / totalPlazas) * 100) : 0;
-        setOccupiedRoomsPercent(`${pct}%`);
-    }).catch(() => setOccupiedRoomsPercent('—'));
+        residentsService.list().then((d) => setTotalResidents(d.length)).catch(() => setTotalResidents(0));
 
-    staffService.list().then((d) => setTotalStaff(d.length)).catch(() => setTotalStaff(0));
-    listAdminGuestPasses("active").then((d) => setTotalActiveGuests(d.length)).catch(() => setTotalActiveGuests(0));
-    IncidenceService.getAll().then((d) => setPendingIncidences(d.filter(i => i.status === 'pending').length)).catch(() => setPendingIncidences(0));
-    roleService.getRoles().then((d) => setTotalRoles(d.length)).catch(() => setTotalRoles(0));
-    loadChatsCount();
-}, [activeTab]);
+        listBedrooms().then((d) => {
+            const totalPlazas = d.reduce((sum, r) => sum + r.capacidad_maxima, 0);
+            const plazasOcupadas = d.reduce((sum, r) => sum + r.ocupantes_actuales, 0);
+            const pct = totalPlazas > 0 ? Math.round((plazasOcupadas / totalPlazas) * 100) : 0;
+            setOccupiedRoomsPercent(`${pct}%`);
+        }).catch(() => setOccupiedRoomsPercent('—'));
+
+        staffService.list().then((d) => setTotalStaff(d.length)).catch(() => setTotalStaff(0));
+        listAdminGuestPasses("active").then((d) => setTotalActiveGuests(d.length)).catch(() => setTotalActiveGuests(0));
+        IncidenceService.getAll().then((d) => setPendingIncidences(d.filter(i => i.status === 'pending').length)).catch(() => setPendingIncidences(0));
+        roleService.getRoles().then((d) => setTotalRoles(d.length)).catch(() => setTotalRoles(0));
+        loadChatsCount();
+    }, [activeTab]);
 
     const allNavItems = [
         { id: "dashboard", label: "Panel de Control", icon: <LayoutDashboard className="w-5 h-5" /> },
@@ -338,6 +385,7 @@ useEffect(() => {
         { id: "rooms", label: "Habitaciones", icon: <Home className="w-5 h-5" /> },
         { id: "students", label: "Residentes", icon: <Users className="w-5 h-5" /> },
         { id: "staff", label: "Personal", icon: <Briefcase className="w-5 h-5" /> },
+        { id: "packages", label: "Paqueteria", icon: <Package className="w-5 h-5" /> },
         { id: "incidences", label: "Incidencias", icon: <AlertCircle className="w-5 h-5" /> },
         { id: "kitchen", label: "Menú Comedor", icon: <Utensils className="w-5 h-5" /> },
         { id: "events", label: "Eventos & Comunidad", icon: <Calendar className="w-5 h-5" /> },
@@ -349,19 +397,21 @@ useEffect(() => {
     ];
 
     const metricsData = [
-    { label: 'Residentes',         value: totalResidents,    icon: Users,         theme: 'blue'   as const, onClick: () => setActiveTab('students')      },
-    { label: 'Habitaciones',       value: occupiedRoomsPercent, icon: BedDouble,  theme: 'green'  as const, onClick: () => setActiveTab('rooms')         },
-    { label: 'Personal',           value: totalStaff,        icon: Briefcase,     theme: 'purple' as const, onClick: () => setActiveTab('staff')         },
-    { label: 'Visitantes',         value: totalActiveGuests, icon: UserCheck,     theme: 'purple' as const, onClick: () => setActiveTab('visitors')      },
-    { label: 'Incidencias',        value: pendingIncidences, icon: AlertCircle,   theme: 'red'    as const, onClick: () => setActiveTab('incidences')    },
-    { label: 'Eventos',            value: 'Ver',             icon: Calendar,      theme: 'orange' as const, onClick: () => setActiveTab('events')        },
-    { label: 'Roles',              value: totalRoles,        icon: Shield,        theme: 'purple' as const, onClick: () => setActiveTab('roles')         },
-    { label: 'Chats',              value: totalChats,        icon: MessageSquare, theme: 'blue'   as const,
-      topBadgeText: unreadChatsCount > 0 ? '¡Tienes mensajes sin leer!' : undefined,
-      onClick: () => setActiveTab('chats') },
-    { label: 'Menú Comedor',       value: 'Ver',             icon: Utensils,      theme: 'blue'   as const, onClick: () => setActiveTab('kitchen')       },
-    { label: 'Recursos & Reservas',value: 'Ver',             icon: BookOpen,      theme: 'green'  as const, onClick: () => setActiveTab('reservations')  },
-];
+        { label: 'Residentes',         value: totalResidents,    icon: Users,         theme: 'blue'   as const, onClick: () => setActiveTab('students')      },
+        { label: 'Habitaciones',       value: occupiedRoomsPercent, icon: BedDouble,  theme: 'green'  as const, onClick: () => setActiveTab('rooms')         },
+        { label: 'Personal',           value: totalStaff,        icon: Briefcase,     theme: 'purple' as const, onClick: () => setActiveTab('staff')         },
+        { label: 'Visitantes',         value: totalActiveGuests, icon: UserCheck,     theme: 'purple' as const, onClick: () => setActiveTab('visitors')      },
+        { label: 'Incidencias',        value: pendingIncidences, icon: AlertCircle,   theme: 'red'    as const, onClick: () => setActiveTab('incidences')    },
+        { label: 'Eventos',            value: 'Ver',             icon: Calendar,      theme: 'orange' as const, onClick: () => setActiveTab('events')        },
+        { label: 'Roles',              value: totalRoles,        icon: Shield,        theme: 'purple' as const, onClick: () => setActiveTab('roles')         },
+        { label: 'Chats',              value: totalChats,        icon: MessageSquare, theme: 'blue'   as const,
+          topBadgeText: unreadChatsCount > 0 ? '¡Tienes mensajes sin leer!' : undefined,
+          onClick: () => setActiveTab('chats') },
+        { label: 'Paquetería',         value: 'Ver',             icon: Package,       theme: 'orange'  as const, onClick: () => setActiveTab('packages')      },
+        { label: 'Menú Comedor',       value: 'Ver',             icon: Utensils,      theme: 'blue'   as const, onClick: () => setActiveTab('kitchen')       },
+        { label: 'Recursos & Reservas',value: 'Ver',             icon: BookOpen,      theme: 'green'  as const, onClick: () => setActiveTab('reservations')  },
+    ];
+
     const today = new Date().toLocaleDateString('es-ES', {
         weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
     });
@@ -448,6 +498,13 @@ useEffect(() => {
                     </div>
                 );
 
+            case "packages":
+                return (
+                    <div className="p-4">
+                        <AdminPackages />
+                    </div>
+                );
+
             case "incidences":
                 return (
                     <div className="p-4">
@@ -527,7 +584,7 @@ useEffect(() => {
                                                         onClick={() => {
                                                             const source = handleOpenNotification(notification);
                                                             if (source === "reservations") setReservationsSubTab(notification.id.startsWith("object-reservations-") ? "objetos" : "espacios");
-                                                            setActiveTab(getTabByNotificationSource(source));
+                                                            goToTab(getTabByNotificationSource(source));
                                                         }}
                                                         className={`w-full rounded-lg border p-3 text-left transition-colors hover:shadow-sm ${getCardClassesBySource(notification.source)}`}
                                                     >
@@ -564,7 +621,7 @@ useEffect(() => {
                                                 onClick={() => {
                                                     const nextTab = item.id as AdminTab;
                                                     handleNavbarModuleAccess(nextTab);
-                                                    setActiveTab(nextTab);
+                                                    goToTab(nextTab);
                                                 }}
                                                 className={`w-full flex items-center justify-between gap-3 px-4 py-3 text-sm rounded-xl transition-colors ${
                                                     activeTab === item.id
