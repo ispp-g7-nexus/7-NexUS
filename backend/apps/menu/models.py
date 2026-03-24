@@ -161,10 +161,30 @@ class Meal(models.Model):
         auto_now=True
     )
 
+class SpecialMenuRequest(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pendiente'),
+        ('approved', 'Aprobado'),
+        ('rejected', 'Rechazado'),
+    ]
+    resident = models.ForeignKey(
+        'residents.Resident', 
+        on_delete=models.CASCADE,
+        related_name='special_menu_requests'
+    )
+    date = models.DateField("Fecha solicitada")
+    description = models.TextField("Motivo/Descripción")
+    status = models.CharField(
+        max_length=10, 
+        choices=STATUS_CHOICES, 
+        default='pending'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    
     class Meta:
-        verbose_name = "Comida"
-        verbose_name_plural = "Comidas"
-        ordering = ['type', 'name']
+        verbose_name = "Petición especial"
+        verbose_name_plural = "Peticiones especiales"
+        ordering = ['-date']
 
     def __str__(self):
-        return f"{self.name} ({self.get_type_display()})"
+        return f"Petición de {self.resident} para el {self.date}"

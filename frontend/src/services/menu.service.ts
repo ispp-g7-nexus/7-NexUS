@@ -136,6 +136,33 @@ class MenuService {
       method: 'DELETE',
     });
   }
+
+  /**
+   * Crear una nueva petición de menú especial (estudiantes).
+   */
+  async createSpecialRequest(data: { date: string; description: string }): Promise<any> {
+    return this.request('/menu/special-requests/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  /**
+   * Obtener todas las peticiones especiales (admin ve todas, residente las suyas).
+   */
+  async getSpecialRequests(): Promise<any[]> {
+    return this.request<any[]>('/menu/special-requests/');
+  }
+
+  /**
+   * Actualizar el estado de una petición (Aprobar/Rechazar).
+   */
+  async updateSpecialRequestStatus(requestId: string | number, status: 'approved' | 'rejected'): Promise<any> {
+    return this.request(`/menu/special-requests/${requestId}/`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+  }
 }
 
 export default new MenuService();

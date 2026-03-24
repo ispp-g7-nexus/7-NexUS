@@ -1,18 +1,21 @@
 import datetime
-from rest_framework import viewsets, status
+from django.forms import ValidationError
+from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from apps.tenants.models import Domain
 from apps.common.utils.jwt_auth import resolve_user_from_request
 
-from .models import MenuWeek, MenuDay, Meal
+from .models import MenuWeek, MenuDay, Meal, SpecialMenuRequest
+from apps.residents.models import Resident
 from .serializers import (
     MenuWeekSerializer,
     MenuWeekListSerializer,
     MenuWeekCreateSerializer,
     MealSerializer,
     MealCreateSerializer,
+    SpecialMenuRequestSerializer
 )
 from .permissions import IsStaffOrReadOnly
 
@@ -227,3 +230,19 @@ class MealViewSet(viewsets.ModelViewSet):
 
         output_serializer = MealSerializer(instance)
         return Response(output_serializer.data)
+    
+class SpecialMenuRequestViewSet(viewsets.ModelViewSet):
+    serializer_class = SpecialMenuRequestSerializer
+    queryset = SpecialMenuRequest.objects.all()
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        from apps.residents.models import Resident 
+        
+        resident = Resident.objects.first()
+        
+        if not resident:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"detail": "No hay residentes en la base de datos. Ejecuta el comando de la terminal."})
+
+        serializer.save(resident=resident)

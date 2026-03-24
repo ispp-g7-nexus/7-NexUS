@@ -1,5 +1,5 @@
 import { Clock, Edit2, Plus, Trash2, Leaf, Flame, X, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, JSX } from "react";
 import { MenuWeek, MenuDay, Meal } from "../../types/menu.types";
 import menuService from "../../services/menu.service";
 import { Toast } from "../../components/ui/Toast";
@@ -135,14 +135,14 @@ interface EditMealModalProps {
 
 const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditMealModalProps) => {
   const [formData, setFormData] = useState<Meal>(
-    meal || { name: '', type: 'lunch', description: '', isGlutenFree: false, isVegetarian: false, isVegan: false }
+    meal || { allergens: [], name: '', type: 'lunch', description: '', isGlutenFree: false, isVegetarian: false, isVegan: false }
   );
 
   // Reseteamos el form cuando se abre el modal con nuevos datos
   useEffect(() => {
     if (isOpen) {
       setFormData(
-        meal || { name: '', type: 'lunch', description: '', isGlutenFree: false, isVegetarian: false, isVegan: false }
+        meal || { allergens: [], name: '', type: 'lunch', description: '', isGlutenFree: false, isVegetarian: false, isVegan: false }
       );
     }
   }, [isOpen, meal]);
@@ -414,7 +414,7 @@ const DayMenuCardAdmin = ({ day, onAddMeal, onEditMeal, onDeleteMeal }: DayMenuC
           <p className="text-sm text-primary-foreground/80">{formattedDate}</p>
         </div>
         <button
-          onClick={() => onAddMeal(day.date)}
+          onClick={() => onAddMeal(day.date, day.id || '')}
           className="flex items-center gap-2 px-3 py-2 bg-white text-primary rounded-lg hover:bg-primary/10 transition-colors font-medium"
           title="Agregar comida"
         >
@@ -462,6 +462,7 @@ export function AdminMenuView() {
   const [selectedMeal, setSelectedMeal] = useState<Meal | undefined>();
   const [editingDayId, setEditingDayId] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
+  const [specialRequests, setSpecialRequests] = useState<any[]>([]);
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [confirmConfig, setConfirmConfig] = useState<{
@@ -505,6 +506,14 @@ export function AdminMenuView() {
   useEffect(() => {
     const init = async () => {
       setLoading(true);
+      
+      try {
+        const requests = await menuService.getSpecialRequests();
+        setSpecialRequests(requests);
+      } catch (err) {
+        console.error("Error al cargar solicitudes:", err);
+      }
+
       try {
         const currentWeek = await menuService.getCurrentWeek();
         setMenuWeek(currentWeek);
@@ -519,11 +528,9 @@ export function AdminMenuView() {
             setMenuWeek(firstWeek);
             setSelectedWeekId(weeks[0].id || null);
           } else {
-            setError(null);
             setMenuWeek(null);
           }
         } catch {
-          setError(null);
           setMenuWeek(null);
         }
       } finally {
@@ -534,6 +541,17 @@ export function AdminMenuView() {
     init();
   }, [loadWeeks]);
 
+  const handleUpdateSpecialRequest = async (id: string | number, status: 'approved' | 'rejected') => {
+  try {
+    await menuService.updateSpecialRequestStatus(id, status);
+    
+    setSpecialRequests(prev => prev.filter(req => req.id !== id));
+    
+    showToast(`Petición ${status === 'approved' ? 'aprobada' : 'rechazada'}`, 'success');
+  } catch (err) {
+    showToast('Error al actualizar la petición', 'error');
+  }
+};
   const handleAddMeal = (_dayDate: string, dayId: string) => {
     setEditingDayId(dayId);
     setSelectedMeal(undefined);
@@ -809,10 +827,6 @@ export function AdminMenuView() {
               Nueva Semana
             </button>
           </div>
-          <button className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium flex items-center gap-2">
-            <Plus className="w-5 h-5" />
-            Nueva Semana
-          </button>
         </div>
 
         {/* Menu Days Grid */}
@@ -893,6 +907,41 @@ export function AdminMenuView() {
           onClose={() => setToast(null)}
         />
       )}
+      {/* Sección de Peticiones al final de la página */}
+      <div className="mt-12 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="bg-[#1B4D1C] p-4 flex justify-between items-center">
+          <h3 className="text-white font-bold">Solicitudes Especiales</h3>
+          <span className="bg-white/20 text-white text-xs px-2 py-1 rounded">{specialRequests.length}</span>
+        </div>
+        <div className="divide-y divide-gray-100">
+          {specialRequests.length === 0 ? (
+            <p className="p-8 text-center text-gray-400">No hay peticiones pendientes</p>
+          ) : (
+            specialRequests.map((req) => (
+              <div key={req.id} className="p-4 flex justify-between items-center">
+                <div>
+                  <p className="font-bold text-gray-800">{req.resident_name || 'Residente'}</p>
+                  <p className="text-sm text-gray-500">{req.date}: {req.description}</p>
+                </div>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => handleUpdateSpecialRequest(req.id, 'approved')} 
+                    className="bg-green-600 text-white px-3 py-1 rounded-lg text-sm font-bold"
+                  >
+                    Aprobar
+                  </button>
+                  <button 
+                    onClick={() => handleUpdateSpecialRequest(req.id, 'rejected')} 
+                    className="border border-red-200 text-red-600 px-3 py-1 rounded-lg text-sm font-bold"
+                  >
+                    Rechazar
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
     </div>
   );
 }

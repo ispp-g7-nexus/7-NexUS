@@ -1,6 +1,7 @@
 import datetime
 from rest_framework import serializers
-from .models import MenuWeek, MenuDay, Meal
+from .models import MenuWeek, MenuDay, Meal, SpecialMenuRequest
+from apps.residents.models import Resident
 
 
 class MealSerializer(serializers.ModelSerializer):
@@ -169,3 +170,11 @@ class MealCreateSerializer(serializers.ModelSerializer):
         if 'imageUrl' in converted:
             converted['image_url'] = converted.pop('imageUrl')
         return super().to_internal_value(converted)
+
+class SpecialMenuRequestSerializer(serializers.ModelSerializer):
+    resident_name = serializers.ReadOnlyField(source='resident.fullname')
+
+    class Meta:
+        model = SpecialMenuRequest
+        fields = ['id', 'resident', 'resident_name', 'date', 'description', 'status', 'created_at']
+        read_only_fields = ['resident', 'status', 'created_at']

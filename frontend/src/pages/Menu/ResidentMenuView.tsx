@@ -1,7 +1,8 @@
-import { Clock, Flame, Leaf, Loader2 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Clock, Flame, Leaf, Loader2, Send } from "lucide-react";
+import { useState, useEffect, JSX } from "react";
 import { MenuWeek, MenuDay, Meal } from "../../types/menu.types";
 import menuService from "../../services/menu.service";
+import { toast } from "sonner";
 
 const getMealTypeLabel = (type: Meal['type']): string => {
   switch (type) {
@@ -55,7 +56,7 @@ const MealCard = ({ meal }: { meal: Meal }) => {
           <div className="flex-1">
             <p className="font-semibold text-gray-900 leading-tight">{meal.name}</p>
             {meal.description && (
-              <p className="text-sm text-gray-500">{meal.description}</p>
+              <p className="text-sm text-gray-600 mt-0.5">{meal.description}</p>
             )}
           </div>
         </div>
@@ -97,11 +98,11 @@ const DayMenuCard = ({ day }: { day: MenuDay }) => {
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-      <div className="bg-primary pt-12 pb-24 px-6 rounded-b-[2.5rem] relative">
-        <h3 className="text-lg font-semibold text-primary-foreground capitalize">
+      <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4">
+        <h3 className="text-lg font-semibold text-white capitalize">
           {dayName}
         </h3>
-        <p className="text-sm text-primary-foreground/80">{formattedDate}</p>
+        <p className="text-sm text-green-50">{formattedDate}</p>
       </div>
 
       <div className="p-6 space-y-4">
@@ -131,7 +132,9 @@ export function ResidentMenuView() {
   const [menuWeek, setMenuWeek] = useState<MenuWeek | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [requestText, setRequestText] = useState("");
+  
   useEffect(() => {
     const loadMenu = async () => {
       try {
@@ -149,6 +152,19 @@ export function ResidentMenuView() {
 
     loadMenu();
   }, []);
+
+  const handleSendRequest = () => {
+    if (requestText.trim()) {
+      menuService.createSpecialRequest({
+        description: requestText,
+        date: new Date().toISOString().split('T')[0]
+      });
+
+      toast.success("Petición enviada");
+      setIsModalOpen(false);
+      setRequestText("");
+    }
+  };
 
   if (loading) {
     return (
@@ -184,13 +200,19 @@ export function ResidentMenuView() {
   }
 
   return (
-    <div className="flex flex-col w-full bg-background">
+    <div className="flex flex-col w-full bg-[#F6F7F9]">
       {/* Header */}
-      <header className="bg-primary p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg sticky top-0 z-20">
-        <h1 className="text-primary-foreground text-2xl font-bold">Menú</h1>
+      <header className="bg-[#1B4D1C] p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg sticky top-0 z-20">
+        <h1 className="text-white text-2xl font-bold">Menú</h1>
+        <button 
+          onClick={() => setIsModalOpen(true)}
+          className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors"
+        >
+          Solicitud Especial
+        </button>
       </header>
       
-      <div className="min-h-screen bg-background pt-6">
+      <div className="min-h-screen bg-[#F6F7F9] pt-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         {/* Menu Days Grid */}
@@ -211,9 +233,7 @@ export function ResidentMenuView() {
           <h3 className="font-semibold text-blue-900 mb-4">Información dietética</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-blue-800">
             <div className="flex items-center gap-2">
-              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                <Leaf className="w-5 h-5 text-primary" />
-              </div>
+              <Leaf className="w-5 h-5 text-green-600" />
               <span>Las opciones vegetarianas disponibles están marcadas</span>
             </div>
             <div className="flex items-center gap-2">
@@ -225,9 +245,36 @@ export function ResidentMenuView() {
               <span>Las opciones sin gluten están identificadas</span>
             </div>
           </div>
-          </div>
+        </div>
       </div>
     </div>
-  </div>
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl animate-in fade-in zoom-in duration-200">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Petición Especial</h3>
+            <textarea
+              className="w-full h-32 p-3 border border-gray-200 rounded-xl mb-4 focus:ring-2 focus:ring-amber-500 outline-none resize-none text-gray-700"
+              placeholder="Describe tu necesidad (picnic, dieta médica...)"
+              value={requestText}
+              onChange={(e) => setRequestText(e.target.value)}
+            />
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setIsModalOpen(false)} 
+                className="flex-1 rounded-xl border border-gray-300 py-2 text-sm font-medium hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={handleSendRequest} 
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-xl flex items-center justify-center gap-2 font-bold"
+              >
+                <Send size={16} /> Enviar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
