@@ -1,6 +1,14 @@
-import { Clock, Flame, Leaf, Loader2, Send } from "lucide-react";
+import { Clock, Flame, Leaf, LogOut, User, Loader2, Send } from "lucide-react";
 import { useState, useEffect, JSX } from "react";
 import { MenuWeek, MenuDay, Meal } from "../../types/menu.types";
+import { NotificationBell } from "../../components/announcement/NotificationBell";
+import { Button } from "../../components/ui/button";
+
+interface ResidentMenuViewProps {
+  menuWeek?: MenuWeek;
+  onGoToProfile?: () => void;
+  onLogout?: () => void;
+}
 import menuService from "../../services/menu.service";
 import { toast } from "sonner";
 
@@ -202,14 +210,31 @@ export function ResidentMenuView() {
   return (
     <div className="flex flex-col w-full bg-[#F6F7F9]">
       {/* Header */}
-      <header className="bg-[#1B4D1C] p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg sticky top-0 z-20">
-        <h1 className="text-white text-2xl font-bold">Menú</h1>
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors"
-        >
-          Solicitud Especial
-        </button>
+      <header className="bg-primary p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg sticky top-0 z-20">
+        <h1 className="text-primary-foreground text-2xl font-bold">Menú</h1>
+        <div className="flex items-center gap-2">
+          <NotificationBell />
+          <Button
+            size="icon"
+            variant="ghost"
+            className="text-primary-foreground hover:bg-primary-foreground/20 hover:scale-110 rounded-full transition-all"
+            onClick={() => onGoToProfile?.()}
+            aria-label="Ir al perfil"
+          >
+            <User className="w-5 h-5" />
+          </Button>
+          {onLogout ? (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="text-primary-foreground hover:bg-primary-foreground/20 hover:scale-110 rounded-full transition-all"
+              onClick={onLogout}
+              aria-label="Cerrar sesión"
+            >
+              <LogOut className="w-5 h-5" />
+            </Button>
+          ) : null}
+        </div>
       </header>
       
       <div className="min-h-screen bg-[#F6F7F9] pt-6">

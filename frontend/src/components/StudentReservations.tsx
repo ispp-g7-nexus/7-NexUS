@@ -1,8 +1,16 @@
 import { useState } from "react";
+import { LogOut, User } from "lucide-react";
 import { Objects } from "../pages/Objects/Objects";
 import { Reservations } from "../pages/Reservations/Reservations";
+import { NotificationBell } from "./announcement/NotificationBell";
+import { Button } from "./ui/button";
 
-export function StudentReservations() {
+interface StudentReservationsProps {
+  onGoToProfile?: () => void;
+  onLogout?: () => void;
+}
+
+export function StudentReservations({ onGoToProfile, onLogout }: StudentReservationsProps) {
   const [activeTab, setActiveTab] = useState("objetos");
 
   const tabs = [
@@ -15,6 +23,29 @@ export function StudentReservations() {
       {/* Header */}
       <header className="bg-primary p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg sticky top-0 z-20">
         <h1 className="text-primary-foreground text-2xl font-bold">Reservas</h1>
+        <div className="flex items-center gap-2">
+          <NotificationBell />
+          <Button
+            size="icon"
+            variant="ghost"
+            className="text-primary-foreground hover:bg-primary-foreground/20 rounded-full transition-colors"
+            onClick={() => onGoToProfile?.()}
+            aria-label="Ir al perfil"
+          >
+            <User className="w-5 h-5" />
+          </Button>
+          {onLogout ? (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="text-primary-foreground hover:bg-primary-foreground/20 rounded-full transition-colors"
+              onClick={onLogout}
+              aria-label="Cerrar sesión"
+            >
+              <LogOut className="w-5 h-5" />
+            </Button>
+          ) : null}
+        </div>
       </header>
 
       <main className="flex-1 overflow-y-auto p-4 space-y-4 pb-32">
