@@ -28,6 +28,94 @@ from .services import (
 )
 
 UserModel = get_user_model()
+NO_AUTHENTICATED_DETAIL = "No autenticado."
+
+
+def _resolve_fallback_residence_for_portal(user, portal: str):
+    has_any_access = False
+    fallback_residence = None
+
+    if portal == "student":
+        member = Membership.objects.filter(
+            user=user, role__name__iexact="Student", is_active=True
+        ).first()
+        if member and member.residence:
+            has_any_access = True
+            fallback_residence = member.residence
+        return has_any_access, fallback_residence
+
+    member_list = Membership.objects.filter(user=user, is_active=True).exclude(
+        role__name__iexact="Student"
+    )
+    if member_list.exists():
+        has_any_access = True
+        fallback_member = member_list.exclude(residence__isnull=True).first()
+        fallback_residence = fallback_member.residence if fallback_member else None
+
+    return has_any_access, fallback_residence
+
+
+def _find_or_create_user_for_resident(data: dict):
+    email = data["email"].lower()
+    user = UserModel.objects.filter(email__iexact=email).first()
+    created = False
+
+    if not user:
+        base_username = email.split("@", 1)[0][:30]
+        username = base_username
+        counter = 1
+        while UserModel.objects.filter(username=username).exists():
+            username = f"{base_username}{counter}"
+            counter += 1
+
+        names = (data.get("full_name") or "").strip().split(None, 1)
+        first_name = names[0] if names else ""
+        last_name = names[1] if len(names) > 1 else ""
+        user = UserModel.objects.create(
+            username=username,
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            is_active=True,
+        )
+        created = True
+
+    return user, created
+
+
+def _ensure_student_membership(user, residence) -> None:
+    student_role, _ = Role.objects.get_or_create(
+        name="Student",
+        residence=None,
+        defaults={
+            "description": "Estudiante / Residente",
+            "is_system_default": True,
+        },
+    )
+    membership_exists = Membership.objects.filter(
+        user=user,
+        role=student_role,
+        residence=residence,
+    ).exists()
+    if not membership_exists:
+        Membership.objects.create(
+            user=user,
+            role=student_role,
+            residence=residence,
+            is_active=True,
+        )
+
+
+def _apply_resident_password_or_reset(user, data: dict, request) -> None:
+    try:
+        passwd = data.get("password")
+        if passwd:
+            user.set_password(passwd)
+            user.save()
+            return
+        process_password_reset_request(user.email, request)
+    except Exception:
+        pass
 
 
 class TenantContextView(APIView):
@@ -100,7 +188,8 @@ class AuthMeView(APIView):
         user_data = resolve_user_from_request(request)
         if not user_data:
             return Response(
-                {"detail": "No autenticado."}, status=status.HTTP_401_UNAUTHORIZED
+                {"detail": NO_AUTHENTICATED_DETAIL},
+                status=status.HTTP_401_UNAUTHORIZED,
             )
 
         user_pk = (
@@ -151,25 +240,9 @@ class AuthLoginView(APIView):
 
         residence = getattr(request, "residence", None)
         if not has_access_for_portal(user, portal, residence):
-            from apps.membership.models import Membership
-            has_any_access = False
-            fallback_residence = None
-
-            if portal == "student":
-                member = Membership.objects.filter(user=user, role__name__iexact="Student", is_active=True).first()
-                if member and member.residence:
-                    has_any_access = True
-                    fallback_residence = member.residence
-            else:
-                memberList = Membership.objects.filter(user=user, is_active=True).exclude(role__name__iexact="Student")
-                if memberList.exists():
-                    has_any_access = True
-                    # Prefer the first one that has a residence attached, if any
-                    fallback_residence = memberList.exclude(residence__isnull=True).first()
-                    if fallback_residence:
-                        fallback_residence = fallback_residence.residence
-                    else:
-                        fallback_residence = None
+            has_any_access, fallback_residence = _resolve_fallback_residence_for_portal(
+                user, portal
+            )
 
             if has_any_access:
                 residence = fallback_residence
@@ -278,7 +351,8 @@ class AdminCreateResidentView(APIView):
         caller = resolve_user_from_request(request)
         if not caller:
             return Response(
-                {"detail": "No autenticado."}, status=status.HTTP_401_UNAUTHORIZED
+                {"detail": NO_AUTHENTICATED_DETAIL},
+                status=status.HTTP_401_UNAUTHORIZED,
             )
 
         caller_roles = caller.get("roles", [])
@@ -296,67 +370,9 @@ class AdminCreateResidentView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        email = data["email"].lower()
-
-        user = UserModel.objects.filter(email__iexact=email).first()
-        created = False
-        if not user:
-            base_username = email.split("@", 1)[0][:30]
-            username = base_username
-            counter = 1
-            while UserModel.objects.filter(username=username).exists():
-                username = f"{base_username}{counter}"
-                counter += 1
-
-            names = (data.get("full_name") or "").strip().split(None, 1)
-            first_name = names[0] if names else ""
-            last_name = names[1] if len(names) > 1 else ""
-            user = UserModel.objects.create(
-                username=username,
-                email=email,
-                first_name=first_name,
-                last_name=last_name,
-                is_active=True,
-            )
-            created = True
-            passwd = data.get("password")
-            if passwd:
-                user.set_password(passwd)
-                user.save()
-
-        student_role, _ = Role.objects.get_or_create(
-            name="Student",
-            residence=None,
-            defaults={
-                "description": "Estudiante / Residente",
-                "is_system_default": True,
-            },
-        )
-
-        membership_exists = Membership.objects.filter(
-            user=user,
-            role=student_role,
-            residence=residence,
-        ).exists()
-        if not membership_exists:
-            Membership.objects.create(
-                user=user,
-                role=student_role,
-                residence=residence,
-                is_active=True,
-            )
-
-        try:
-            if data.get("password"):
-                if not created:
-                    passwd = data.get("password")
-                    if passwd:
-                        user.set_password(passwd)
-                        user.save()
-            else:
-                process_password_reset_request(user.email, request)
-        except Exception:
-            pass
+        user, created = _find_or_create_user_for_resident(data)
+        _ensure_student_membership(user, residence)
+        _apply_resident_password_or_reset(user, data, request)
 
         return Response(
             {"ok": True, "created": created, "email": user.email},
@@ -373,7 +389,8 @@ class StudentProfileView(APIView):
         user_data = resolve_user_from_request(request)
         if not user_data:
             return Response(
-                {"detail": "No autenticado."}, status=status.HTTP_401_UNAUTHORIZED
+                {"detail": NO_AUTHENTICATED_DETAIL},
+                status=status.HTTP_401_UNAUTHORIZED,
             )
 
         from apps.residences.models import StudentProfile
@@ -398,7 +415,8 @@ class StudentProfileView(APIView):
         user_data = resolve_user_from_request(request)
         if not user_data:
             return Response(
-                {"detail": "No autenticado."}, status=status.HTTP_401_UNAUTHORIZED
+                {"detail": NO_AUTHENTICATED_DETAIL},
+                status=status.HTTP_401_UNAUTHORIZED,
             )
 
         from apps.residences.models import StudentProfile

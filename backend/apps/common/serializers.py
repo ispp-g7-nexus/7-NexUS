@@ -4,11 +4,12 @@ from rest_framework import serializers
 from apps.residences.models import StudentProfile
 
 UserModel = get_user_model()
+INVALID_EMAIL_MESSAGE = "Por favor, introduce un correo electrónico válido."
 
 
 class LoginInputSerializer(serializers.Serializer):
     email = serializers.EmailField(
-        error_messages={"invalid": "Por favor, introduce un correo electrónico válido."}
+        error_messages={"invalid": INVALID_EMAIL_MESSAGE}
     )
     password = serializers.CharField(write_only=True)
     portal = serializers.ChoiceField(
@@ -36,7 +37,7 @@ class BrandingSerializer(serializers.Serializer):
 
 class PasswordResetRequestSerializer(serializers.Serializer):
     email = serializers.EmailField(
-        error_messages={"invalid": "Por favor, introduce un correo electrónico válido."}
+        error_messages={"invalid": INVALID_EMAIL_MESSAGE}
     )
 
 
@@ -59,7 +60,7 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
 class AdminCreateResidentSerializer(serializers.Serializer):
     full_name = serializers.CharField(allow_blank=True)
     email = serializers.EmailField(
-        error_messages={"invalid": "Por favor, introduce un correo electrónico válido."}
+        error_messages={"invalid": INVALID_EMAIL_MESSAGE}
     )
     password = serializers.CharField(write_only=True, min_length=6)
     room = serializers.CharField(allow_blank=True)

@@ -34,6 +34,9 @@ UserModel = get_user_model()
 
 PASSWORD = "password123"  # NOSONAR
 PASSWORD2 = "SecurePass123!"  # NOSONAR
+TEST_EMAIL = "test@test.com"
+AUTH_EMAIL = "auth@test.com"
+JSON_CONTENT_TYPE = "application/json"
 
 
 class CommonUtilsTests(FastTenantTestCase):
@@ -73,7 +76,7 @@ class CommonUtilsTests(FastTenantTestCase):
 
         claims = {
             "sub": "123",
-            "email": "test@test.com",
+            "email": TEST_EMAIL,
             "name": "Test User",
             "exp": 999999,
         }
@@ -168,7 +171,7 @@ class CommonServicesTests(FastTenantTestCase):
         super().setUp()
         with tenant_context(self.tenant):
             self.user = UserModel.objects.create_user(
-                username="testuser", email="test@test.com", password=PASSWORD
+                username="testuser", email=TEST_EMAIL, password=PASSWORD
             )
             self.student_role = Role.objects.create(name="Student")
             self.admin_role = Role.objects.create(name="Admin")
@@ -181,9 +184,9 @@ class CommonServicesTests(FastTenantTestCase):
         with tenant_context(self.tenant):
             request = MagicMock()
             self.assertIsNone(authenticate_user(request, "", ""))
-            self.assertIsNone(authenticate_user(request, "test@test.com", "wrongpass"))
+            self.assertIsNone(authenticate_user(request, TEST_EMAIL, "wrongpass"))
             self.assertEqual(
-                authenticate_user(request, "test@test.com", PASSWORD), self.user
+                authenticate_user(request, TEST_EMAIL, PASSWORD), self.user
             )
 
     def test_has_access_for_portal(self):
@@ -207,7 +210,7 @@ class CommonServicesTests(FastTenantTestCase):
             request = MagicMock(scheme="http")
             request.get_host.return_value = "local"
             with self.assertRaises(SMTPServerError):
-                process_password_reset_request("test@test.com", request)
+                process_password_reset_request(TEST_EMAIL, request)
 
 
 class CommonViewsTests(FastTenantTestCase):
@@ -227,7 +230,7 @@ class CommonViewsTests(FastTenantTestCase):
         super().setUp()
         with tenant_context(self.tenant):
             self.user = UserModel.objects.create_user(
-                username="authuser", email="auth@test.com", password=PASSWORD2
+                username="authuser", email=AUTH_EMAIL, password=PASSWORD2
             )
             self.admin_user = UserModel.objects.create_user(
                 username="adminuser", email="admin@test.com", password=PASSWORD2
@@ -274,36 +277,36 @@ class CommonViewsTests(FastTenantTestCase):
     def test_auth_login_view_success(self):
         url = reverse("auth-login")
         data = {
-            "email": "auth@test.com",
+            "email": AUTH_EMAIL,
             "password": PASSWORD2,
             "portal": "student",
         }
         response = self.anon_client.post(
-            url, data=json.dumps(data), content_type="application/json"
+            url, data=json.dumps(data), content_type=JSON_CONTENT_TYPE
         )
         self.assertEqual(response.status_code, 200)
 
     def test_auth_login_view_invalid_credentials(self):
         url = reverse("auth-login")
         data = {
-            "email": "auth@test.com",
+            "email": AUTH_EMAIL,
             "password": "WrongPassword!",
             "portal": "student",
         }
         response = self.anon_client.post(
-            url, data=json.dumps(data), content_type="application/json"
+            url, data=json.dumps(data), content_type=JSON_CONTENT_TYPE
         )
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_auth_login_view_forbidden_portal(self):
         url = reverse("auth-login")
         data = {
-            "email": "auth@test.com",
+            "email": AUTH_EMAIL,
             "password": PASSWORD2,
             "portal": "admin",
         }
         response = self.anon_client.post(
-            url, data=json.dumps(data), content_type="application/json"
+            url, data=json.dumps(data), content_type=JSON_CONTENT_TYPE
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -319,7 +322,7 @@ class CommonViewsTests(FastTenantTestCase):
         response = self.student_client.patch(
             url,
             data=json.dumps({"first_name": "Editado"}),
-            content_type="application/json",
+            content_type=JSON_CONTENT_TYPE,
         )
         self.assertEqual(response.status_code, 200)
 
@@ -328,7 +331,7 @@ class CommonViewsTests(FastTenantTestCase):
         response = self.student_client.patch(
             url,
             data=json.dumps({"email": "correo-falso-sin-arroba"}),
-            content_type="application/json",
+            content_type=JSON_CONTENT_TYPE,
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -342,7 +345,7 @@ class CommonViewsTests(FastTenantTestCase):
         self.assertTrue(response_get.json()["authenticated"])
 
         response_patch = self.student_client.patch(
-            url, data=json.dumps({"first_name": "X"}), content_type="application/json"
+            url, data=json.dumps({"first_name": "X"}), content_type=JSON_CONTENT_TYPE
         )
         self.assertEqual(response_patch.status_code, 404)
 
@@ -353,8 +356,8 @@ class CommonViewsTests(FastTenantTestCase):
         url = reverse("password-reset-request")
         response = self.anon_client.post(
             url,
-            data=json.dumps({"email": "auth@test.com"}),
-            content_type="application/json",
+            data=json.dumps({"email": AUTH_EMAIL}),
+            content_type=JSON_CONTENT_TYPE,
         )
         self.assertEqual(response.status_code, 200)
 
@@ -365,7 +368,7 @@ class CommonViewsTests(FastTenantTestCase):
         response = self.anon_client.post(
             url,
             data=json.dumps({"uid": "1", "token": "abc", "new_password": PASSWORD}),
-            content_type="application/json",
+            content_type=JSON_CONTENT_TYPE,
         )
         self.assertEqual(response.status_code, 200)
 
@@ -376,7 +379,7 @@ class CommonViewsTests(FastTenantTestCase):
         response = self.anon_client.post(
             url,
             data=json.dumps({"uid": "1", "token": "abc", "new_password": PASSWORD}),
-            content_type="application/json",
+            content_type=JSON_CONTENT_TYPE,
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -395,13 +398,13 @@ class CommonViewsTests(FastTenantTestCase):
         resp_post = self.student_client.post(
             url,
             data=json.dumps({"room_number": "10B"}),
-            content_type="application/json",
+            content_type=JSON_CONTENT_TYPE,
         )
         self.assertEqual(resp_post.status_code, 201)
 
         # UPDATE
         resp_patch = self.student_client.post(
-            url, data=json.dumps({"bio": "Hola mundo"}), content_type="application/json"
+            url, data=json.dumps({"bio": "Hola mundo"}), content_type=JSON_CONTENT_TYPE
         )
         self.assertEqual(resp_patch.status_code, 201)
 
@@ -416,7 +419,7 @@ class CommonViewsTests(FastTenantTestCase):
         resp_invalid = self.student_client.post(
             url,
             data=json.dumps({"birth_year": "no-es-un-numero"}),
-            content_type="application/json",
+            content_type=JSON_CONTENT_TYPE,
         )
         self.assertEqual(resp_invalid.status_code, status.HTTP_400_BAD_REQUEST)
 
