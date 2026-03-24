@@ -6,8 +6,7 @@ import requests
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.db import IntegrityError, transaction
-from django.db.utils import ProgrammingError
+from django.db import IntegrityError, connection, transaction
 from django.test import override_settings
 from django.utils import timezone
 from django_tenants.test.cases import TenantTestCase
@@ -70,11 +69,16 @@ class PackageApiTests(TenantTestCase):
 
     @classmethod
     def tearDownClass(cls):
+        # Keep tenant schema in search_path while deleting to avoid reverse
+        # relation checks against tenant-only tables in public schema.
         try:
-            super().tearDownClass()
-        except ProgrammingError as exc:
-            if "announcements_announcement" not in str(exc):
-                raise
+            connection.set_tenant(cls.tenant)
+            cls.domain.delete()
+            cls.tenant.__class__.objects.filter(pk=cls.tenant.pk).delete()
+            cls.tenant._drop_schema(force_drop=True)
+        finally:
+            connection.set_schema_to_public()
+            cls.remove_allowed_test_domain()
 
     def setUp(self):
         super().setUp()

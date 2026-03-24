@@ -1,6 +1,7 @@
 from datetime import datetime, time, timedelta
 
 from django.contrib.auth import get_user_model
+from django.db import connection
 from django.utils import timezone
 from django_tenants.test.cases import TenantTestCase
 from django_tenants.test.client import TenantClient
@@ -25,6 +26,19 @@ class ObjectReservationApiTests(TenantTestCase):
     def setup_domain(cls, domain):
         domain.domain = cls.get_test_tenant_domain()
         domain.is_primary = True
+
+    @classmethod
+    def tearDownClass(cls):
+        # Keep tenant schema in search_path while deleting to avoid reverse
+        # relation checks against tenant-only tables in public schema.
+        try:
+            connection.set_tenant(cls.tenant)
+            cls.domain.delete()
+            cls.tenant.__class__.objects.filter(pk=cls.tenant.pk).delete()
+            cls.tenant._drop_schema(force_drop=True)
+        finally:
+            connection.set_schema_to_public()
+            cls.remove_allowed_test_domain()
 
     def setUp(self):
         super().setUp()

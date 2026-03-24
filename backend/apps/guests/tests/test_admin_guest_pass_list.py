@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
-from django.db.utils import ProgrammingError
+from django.db import connection
 from django.utils import timezone
 from django_tenants.test.cases import TenantTestCase
 from django_tenants.test.client import TenantClient
@@ -33,13 +33,16 @@ class AdminGuestPassListTests(TenantTestCase):
 
     @classmethod
     def tearDownClass(cls):
+        # Keep tenant schema in search_path while deleting to avoid reverse
+        # relation checks against tenant-only tables in public schema.
         try:
-            super().tearDownClass()
-        except ProgrammingError as exc:
-            message = str(exc).strip()
-            expected = 'relation "announcements_announcement" does not exist'
-            if message != expected:
-                raise
+            connection.set_tenant(cls.tenant)
+            cls.domain.delete()
+            cls.tenant.__class__.objects.filter(pk=cls.tenant.pk).delete()
+            cls.tenant._drop_schema(force_drop=True)
+        finally:
+            connection.set_schema_to_public()
+            cls.remove_allowed_test_domain()
 
     def setUp(self):
         super().setUp()

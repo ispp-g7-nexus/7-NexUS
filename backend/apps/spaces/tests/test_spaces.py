@@ -1,6 +1,7 @@
 from datetime import datetime, time, timedelta
 
 from django.contrib.auth import get_user_model
+from django.db import connection
 from django.utils import timezone
 from django_tenants.test.cases import TenantTestCase
 from django_tenants.test.client import TenantClient
@@ -25,6 +26,19 @@ class SpaceReservationApiTests(TenantTestCase):
     def setup_domain(cls, domain):
         domain.domain = cls.get_test_tenant_domain()
         domain.is_primary = True
+
+    @classmethod
+    def tearDownClass(cls):
+        # Keep tenant schema in search_path while deleting to avoid reverse
+        # relation checks against tenant-only tables in public schema.
+        try:
+            connection.set_tenant(cls.tenant)
+            cls.domain.delete()
+            cls.tenant.__class__.objects.filter(pk=cls.tenant.pk).delete()
+            cls.tenant._drop_schema(force_drop=True)
+        finally:
+            connection.set_schema_to_public()
+            cls.remove_allowed_test_domain()
 
     def setUp(self):
         super().setUp()
@@ -393,7 +407,9 @@ class SpaceReservationApiTests(TenantTestCase):
             f"/api/spaces/{self.space.id}/availability/?date={start_time.date().isoformat()}"
         )
         self.assertEqual(available_response.status_code, 200)
-        self.assertEqual(len(available_response.json()["available_slots"]), 1)
+        available_slots = available_response.json()["available_slots"]
+        self.assertEqual(len(available_slots), 2)
+        self.assertTrue(all(slot["status"] == "available" for slot in available_slots))
 
         SpaceReservation.objects.create(
             space=self.space,
@@ -408,7 +424,9 @@ class SpaceReservationApiTests(TenantTestCase):
             f"/api/spaces/{self.space.id}/availability/?date={start_time.date().isoformat()}"
         )
         self.assertEqual(full_response.status_code, 200)
-        self.assertEqual(full_response.json()["available_slots"], [])
+        full_slots = full_response.json()["available_slots"]
+        self.assertEqual(len(full_slots), 2)
+        self.assertTrue(all(slot["status"] == "occupied" for slot in full_slots))
 
     def test_blocks_reservation_outside_schedule(self):
         start_time, end_time = self._build_slot(

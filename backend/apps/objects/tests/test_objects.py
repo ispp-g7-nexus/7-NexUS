@@ -11,6 +11,10 @@ from apps.residences.models import Residence, ResidenceDomain
 
 class ObjectAvailabilityApiTests(FastTenantTestCase):
     @classmethod
+    def get_test_schema_name(cls):
+        return "test_objects_availability"
+
+    @classmethod
     def get_test_tenant_domain(cls):
         return "objects.test.local"
 
