@@ -203,6 +203,13 @@ export default function StudentIncidences({ onGoToProfile, onLogout }: StudentIn
                             <MapPin size={14} className="text-slate-400" />
                             <span className="text-[11px] font-semibold text-slate-500 truncate">
                               {LOCATION_LABELS[inc.location_type]}
+                              {inc.location_type === 'habitacion' && inc.room_number_detail && (
+                                <>
+                                  {` • Hab. ${inc.room_number_detail.numero}`}
+                                  {inc.room_number_detail.planta && ` Planta ${inc.room_number_detail.planta}` }
+                                  {inc.room_number_detail.edificio && ` Edificio ${inc.room_number_detail.edificio}`}
+                                </>
+                              )}
                             </span>
                           </div>
                         </div>

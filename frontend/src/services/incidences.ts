@@ -65,7 +65,7 @@ export interface UpdateIncidenceDTO {
   assigned_external_name?: string;
   admin_notes?: string;
   quick_comment?: string;
-  room_number?: string | null;
+  room_number?: number | null;
 }
 
 

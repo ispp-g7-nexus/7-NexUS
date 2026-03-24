@@ -35,7 +35,7 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
       fetchWithAuth('/api/bedrooms/').then(res => res.json()).then(data => setRooms(data));
     }
   }, [isAdmin]);
-  
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
@@ -64,17 +64,12 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
       description: formData.get("description") as string,
       location_type: locationType,
       priority: (urgent ? "high" : "low") as 'low' | 'high',
-      room_number: locationType === "habitacion" && selectedRoomId ? Number(selectedRoomId) : null,
-      assigned_staff: isAdmin && staffId && !["external", "none"].includes(staffId) ? Number(staffId) : null,
+      room_number: locationType === "habitacion"
+        ? (initialData?.room_number_detail?.id || initialData?.room_number || null)
+        : null, assigned_staff: isAdmin && staffId && !["external", "none"].includes(staffId) ? Number(staffId) : null,
       assigned_external_name: isAdmin && staffId === "external" ? externalName : "",
       img: base64Image,
     };
-
-    if (locationType === 'habitacion') {
-      payload.room_number = initialData?.room_number || "Pendiente";
-    } else {
-      payload.room_number = "";
-    }
 
     if (base64Image && base64Image.startsWith("data:image")) {
       payload.img = base64Image;
