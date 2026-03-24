@@ -79,56 +79,62 @@ function DeliveryCard({ sender, tracking, delivery_code, date, status, location,
 
   return (
     <Card className="border-none shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-      <CardContent className="p-0 flex flex-col">
+      <CardContent className="p-0 !pb-0 flex flex-col">
         <div className="flex">
           <div className={`w-1.5 ${isReady ? "bg-chart-2" : "bg-border"}`} />
-          <div className="p-4 flex-1">
-            <div className="flex justify-between items-start mb-1">
-              <div className="flex items-center gap-2">
-                <h3 className="font-bold text-card-foreground">{sender}</h3>
-                {is_unread && (
-                  <Badge className="bg-red-600 text-white text-xs py-0.5 px-2">Nuevo</Badge>
+          <div className="px-4 pt-2 pb-3 flex-1">
+            <div className="flex justify-between">
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="font-bold text-card-foreground">{sender}</h3>
+                  {is_unread && (
+                    <Badge className="bg-red-600 text-white text-xs py-0.5 px-2">Nuevo</Badge>
+                  )}
+                </div>
+                <div className="flex flex-col gap-3 text-xs text-gray-500">
+                  <span className="font-mono">#{tracking}</span>
+                  <div className="flex items-center gap-3">
+                    <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {date}</span>
+                    {location && (
+                      <span className="flex items-center gap-1 text-chart-2 font-medium"><MapPin className="w-3.5 h-3.5" /> {location}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex flex-col items-end gap-6">
+                {isReady ? (
+                  <Badge className="bg-accent/10 text-accent hover:bg-accent/10 border-none shadow-none">Listo para recoger</Badge>
+                ) : (
+                  <Badge variant="outline" className="text-gray-500 border-gray-200">Entregado</Badge>
+                )}
+                
+                {isReady && delivery_code && (
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button size="sm" className="bg-[#509550] text-white hover:bg-[#3d7a3d]">
+                        Ver código
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Codigo de recogida</DialogTitle>
+                        <DialogDescription>
+                          Muestra este codigo al personal de recepcion para retirar el paquete correspondiente a {sender}.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="flex items-center justify-center p-8">
+                        <div className="bg-gray-100 px-8 py-5 rounded-2xl border-2 border-dashed border-gray-300">
+                          <span className="text-5xl font-mono font-bold tracking-widest text-gray-800">{delivery_code}</span>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 )}
               </div>
-              {isReady ? (
-                <Badge className="bg-accent/10 text-accent hover:bg-accent/10 border-none shadow-none">Listo para recoger</Badge>
-              ) : (
-                <Badge variant="outline" className="text-gray-500 border-gray-200">Entregado</Badge>
-              )}
-            </div>
-
-            <p className="text-xs text-gray-500 mb-3 font-mono">#{tracking}</p>
-
-            <div className="flex items-center justify-between text-xs text-gray-500">
-              <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {date}</span>
-              {location && (<span className="flex items-center gap-1 text-chart-2 font-medium"><MapPin className="w-3.5 h-3.5" /> {location}</span>)}
             </div>
           </div>
         </div>
-        {isReady && delivery_code && (
-          <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 flex justify-end">
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button size="sm" className="bg-[#509550] text-white hover:bg-[#3d7a3d]">
-                  Ver codigo de recogida
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Codigo de recogida</DialogTitle>
-                  <DialogDescription>
-                    Muestra este codigo al personal de recepcion para retirar el paquete correspondiente a {sender}.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="flex items-center justify-center p-8">
-                  <div className="bg-gray-100 px-8 py-5 rounded-2xl border-2 border-dashed border-gray-300">
-                    <span className="text-5xl font-mono font-bold tracking-widest text-gray-800">{delivery_code}</span>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
-        )}
       </CardContent>
     </Card>
   );

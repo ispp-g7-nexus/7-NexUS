@@ -1208,7 +1208,7 @@ export function AdminPackages() {
   }, []);
 
   useEffect(() => {
-    void loadData();
+    loadData();
   }, [loadData]);
 
   const residentFilterOptions = useMemo(
@@ -1351,7 +1351,7 @@ export function AdminPackages() {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => void loadData()} disabled={loading}>
+          <Button variant="outline" onClick={() => loadData()} disabled={loading}>
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             Actualizar
           </Button>
