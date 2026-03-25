@@ -175,6 +175,18 @@ Arranque:
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
+Tambien se incluye `docker-compose.prod.images.yml` para desplegar solo con imagenes publicadas en GHCR (sin build local en la VM):
+
+```bash
+docker login ghcr.io
+export GHCR_OWNER=ispp-g7-nexus
+export IMAGE_TAG=dev
+docker compose -f docker-compose.prod.images.yml pull
+docker compose -f docker-compose.prod.images.yml up -d
+```
+
+`IMAGE_TAG` puede ser `dev`, `stg`, `pre`, `prod` o un tag concreto (`dev-vX.Y.Z`, `sha-<commit>`).
+
 Variables recomendadas para prod:
 
 ```bash
@@ -193,6 +205,7 @@ Detalles de produccion:
 Toda la documentacion del proyecto se mantiene en `docs/`.
 - Setup base y arquitectura local: `docs/setup/7-DP-Base-Setup-Docker-Compose.md`.
 - Guia de desarrollo (backend, frontend, tenants y auth): `docs/setup/7-DP-Developer-Guide.md`.
+- Guia de despliegue cloud en AWS + Cloudflare: `docs/deploy/7-SI-Deploy-on-cloud.md`.
 - Setup inicial de SonarQube/SonarCloud: `docs/setup/7-DP-SonarQube-Initial-Setup.md`.
 - Guia de analisis Sonar para el equipo: `docs/setup/7-DP-Sonar-Analysis-Guide.md`.
 

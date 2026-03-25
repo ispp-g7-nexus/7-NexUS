@@ -1,6 +1,5 @@
 import { Bell } from "lucide-react";
-import { useState, useEffect } from "react";
-import { Button } from "../ui/button";
+import { useState, useEffect, useRef } from "react";
 import { cn } from "../ui/utils";
 import { toast } from "sonner";
 import announcementService from "../../services/announcement.service";
@@ -10,9 +9,12 @@ interface NotificationBellProps {
   className?: string;
 }
 
+const TOAST_COOLDOWN_MS = 3500; // Tiempo para no repetir el mismo toast de notificación
+
 export function NotificationBell({ onMarkAsRead, className }: NotificationBellProps) {
   const [unviewedCount, setUnviewedCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const lastEmptyToastTimeRef = useRef<number>(0);
   const hasNotifications = unviewedCount > 0;
 
   useEffect(() => {
@@ -35,16 +37,26 @@ export function NotificationBell({ onMarkAsRead, className }: NotificationBellPr
       setUnviewedCount(data.count);
 
       if (data.count === 0) {
-        toast.info("Avisos", {
-          description: "No tienes avisos nuevos",
-          duration: 3000,
-        });
+        const now = Date.now();
+        // Solo mostrar el toast de "no hay avisos" si ha pasado el cooldown
+        if (now - lastEmptyToastTimeRef.current > TOAST_COOLDOWN_MS) {
+          toast.info("Avisos", {
+            description: "No tienes avisos nuevos",
+            duration: 3000,
+          });
+          lastEmptyToastTimeRef.current = now;
+        }
       } else {
+        // Si hay avisos, resetear el cooldown para permitir mostrar de nuevo
+        lastEmptyToastTimeRef.current = 0;
         const pluralSuffix = data.count !== 1 ? "s" : "";
         toast.info("Avisos", {
           description: `Tienes ${data.count} aviso${pluralSuffix} nuevo${pluralSuffix}`,
           duration: 3000,
         });
+
+        await announcementService.markAsViewed();
+        setUnviewedCount(0);
       }
 
       onMarkAsRead?.();
@@ -60,18 +72,17 @@ export function NotificationBell({ onMarkAsRead, className }: NotificationBellPr
   };
 
   return (
-    <Button
-      variant="ghost"
-      size="icon"
-      className={cn("relative text-gray-500 w-9 h-9", className)}
+    <button
+      type="button"
+      aria-label="Ver notificaciones de avisos"
       onClick={handleBellClick}
       disabled={loading}
-      aria-label="Ver notificaciones de avisos"
+      className={cn("relative h-9 w-9 inline-flex items-center justify-center rounded-full text-primary-foreground transition-colors hover:bg-primary-foreground/20", className)}
     >
-      <Bell className="w-5 h-5" />
+      <Bell className="w-5 h-5 text-current" />
       {hasNotifications && (
-        <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white" />
+        <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-background" />
       )}
-    </Button>
+    </button>
   );
 }

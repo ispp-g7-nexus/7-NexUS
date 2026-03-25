@@ -1,106 +1,88 @@
-import { useState, useEffect } from "react";
-import { MapPin } from "lucide-react";
+import { useState } from "react";
+import { LogOut, User } from "lucide-react";
 import { Objects } from "../pages/Objects/Objects";
-import { MyReservations } from "../pages/Objects/components/MyReservations";
-import { objectsService, UserObjectReservation } from "../services/objects";
+import { Reservations } from "../pages/Reservations/Reservations";
+import { NotificationBell } from "./announcement/NotificationBell";
+import { Button } from "./ui/button";
 
-export function StudentReservations() {
+interface StudentReservationsProps {
+  onGoToProfile?: () => void;
+  onLogout?: () => void;
+}
+
+export function StudentReservations({ onGoToProfile, onLogout }: StudentReservationsProps) {
   const [activeTab, setActiveTab] = useState("objetos");
-  const [reservations, setReservations] = useState<UserObjectReservation[]>([]);
-  const [reservationsLoading, setReservationsLoading] = useState(false);
-  const [reservationsError, setReservationsError] = useState<string | null>(null);
-  
+
   const tabs = [
     { id: "espacios", label: "Espacios" },
     { id: "objetos", label: "Objetos" },
-    { id: "reservas", label: "Mis Reservas" }
   ];
 
-  useEffect(() => {
-    if (activeTab === "reservas") {
-      fetchReservations();
-    }
-  }, [activeTab]);
-
-  const fetchReservations = async () => {
-    try {
-      setReservationsLoading(true);
-      setReservationsError(null);
-      const data = await objectsService.getUserObjectReservations();
-      setReservations(data);
-    } catch (err) {
-      setReservationsError(err instanceof Error ? err.message : "Error al cargar reservas");
-    } finally {
-      setReservationsLoading(false);
-    }
-  };
-
-  const handleCancelReservation = async (objectId: number, rentalId: number) => {
-    try {
-      await objectsService.cancelReservation(objectId, { rental_id: rentalId });
-      await fetchReservations(); // Refresh reservations after cancellation
-    } catch (err) {
-      console.error('Error canceling reservation:', err);
-      setReservationsError(err instanceof Error ? err.message : "Error al cancelar reserva");
-    }
-  };
-  
   return (
-    <div className="w-full bg-background">
-      <div className="bg-card rounded-xl shadow-sm border border-border">
-        <div className="p-4 border-b border-border">
-          <h2 className="text-lg font-semibold text-foreground">Reservas</h2>
-        </div>
-        
-        {/* Tabs */}
-        <div className="flex border-b border-border">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === tab.id 
-                  ? "text-[#4A7C59] border-[#4A7C59]" 
-                  : "text-muted-foreground border-transparent hover:text-foreground"
-              }`}
+    <div className="flex flex-col w-full bg-background">
+      {/* Header */}
+      <header className="bg-primary p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg sticky top-0 z-20">
+        <h1 className="text-primary-foreground text-2xl font-bold">Reservas</h1>
+        <div className="flex items-center gap-2">
+          <NotificationBell />
+          <Button
+            size="icon"
+            variant="ghost"
+            className="text-primary-foreground hover:bg-primary-foreground/20 rounded-full transition-colors"
+            onClick={() => onGoToProfile?.()}
+            aria-label="Ir al perfil"
+          >
+            <User className="w-5 h-5" />
+          </Button>
+          {onLogout ? (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="text-primary-foreground hover:bg-primary-foreground/20 rounded-full transition-colors"
+              onClick={onLogout}
+              aria-label="Cerrar sesión"
             >
-              {tab.label}
-            </button>
-          ))}
+              <LogOut className="w-5 h-5" />
+            </Button>
+          ) : null}
         </div>
-        
-        {/* Tab Content */}
-        <div className="min-h-[500px]">
-          {activeTab === "espacios" && (
-            <div className="flex items-center justify-center h-64 px-4">
-              <div className="text-center">
-                <MapPin className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground">Reserva de espacios próximamente</p>
-              </div>
-            </div>
-          )}
-          
-          {activeTab === "objetos" && (
-            <div className="h-full">
-              <Objects onReservationSuccess={() => fetchReservations()} />
-            </div>
-          )}
-          
-          {activeTab === "reservas" && (
-            <div className="h-full p-4">
-              <MyReservations
-                reservations={reservations}
-                loading={reservationsLoading}
-                error={reservationsError}
-                onCancel={handleCancelReservation}
-                onRetry={fetchReservations}
-              />
-            </div>
-          )}
-          
+      </header>
 
+      <main className="flex-1 overflow-y-auto p-4 space-y-4 pb-32">
+        <div className="bg-card rounded-xl shadow-sm border border-border">
+          {/* Tabs */}
+          <div className="flex border-b border-border">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex-1 py-3 px-4 text-sm font-medium border-b-2 transition-all ${
+                  activeTab === tab.id 
+                    ? "bg-primary text-primary-foreground font-bold shadow-sm" 
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Tab Content */}
+          <div className="min-h-[500px]">
+            {activeTab === "espacios" && (
+              <div className="h-full">
+                <Reservations />
+              </div>
+            )}
+
+            {activeTab === "objetos" && (
+              <div className="h-full">
+                <Objects />
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

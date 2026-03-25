@@ -8,6 +8,7 @@ import type { StaffMember, StaffStatus } from "../../../services/staff";
 
 interface StaffCardProps {
   member: StaffMember;
+  isCurrentUser: boolean;
   onEdit: (member: StaffMember) => void;
   onDelete: (member: StaffMember) => void;
 }
@@ -32,17 +33,17 @@ const STATUS_VARIANT: Record<StaffStatus, "success" | "muted" | "warning"> = {
   holidays: "warning",
 };
 
-export function StaffCard({ member, onEdit, onDelete }: StaffCardProps) {
+export function StaffCard({ member, isCurrentUser, onEdit, onDelete }: Readonly<StaffCardProps>) {
   const { full_name, job_title, department, email, location, schedule, status, role_name } = member;
-
+  
   return (
     <Card className="hover:shadow-md transition-shadow border-gray-200">
       <CardContent className="p-6">
         {/* Top row: avatar + name + actions */}
         <div className="flex items-start justify-between mb-4 gap-2">
           <div className="flex items-start gap-3 flex-1 min-w-0">
-            <Avatar className="h-14 w-14 border-2 border-gray-100 shrink-0">
-              <AvatarFallback className="bg-[#509550] text-white font-semibold text-base">
+            <Avatar className="h-14 w-14 border-2 border-gray-200 shrink-0">
+              <AvatarFallback className="bg-green-600 text-white font-semibold text-base">
                 {getInitials(full_name)}
               </AvatarFallback>
             </Avatar>
@@ -57,7 +58,7 @@ export function StaffCard({ member, onEdit, onDelete }: StaffCardProps) {
                   {STATUS_LABEL[status]}
                 </Badge>
                 {role_name && (
-                  <Badge variant="outline" className="text-xs shrink-0 text-[#509550] border-[#509550]/40">
+                  <Badge variant="outline" className="text-xs shrink-0 text-green-600 border-green-600/40">
                     {role_name}
                   </Badge>
                 )}
@@ -70,12 +71,13 @@ export function StaffCard({ member, onEdit, onDelete }: StaffCardProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-gray-400 hover:text-[#509550]"
+              className="h-8 w-8 text-gray-400 hover:text-green-600"
               title="Editar"
               onClick={() => onEdit(member)}
             >
               <Edit className="w-4 h-4" />
             </Button>
+            {!isCurrentUser && (
             <Button
               variant="ghost"
               size="icon"
@@ -85,27 +87,28 @@ export function StaffCard({ member, onEdit, onDelete }: StaffCardProps) {
             >
               <Trash2 className="w-4 h-4" />
             </Button>
+            )}
           </div>
         </div>
 
         {/* Details */}
-        <div className="space-y-2.5 pt-4 border-t border-gray-100">
+        <div className="space-y-2.5 pt-4 border-t border-gray-200">
           <div className="flex items-center gap-3 text-sm">
             <Mail className="w-4 h-4 text-gray-400 shrink-0" />
             <a
               href={`mailto:${email}`}
-              className="text-[#509550] hover:underline truncate min-w-0"
+              className="text-green-600 hover:underline truncate min-w-0"
             >
               {email}
             </a>
           </div>
           <div className="flex items-start gap-3 text-sm">
             <MapPin className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" />
-            <span className="text-gray-600 truncate min-w-0">{location}</span>
+            <span className="text-gray-500 truncate min-w-0">{location}</span>
           </div>
           <div className="flex items-start gap-3 text-sm">
             <Clock className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" />
-            <span className="text-gray-600 truncate min-w-0">{schedule}</span>
+            <span className="text-gray-500 truncate min-w-0">{schedule}</span>
           </div>
         </div>
       </CardContent>

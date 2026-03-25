@@ -8,15 +8,19 @@ import { ForgotPassword } from './pages/ForgotPassword';
 import { ResetPassword } from './pages/ResetPassword';
 import RolesPage from './pages/RolesPage';
 
+import { useTenantBranding } from './hooks/useTenantBranding';
 
 export default function App() {
+  useTenantBranding();
+
   return (
     <Router>
       <Toaster position="top-center" richColors />
-
       <Routes>
         <Route path="/" element={<AuthPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/dashboard/:tab" element={<DashboardPage />} />
+
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/roles" element={<RolesPage />} />

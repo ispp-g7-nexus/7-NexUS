@@ -69,9 +69,13 @@ class AnnouncementViewSet(viewsets.ModelViewSet):
         return AnnouncementListSerializer if self.action == 'list' else AnnouncementSerializer
 
     def perform_create(self, serializer):
+        resolved_user = self._resolve_user()
+        if not resolved_user and getattr(self.request, 'user', None) and self.request.user.is_authenticated:
+            resolved_user = self.request.user
+
         serializer.save(
             residence=self._resolve_tenant(),
-            user=self._resolve_user(),
+            user=resolved_user,
         )
 
     @action(detail=True, methods=['post'])

@@ -1,14 +1,18 @@
 # apps/common/views.py
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.common.utils.jwt_auth import resolve_user_from_request
+from apps.membership.models import Membership, Role
 from apps.residences.models import ResidenceBranding
 
 from .serializers import (
+    AdminCreateResidentSerializer,
+    AdminProfileUpdateSerializer,
     BrandingSerializer,
     LoginInputSerializer,
     PasswordResetConfirmSerializer,
@@ -22,7 +26,6 @@ from .services import (
     process_password_reset_confirm,
     process_password_reset_request,
 )
-from django.contrib.auth import get_user_model
 
 UserModel = get_user_model()
 
@@ -75,6 +78,17 @@ class AuthMeView(APIView):
 
     def get(self, request):
         user_data = resolve_user_from_request(request)
+        if user_data:
+            user_pk = (
+                user_data.get("user_id") or user_data.get("id") or user_data.get("sub")
+            )
+            try:
+                user_obj = UserModel.objects.get(pk=user_pk)
+                user_data["first_name"] = user_obj.first_name
+                user_data["last_name"] = user_obj.last_name
+            except UserModel.DoesNotExist:
+                pass
+
         return Response(
             {
                 "authenticated": bool(user_data),
@@ -82,9 +96,41 @@ class AuthMeView(APIView):
             }
         )
 
+    def patch(self, request):
+        user_data = resolve_user_from_request(request)
+        if not user_data:
+            return Response(
+                {"detail": "No autenticado."}, status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        user_pk = (
+            user_data.get("user_id") or user_data.get("id") or user_data.get("sub")
+        )
+        try:
+            user = UserModel.objects.get(pk=user_pk)
+        except UserModel.DoesNotExist:
+            return Response(
+                {"detail": "Usuario no encontrado."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = AdminProfileUpdateSerializer(user, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                {
+                    "detail": "Perfil actualizado correctamente.",
+                    "user": serializer.data,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class AuthLoginView(APIView):
     permission_classes = [AllowAny]
+    authentication_classes = []
 
     def post(self, request):
         serializer = LoginInputSerializer(data=request.data)
@@ -94,6 +140,7 @@ class AuthLoginView(APIView):
         email = data["email"]
         password = data["password"]
         portal = data["portal"]
+        remember_me = data.get("rememberMe", False)
 
         user = authenticate_user(request, email, password)
         if not user or not user.is_active:
@@ -104,12 +151,40 @@ class AuthLoginView(APIView):
 
         residence = getattr(request, "residence", None)
         if not has_access_for_portal(user, portal, residence):
-            return Response(
-                {"detail": "No tienes permisos para este portal en esta residencia."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+            from apps.membership.models import Membership
+            has_any_access = False
+            fallback_residence = None
 
-        token, max_age = build_access_token(user, request.tenant, residence)
+            if portal == "student":
+                member = Membership.objects.filter(user=user, role__name__iexact="Student", is_active=True).first()
+                if member and member.residence:
+                    has_any_access = True
+                    fallback_residence = member.residence
+            else:
+                memberList = Membership.objects.filter(user=user, is_active=True).exclude(role__name__iexact="Student")
+                if memberList.exists():
+                    has_any_access = True
+                    # Prefer the first one that has a residence attached, if any
+                    fallback_residence = memberList.exclude(residence__isnull=True).first()
+                    if fallback_residence:
+                        fallback_residence = fallback_residence.residence
+                    else:
+                        fallback_residence = None
+
+            if has_any_access:
+                residence = fallback_residence
+                request.residence = fallback_residence
+            else:
+                return Response(
+                    {"detail": "No tienes permisos para este portal en esta ni en ninguna otra residencia válida."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+        token, max_age = build_access_token(
+            user, request.tenant, residence, remember_me
+        )
+
+        final_max_age = max_age if remember_me else None
 
         response = Response(
             {
@@ -123,7 +198,7 @@ class AuthLoginView(APIView):
         response.set_cookie(
             key=settings.JWT_ACCESS_COOKIE_NAME,
             value=token,
-            max_age=max_age,
+            max_age=final_max_age,
             httponly=True,
             secure=bool(getattr(settings, "JWT_COOKIE_SECURE", False)),
             samesite=str(getattr(settings, "JWT_COOKIE_SAMESITE", "Lax")),
@@ -149,6 +224,7 @@ class AuthLogoutView(APIView):
 
 class PasswordResetRequestView(APIView):
     permission_classes = [AllowAny]
+    authentication_classes = []
 
     def post(self, request):
         serializer = PasswordResetRequestSerializer(data=request.data)
@@ -168,6 +244,7 @@ class PasswordResetRequestView(APIView):
 
 class PasswordResetConfirmView(APIView):
     permission_classes = [AllowAny]
+    authentication_classes = []
 
     def post(self, request):
         serializer = PasswordResetConfirmSerializer(data=request.data)
@@ -182,3 +259,170 @@ class PasswordResetConfirmView(APIView):
             return Response({"ok": True, "detail": message}, status=status.HTTP_200_OK)
         else:
             return Response({"detail": message}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AdminCreateResidentView(APIView):
+    """Endpoint para que un administrador cree una cuenta de residente.
+
+    Crea el `User` si no existe, asocia una `Membership` con rol `resident`
+    y envía un correo de restablecimiento para que el residente configure su contraseña.
+    """
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = AdminCreateResidentSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        caller = resolve_user_from_request(request)
+        if not caller:
+            return Response(
+                {"detail": "No autenticado."}, status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        caller_roles = caller.get("roles", [])
+        allowed = any(r in ["residence_admin", "portfolio_admin"] for r in caller_roles)
+        if not allowed:
+            return Response(
+                {"detail": "No tienes permisos para crear residentes."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        residence = getattr(request, "residence", None)
+        if not residence:
+            return Response(
+                {"detail": "No se ha determinado la residencia."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        email = data["email"].lower()
+
+        user = UserModel.objects.filter(email__iexact=email).first()
+        created = False
+        if not user:
+            base_username = email.split("@", 1)[0][:30]
+            username = base_username
+            counter = 1
+            while UserModel.objects.filter(username=username).exists():
+                username = f"{base_username}{counter}"
+                counter += 1
+
+            names = (data.get("full_name") or "").strip().split(None, 1)
+            first_name = names[0] if names else ""
+            last_name = names[1] if len(names) > 1 else ""
+            user = UserModel.objects.create(
+                username=username,
+                email=email,
+                first_name=first_name,
+                last_name=last_name,
+                is_active=True,
+            )
+            created = True
+            passwd = data.get("password")
+            if passwd:
+                user.set_password(passwd)
+                user.save()
+
+        student_role, _ = Role.objects.get_or_create(
+            name="Student",
+            residence=None,
+            defaults={
+                "description": "Estudiante / Residente",
+                "is_system_default": True,
+            },
+        )
+
+        membership_exists = Membership.objects.filter(
+            user=user,
+            role=student_role,
+            residence=residence,
+        ).exists()
+        if not membership_exists:
+            Membership.objects.create(
+                user=user,
+                role=student_role,
+                residence=residence,
+                is_active=True,
+            )
+
+        try:
+            if data.get("password"):
+                if not created:
+                    passwd = data.get("password")
+                    if passwd:
+                        user.set_password(passwd)
+                        user.save()
+            else:
+                process_password_reset_request(user.email, request)
+        except Exception:
+            pass
+
+        return Response(
+            {"ok": True, "created": created, "email": user.email},
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class StudentProfileView(APIView):
+    """Get or update student profile"""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        user_data = resolve_user_from_request(request)
+        if not user_data:
+            return Response(
+                {"detail": "No autenticado."}, status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        from apps.residences.models import StudentProfile
+
+        try:
+            user_pk = (
+                user_data.get("user_id") or user_data.get("id") or user_data.get("sub")
+            )
+            user = UserModel.objects.get(pk=user_pk)
+            profile = StudentProfile.objects.get(user=user)
+            from .serializers import StudentProfileSerializer
+
+            serializer = StudentProfileSerializer(profile)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except StudentProfile.DoesNotExist:
+            return Response(
+                {"detail": "Perfil no encontrado."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+    def post(self, request):
+        """Create or update student profile"""
+        user_data = resolve_user_from_request(request)
+        if not user_data:
+            return Response(
+                {"detail": "No autenticado."}, status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        from apps.residences.models import StudentProfile
+
+        from .serializers import StudentProfileSerializer
+
+        user_pk = (
+            user_data.get("user_id") or user_data.get("id") or user_data.get("sub")
+        )
+        user = UserModel.objects.get(pk=user_pk)
+
+        request.user = user
+
+        try:
+            profile = StudentProfile.objects.get(user=user)
+            serializer = StudentProfileSerializer(
+                profile, data=request.data, partial=True, context={"request": request}
+            )
+        except StudentProfile.DoesNotExist:
+            serializer = StudentProfileSerializer(
+                data=request.data, context={"request": request}
+            )
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

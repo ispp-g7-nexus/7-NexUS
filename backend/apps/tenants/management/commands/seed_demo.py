@@ -176,11 +176,13 @@ class Command(BaseCommand):
 
         with schema_context(client.schema_name):
             from apps.membership.models import Membership, Role
+            from apps.packages.models import Package
             from apps.residences.models import (
                 Residence,
                 ResidenceBranding,
                 ResidenceDomain,
             )
+            from apps.spaces.models import CommonSpace
 
             residence, _ = Residence.objects.update_or_create(
                 code="DEMO-01",
@@ -212,6 +214,42 @@ class Command(BaseCommand):
                     "accent_color": "#35C759",
                 },
             )
+
+            demo_spaces = [
+                {
+                    "name": "Sala de Estudio",
+                    "description": "Espacio silencioso para estudio individual o en grupo reducido.",
+                    "capacity": 12,
+                    "open_time": "08:00",
+                    "close_time": "22:00",
+                },
+                {
+                    "name": "Sala Multimedia",
+                    "description": "Sala equipada con proyector para presentaciones y cinefórum.",
+                    "capacity": 20,
+                    "open_time": "10:00",
+                    "close_time": "23:00",
+                },
+                {
+                    "name": "Gimnasio",
+                    "description": "Zona deportiva con aforo limitado por seguridad.",
+                    "capacity": 8,
+                    "open_time": "07:00",
+                    "close_time": "21:30",
+                },
+            ]
+            for item in demo_spaces:
+                CommonSpace.objects.update_or_create(
+                    residence=residence,
+                    name=item["name"],
+                    defaults={
+                        "description": item["description"],
+                        "capacity": item["capacity"],
+                        "is_active": True,
+                        "open_time": item["open_time"],
+                        "close_time": item["close_time"],
+                    },
+                )
 
             admin_user = self._upsert_user(
                 email=admin_email,
@@ -253,11 +291,37 @@ class Command(BaseCommand):
                 defaults={"is_active": True},
             )
 
-            Membership.objects.update_or_create(
+            student_membership, _ = Membership.objects.update_or_create(
                 user=student_user,
                 role=student_role,
                 residence=residence,
                 defaults={"is_active": True},
+            )
+
+            Package.objects.update_or_create(
+                residence=residence,
+                tracking_number="TRK-DEMO-001",
+                defaults={
+                    "resident": student_membership,
+                    "resident_name_snapshot": f"{student_user.first_name} {student_user.last_name}",
+                    "room_snapshot": "101",
+                    "carrier": "Amazon",
+                    "notes": "Caja mediana",
+                    "status": Package.Status.RECEIVED,
+                },
+            )
+
+            Package.objects.update_or_create(
+                residence=residence,
+                tracking_number="TRK-DEMO-002",
+                defaults={
+                    "resident": student_membership,
+                    "resident_name_snapshot": f"{student_user.first_name} {student_user.last_name}",
+                    "room_snapshot": "101",
+                    "carrier": "Correos",
+                    "notes": "Sobre impreso",
+                    "status": Package.Status.RECEIVED,
+                },
             )
 
         self.stdout.write(self.style.SUCCESS("Seed demo aplicado correctamente."))

@@ -49,9 +49,13 @@ TENANT_APPS = [
     "apps.incidences",
     "apps.membership",
     "apps.announcements",
+    "apps.chats",
+    "apps.spaces",
     "apps.residents",
     "apps.onboarding",
     "apps.objects",
+    "apps.packages",
+    "apps.guests",
 ]
 
 if MATCHING_ENABLED:
@@ -139,6 +143,13 @@ CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_ALWAYS_EAGER = os.getenv("CELERY_TASK_ALWAYS_EAGER", "0") == "1"
+CELERY_IMPORTS = tuple(
+    module
+    for module in (
+        "apps.matching.tasks" if MATCHING_ENABLED else None,
+    )
+    if module
+)
 
 MATCHING_ROOM_CHANGE_MODEL = os.getenv("MATCHING_ROOM_CHANGE_MODEL", "")
 MATCHING_ROOM_CHANGE_MEMBERSHIP_FIELD = os.getenv(
@@ -155,6 +166,16 @@ JWT_ACCESS_TOKEN_LIFETIME_SECONDS = int(
 )
 JWT_COOKIE_SECURE = os.getenv("JWT_COOKIE_SECURE", "0") == "1"
 JWT_COOKIE_SAMESITE = os.getenv("JWT_COOKIE_SAMESITE", "Lax")
+
+FIREWORKS_API_KEY = os.getenv("FIREWORKS_API_KEY", "")
+FIREWORKS_LABEL_MODEL = os.getenv("FIREWORKS_LABEL_MODEL", "")
+FIREWORKS_BASE_URL = os.getenv(
+    "FIREWORKS_BASE_URL",
+    "https://api.fireworks.ai/inference/v1",
+)
+PACKAGE_QR_TOKEN_MAX_AGE_SECONDS = int(
+    os.getenv("PACKAGE_QR_TOKEN_MAX_AGE_SECONDS", "300")
+)
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ("apps.common.services.CustomJWTAuthentication",),

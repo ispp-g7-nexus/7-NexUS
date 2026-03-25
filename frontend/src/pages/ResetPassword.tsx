@@ -40,14 +40,14 @@ export function ResetPassword() {
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <input
                             type="password"
-                            placeholder="Mínimo 6 caracteres"
+                            placeholder="Mínimo 8 caracteres"
                             className="w-full p-3 border rounded-md"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required
-                            minLength={6}
+                            minLength={8}
                         />
-                        <Button type="submit" className="w-full bg-[#1B5E20] hover:bg-[#144a19] text-white">
+                        <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-white">
                             Actualizar Contraseña
                         </Button>
                     </form>
