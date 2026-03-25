@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import { LogOut, User } from "lucide-react";
 import { Button } from "../../components/ui/button";
+import { NotificationBell } from "../../components/announcement/NotificationBell";
 import { MyMatchesPage } from "../Matching/MyMatchesPage";
 import { Events } from "./Events/Events";
 import { StudentChats } from "./Chats/StudentChats";
@@ -18,6 +20,7 @@ export function SocialHub({
   hasGroupChatNews = false,
   hasPrivateChatNews = false,
   initialTab = "perfil",
+  onLogout,
 }: {
   readonly onChatTabActiveChange?: (active: boolean) => void;
   readonly onChatSubTabActiveChange?: (tab: "grupos" | "privados") => void;
@@ -28,6 +31,7 @@ export function SocialHub({
   readonly hasGroupChatNews?: boolean;
   readonly hasPrivateChatNews?: boolean;
   readonly initialTab?: Tab;
+  readonly onLogout?: () => void;
 }) {
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
 
@@ -43,6 +47,29 @@ export function SocialHub({
       {/* Header */}
       <header className="bg-primary p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg sticky top-0 z-20">
         <h1 className="text-primary-foreground text-2xl font-bold">Social</h1>
+        <div className="flex items-center gap-2">
+          <NotificationBell />
+          <Button
+            size="icon"
+            variant="ghost"
+            className="text-primary-foreground hover:bg-primary-foreground/20 hover:scale-110 rounded-full transition-all"
+            onClick={() => setActiveTab("perfil")}
+            aria-label="Ir al perfil"
+          >
+            <User className="w-5 h-5" />
+          </Button>
+          {onLogout ? (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="text-primary-foreground hover:bg-primary-foreground/20 hover:scale-110 rounded-full transition-all"
+              onClick={onLogout}
+              aria-label="Cerrar sesión"
+            >
+              <LogOut className="w-5 h-5" />
+            </Button>
+          ) : null}
+        </div>
       </header>
       
       <div className="px-4 py-6 space-y-6">

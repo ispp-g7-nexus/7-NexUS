@@ -290,6 +290,10 @@ export function StudentView({ onLogout }: StudentViewProps) {
         setActiveTab(tab);
     };
 
+    const handleGoToProfile = () => {
+        setActiveTab("community");
+    };
+
     const renderContent = () => {
         // 1. El Home maneja sus propios márgenes (diseño de borde a borde)
         if (activeTab === "home") {
@@ -300,14 +304,15 @@ export function StudentView({ onLogout }: StudentViewProps) {
         let tabContent;
         switch (activeTab) {
             case "incidences":
-                tabContent = <StudentIncidences />;
+                tabContent = <StudentIncidences onGoToProfile={handleGoToProfile} onLogout={onLogout} />;
                 break;
             case "reservations":
-                tabContent = <StudentReservations />;
+                tabContent = <StudentReservations onGoToProfile={handleGoToProfile} onLogout={onLogout} />;
                 break;
             case "community":
                 tabContent = (
                     <SocialHub
+                        onLogout={onLogout}
                         chatRealtimeTick={chatRealtimeTick}
                         chatRealtimeEvent={chatRealtimeEvent}
                         onChatTabActiveChange={setIsCommunityChatActive}
@@ -329,16 +334,16 @@ export function StudentView({ onLogout }: StudentViewProps) {
                 tabContent = <MyMatchesPage />;
                 break;
             case "announcements":
-                tabContent = <StudentAnnouncements />;
+                tabContent = <StudentAnnouncements onGoToProfile={handleGoToProfile} onLogout={onLogout} />;
                 break;
             case "packages":
-                tabContent = <PackagesPage />;
+                tabContent = <PackagesPage onGoToProfile={handleGoToProfile} onLogout={onLogout} />;
                 break;
             case "visitors":
-                tabContent = <ActiveGuestPassesPage />;
+                tabContent = <ActiveGuestPassesPage onGoToProfile={handleGoToProfile} onLogout={onLogout} />;
                 break;
             case "menu":
-                tabContent = <ResidentMenuView />;
+                tabContent = <ResidentMenuView onGoToProfile={handleGoToProfile} onLogout={onLogout} />;
                 break;
             default:
                 tabContent = <div className="p-8 text-center text-gray-500">Módulo en construcción</div>;

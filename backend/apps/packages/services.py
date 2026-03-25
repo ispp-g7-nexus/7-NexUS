@@ -4,6 +4,7 @@ import base64
 import difflib
 import json
 import re
+import unicodedata
 from datetime import datetime
 from typing import Any
 
@@ -62,7 +63,14 @@ def _resident_full_name(membership: Membership) -> str:
 
 def _normalise_text(value: str) -> str:
     value = (value or "").strip().lower()
-    return re.sub(r"\s+", " ", value)
+    value = unicodedata.normalize("NFKD", value)
+    value = "".join(char for char in value if not unicodedata.combining(char))
+    value = re.sub(r"[\W_]+", " ", value, flags=re.UNICODE)
+    return re.sub(r"\s+", " ", value).strip()
+
+
+def _tokenize_text(value: str) -> list[str]:
+    return [token for token in _normalise_text(value).split(" ") if token]
 
 
 def _serialize_candidate(membership: Membership) -> dict[str, Any]:
@@ -91,18 +99,24 @@ def _resolve_name_candidates(
     if exact_matches:
         return exact_matches, "exact_name_match", 1.0
 
-    query_tokens = [token for token in normalized_name.split(" ") if token]
+    query_tokens = _tokenize_text(recipient_name)
     token_matches = []
+    subset_token_matches = []
     for membership in memberships:
-        resident_tokens = [
-            token
-            for token in _normalise_text(_resident_full_name(membership)).split(" ")
-            if token
-        ]
+        resident_tokens = _tokenize_text(_resident_full_name(membership))
         if query_tokens and all(token in resident_tokens for token in query_tokens):
             token_matches.append(membership)
+            continue
+        if (
+            len(resident_tokens) >= 2
+            and len(query_tokens) >= len(resident_tokens)
+            and all(token in query_tokens for token in resident_tokens)
+        ):
+            subset_token_matches.append(membership)
     if token_matches:
         return token_matches, "name_db_search_match", 0.92
+    if subset_token_matches:
+        return subset_token_matches, "resident_name_subset_match", 0.9
 
     scored_matches = sorted(
         (
@@ -467,12 +481,11 @@ def _resolve_resident_match(
 
     room_matches = _filter_memberships_by_location(memberships, room, building)
 
-    if len(room_matches) == 1 and confidence >= RESIDENT_MATCH_CONFIDENCE_THRESHOLD:
-        return _build_match_response(
-            room_matches[0].id, "unique_room_match", [], confidence
-        )
-
     if len(room_matches) == 1:
+        if confidence >= RESIDENT_MATCH_CONFIDENCE_THRESHOLD:
+            return _build_match_response(
+                room_matches[0].id, "unique_room_match", [], confidence
+            )
         return _build_match_response(None, "low_confidence", room_matches, confidence)
 
     if len(room_matches) > 1:
@@ -630,3 +643,12 @@ def _decode_delivery_qr_token(qr_token: str) -> dict[str, Any]:
         "resident_id": resident_id,
         "residence_id": residence_id,
     }
+
+def update_resident_packages_snapshot(membership: Membership) -> None:
+    bedroom = membership.bedroom
+    Package.objects.filter(resident=membership).update(
+        resident_name_snapshot=_resident_full_name(membership),
+        room_snapshot=bedroom.numero if bedroom else "",
+        building_snapshot=bedroom.edificio if bedroom else "",
+        updated_at=timezone.now(),
+    )

@@ -1,4 +1,4 @@
-import { CalendarClock, History, RefreshCw, ShieldCheck, Ticket, UserRoundPlus } from "lucide-react";
+import { CalendarClock, History, LogOut, RefreshCw, ShieldCheck, Ticket, User, UserRoundPlus } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -9,6 +9,7 @@ import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Select1, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { Textarea } from "../../components/ui/textarea";
+import { NotificationBell } from "../../components/announcement/NotificationBell";
 import {
   createMyGuestPass,
   GuestPassApiError,
@@ -637,7 +638,12 @@ function CreateGuestPassForm({
   );
 }
 
-export function ActiveGuestPassesPage() {
+interface ActiveGuestPassesPageProps {
+  onGoToProfile?: () => void;
+  onLogout?: () => void;
+}
+
+export function ActiveGuestPassesPage({ onGoToProfile, onLogout }: ActiveGuestPassesPageProps) {
   const [activePasses, setActivePasses] = useState<GuestPass[]>([]);
   const [upcomingPasses, setUpcomingPasses] = useState<GuestPass[]>([]);
   const [historyPasses, setHistoryPasses] = useState<GuestPass[]>([]);
@@ -747,6 +753,29 @@ export function ActiveGuestPassesPage() {
     <div className="flex flex-col w-full bg-background">
       <header className="bg-primary p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg sticky top-0 z-20">
         <h1 className="text-primary-foreground text-2xl font-bold">Pases de Invitados</h1>
+        <div className="flex items-center gap-2">
+          <NotificationBell />
+          <Button
+            size="icon"
+            variant="ghost"
+            className="text-primary-foreground hover:bg-primary-foreground/20 hover:scale-110 rounded-full transition-all"
+            onClick={() => onGoToProfile?.()}
+            aria-label="Ir al perfil"
+          >
+            <User className="w-5 h-5" />
+          </Button>
+          {onLogout ? (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="text-primary-foreground hover:bg-primary-foreground/20 hover:scale-110 rounded-full transition-all"
+              onClick={onLogout}
+              aria-label="Cerrar sesión"
+            >
+              <LogOut className="w-5 h-5" />
+            </Button>
+          ) : null}
+        </div>
       </header>
 
       <section className="mx-auto flex w-full max-w-4xl flex-col gap-6 pb-24 pt-6 px-4">

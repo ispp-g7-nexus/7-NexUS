@@ -549,6 +549,14 @@ class AdminSpaceListCreateView(AdminRequiredMixin, AuthenticatedView):
 
 
 class AdminSpaceDetailView(AdminRequiredMixin, AuthenticatedView):
+    def get(self, request, space_id: int):
+        residence = _validate_residence(request)
+        if not residence:
+            return JsonResponse({"detail": "No residence context."}, status=400)
+
+        space = get_object_or_404(CommonSpace, id=space_id, residence=residence)
+        return JsonResponse(_serialize_space(space))
+
     def patch(self, request, space_id: int):
         """Edita parcialmente un espacio."""
         residence = _validate_residence(request)
