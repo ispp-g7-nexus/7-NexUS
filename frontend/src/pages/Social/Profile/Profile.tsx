@@ -1,9 +1,12 @@
 import "./Profile.css";
 import { useState, useEffect } from "react";
-import { User, Sparkles, Home, Edit, Music, Heart } from "lucide-react";
+import { User, Sparkles, Home, Edit, Music, Heart, LogOut } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { ProfileEditForm, type ProfileFormData } from "./components/ProfileEditForm";
 import { getStudentProfile } from "../../../services/api";
+import { authService } from "../../../services/auth";
+import { toast } from "sonner";
+
 
 const emptyProfileData: ProfileFormData = {
   name: "", 
@@ -22,6 +25,7 @@ const emptyProfileData: ProfileFormData = {
   musicGenres: [],
   dealbreakers: [],
   roomNumber: "",
+  room: "",
 };
 
 export function Profile() {
@@ -30,6 +34,7 @@ export function Profile() {
   );
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
 
   // Load profile from API on mount
   useEffect(() => {
@@ -54,6 +59,8 @@ export function Profile() {
             lifestyle: apiData.lifestyle || prev.lifestyle,
             musicGenres: apiData.music_genres || prev.musicGenres,
             dealbreakers: apiData.dealbreakers || prev.dealbreakers,
+            name: apiData.name || prev.name,
+            room: apiData.room || apiData.room_number || prev.room,
           }));
         }
       } catch (error) {
@@ -128,6 +135,19 @@ export function Profile() {
     );
   }
 
+  const handleLogout = async () => {
+  try {
+    await authService.logout();
+  } catch (error) {
+    console.error("Error en logout remoto:", error);
+    toast.error("No se pudo cerrar sesión en servidor; se cerrará sesión local.");
+  } finally {
+    localStorage.clear();
+    sessionStorage.clear();
+    globalThis.location.assign("/");
+  }
+};
+
   return (
     <div className="profile-container">
       {/* Header Card */}
@@ -150,14 +170,16 @@ export function Profile() {
               <span className="profile-nickname">@{profileData.nickname}</span>
             )}
             <span className="profile-room">
-              <Home size={14} /> Habitación 305-A
+              <Home size={14} /> Habitación {profileData.room || profileData.roomNumber || "Sin asignar"}
             </span>
-            <Button
-              onClick={() => setIsEditModalOpen(true)}
-              className="mt-3 bg-white/20 border-white/30 text-white hover:bg-white/40 rounded-xl border-none"
-            >
-              <Edit size={14} className="mr-2" /> Editar Perfil
-            </Button>
+            <div className="flex items-center gap-2 mt-3">
+                <Button
+                  onClick={() => setIsEditModalOpen(true)}
+                  className="bg-primary-foreground/20 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/40 rounded-xl border-none"
+                >
+                  <Edit size={14} className="mr-2" /> Editar Perfil
+                </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -166,7 +188,7 @@ export function Profile() {
       <div className="profile-info-card">
         <section>
           <h3 className="profile-section-title">
-            <User size={18} className="text-green-600" /> Sobre mí
+            <User size={18} className="text-primary" /> Sobre mí
           </h3>
           <p className="profile-bio-text">{profileData.bio}</p>
           {profileData.birthplace && (
@@ -179,7 +201,7 @@ export function Profile() {
         {allInterests.length > 0 && (
           <section className="profile-section">
             <h3 className="profile-section-title">
-              <Sparkles size={18} className="text-green-600" /> Intereses y Hobbies
+              <Sparkles size={18} className="text-primary" /> Intereses y Hobbies
             </h3>
             <div className="interests-grid">
               {allInterests.map((item) => (
@@ -261,6 +283,17 @@ export function Profile() {
         )}
       </div>
 
+      <div className="mt-12 pt-8 border-t border-gray-200">
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-3 px-6 py-3.5 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-xl hover:shadow-lg hover:from-red-700 hover:to-red-600 transition-all font-bold tracking-wide"
+          >
+            <LogOut size={20} />
+            CERRAR SESIÓN
+          </button>
+        </div>
+      
       {/* Edit Modal - PASAMOS handleSaveSuccess en onSaveSuccess */}
       {isEditModalOpen && (
         <ProfileEditForm

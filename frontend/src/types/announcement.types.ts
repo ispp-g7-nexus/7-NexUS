@@ -22,9 +22,11 @@ export interface AnnouncementList {
   description: string;
   category: AnnouncementCategory;
   category_display: string;
+  publication_date: string;
   announcement_date: string;
   featured: boolean;
   has_passed: boolean;
+  user: number | null;
 }
 
 export interface CreateAnnouncementDTO {

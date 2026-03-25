@@ -7,6 +7,7 @@ import { authService, resolvePortalRoleFromRoles, type PortalRole } from '../ser
 export function DashboardPage() {
     const navigate = useNavigate();
     const [role, setRole] = useState<PortalRole | null>(null);
+    const [adminUser, setAdminUser] = useState<{ name: string; email: string } | null>(null);
 
     useEffect(() => {
         const loadSession = async () => {
@@ -25,6 +26,12 @@ export function DashboardPage() {
                     return;
                 }
 
+                const { first_name, last_name, username, email } = session.user;
+                const name = (first_name || last_name)
+                    ? `${first_name ?? ''} ${last_name ?? ''}`.trim()
+                    : (username ?? '');
+                setAdminUser({ name, email: email ?? '' });
+
                 localStorage.setItem('userRole', nextRole);
                 setRole(nextRole);
             } catch {
@@ -36,6 +43,22 @@ export function DashboardPage() {
         loadSession();
     }, [navigate]);
 
+    // Polling de sesión: si el admin elimina la cuenta, el residente es expulsado
+    // en el siguiente ciclo (máx. 30 s) sin necesidad de ninguna acción extra.
+    useEffect(() => {
+        if (!role) return;
+
+        const interval = setInterval(async () => {
+            try {
+                await authService.me();
+            } catch {
+                // devuelve 401 (usuario desactivado / sesión inválida).
+            }
+        }, 30_000);
+
+        return () => clearInterval(interval);
+    }, [role]);
+
     const handleLogout = () => {
         localStorage.removeItem('userRole');
         authService.logout().catch(() => null);
@@ -46,5 +69,5 @@ export function DashboardPage() {
 
     return role === 'student'
         ? <StudentView onLogout={handleLogout} />
-        : <AdminView onLogout={handleLogout} />;
+        : <AdminView onLogout={handleLogout} currentUser={adminUser} />;
 }

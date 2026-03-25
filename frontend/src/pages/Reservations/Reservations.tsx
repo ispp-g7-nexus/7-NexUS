@@ -1,18 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, RefreshCw } from "lucide-react";
+import { InteractiveDatePicker } from "../../components/ui/InteractiveDatePicker";
 import { toast } from "sonner";
 
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import {
   cancelReservation,
-  createReservation,
   getSpaceAvailability,
   isApiError,
   listCommonSpaces,
   listMyReservations,
   type CommonSpace,
-  type CreateReservationPayload,
   type SpaceAvailability,
   type SpaceReservation,
 } from "../../services/reservations";
@@ -46,7 +44,6 @@ export function Reservations() {
 
   const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedSpace, setSelectedSpace] = useState<CommonSpace | null>(null);
-  const [submittingReservation, setSubmittingReservation] = useState(false);
   const [cancellingReservationId, setCancellingReservationId] = useState<number | null>(null);
 
   const loadMyReservations = async () => {
@@ -134,23 +131,6 @@ export function Reservations() {
     setSheetOpen(true);
   };
 
-  const handleCreateReservation = async (payload: CreateReservationPayload) => {
-    if (!selectedSpace) {
-      return;
-    }
-
-    setSubmittingReservation(true);
-    try {
-      await createReservation(selectedSpace.id, payload);
-      toast.success("Reserva creada correctamente.");
-      setSheetOpen(false);
-      await Promise.all([loadMyReservations(), loadAvailability(spaces, selectedDate)]);
-    } catch (unknownError) {
-      toast.error(isApiError(unknownError) ? unknownError.message : "No se pudo crear la reserva.");
-    } finally {
-      setSubmittingReservation(false);
-    }
-  };
 
   const handleCancelReservation = async (reservationId: number) => {
     setCancellingReservationId(reservationId);
@@ -170,7 +150,7 @@ export function Reservations() {
       <Card className="mx-auto mt-6 w-full max-w-3xl">
         <CardContent className="space-y-4 p-6 text-center">
           <h2 className="text-xl font-semibold">Acceso no autorizado</h2>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-gray-500">
             Debes iniciar sesión para consultar disponibilidad y gestionar reservas.
           </p>
           <Button onClick={() => (window.location.href = "/")}>Ir al inicio</Button>
@@ -181,38 +161,23 @@ export function Reservations() {
 
   return (
     <section className="mx-auto flex w-full max-w-5xl flex-col gap-6 pb-24">
-      <header className="rounded-xl border border-border/80 bg-card p-4 shadow-sm sm:p-6">
+      <header className="rounded-xl border border-border/80 bg-white p-4 shadow-sm sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-2xl font-bold tracking-tight">Reservas de espacios</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-sm text-gray-500">
               Consulta la disponibilidad diaria y reserva espacios comunes de tu residencia.
             </p>
           </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <label htmlFor="reservations-date" className="inline-flex items-center gap-2 text-sm font-medium">
-              <CalendarDays className="h-4 w-4" /> Fecha
-            </label>
-            <input
-              id="reservations-date"
-              type="date"
-              min={todayDate}
+          <div className="flex items-center">
+            <InteractiveDatePicker
               value={selectedDate}
-              onChange={(event) => setSelectedDate(event.target.value)}
-              className="border-input bg-input-background focus-visible:ring-ring/50 h-9 rounded-md border px-3 text-sm outline-none focus-visible:ring-[3px]"
+              onChange={(newDate) => setSelectedDate(newDate)}
+              minDate={todayDate}
+              className="group relative flex items-center gap-2 border-b-2 border-transparent pb-1 transition-all focus-within:border-green-700 hover:border-green-700/50"
+              inputClassName="w-[130px] text-sm font-medium"
             />
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                void loadInitialData();
-              }}
-              disabled={loadingInitial || loadingAvailability}
-            >
-              <RefreshCw className={`mr-2 h-4 w-4 ${loadingInitial || loadingAvailability ? "animate-spin" : ""}`} />
-              Actualizar
-            </Button>
           </div>
         </div>
       </header>
@@ -234,11 +199,11 @@ export function Reservations() {
 
           {loadingInitial ? (
             <Card>
-              <CardContent className="p-4 text-sm text-muted-foreground">Cargando espacios...</CardContent>
+              <CardContent className="p-4 text-sm text-gray-500">Cargando espacios...</CardContent>
             </Card>
           ) : spaces.length === 0 ? (
             <Card>
-              <CardContent className="p-4 text-sm text-muted-foreground">
+              <CardContent className="p-4 text-sm text-gray-500">
                 No hay espacios activos en esta residencia por el momento.
               </CardContent>
             </Card>
@@ -268,11 +233,15 @@ export function Reservations() {
 
       <ReservationFormSheet
         open={sheetOpen}
-        selectedDate={selectedDate}
+        initialDate={selectedDate} // Cambiamos selectedDate por initialDate
         space={selectedSpace}
-        isSubmitting={submittingReservation}
         onOpenChange={setSheetOpen}
-        onSubmit={handleCreateReservation}
+        onSuccess={() => {
+          // Cuando la reserva se cree con éxito, cerramos el drawer y recargamos
+          setSheetOpen(false);
+          void loadInitialData();
+          void loadAvailability(spaces, selectedDate);
+        }}
       />
     </section>
   );

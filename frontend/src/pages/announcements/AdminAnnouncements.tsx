@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { AlertTriangle, Plus } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { AnnouncementCard } from "../../components/announcement/AnnouncementCard";
@@ -18,6 +18,8 @@ const CATEGORY_OPTIONS: { value: AnnouncementCategory; label: string }[] = [
   { value: "EVENT", label: "Evento" },
   { value: "GENERAL", label: "General" },
 ];
+
+const ANNOUNCEMENTS_POLL_MS = 2000;
 
 const EMPTY_ANNOUNCEMENT_FORM = {
   title: "",
@@ -61,10 +63,6 @@ export function AdminAnnouncements() {
     thisMonth: 0,
   });
 
-  useEffect(() => {
-    loadAnnouncements();
-  }, [selectedCategory]);
-
   const todayDate = getLocalDateString();
 
   const isPastDate = (dateValue: string) => {
@@ -74,8 +72,10 @@ export function AdminAnnouncements() {
     return normalizedDate < todayDate;
   };
 
-  const loadAnnouncements = async () => {
-    setLoading(true);
+  const loadAnnouncements = useCallback(async (silent = false) => {
+    if (!silent) {
+      setLoading(true);
+    }
     setError(null);
     try {
       const data = await announcementService.getAnnouncementsByCategory(selectedCategory);
@@ -85,9 +85,21 @@ export function AdminAnnouncements() {
       setError("Error al cargar los avisos");
       console.error(err);
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
-  };
+  }, [selectedCategory]);
+
+  useEffect(() => {
+    loadAnnouncements(false);
+
+    const intervalId = window.setInterval(() => {
+      loadAnnouncements(true);
+    }, ANNOUNCEMENTS_POLL_MS);
+
+    return () => window.clearInterval(intervalId);
+  }, [loadAnnouncements]);
 
   const calculateStats = (data: AnnouncementList[]) => {
     const now = new Date();
@@ -195,11 +207,11 @@ export function AdminAnnouncements() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="bg-card border-b border-border px-4 py-4">
+      <div className="bg-white border-b border-gray-200 px-4 py-4">
         <div className="flex justify-between items-start mb-4">
           <div>
             <h1 className="text-xl font-bold text-card-foreground">Gestión de Avisos</h1>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-sm text-gray-500 mt-1">
               Comunica noticias y eventos a los residentes
             </p>
           </div>
@@ -214,16 +226,16 @@ export function AdminAnnouncements() {
 
         {/* Estadisticas */}
         <div className="grid grid-cols-3 gap-3">
-          <div className="bg-muted rounded-xl p-3">
-            <p className="text-xs text-muted-foreground mb-1">Total Avisos</p>
+          <div className="bg-gray-50 rounded-xl p-3">
+            <p className="text-xs text-gray-500 mb-1">Total Avisos</p>
             <p className="text-2xl font-bold text-card-foreground">{stats.total}</p>
           </div>
-          <div className="bg-muted rounded-xl p-3">
-            <p className="text-xs text-muted-foreground mb-1">Activos</p>
+          <div className="bg-gray-50 rounded-xl p-3">
+            <p className="text-xs text-gray-500 mb-1">Activos</p>
             <p className="text-2xl font-bold text-primary">{stats.active}</p>
           </div>
-          <div className="bg-muted rounded-xl p-3">
-            <p className="text-xs text-muted-foreground mb-1">Este Mes</p>
+          <div className="bg-gray-50 rounded-xl p-3">
+            <p className="text-xs text-gray-500 mb-1">Este Mes</p>
             <p className="text-2xl font-bold text-card-foreground">{stats.thisMonth}</p>
           </div>
         </div>
@@ -252,7 +264,7 @@ export function AdminAnnouncements() {
         )}
 
         {!loading && !error && announcements.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground">
+          <div className="text-center py-12 text-gray-500">
             No hay avisos disponibles
           </div>
         )}
@@ -459,7 +471,7 @@ export function AdminAnnouncements() {
           </DialogHeader>
 
           {deletingAnnouncement && (
-            <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm">
+            <div className="rounded-lg border border-gray-200 bg-muted/30 p-3 text-sm">
               <p className="font-medium text-card-foreground line-clamp-1">{deletingAnnouncement.title}</p>
             </div>
           )}

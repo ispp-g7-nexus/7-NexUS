@@ -13,6 +13,20 @@ export interface MatchItem {
     display_name: string;
     score: number;
     updated_at: string;
+    horario_ritmo?: string | null;
+    nivel_sociabilidad?: number | null;
+    habito_fumar_vapear?: string | null;
+    sex?: string | null;
+    age?: number | null;
+    study_location?: string | null;
+    weekend_return?: string | null;
+    outside_plans_importance?: string | null;
+    desired_activity?: string | null;
+    order_importance?: number | null;
+    noise_tolerance?: number | null;
+    visitors_preference?: string | null;
+    basic_items_preference?: string | null;
+    temperature_preference?: string | null;
 }
 
 export interface MyMatchesResponse {

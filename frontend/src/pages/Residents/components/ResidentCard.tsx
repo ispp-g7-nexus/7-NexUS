@@ -35,8 +35,8 @@ export function ResidentCard({ resident, onEdit, onDelete }: ResidentCardProps) 
     <Card className="hover:shadow-md transition-shadow border-gray-200">
       <CardContent className="p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
         {/* Avatar */}
-        <Avatar className="h-12 w-12 border border-gray-100 shrink-0">
-          <AvatarFallback className="bg-[#509550]/10 text-[#509550] font-bold text-base">
+        <Avatar className="h-12 w-12 border border-gray-200 shrink-0">
+          <AvatarFallback className="bg-green-600/10 text-green-600 font-bold text-base">
             {getInitials(full_name)}
           </AvatarFallback>
         </Avatar>
@@ -53,7 +53,7 @@ export function ResidentCard({ resident, onEdit, onDelete }: ResidentCardProps) 
           </div>
 
           {/* Room + check-in */}
-          <div className="flex flex-col justify-center text-sm text-gray-600 gap-1">
+          <div className="flex flex-col justify-center text-sm text-gray-500 gap-1">
             {(room || building) && (
               <div className="flex items-center gap-2">
                 <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0" />
@@ -90,7 +90,7 @@ export function ResidentCard({ resident, onEdit, onDelete }: ResidentCardProps) 
           <Button
             variant="ghost"
             size="icon"
-            className="text-gray-400 hover:text-[#509550] h-8 w-8"
+            className="text-gray-400 hover:text-green-600 h-8 w-8"
             title="Editar residente"
             onClick={() => onEdit(resident)}
           >

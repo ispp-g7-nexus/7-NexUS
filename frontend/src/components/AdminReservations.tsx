@@ -2,8 +2,8 @@ import { useState } from "react";
 import { AdminSpaces } from "../pages/Reservations/AdminSpaces";
 import { AdminObjects } from "../pages/Objects/AdminObjects";
 
-export function AdminReservations() {
-  const [activeTab, setActiveTab] = useState("espacios");
+export function AdminReservations({ defaultTab = "espacios" }: { defaultTab?: string }) {
+  const [activeTab, setActiveTab] = useState(defaultTab);
   
   const tabs = [
     { id: "espacios", label: "Espacios" },
@@ -20,7 +20,7 @@ export function AdminReservations() {
             onClick={() => setActiveTab(tab.id)}
             className={`flex-1 py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
               activeTab === tab.id 
-                ? "text-[#4A7C59] border-[#4A7C59]" 
+                ? "text-green-700 border-green-700" 
                 : "text-muted-foreground border-transparent hover:text-foreground"
             }`}
           >
