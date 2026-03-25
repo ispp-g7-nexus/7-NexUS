@@ -5,9 +5,9 @@ import { NotificationBell } from "../../components/announcement/NotificationBell
 import { Button } from "../../components/ui/button";
 
 interface ResidentMenuViewProps {
-  menuWeek?: MenuWeek;
-  onGoToProfile?: () => void;
-  onLogout?: () => void;
+  readonly menuWeek?: MenuWeek;
+  readonly onGoToProfile?: () => void;
+  readonly onLogout?: () => void;
 }
 import menuService from "../../services/menu.service";
 import { toast } from "sonner";
@@ -75,19 +75,19 @@ const MealCard = ({ meal }: { meal: Meal }) => {
           {meal.isVegetarian && (
             <span className="inline-flex items-center gap-1 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
               <Leaf className="w-3 h-3" />
-              Vegetariano
+              <span className="ml-1">Vegetariano</span>
             </span>
           )}
           {meal.isVegan && (
             <span className="inline-flex items-center gap-1 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
               <Flame className="w-3 h-3" />
-              Vegano
+              <span className="ml-1">Vegano</span>
             </span>
           )}
           {meal.isGlutenFree && (
             <span className="inline-flex items-center gap-1 text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full">
               <span className="text-xs">🌾</span>
-              Sin Gluten
+              <span className="ml-1">Sin Gluten</span>
             </span>
           )}
         </div>
@@ -161,9 +161,9 @@ export function ResidentMenuView({ onGoToProfile, onLogout }: ResidentMenuViewPr
     loadMenu();
   }, []);
 
-  const handleSendRequest = () => {
+  const handleSendRequest = async () => {
     if (requestText.trim()) {
-      menuService.createSpecialRequest({
+      await menuService.createSpecialRequest({
         description: requestText,
         date: new Date().toISOString().split('T')[0]
       });

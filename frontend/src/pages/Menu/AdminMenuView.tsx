@@ -1,5 +1,5 @@
 import { Clock, Edit2, Plus, Trash2, Leaf, Flame, X, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
-import { useState, useEffect, useCallback, JSX } from "react";
+import { useState, useEffect, useCallback, JSX, SyntheticEvent } from "react";
 import { MenuWeek, MenuDay, Meal } from "../../types/menu.types";
 import menuService from "../../services/menu.service";
 import { Toast } from "../../components/ui/Toast";
@@ -51,19 +51,20 @@ const MealCardAdmin = ({ meal, onEdit, onDelete }: MealCardAdminProps) => {
       <div className={`border rounded-xl p-4 overflow-hidden shadow-sm transition-all hover:shadow-md relative ${getMealTypeColor(meal.type)}`}>
   {meal?.image && (
     <div className="w-full h-40 mb-3 -mt-4 -mx-4 w-[calc(100%+2rem)] border-b border-black/5 relative group">
-      <img 
-        src={meal.image}
-        alt={meal.name} 
-        className="w-full h-full object-cover" 
-        onError={(e) => {
-          const target = e.target as HTMLImageElement;
-          if (!target.src.includes('http://localhost:8000')) {
-            target.src = `http://localhost:8000${meal.image}`;
-          } else {
-            target.src = 'https://via.placeholder.com/150?text=Error+Imagen';
-          }
-        }}
-      />
+          <img
+            src={meal.image}
+            alt={meal.name}
+            className="w-full h-full object-cover"
+            onError={(e: SyntheticEvent<HTMLImageElement>) => {
+              const img = e.currentTarget;
+              // prefer positive condition to avoid negated condition warning
+              if (img.src.includes('http://localhost:8000')) {
+                img.src = 'https://via.placeholder.com/150?text=Error+Imagen';
+              } else {
+                img.src = `http://localhost:8000${meal.image}`;
+              }
+            }}
+          />
       <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
     </div>
   )}
@@ -102,19 +103,19 @@ const MealCardAdmin = ({ meal, onEdit, onDelete }: MealCardAdminProps) => {
           {meal.isVegetarian && (
             <span className="inline-flex items-center gap-1 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
               <Leaf className="w-3 h-3" />
-              Vegetariano
+              <span className="ml-1">Vegetariano</span>
             </span>
           )}
           {meal.isVegan && (
             <span className="inline-flex items-center gap-1 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
               <Flame className="w-3 h-3" />
-              Vegano
+              <span className="ml-1">Vegano</span>
             </span>
           )}
           {meal.isGlutenFree && (
             <span className="inline-flex items-center gap-1 text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full">
               <span className="text-xs">🌾</span>
-              Sin Gluten
+              <span className="ml-1">Sin Gluten</span>
             </span>
           )}
         </div>
@@ -217,7 +218,7 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
             </label>
             <select
               value={formData.type}
-              onChange={(e) => handleChange('type', e.target.value as Meal['type'])}
+              onChange={(e) => handleChange('type', e.target.value)}
               className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {MEAL_TYPES.map(type => (
@@ -256,7 +257,7 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
               className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <div className="flex flex-col gap-4 py-4">
-              <label className="text-sm font-medium">Imagen del plato</label>
+              <label htmlFor="meal-image-input" className="text-sm font-medium">Imagen del plato</label>
               
               {(previewUrl || meal?.image) && (
                 <div className="relative w-full h-40 border rounded-md overflow-hidden bg-gray-100">
@@ -269,6 +270,7 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
               )}
 
               <input
+                id="meal-image-input"
                 type="file"
                 accept="image/*"
                 onChange={(e) => {
@@ -384,10 +386,11 @@ const NewWeekModal = ({ isOpen, onClose, onSave, isSaving }: NewWeekModalProps) 
             Selecciona <strong>cualquier día de la semana</strong> que desees crear. El sistema construirá automáticamente la semana empezando desde el lunes.
           </p>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="new-week-date" className="block text-sm font-medium text-gray-700 mb-2">
               Semana a crear (Día de referencia)
             </label>
             <input
+              id="new-week-date"
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
@@ -492,8 +495,8 @@ export function AdminMenuView() {
   const [editingDayId, setEditingDayId] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
   const [specialRequests, setSpecialRequests] = useState<any[]>([]);
-  const [, setPhotoFile] = useState<File | null>(null);
-  const [, setPreviewUrl] = useState<string | null>(null);
+  const [_photoFile, setPhotoFile] = useState<File | null>(null);
+  const [_previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [confirmConfig, setConfirmConfig] = useState<{
@@ -573,15 +576,11 @@ export function AdminMenuView() {
   }, [loadWeeks]);
 
   const handleUpdateSpecialRequest = async (id: string | number, status: 'approved' | 'rejected') => {
-  try {
     await menuService.updateSpecialRequestStatus(id, status);
     
     setSpecialRequests(prev => prev.filter(req => req.id !== id));
     
     showToast(`Petición ${status === 'approved' ? 'aprobada' : 'rechazada'}`, 'success');
-  } catch (err) {
-    showToast('Error al actualizar la petición', 'error');
-  }
 };
   const handleAddMeal = (_dayDate: string, dayId: string) => {
     setEditingDayId(dayId);
@@ -712,13 +711,13 @@ export function AdminMenuView() {
       async () => {
         setIsSaving(true);
         try {
-          await menuService.deleteWeek(menuWeek.id!);
+          await menuService.deleteWeek(menuWeek.id);
 
           const updatedWeeks = allWeeks.filter(w => w.id !== menuWeek.id);
           setAllWeeks(updatedWeeks);
 
           if (updatedWeeks.length > 0) {
-            await loadWeekDetail(updatedWeeks[0].id!);
+            await loadWeekDetail(updatedWeeks[0].id);
           } else {
             setMenuWeek(null);
             setSelectedWeekId(null);

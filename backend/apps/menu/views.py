@@ -62,7 +62,8 @@ class MenuWeekViewSet(viewsets.ModelViewSet):
         user_data = resolve_user_from_request(self.request)
         is_admin = False
         if user_data:
-            roles = set(r.strip().lower().replace(" ", "_") for r in user_data.get("roles", []) if isinstance(r, str))
+            # normalize roles into a set for membership checks
+            roles = {r.strip().lower().replace(" ", "_") for r in user_data.get("roles", []) if isinstance(r, str)}
             is_admin = bool(roles.intersection({"admin"}))
 
         if not is_admin:
@@ -126,7 +127,8 @@ class MenuWeekViewSet(viewsets.ModelViewSet):
         user_data = resolve_user_from_request(self.request)
         is_admin = False
         if user_data:
-            roles = set(r.strip().lower().replace(" ", "_") for r in user_data.get("roles", []) if isinstance(r, str))
+            # use a set comprehension instead of set(generator) for clarity
+            roles = {r.strip().lower().replace(" ", "_") for r in user_data.get("roles", []) if isinstance(r, str)}
             is_admin = bool(roles.intersection({"admin"}))
 
         if not is_admin:
