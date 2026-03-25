@@ -325,8 +325,12 @@ const DayMenuCardAdmin = ({ day, onAddMeal, onEditMeal, onDeleteMeal }: DayMenuC
 
 export function AdminMenuView({ menuWeek }: AdminMenuViewProps) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [selectedMeal, setSelectedMeal] = useState<Meal | undefined>();
-  const [editingDayDate, setEditingDayDate] = useState<string>('');
+  const [selectedMeal, 
+    // setSelectedMeal
+  ] = useState<Meal | undefined>();
+  const [editingDayDate, 
+    // setEditingDayDate
+  ] = useState<string>('');
 
   const mockMenuWeek: MenuWeek = menuWeek || {
     weekStart: '2026-03-09',
@@ -440,14 +444,18 @@ export function AdminMenuView({ menuWeek }: AdminMenuViewProps) {
 
   const week = menuWeek || mockMenuWeek;
 
-  const handleAddMeal = (dayDate: string) => {
+  const handleAddMeal = (
+    // dayDate: string
+  ) => {
     // setEditingDayDate(dayDate);
     // setSelectedMeal(undefined);
     // setIsEditModalOpen(true);
     toast.info("Estamos trabajando en esta funcionalidad");
   };
 
-  const handleEditMeal = (meal: Meal) => {
+  const handleEditMeal = (
+    // meal: Meal
+  ) => {
     // setSelectedMeal(meal);
     // setIsEditModalOpen(true);
     toast.info("Estamos trabajando en esta funcionalidad");
