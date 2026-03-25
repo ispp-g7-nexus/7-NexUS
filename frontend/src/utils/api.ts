@@ -20,12 +20,18 @@ export function getCookie(name: string): string | null {
 export async function fetchWithAuth(url: string, options: RequestInit = {}) {
     // Set up headers
     const headers = new Headers(options.headers || {});
+    const isFormDataBody =
+        typeof FormData !== "undefined" && options.body instanceof FormData;
 
     // Always include credentials to send session cookies
     options.credentials = 'include';
 
     // Default to JSON if not set and method is writing data
-    if ((options.method || 'GET').toUpperCase() !== 'GET' && !headers.has('Content-Type')) {
+    if (
+        (options.method || 'GET').toUpperCase() !== 'GET' &&
+        !headers.has('Content-Type') &&
+        !isFormDataBody
+    ) {
         headers.set('Content-Type', 'application/json');
     }
 
@@ -42,8 +48,17 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}) {
 
     const response = await fetch(url, options);
 
-    if (response.status === 401 || response.status === 403) {
-        console.warn(`API request unauthorized/forbidden (${response.status}). The user may need to log in.`);
+    if (response.status === 401) {
+        const currentPath = globalThis.location.pathname;
+        const isPublicRoute =
+            currentPath === '/' ||
+            currentPath === '/login' ||
+            currentPath.startsWith('/login/') ||
+            currentPath === '/forgot-password' ||
+            currentPath.startsWith('/forgot-password/');
+        if (!isPublicRoute) {
+            globalThis.location.href = '/';
+        }
     }
 
     return response;

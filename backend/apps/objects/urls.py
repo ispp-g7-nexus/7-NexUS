@@ -6,6 +6,7 @@ from .views import (
     ObjectCancelView,
     ObjectRentalsView,
     UserReservationsView,
+    AdminObjectNotificationsView,
 )
 
 urlpatterns = [
@@ -15,4 +16,5 @@ urlpatterns = [
     path('objects/<int:object_id>/cancel/', ObjectCancelView.as_view(), name='object-cancel'),
     path('objects/<int:object_id>/rentals/', ObjectRentalsView.as_view(), name='object-rentals'),
     path('my-reservations/', UserReservationsView.as_view(), name='user-reservations'),
+    path('admin/objects/notifications/', AdminObjectNotificationsView.as_view(), name='admin-object-notifications'),
 ]

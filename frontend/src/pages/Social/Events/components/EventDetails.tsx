@@ -21,6 +21,10 @@ export function EventDetails({
 
     const now = new Date();
     const isPastEvent = new Date(selectedEvent.end_time) < now;
+    const isAdmin = localStorage.getItem('userRole') === 'admin';
+    const venueLabel = selectedEvent.event_type === 'internal'
+        ? `Espacio común: ${selectedEvent.space?.name || 'Sin espacio'}`
+        : `Ubicación: ${selectedEvent.location}`;
 
     return (
         <div className="dialog-overlay" onClick={() => setSelectedEvent(null)}>
@@ -35,7 +39,7 @@ export function EventDetails({
 
                     <div className="details-info-row">
                         <span>🗓️ {new Date(selectedEvent.start_time).toLocaleString('es-ES', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} - {new Date(selectedEvent.end_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
-                        <span>📍 {selectedEvent.location}</span>
+                        <span>📍 {venueLabel}</span>
                     </div>
 
                     <div className="details-description">
@@ -63,6 +67,7 @@ export function EventDetails({
                     {selectedEvent.can_edit && (
                         <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
                             <button
+                                type="button"
                                 className="btn-secondary"
                                 style={{ flex: 1 }}
                                 onClick={() => onEditEvent(selectedEvent)}
@@ -70,9 +75,12 @@ export function EventDetails({
                                 Editar
                             </button>
                             <button
+                                type="button"
                                 className="btn-secondary"
                                 style={{ flex: 1, color: 'hsl(var(--destructive))', borderColor: 'hsl(var(--destructive))' }}
-                                onClick={async () => {
+                                onClick={async (event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
                                     await handleDeleteEvent(selectedEvent.id);
                                 }}
                             >
@@ -82,8 +90,12 @@ export function EventDetails({
                     )}
                     {isPastEvent ? (
                         <p className="no-participants" style={{ width: '100%', textAlign: 'center' }}>Este evento ya ha finalizado.</p>
-                    ) : selectedEvent.is_joined ? (
+                    ) : isAdmin ? null : selectedEvent.is_joined ? (
                         <button className="btn-leave" style={{ width: '100%' }} onClick={async () => { await handleLeaveEvent(selectedEvent.id); setSelectedEvent(null); }}>Desapuntarme</button>
+                    ) : selectedEvent.can_join === false ? (
+                        <button className="btn-secondary" style={{ width: '100%', cursor: 'default' }} disabled>
+                            Aforo completado
+                        </button>
                     ) : (
                         <button className="btn-join" style={{ width: '100%', justifyContent: 'center' }} onClick={async () => { await handleJoinEvent(selectedEvent.id); setSelectedEvent(null); }}>Apuntarme al Evento</button>
                     )}

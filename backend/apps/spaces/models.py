@@ -12,6 +12,7 @@ class CommonSpace(models.Model):
     is_active = models.BooleanField(default=True)
     open_time = models.TimeField()
     close_time = models.TimeField()
+    reservation_interval_minutes = models.PositiveIntegerField(default=60)
     residence = models.ForeignKey(
         Residence,
         on_delete=models.CASCADE,
@@ -59,7 +60,9 @@ class SpaceReservation(models.Model):
     )
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
-    status = models.CharField(max_length=16, choices=Status.choices, default=Status.ACTIVE)
+    status = models.CharField(
+        max_length=16, choices=Status.choices, default=Status.ACTIVE
+    )
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

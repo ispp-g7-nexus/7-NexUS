@@ -5,7 +5,7 @@ import type { AdminSpace, CreateSpacePayload } from "../../../services/adminSpac
 
 interface SpaceFormSheetProps {
   open: boolean;
-  space: AdminSpace | null; // null = create mode
+  space: AdminSpace | null;
   isSubmitting: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (payload: CreateSpacePayload) => Promise<void>;
@@ -17,6 +17,7 @@ const EMPTY_FORM: CreateSpacePayload = {
   capacity: 1,
   open_time: "08:00",
   close_time: "22:00",
+  reservation_interval_minutes: 60,
   is_active: true,
 };
 
@@ -39,6 +40,7 @@ export function SpaceFormSheet({
               capacity: space.capacity,
               open_time: space.open_time.slice(0, 5),
               close_time: space.close_time.slice(0, 5),
+              reservation_interval_minutes: space.reservation_interval_minutes,
               is_active: space.is_active,
             }
           : EMPTY_FORM,
@@ -68,7 +70,7 @@ export function SpaceFormSheet({
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            className="rounded-md p-1 text-gray-500 hover:bg-gray-50 hover:text-gray-900 transition-colors"
             aria-label="Cerrar"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -136,7 +138,18 @@ export function SpaceFormSheet({
                 />
               </div>
             </div>
-
+            <div className="space-y-1.5">
+              <label htmlFor="reservation-interval-minutes" className="text-sm font-medium">Intervalo de reserva(minutos) *</label>
+              <input
+                id="reservation-interval-minutes"
+                required
+                type="number"
+                min={1}
+                value={form.reservation_interval_minutes}
+                onChange={(e) => set("reservation_interval_minutes", Number.parseInt(e.target.value) || 1)}
+                className="border-input bg-background focus-visible:ring-ring/50 w-full rounded-md border px-3 py-2 text-sm outline-none focus-visible:ring-[3px]"
+              />
+            </div>
             <div className="flex items-center gap-3">
               <input
                 id="is_active"

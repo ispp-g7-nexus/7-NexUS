@@ -17,6 +17,7 @@ export interface AdminSpace {
   is_active: boolean;
   open_time: string;
   close_time: string;
+  reservation_interval_minutes: number;
 }
 
 export interface AdminSpaceReservation {
@@ -38,6 +39,7 @@ export interface CreateSpacePayload {
   capacity: number;
   open_time: string;
   close_time: string;
+  reservation_interval_minutes: number;
   is_active?: boolean;
 }
 
@@ -75,6 +77,10 @@ async function requestVoid(url: string, options?: RequestInit): Promise<void> {
 
 export function listAdminSpaces(): Promise<AdminSpace[]> {
   return requestJson<AdminSpace[]>(`${ADMIN_SPACES_BASE}/`);
+}
+
+export function getSpace(spaceId: number): Promise<AdminSpace> {
+  return requestJson<AdminSpace>(`${ADMIN_SPACES_BASE}/${spaceId}/`);
 }
 
 export function createSpace(payload: CreateSpacePayload): Promise<AdminSpace> {

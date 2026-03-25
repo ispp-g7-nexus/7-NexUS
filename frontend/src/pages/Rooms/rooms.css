@@ -20,7 +20,7 @@
 }
 
 .btn-primary {
-  background: #36b56a;
+  background: hsl(var(--tenant-primary-600));
   color: white;
   border: none;
   padding: 10px 18px;
@@ -43,8 +43,8 @@
 }
 
 .stat-green {
-  background: #e9f7ef;
-  color: #36b56a;
+  background: hsl(var(--tenant-primary-50));
+  color: hsl(var(--tenant-primary-600));
 }
 
 .stat-blue {
@@ -93,8 +93,8 @@
 }
 
 .occupied {
-  background: #e9f7ef;
-  color: #36b56a;
+  background: hsl(var(--tenant-primary-50));
+  color: hsl(var(--tenant-primary-600));
 }
 
 .modal-bg {

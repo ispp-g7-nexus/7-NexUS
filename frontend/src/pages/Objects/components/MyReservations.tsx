@@ -32,7 +32,7 @@ export function MyReservations({ reservations, loading, error, cancellingRentalI
       </CardHeader>
       <CardContent>
         {loading ? (
-          <p className="text-sm text-muted-foreground">Cargando tus reservas...</p>
+          <p className="text-sm text-gray-500">Cargando tus reservas...</p>
         ) : error ? (
           <div className="space-y-3">
             <p className="text-sm text-destructive">{error}</p>
@@ -42,9 +42,9 @@ export function MyReservations({ reservations, loading, error, cancellingRentalI
           </div>
         ) : reservations.length === 0 ? (
           <div className="text-center py-6">
-            <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-            <h3 className="text-sm font-medium text-foreground mb-1">No tienes reservas</h3>
-            <p className="text-sm text-muted-foreground">Cuando reserves objetos, aparecerán aquí.</p>
+            <Calendar className="w-12 h-12 text-gray-500 mx-auto mb-3" />
+            <h3 className="text-sm font-medium text-gray-900 mb-1">No tienes reservas</h3>
+            <p className="text-sm text-gray-500">Cuando reserves objetos, aparecerán aquí.</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -80,7 +80,7 @@ function ReservationCard({
   const isPast = new Date(rental.end_date) <= new Date();
 
   const getStatusColor = () => {
-    if (isPast) return 'bg-slate-200 text-slate-700';
+    if (isPast) return 'bg-slate-200 text-gray-500';
     if (isActive) return 'bg-primary/10 text-primary';
     return 'bg-blue-100 text-blue-800';
   };
@@ -97,20 +97,20 @@ function ReservationCard({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-2 flex-wrap">
-            <p className="text-sm font-semibold text-foreground">{object.name}</p>
+            <p className="text-sm font-semibold text-gray-900">{object.name}</p>
             <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${getStatusColor()}`}>
               {getStatusText()}
             </span>
           </div>
           
           {object.location && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+            <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
               <MapPin className="h-3.5 w-3.5" />
               <span>{object.location}</span>
             </div>
           )}
           
-          <div className="space-y-1 text-sm text-muted-foreground">
+          <div className="space-y-1 text-sm text-gray-500">
             <div className="flex items-center gap-2">
               <Calendar className="h-3.5 w-3.5" />
               <span>Inicio: {formatDateTime(rental.start_date)}</span>

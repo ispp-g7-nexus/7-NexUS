@@ -1,12 +1,19 @@
 import { useState, useEffect } from "react";
+import { LogOut, User } from "lucide-react";
 import { AnnouncementCard } from "../../components/announcement/AnnouncementCard";
 import { AnnouncementFilters } from "../../components/announcement/AnnouncementFilters";
 import { NotificationBell } from "../../components/announcement/NotificationBell";
+import { Button } from "../../components/ui/button";
 import announcementService from "../../services/announcement.service";
 import { AnnouncementList } from "../../types/announcement.types";
-import logo from "../../assets/logo.png";
 
-export function StudentAnnouncements() {
+
+interface StudentAnnouncementsProps {
+  onGoToProfile?: () => void;
+  onLogout?: () => void;
+}
+
+export function StudentAnnouncements({ onGoToProfile, onLogout }: StudentAnnouncementsProps) {
   const [announcements, setAnnouncements] = useState<AnnouncementList[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -30,21 +37,39 @@ export function StudentAnnouncements() {
     }
   };
 
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex flex-col w-full bg-background">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-primary border-b border-primary/80 px-4 py-3">
-        <div className="relative flex items-center justify-center min-h-[2.25rem]">
-          <div className="absolute left-0 w-11 h-11 flex items-center justify-center">
-            <img src={logo} alt="NexUS Logo" className="w-full h-full object-contain" />
-            </div>
-          <h1 className="text-xl font-bold text-white">Avisos</h1>
-          <NotificationBell onMarkAsRead={loadAnnouncements} className="absolute right-0 text-white hover:text-white" />
+      <header className="bg-primary  p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg sticky top-0 z-20">
+        <h1 className="text-primary-foreground text-2xl font-bold">Avisos</h1>
+        <div className="flex items-center gap-2">
+          <NotificationBell onMarkAsRead={loadAnnouncements} />
+          <Button
+            size="icon"
+            variant="ghost"
+            className="text-primary-foreground hover:bg-primary-foreground/20 hover:scale-110 rounded-full transition-all"
+            onClick={() => onGoToProfile?.()}
+            aria-label="Ir al perfil"
+          >
+            <User className="w-5 h-5" />
+          </Button>
+          {onLogout ? (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="text-primary-foreground hover:bg-primary-foreground/20 hover:scale-110 rounded-full transition-all"
+              onClick={onLogout}
+              aria-label="Cerrar sesión"
+            >
+              <LogOut className="w-5 h-5" />
+            </Button>
+          ) : null}
         </div>
-      </div>
+      </header>
 
       {/* Filtros */}
-      <div className="px-4 py-3 flex justify-center">
+      <div className="px-4 py-3 flex justify-center sticky top-[72px] z-10 bg-[#F6F7F9]">
         <div className="w-fit max-w-full">
           <AnnouncementFilters
             selectedCategory={selectedCategory}
@@ -54,7 +79,7 @@ export function StudentAnnouncements() {
       </div>
 
       {/* Lista de avisos */}
-      <div className="px-4 pb-6">
+      <main className="flex-1 overflow-y-auto px-4 pb-32">
         {loading && (
           <div className="flex justify-center items-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -68,7 +93,7 @@ export function StudentAnnouncements() {
         )}
 
         {!loading && !error && announcements.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground">
+          <div className="text-center py-12 text-gray-500">
             No hay avisos disponibles
           </div>
         )}
@@ -83,7 +108,7 @@ export function StudentAnnouncements() {
             ))}
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 }
