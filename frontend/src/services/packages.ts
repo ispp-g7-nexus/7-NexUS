@@ -214,6 +214,16 @@ export const packagesService = {
     return Number((data as { count?: number }).count || 0);
   },
 
+  getPendingCount: async (): Promise<number> => {
+    const response = await fetchWithAuth(`${PACKAGES_URL}me/?status=RECEIVED`);
+    if (!response.ok) {
+      return 0;
+    }
+
+    const data = await response.json().catch(() => []);
+    return Array.isArray(data) ? data.length : 0;
+  },
+
   markAsViewed: async (): Promise<{ message: string; marked_count: number }> => {
     const response = await fetchWithAuth(`${PACKAGES_URL}me/mark_as_viewed/`, {
       method: "POST",
