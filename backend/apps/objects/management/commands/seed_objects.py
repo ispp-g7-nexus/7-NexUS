@@ -2,7 +2,7 @@ import os
 from django.core.management.base import BaseCommand
 from django.utils.text import slugify
 from django_tenants.utils import schema_context
-from apps.tenants.models import Client
+from apps.tenants.models import Client, Domain
 
 
 class Command(BaseCommand):
@@ -38,7 +38,7 @@ class Command(BaseCommand):
             if schema_name:
                 tenant = Client.objects.filter(schema_name=schema_name).first()
             if not tenant and tenant_domain:
-                domain_obj = tenant.domains.filter(domain=tenant_domain).first()
+                domain_obj = Domain.objects.filter(domain=tenant_domain).first()
                 if domain_obj:
                     tenant = domain_obj.tenant
 

@@ -241,8 +241,16 @@ class ObjectAvailabilityApiTests(FastTenantTestCase):
         self.assertIsInstance(rental_str, str)
 
     def test_seed_objects_command(self):
+        from io import StringIO
         from django.core.management import call_command
-        call_command('seed_objects')
+        out = StringIO()
+        call_command(
+            'seed_objects',
+            schema=self.tenant.schema_name,
+            residence_code='RA-001',
+            stdout=out,
+        )
+        self.assertIn('Seeder de objetos completado', out.getvalue())
 
     def test_create_object_invalid_json(self):
         response = self.client.post("/api/objects/", data="not a json", content_type="application/json")

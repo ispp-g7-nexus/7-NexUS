@@ -325,3 +325,119 @@ class ObjectViewsCoverageTests(FastTenantTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), [])
+
+    # ------------------------------------------------------------------
+    # ObjectReserveView — ramas adicionales
+    # ------------------------------------------------------------------
+
+    def test_reserve_success(self):
+        """Reserva válida crea el rental y devuelve 201."""
+        self.client.force_login(self.regular_user)
+        now = timezone.now()
+
+        response = self.client.post(
+            f"/api/objects/{self.obj.id}/reserve/",
+            data=json.dumps({
+                "start_date": (now + timedelta(hours=2)).isoformat(),
+                "end_date": (now + timedelta(hours=3)).isoformat(),
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(ObjectRental.objects.filter(object=self.obj, user=self.regular_user).exists())
+
+    def test_reserve_end_before_start_returns_400(self):
+        """start >= end debe devolver 400."""
+        self.client.force_login(self.regular_user)
+        now = timezone.now()
+
+        response = self.client.post(
+            f"/api/objects/{self.obj.id}/reserve/",
+            data=json.dumps({
+                "start_date": (now + timedelta(hours=3)).isoformat(),
+                "end_date": (now + timedelta(hours=2)).isoformat(),
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("posterior", response.json()["detail"].lower())
+
+    def test_reserve_overlapping_returns_400(self):
+        """Reserva solapada con otra existente devuelve 400."""
+        self.client.force_login(self.regular_user)
+        now = timezone.now()
+        start = now + timedelta(hours=1)
+        end = now + timedelta(hours=2)
+        ObjectRental.objects.create(object=self.obj, user=self.other_user, start_date=start, end_date=end)
+
+        response = self.client.post(
+            f"/api/objects/{self.obj.id}/reserve/",
+            data=json.dumps({
+                "start_date": (start + timedelta(minutes=15)).isoformat(),
+                "end_date": (end + timedelta(minutes=15)).isoformat(),
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("disponibilidad", response.json()["detail"].lower())
+
+    def test_reserve_naive_datetime_is_made_aware(self):
+        """Datetime sin zona horaria se normaliza correctamente (make_aware)."""
+        self.client.force_login(self.regular_user)
+
+        response = self.client.post(
+            f"/api/objects/{self.obj.id}/reserve/",
+            data=json.dumps({
+                "start_date": "2027-06-01T10:00:00",
+                "end_date": "2027-06-01T11:00:00",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+
+    # ------------------------------------------------------------------
+    # ObjectCancelView — objeto no encontrado
+    # ------------------------------------------------------------------
+
+    def test_cancel_object_not_found_returns_404(self):
+        """Cancel sobre object_id inexistente devuelve 404."""
+        self.client.force_login(self.regular_user)
+
+        response = self.client.post(
+            "/api/objects/9999/cancel/",
+            data=json.dumps({}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    # ------------------------------------------------------------------
+    # tasks.py — send_return_reminders
+    # ------------------------------------------------------------------
+
+    def test_send_return_reminders_returns_empty_when_no_rentals(self):
+        """Sin rentals próximos a vencer, devuelve count=0."""
+        from apps.objects.tasks import send_return_reminders
+        result = send_return_reminders()
+        self.assertEqual(result['count'], 0)
+        self.assertEqual(result['reminders'], [])
+
+    def test_send_return_reminders_includes_rentals_ending_within_24h(self):
+        """Rental que vence en <24 h aparece en el resultado."""
+        from apps.objects.tasks import send_return_reminders
+        now = timezone.now()
+        ObjectRental.objects.create(
+            object=self.obj,
+            user=self.regular_user,
+            start_date=now - timedelta(hours=1),
+            end_date=now + timedelta(hours=12),
+        )
+        result = send_return_reminders()
+        self.assertEqual(result['count'], 1)
+        entry = result['reminders'][0]
+        self.assertEqual(entry['object_name'], self.obj.name)
+        self.assertEqual(entry['user_id'], self.regular_user.id)

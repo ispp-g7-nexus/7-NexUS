@@ -217,7 +217,10 @@ class ObjectCancelView(AuthenticatedView):
         if error_response:
             return error_response
         try:
-            body = json.loads(request.body) if request.body else {}
+            try:
+                body = json.loads(request.body) if request.body else {}
+            except json.JSONDecodeError:
+                body = {}
             rental_id = body.get('rental_id')
             if rental_id:
                 deleted, _ = ObjectRental.objects.filter(id=rental_id, object=obj, user=request.user).delete()
