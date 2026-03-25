@@ -558,9 +558,16 @@ export function AdminMenuView() {
           const weeks = await menuService.listWeeks();
           setAllWeeks(weeks);
           if (weeks.length > 0) {
-            const firstWeek = await menuService.getWeek(weeks[0].id!);
-            setMenuWeek(firstWeek);
-            setSelectedWeekId(weeks[0].id || null);
+            const first = weeks[0];
+            if (first.id) {
+              const firstWeek = await menuService.getWeek(first.id);
+              setMenuWeek(firstWeek);
+              setSelectedWeekId(first.id || null);
+            } else {
+              // fallback: use the week object as-is if it lacks an id
+              setMenuWeek(first as MenuWeek);
+              setSelectedWeekId(null);
+            }
           } else {
             setMenuWeek(null);
           }

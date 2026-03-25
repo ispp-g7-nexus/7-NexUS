@@ -5,7 +5,6 @@ import { NotificationBell } from "../../components/announcement/NotificationBell
 import { Button } from "../../components/ui/button";
 
 interface ResidentMenuViewProps {
-  readonly menuWeek?: MenuWeek;
   readonly onGoToProfile?: () => void;
   readonly onLogout?: () => void;
 }
