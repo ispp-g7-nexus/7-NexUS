@@ -1,4 +1,5 @@
 import { useState, ChangeEvent, FormEvent } from "react";
+import { toast } from "sonner";
 import { X, Upload, Plus, Trash2 } from "lucide-react";
 import { Button } from "../../../../components/ui/button";
 import { Input } from "../../../../components/ui/input";
@@ -142,7 +143,7 @@ export function ProfileEditForm({
 
     // Validaciones (NX-FB.07/30)
     if (!formData.birthplace || formData.birthplace.trim() === "") {
-      alert("El lugar de origen es obligatorio.");
+      toast.error("El lugar de origen es obligatorio.");
       return;
     }
 
