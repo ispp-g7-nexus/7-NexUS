@@ -49,6 +49,8 @@
 
 ## 1. Listado de Usuarios Pilotos
 
+**Nota para la evaluación:** Al ser un repositorio público no se incluyen los datos de contacto en este documento por protección de datos, pero sí que se incluyen en el documento entregado en Enseñanza Virtual.
+
 | Nombre | Rol | Residencia |
 | :--- | :--- | :--- |
 | Pedro | Director ONE Sevilla | ONE Sevilla |
