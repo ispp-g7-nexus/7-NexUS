@@ -39,6 +39,7 @@
 | Versión | Fecha | Cambio principal |
 |---------|-------|------------------|
 | 1.0.0 | 11/03/2026 | Creación del documento del seguimiento económico |
+| 2.0.0 | 25/03/2026 | Actualización de datos conforme al Sprint 2 |
 ---
 
 
@@ -70,7 +71,7 @@ Este análisis detalla el gasto incurrido durante el Sprint 2 basándose en la d
 ## 2. Desglose de Costes de Personal (HBS - Hora Básica de Servicio)
 
 
-El equipo ha dedicado un total de 630 horas productivas durante las dos semanas del Sprint (30 horas por perfil).
+El equipo ha dedicado un total de 712 horas productivas durante las tres semanas del Sprint.
 
 | Perfil Profesional (según PPT) | Rol Asignado | Multiplicador | Precio Hora | Total Sprint 2 |
 | :--- | :--- | :--- | :--- | :--- |
