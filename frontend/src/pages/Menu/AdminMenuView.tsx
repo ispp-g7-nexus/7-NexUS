@@ -1,5 +1,6 @@
 import { Clock, Edit2, Plus, Trash2, Leaf, Flame, X } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { MenuWeek, MenuDay, Meal } from "../../types/menu.types";
 
 interface AdminMenuViewProps {
@@ -440,26 +441,28 @@ export function AdminMenuView({ menuWeek }: AdminMenuViewProps) {
   const week = menuWeek || mockMenuWeek;
 
   const handleAddMeal = (dayDate: string) => {
-    setEditingDayDate(dayDate);
-    setSelectedMeal(undefined);
-    setIsEditModalOpen(true);
+    // setEditingDayDate(dayDate);
+    // setSelectedMeal(undefined);
+    // setIsEditModalOpen(true);
+    toast.info("Estamos trabajando en esta funcionalidad");
   };
 
   const handleEditMeal = (meal: Meal) => {
-    setSelectedMeal(meal);
-    setIsEditModalOpen(true);
+    // setSelectedMeal(meal);
+    // setIsEditModalOpen(true);
+    toast.info("Estamos trabajando en esta funcionalidad");
   };
 
   const handleDeleteMeal = (mealId?: string) => {
     // Esta función solo es visual, la lógica se implementará después
     console.log('Eliminar comida:', mealId);
-    alert('Eliminar comida: ' + (mealId || 'Nueva comida'));
+    toast.info("Estamos trabajando en esta funcionalidad");
   };
 
   const handleSaveMeal = (meal: Meal) => {
     // Esta función solo es visual, la lógica se implementará después
     console.log('Guardar comida:', meal);
-    alert('Comida guardada: ' + meal.name);
+    toast.info("Estamos trabajando en esta funcionalidad");
   };
 
   return (
@@ -484,7 +487,10 @@ export function AdminMenuView({ menuWeek }: AdminMenuViewProps) {
               })}
             </p>
           </div>
-          <button className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium flex items-center gap-2">
+          <button 
+            onClick={() => toast.info("Estamos trabajando en esta funcionalidad")}
+            className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium flex items-center gap-2"
+          >
             <Plus className="w-5 h-5" />
             Nueva Semana
           </button>
