@@ -51,6 +51,7 @@ export interface CreateIncidenceDTO {
   description: string;
   location_type: LocationType;
   room_number?: number | null;
+  room_number_detail?: BedroomDetail | null;
   priority?: PriorityLevel;
 }
 
@@ -66,6 +67,8 @@ export interface UpdateIncidenceDTO {
   admin_notes?: string;
   quick_comment?: string;
   room_number?: number | null;
+  room_number_detail?: BedroomDetail | null;
+
 }
 
 
@@ -90,6 +93,9 @@ export const IncidenceService = {
    * Actualizar estado, personal asignado o notas
    */
   update: async (id: number, data: UpdateIncidenceDTO): Promise<Incidence> => {
+    console.log("-------------------------------");
+    console.log("📦 PAYLOAD QUE SALE AL BACKEND:", data);
+    console.log("-------------------------------");
     const response = await fetchWithAuth(`/api/incidences/${id}/`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -98,7 +104,7 @@ export const IncidenceService = {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error("DEBUG BACKEND ERROR:", errorData); 
+      console.error("DEBUG BACKEND ERROR:", errorData);
 
       const details = Object.entries(errorData)
         .map(([key, value]) => `${key}: ${Array.isArray(value) ? value[0] : value}`)
