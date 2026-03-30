@@ -1,6 +1,5 @@
-import { Clock, Edit2, Plus, Trash2, Leaf, Flame, X, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Clock, Edit2, Plus, Trash2, Leaf, Flame, X, Loader2, ChevronLeft } from "lucide-react";
 import { useState, useEffect, useCallback, JSX, SyntheticEvent } from "react";
-import { toast } from "sonner";
 import { MenuWeek, MenuDay, Meal } from "../../types/menu.types";
 import menuService from "../../services/menu.service";
 import { Toast } from "../../components/ui/Toast";
@@ -496,8 +495,8 @@ export function AdminMenuView() {
   const [editingDayId, setEditingDayId] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
   const [specialRequests, setSpecialRequests] = useState<any[]>([]);
-  const [_photoFile, setPhotoFile] = useState<File | null>(null);
-  const [_previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [, setPhotoFile] = useState<File | null>(null);
+  const [, setPreviewUrl] = useState<string | null>(null);
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [confirmConfig, setConfirmConfig] = useState<{
@@ -567,7 +566,6 @@ export function AdminMenuView() {
             } else {
               // fallback: use the week object as-is if it lacks an id
               setMenuWeek(first as MenuWeek);
-              setSelectedWeekId(null);
             }
           } else {
             setMenuWeek(null);
@@ -811,7 +809,7 @@ export function AdminMenuView() {
 
   const currentIndex = allWeeks.findIndex(w => w.id === selectedWeekId);
   const canGoPrev = currentIndex < allWeeks.length - 1;
-  const canGoNext = currentIndex > 0;
+  //const canGoNext = currentIndex > 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
@@ -836,13 +834,34 @@ export function AdminMenuView() {
                   {' - '}
                   {new Date(menuWeek.weekEnd + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
                 </h2>
-                <button
-                  onClick={() => handleNavigateWeek('next')}
-                  disabled={!canGoNext}
-                  className="p-1.5 rounded-full hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                >
-                  <ChevronRight className="w-5 h-5 text-gray-700" />
-                </button>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={handleTogglePublish}
+                    disabled={isSaving}
+                    className={`px-5 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-colors ${
+                      menuWeek.isPublished
+                        ? 'bg-orange-100 text-orange-700 hover:bg-orange-200 border border-orange-200'
+                        : 'bg-green-600 text-white hover:bg-green-700'
+                    }`}
+                  >
+                    {menuWeek.isPublished ? 'Ocultar menú' : 'Publicar menú'}
+                  </button>
+                  <button
+                    onClick={handleDeleteWeek}
+                    disabled={isSaving}
+                    className="px-5 py-2.5 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors font-medium flex items-center gap-2"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Eliminar semana
+                  </button>
+                  <button
+                    onClick={() => setIsNewWeekModalOpen(true)}
+                    className="px-5 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium flex items-center gap-2"
+                  >
+                    <Plus className="w-5 h-5" />
+                    Nueva Semana
+                  </button>
+                </div>
               </div>
 
               {/* Status indicator inline */}

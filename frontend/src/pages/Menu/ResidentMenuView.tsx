@@ -280,35 +280,6 @@ export function ResidentMenuView({ onGoToProfile, onLogout }: ResidentMenuViewPr
     Petición especial
   </button>
 </div>
-  {isModalOpen && (
-  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-    <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
-      <h3 className="text-xl font-bold text-gray-900 mb-4">Nueva petición especial</h3>
-      
-      <textarea
-        className="w-full border border-gray-200 rounded-xl p-3 h-32 focus:ring-2 focus:ring-orange-500 outline-none resize-none"
-        placeholder="Ej: Sin sal, alérgico a los frutos secos, etc..."
-        value={requestText}
-        onChange={(e) => setRequestText(e.target.value)}
-      />
-
-      <div className="flex gap-3 mt-6">
-        <button
-          onClick={() => setIsModalOpen(false)}
-          className="flex-1 py-2 text-gray-600 font-medium hover:bg-gray-50 rounded-lg transition-colors"
-        >
-          Cancelar
-        </button>
-        <button
-          onClick={handleSendRequest}
-          disabled={!requestText.trim()}
-          className="flex-1 py-2 bg-orange-500 text-white font-bold rounded-lg hover:bg-orange-600 disabled:opacity-50 transition-colors"
-        >
-        </button>
-      </div>
-    </div>
-  </div>
-)}
 </div>
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
