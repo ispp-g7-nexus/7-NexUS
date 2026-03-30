@@ -28,22 +28,17 @@ class MenuService {
     return `Error ${status}`;
   }
 
-  private async request<T>(
-    endpoint: string,
-    options?: RequestInit
-  ): Promise<T> {
-    const isFormData = options?.body instanceof FormData;
+  private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  const isFormData = options?.body instanceof FormData;
 
-    const headers: Record<string, string> = {
-      ...options?.headers as Record<string, string>,
-    };
+  const headers: Record<string, string> = {
+    ...options?.headers as Record<string, string>,
+  };
 
-    if (!isFormData) {
-      headers['Content-Type'] = 'application/json';
-    }
-  if (options?.body instanceof FormData) {
-      delete headers['Content-Type']; 
-}
+  if (!isFormData) {
+    headers['Content-Type'] = 'application/json';
+  }
+
     const response = await fetch(`${API_URL}${endpoint}`, {
       ...options,
       credentials: 'include',

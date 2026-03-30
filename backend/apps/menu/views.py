@@ -1,12 +1,11 @@
 import datetime
 import logging
-from django.forms import ValidationError
-from psycopg import logger
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from apps.tenants.models import Domain
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from apps.common.utils.jwt_auth import resolve_user_from_request
 
 from .models import MenuWeek, MenuDay, Meal, SpecialMenuRequest
@@ -241,21 +240,15 @@ class SpecialMenuRequestViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
-        from apps.common.utils.jwt_auth import resolve_user_from_request
-        import logging
-
         logger = logging.getLogger(__name__)
-
         user_data = resolve_user_from_request(self.request)
         if not user_data:
-            from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied({"detail": "Usuario no autenticado."})
 
         email = user_data.get('email')
         try:
             resident = Resident.objects.get(email=email)
         except Resident.DoesNotExist:
-            from rest_framework.exceptions import ValidationError
             raise ValidationError({"detail": "No se encontró un residente asociado a este usuario."})
-        logger.debug(f"Archivos recibidos: {self.request.FILES}")
+
         serializer.save(resident=resident)
