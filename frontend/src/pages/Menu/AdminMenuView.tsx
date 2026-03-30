@@ -495,8 +495,6 @@ export function AdminMenuView() {
   const [editingDayId, setEditingDayId] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
   const [specialRequests, setSpecialRequests] = useState<any[]>([]);
-  const [, setPhotoFile] = useState<File | null>(null);
-  const [, setPreviewUrl] = useState<string | null>(null);
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [confirmConfig, setConfirmConfig] = useState<{
@@ -563,9 +561,6 @@ export function AdminMenuView() {
               const firstWeek = await menuService.getWeek(first.id);
               setMenuWeek(firstWeek);
               setSelectedWeekId(first.id || null);
-            } else {
-              // fallback: use the week object as-is if it lacks an id
-              setMenuWeek(first as MenuWeek);
             }
           } else {
             setMenuWeek(null);
@@ -647,8 +642,6 @@ export function AdminMenuView() {
     }
 
     setIsEditModalOpen(false);
-    setPhotoFile(null); 
-    setPreviewUrl(null);
     
     showToast(meal.id ? 'Comida actualizada' : 'Comida agregada', 'success');
     
@@ -809,7 +802,6 @@ export function AdminMenuView() {
 
   const currentIndex = allWeeks.findIndex(w => w.id === selectedWeekId);
   const canGoPrev = currentIndex < allWeeks.length - 1;
-  //const canGoNext = currentIndex > 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
