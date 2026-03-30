@@ -50,6 +50,14 @@ class MenuService {
     return response.json();
   }
 
+  private post<T>(endpoint: string, data: unknown): Promise<T> {
+    return this.request<T>(endpoint, { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  private patch<T>(endpoint: string, data: unknown): Promise<T> {
+    return this.request<T>(endpoint, { method: 'PATCH', body: JSON.stringify(data) });
+  }
+
   private serializeBody(data: any): FormData | string {
     return data instanceof FormData ? data : JSON.stringify(data);
   }
@@ -67,17 +75,11 @@ class MenuService {
   }
 
   async createWeek(weekStart: string, weekEnd: string): Promise<MenuWeek> {
-    return this.request<MenuWeek>('/menu/weeks/', {
-      method: 'POST',
-      body: JSON.stringify({ weekStart, weekEnd }),
-    });
+    return this.post('/menu/weeks/', { weekStart, weekEnd });
   }
 
   async updateWeek(weekId: string, data: Partial<MenuWeek>): Promise<MenuWeek> {
-    return this.request<MenuWeek>(`/menu/weeks/${weekId}/`, {
-      method: 'PATCH',
-      body: JSON.stringify(data),
-    });
+    return this.patch(`/menu/weeks/${weekId}/`, data);
   }
 
   async deleteWeek(weekId: string): Promise<void> {
@@ -103,10 +105,7 @@ class MenuService {
   }
 
   async createSpecialRequest(data: { date: string; description: string }): Promise<any> {
-    return this.request('/menu/special-requests/', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+    return this.post('/menu/special-requests/', data);
   }
 
   async getSpecialRequests(): Promise<any[]> {
@@ -114,10 +113,7 @@ class MenuService {
   }
 
   async updateSpecialRequestStatus(requestId: string | number, status: 'approved' | 'rejected'): Promise<any> {
-    return this.request(`/menu/special-requests/${requestId}/`, {
-      method: 'PATCH',
-      body: JSON.stringify({ status }),
-    });
+    return this.patch(`/menu/special-requests/${requestId}/`, { status });
   }
 }
 
