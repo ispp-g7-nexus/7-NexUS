@@ -1,5 +1,6 @@
 import { Clock, Edit2, Plus, Trash2, Leaf, Flame, X, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState, useEffect, useCallback, JSX, SyntheticEvent } from "react";
+import { toast } from "sonner";
 import { MenuWeek, MenuDay, Meal } from "../../types/menu.types";
 import menuService from "../../services/menu.service";
 import { Toast } from "../../components/ui/Toast";
@@ -491,8 +492,12 @@ export function AdminMenuView() {
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isNewWeekModalOpen, setIsNewWeekModalOpen] = useState(false);
-  const [selectedMeal, setSelectedMeal] = useState<Meal | undefined>();
-  const [editingDayId, setEditingDayId] = useState<string>('');
+  const [selectedMeal, 
+    // setSelectedMeal
+  ] = useState<Meal | undefined>();
+  const [editingDayId, 
+    // setEditingDayId
+  ] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
   const [specialRequests, setSpecialRequests] = useState<any[]>([]);
   const [_photoFile, setPhotoFile] = useState<File | null>(null);
@@ -589,10 +594,13 @@ export function AdminMenuView() {
     
     showToast(`Petición ${status === 'approved' ? 'aprobada' : 'rechazada'}`, 'success');
 };
-  const handleAddMeal = (_dayDate: string, dayId: string) => {
-    setEditingDayId(dayId);
-    setSelectedMeal(undefined);
-    setIsEditModalOpen(true);
+  const handleAddMeal = (
+    // _dayDate: string
+  , dayId: string) => {
+    // setEditingDayId(dayId);
+    // setSelectedMeal(undefined);
+    // setIsEditModalOpen(true);
+    toast.info("Estamos trabajando en esta funcionalidad");
   };
 
   const handleEditMeal = (meal: Meal, dayId: string) => {
