@@ -240,7 +240,6 @@ class SpecialMenuRequestViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
-        logger = logging.getLogger(__name__)
         user_data = resolve_user_from_request(self.request)
         if not user_data:
             raise PermissionDenied({"detail": "Usuario no autenticado."})
