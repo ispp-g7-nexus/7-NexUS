@@ -492,12 +492,8 @@ export function AdminMenuView() {
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isNewWeekModalOpen, setIsNewWeekModalOpen] = useState(false);
-  const [selectedMeal, 
-    // setSelectedMeal
-  ] = useState<Meal | undefined>();
-  const [editingDayId, 
-    // setEditingDayId
-  ] = useState<string>('');
+  const [selectedMeal, setSelectedMeal] = useState<Meal | undefined>();
+  const [editingDayId, setEditingDayId] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
   const [specialRequests, setSpecialRequests] = useState<any[]>([]);
   const [_photoFile, setPhotoFile] = useState<File | null>(null);
@@ -595,12 +591,11 @@ export function AdminMenuView() {
     showToast(`Petición ${status === 'approved' ? 'aprobada' : 'rechazada'}`, 'success');
 };
   const handleAddMeal = (
-    // _dayDate: string
+     _dayDate: string
   , dayId: string) => {
-    // setEditingDayId(dayId);
-    // setSelectedMeal(undefined);
-    // setIsEditModalOpen(true);
-    toast.info("Estamos trabajando en esta funcionalidad");
+     setEditingDayId(dayId);
+     setSelectedMeal(undefined);
+     setIsEditModalOpen(true);
   };
 
   const handleEditMeal = (meal: Meal, dayId: string) => {
@@ -857,40 +852,10 @@ export function AdminMenuView() {
               </div>
             </div>
           </div>
-
-          <div className="flex flex-wrap items-center gap-3 shrink-0">
-            {/* Toggle Publish */}
-            <div className="flex items-center gap-3 bg-white px-4 py-2.5 rounded-xl border border-gray-200 shadow-sm" title={menuWeek.isPublished ? 'Ocultar a residentes' : 'Publicar a residentes'}>
-              <span className="text-sm font-medium text-gray-700 hidden sm:inline">Público</span>
-              <button
-                onClick={handleTogglePublish}
-                disabled={isSaving}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 ${menuWeek.isPublished ? 'bg-green-500' : 'bg-gray-300'}`}
-              >
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${menuWeek.isPublished ? 'translate-x-6' : 'translate-x-1'}`} />
-              </button>
-            </div>
-
-            <div className="w-px h-8 bg-gray-200 hidden sm:block mx-1" />
-
-            <button
-              onClick={handleDeleteWeek}
-              disabled={isSaving}
-              className="p-2.5 text-red-600 bg-red-50/50 border border-red-100 rounded-xl hover:bg-red-50 hover:border-red-200 transition-colors disabled:opacity-50"
-              title="Eliminar semana completa"
-            >
-              <Trash2 className="w-5 h-5" />
-            </button>
-
-            <button
-              onClick={() => setIsNewWeekModalOpen(true)}
-              disabled={isSaving}
-              className="px-5 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors font-medium flex items-center gap-2 shadow-sm disabled:opacity-50"
-            >
-              <Plus className="w-5 h-5" />
-              Nueva Semana
-            </button>
-          </div>
+          <button className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium flex items-center gap-2">
+            <Plus className="w-5 h-5" />
+            Nueva Semana
+          </button>
         </div>
 
         {/* Menu Days Grid */}
