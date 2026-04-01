@@ -147,7 +147,6 @@ async function ensureRedisSubscription(residenceId) {
     try {
       await client.quit();
     } catch {
-      // ignore
     }
     return false;
   }
