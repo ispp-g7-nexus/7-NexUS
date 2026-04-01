@@ -54,7 +54,7 @@ function resolveTenantHost(req) {
 }
 
 function shouldProxyToBackend(pathname) {
-  return pathname === "/api" || pathname.startsWith("/api/") || pathname === "/health/" || pathname === "/media/";
+  return pathname === "/api" || pathname.startsWith("/api/") || pathname === "/health/" || pathname.startsWith("/media/");
 }
 
 function getRedisChannelForResidence(residenceId) {

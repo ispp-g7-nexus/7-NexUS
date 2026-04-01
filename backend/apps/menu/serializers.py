@@ -166,11 +166,15 @@ class MealCreateSerializer(serializers.ModelSerializer):
         if 'image' in data:
             converted['image'] = data['image']
 
-        for field in ['is_gluten_free', 'is_vegetarian', 'is_vegan']:
-            frontend_key = field.replace('_g', 'G').replace('_v', 'V')
+        field_mapping = {
+            'isGlutenFree': 'is_gluten_free',
+            'isVegetarian': 'is_vegetarian',
+            'isVegan': 'is_vegan',
+        }
+        for frontend_key, backend_field in field_mapping.items():
             if frontend_key in converted:
                 val = converted.pop(frontend_key)
-                converted[field] = val in ['true', True, 'True']
+                converted[backend_field] = val in ['true', True, 'True']
 
         return super().to_internal_value(converted)
 

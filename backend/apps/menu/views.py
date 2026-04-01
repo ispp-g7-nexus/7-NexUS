@@ -128,12 +128,20 @@ class MealViewSet(TenantMixin, viewsets.ModelViewSet):
     queryset = Meal.objects.all()
     permission_classes = [IsStaffOrReadOnly]
 
+    def _is_admin(self):
+        user_data = resolve_user_from_request(self.request)
+        if not user_data:
+            return False
+        return bool(resolve_roles(user_data).intersection({"admin"}))
+
     def get_queryset(self):
         tenant = self._resolve_tenant()
         if not tenant:
             return Meal.objects.none()
 
         qs = Meal.objects.filter(menu_day__menu_week__residence=tenant)
+        if not self._is_admin():
+            qs = qs.filter(menu_day__menu_week__is_published=True)
         day_id = self.kwargs.get('day_id')
         if day_id:
             qs = qs.filter(menu_day_id=day_id)
@@ -174,7 +182,16 @@ class MealViewSet(TenantMixin, viewsets.ModelViewSet):
 
 class SpecialMenuRequestViewSet(viewsets.ModelViewSet):
     serializer_class = SpecialMenuRequestSerializer
-    queryset = SpecialMenuRequest.objects.all()
+    def get_queryset(self):
+        user_data = resolve_user_from_request(self.request)
+        if not user_data:
+            return SpecialMenuRequest.objects.none()
+
+        try:
+            resident = Resident.objects.get(email=user_data.get('email'))
+            return SpecialMenuRequest.objects.filter(resident=resident)
+        except Resident.DoesNotExist:
+            return SpecialMenuRequest.objects.none()
     permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):

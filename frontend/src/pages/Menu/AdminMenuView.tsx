@@ -58,20 +58,6 @@ const MealCardAdmin = ({ meal, onEdit, onDelete }: MealCardAdminProps) => {
       <div className={`border rounded-xl p-4 overflow-hidden shadow-sm transition-all hover:shadow-md relative ${getMealTypeColor(meal.type)}`}>
   {meal?.image && (
     <div className="w-full h-40 mb-3 -mt-4 -mx-4 w-[calc(100%+2rem)] border-b border-black/5 relative group">
-          <img
-              src={meal.image}
-              alt={meal.name}
-              className="w-full h-full object-cover"
-              onError={(e: SyntheticEvent<HTMLImageElement>) => {
-                const img = e.currentTarget;
-                if (img.src.includes('http://localhost:8000')) {
-                  img.src = 'https://via.placeholder.com/150?text=Error+Imagen';
-                } else {
-                  img.src = `http://localhost:8000${meal.image}`;
-                }
-              }}
-            />
-
             <img
               src={normalizeImageUrl(meal.image)}
               alt={meal.name}
