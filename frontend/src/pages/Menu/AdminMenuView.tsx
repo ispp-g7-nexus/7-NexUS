@@ -4,6 +4,7 @@ import { MenuWeek, MenuDay, Meal } from "../../types/menu.types";
 import menuService from "../../services/menu.service";
 import { Toast } from "../../components/ui/Toast";
 import { ConfirmModal } from "../../components/ui/ConfirmModal";
+import { API_URL } from '../../services/api';
 
 const getMealTypeLabel = (type: Meal['type']): string => {
   switch (type) {
@@ -46,25 +47,39 @@ interface MealCardAdminProps {
   onDelete: (mealId?: string) => void;
 }
 
-const MealCardAdmin = ({ meal, onEdit, onDelete }: MealCardAdminProps) => {  
+function normalizeImageUrl(image: string): string {
+  if (!image) return 'https://via.placeholder.com/150?text=Sin+Imagen';
+  if (image.startsWith('http://') || image.startsWith('https://')) return image;
+  return `${API_URL}${image.startsWith('/') ? '' : '/'}${image}`;
+}
+  
+const MealCardAdmin = ({ meal, onEdit, onDelete }: MealCardAdminProps) => {
   return (
       <div className={`border rounded-xl p-4 overflow-hidden shadow-sm transition-all hover:shadow-md relative ${getMealTypeColor(meal.type)}`}>
   {meal?.image && (
     <div className="w-full h-40 mb-3 -mt-4 -mx-4 w-[calc(100%+2rem)] border-b border-black/5 relative group">
           <img
-            src={meal.image}
-            alt={meal.name}
-            className="w-full h-full object-cover"
-            onError={(e: SyntheticEvent<HTMLImageElement>) => {
-              const img = e.currentTarget;
-              // prefer positive condition to avoid negated condition warning
-              if (img.src.includes('http://localhost:8000')) {
-                img.src = 'https://via.placeholder.com/150?text=Error+Imagen';
-              } else {
-                img.src = `http://localhost:8000${meal.image}`;
-              }
-            }}
-          />
+              src={meal.image}
+              alt={meal.name}
+              className="w-full h-full object-cover"
+              onError={(e: SyntheticEvent<HTMLImageElement>) => {
+                const img = e.currentTarget;
+                if (img.src.includes('http://localhost:8000')) {
+                  img.src = 'https://via.placeholder.com/150?text=Error+Imagen';
+                } else {
+                  img.src = `http://localhost:8000${meal.image}`;
+                }
+              }}
+            />
+
+            <img
+              src={normalizeImageUrl(meal.image)}
+              alt={meal.name}
+              className="w-full h-full object-cover"
+              onError={(e: SyntheticEvent<HTMLImageElement>) => {
+                e.currentTarget.src = 'https://via.placeholder.com/150?text=Error+Imagen';
+              }}
+            />
       <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
     </div>
   )}
@@ -183,7 +198,7 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-lg max-w-md w-full mx-4">
+      <div className="bg-white rounded-xl shadow-lg max-w-md w-full mx-4 max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 className="text-xl font-semibold text-gray-900">
             {meal ? 'Editar comida' : 'Agregar comida'}
@@ -196,7 +211,7 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
           </button>
         </div>
 
-        <div className="p-6 space-y-4">
+        <div className="p-6 space-y-4 overflow-y-auto flex-1">
           {/* Nombre */}
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-1">
@@ -244,7 +259,7 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
           </div>
 
 
-          {/* Imagen URL */}
+          {/* Imagen */}
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-1">
               Alérgenos (separados por comas)
@@ -576,13 +591,17 @@ export function AdminMenuView() {
     init();
   }, [loadWeeks]);
 
-  const handleUpdateSpecialRequest = async (id: string | number, status: 'approved' | 'rejected') => {
-    await menuService.updateSpecialRequestStatus(id, status);
-    
-    setSpecialRequests(prev => prev.filter(req => req.id !== id));
-    
-    showToast(`Petición ${status === 'approved' ? 'aprobada' : 'rechazada'}`, 'success');
-};
+    const handleUpdateSpecialRequest = async (id: string | number, status: 'approved' | 'rejected') => {
+      try {
+      await menuService.updateSpecialRequestStatus(id, status);
+      
+      setSpecialRequests(prev => prev.filter(req => req.id !== id));
+      
+      showToast(`Petición ${status === 'approved' ? 'aprobada' : 'rechazada'}`, 'success');
+      } catch (err) {
+        showToast('Error al actualizar la petición: ' + (err instanceof Error ? err.message : 'Error desconocido'), 'error');
+      }
+  };
   const handleAddMeal = (
      _dayDate: string
   , dayId: string) => {
@@ -704,7 +723,8 @@ export function AdminMenuView() {
   };
 
   const handleDeleteWeek = async () => {
-    if (!menuWeek?.id) return;
+    const weekId = menuWeek?.id;
+    if (!weekId) return;
 
     confirmAction(
       'Eliminar semana completa',
@@ -712,9 +732,9 @@ export function AdminMenuView() {
       async () => {
         setIsSaving(true);
         try {
-          await menuService.deleteWeek(menuWeek.id);
+          await menuService.deleteWeek(weekId);
 
-          const updatedWeeks = allWeeks.filter(w => w.id !== menuWeek.id);
+          const updatedWeeks = allWeeks.filter(w => w.id !== weekId);
           setAllWeeks(updatedWeeks);
 
           if (updatedWeeks.length > 0) {

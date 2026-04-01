@@ -25,7 +25,6 @@ class MealSerializer(serializers.ModelSerializer):
         data['isGlutenFree'] = data.pop('is_gluten_free')
         data['isVegetarian'] = data.pop('is_vegetarian')
         data['isVegan'] = data.pop('is_vegan')
-        data['image'] = data.pop('image')
         # Convertir id a string para consistencia con el frontend
         data['id'] = str(data['id'])
         return data

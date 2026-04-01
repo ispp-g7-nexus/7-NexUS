@@ -162,14 +162,18 @@ export function ResidentMenuView({ onGoToProfile, onLogout }: ResidentMenuViewPr
 
   const handleSendRequest = async () => {
     if (requestText.trim()) {
-      await menuService.createSpecialRequest({
-        description: requestText,
-        date: new Date().toISOString().split('T')[0]
-      });
+      try {
+        await menuService.createSpecialRequest({
+          description: requestText,
+          date: new Date().toISOString().split('T')[0]
+        });
 
       toast.success("Petición enviada");
       setIsModalOpen(false);
       setRequestText("");
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Error al enviar la petición");
+      }
     }
   };
 
