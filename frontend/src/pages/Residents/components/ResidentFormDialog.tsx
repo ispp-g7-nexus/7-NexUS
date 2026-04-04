@@ -77,6 +77,15 @@ function validate(form: FormState, isEdit: boolean): FieldErrors {
     errors.bedroom_id = "Debes asignar una habitación al residente.";
   }
 
+  if (form.checkin_date) {
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    if (form.checkin_date < today) {
+      errors.checkin_date = "La fecha de check-in no puede ser anterior a hoy.";
+    }
+  }
+
   return errors;
 }
 
@@ -260,7 +269,11 @@ export function ResidentFormDialog({
               type="date"
               value={form.checkin_date}
               onChange={(e) => set("checkin_date", e.target.value)}
+              aria-invalid={!!errors.checkin_date}
             />
+            {errors.checkin_date && (
+              <p className="text-xs text-red-600">{errors.checkin_date}</p>
+            )}
           </div>
 
           {/* Status */}

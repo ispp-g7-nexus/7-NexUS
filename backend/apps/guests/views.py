@@ -14,11 +14,13 @@ from .serializers import (
     GuestPassReadSerializer,
 )
 from .services import (
+    cancel_guest_pass_for_resident,
     create_guest_pass_for_resident,
     get_active_guest_passes_queryset,
     get_or_create_guest_pass_policy,
     get_resident_membership_for_user,
     get_upcoming_guest_passes_queryset,
+    revoke_guest_pass_admin,
 )
 
 ERROR_NO_RESIDENCE = "No se ha determinado la residencia."
@@ -82,6 +84,13 @@ class ResidentGuestPassCreateView(ResidentGuestPassBaseView):
         )
 
 
+class ResidentGuestPassCancelView(ResidentGuestPassBaseView):
+    def post(self, request, pass_id: int):
+        membership, residence = self.get_membership(request)
+        guest_pass = cancel_guest_pass_for_resident(pass_id, membership, residence)
+        return Response(GuestPassReadSerializer(guest_pass).data)
+
+
 class ResidentGuestPassPolicyView(ResidentGuestPassBaseView):
     permission_classes = [IsResident]
 
@@ -92,6 +101,17 @@ class ResidentGuestPassPolicyView(ResidentGuestPassBaseView):
             GuestPassPolicyReadSerializer(policy).data,
             status=status.HTTP_200_OK,
         )
+
+
+class AdminGuestPassRevokeView(APIView):
+    permission_classes = [IsAuthenticated, IsResidenceAdmin]
+
+    def post(self, request, pass_id: int):
+        residence = getattr(request, "residence", None)
+        if not residence:
+            raise ValidationError({"detail": ERROR_NO_RESIDENCE})
+        guest_pass = revoke_guest_pass_admin(pass_id, residence)
+        return Response(GuestPassAdminReadSerializer(guest_pass).data)
 
 
 class AdminGuestPassListView(APIView):

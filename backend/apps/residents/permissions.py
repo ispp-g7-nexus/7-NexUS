@@ -23,7 +23,7 @@ class IsResidenceAdmin(permissions.BasePermission):
             is_active=True,
         ).exclude(role__name__iexact="Student")
 
-        if residence:
-            return qs.filter(residence=residence).exists()
+        if not residence:
+            return False
 
-        return qs.exists()
+        return qs.filter(residence=residence).exists()

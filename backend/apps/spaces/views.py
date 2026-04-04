@@ -4,7 +4,6 @@ from typing import Any
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -14,6 +13,7 @@ from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
 from apps.common.utils.jwt_auth import resolve_user_from_request
+from apps.common.utils.permissions import _is_admin_for_residence
 from apps.membership.models import Membership
 from apps.residences.models import Residence
 
@@ -71,23 +71,6 @@ def _validate_residence(request) -> Residence | None:
     if not residence:
         return None
     return residence
-
-
-def _is_admin_for_residence(user, residence: Residence) -> bool:
-    if getattr(user, "is_staff", False):
-        return True
-
-    return (
-        Membership.objects.filter(
-            user=user,
-            is_active=True,
-        )
-        .filter(
-            Q(role__name__iexact="residence_admin", residence=residence)
-            | Q(role__name__iexact="portfolio_admin")
-        )
-        .exists()
-    )
 
 
 def _compute_available_slots(

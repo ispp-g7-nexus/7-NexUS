@@ -147,6 +147,11 @@ export function ProfileEditForm({
       return;
     }
 
+    if (formData.bio && formData.bio.length > 300) {
+      toast.error("La biografía no puede superar los 300 caracteres.");
+      return;
+    }
+
     setIsSaving(true);
     try {
       // Mapeamos los datos para el backend
