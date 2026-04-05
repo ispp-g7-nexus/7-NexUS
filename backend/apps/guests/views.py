@@ -103,24 +103,25 @@ class ResidentGuestPassPolicyView(ResidentGuestPassBaseView):
         )
 
 
-class AdminGuestPassRevokeView(APIView):
+class AdminGuestPassBaseView(APIView):
     permission_classes = [IsAuthenticated, IsResidenceAdmin]
 
-    def post(self, request, pass_id: int):
+    def _get_residence(self, request):
         residence = getattr(request, "residence", None)
         if not residence:
             raise ValidationError({"detail": ERROR_NO_RESIDENCE})
-        guest_pass = revoke_guest_pass_admin(pass_id, residence)
+        return residence
+
+
+class AdminGuestPassRevokeView(AdminGuestPassBaseView):
+    def post(self, request, pass_id: int):
+        guest_pass = revoke_guest_pass_admin(pass_id, self._get_residence(request))
         return Response(GuestPassAdminReadSerializer(guest_pass).data)
 
 
-class AdminGuestPassListView(APIView):
-    permission_classes = [IsAuthenticated, IsResidenceAdmin]
-
+class AdminGuestPassListView(AdminGuestPassBaseView):
     def get(self, request):
-        residence = getattr(request, "residence", None)
-        if not residence:
-            raise ValidationError({"detail": ERROR_NO_RESIDENCE})
+        residence = self._get_residence(request)
 
         queryset = (
             residence.guest_passes
@@ -135,15 +136,7 @@ class AdminGuestPassListView(APIView):
         return Response(serializer.data)
 
 
-class AdminGuestPassPolicyView(APIView):
-    permission_classes = [IsAuthenticated, IsResidenceAdmin]
-
-    def _get_residence(self, request):
-        residence = getattr(request, "residence", None)
-        if not residence:
-            raise ValidationError({"detail": ERROR_NO_RESIDENCE})
-        return residence
-
+class AdminGuestPassPolicyView(AdminGuestPassBaseView):
     def get(self, request):
         policy = get_or_create_guest_pass_policy(self._get_residence(request))
         return Response(

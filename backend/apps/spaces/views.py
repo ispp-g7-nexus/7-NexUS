@@ -14,7 +14,6 @@ from django.views.decorators.csrf import csrf_exempt
 
 from apps.common.utils.jwt_auth import resolve_user_from_request
 from apps.common.utils.permissions import _is_admin_for_residence
-from apps.membership.models import Membership
 from apps.residences.models import Residence
 
 from .models import CommonSpace, SpaceReservation
