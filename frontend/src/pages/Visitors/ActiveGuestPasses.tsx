@@ -103,6 +103,10 @@ function validateForm(
     errors.valid_until = "Formato de fecha/hora de fin inválido.";
   }
 
+  if (start && start < new Date()) {
+    errors.valid_from = "La fecha de inicio no puede ser en el pasado.";
+  }
+
   if (start && end) {
     if (end <= start) {
       errors.valid_until = "La fecha/hora de fin debe ser posterior a la de inicio.";
@@ -197,6 +201,114 @@ interface ActiveGuestPassesPageProps {
   onLogout?: () => void;
 }
 
+function toErrorMessage(unknownError: unknown): string {
+  return unknownError instanceof Error
+    ? unknownError.message
+    : "No se pudieron cargar los pases de invitados.";
+}
+
+async function loadGuestPassPolicy(setPolicy: (p: GuestPassPolicy) => void): Promise<void> {
+  try {
+    const data = await getMyGuestPassPolicy();
+    setPolicy(data);
+  } catch {
+    setPolicy({
+      max_duration_hours: DEFAULT_MAX_DURATION_HOURS,
+      max_concurrent_passes: DEFAULT_MAX_CONCURRENT_PASSES,
+    });
+  }
+}
+
+interface PassListProps {
+  readonly loading: boolean;
+  readonly error: string | null;
+  readonly passes: readonly GuestPass[];
+  readonly emptyMessage: string;
+  readonly statusLabel: string;
+  readonly badgeClassName: string;
+  readonly onRetry: () => void;
+}
+
+function PassList({ loading, error, passes, emptyMessage, statusLabel, badgeClassName, onRetry }: PassListProps) {
+  if (loading) return <LoadingState />;
+  if (error) return <ErrorState message={error} onRetry={onRetry} />;
+  if (passes.length === 0) return <EmptyState message={emptyMessage} />;
+  return (
+    <div className="space-y-4">
+      {passes.map((pass) => (
+        <GuestPassCard key={pass.id} pass={pass} statusLabel={statusLabel} badgeClassName={badgeClassName} />
+      ))}
+    </div>
+  );
+}
+
+function handleCreateError(
+  unknownError: unknown,
+  setFormErrors: (v: GuestPassFormErrors) => void
+): void {
+  if (unknownError instanceof GuestPassApiError) {
+    setFormErrors((unknownError.fieldErrors || {}) as GuestPassFormErrors);
+    toast.error(unknownError.message);
+  } else {
+    toast.error("No se pudo crear el pase de invitado.");
+  }
+}
+
+interface SubmitGuestPassOptions {
+  form: GuestPassFormState;
+  policy: GuestPassPolicy | null;
+  setFormErrors: (v: GuestPassFormErrors) => void;
+  setIsSubmitting: (v: boolean) => void;
+  setForm: (v: GuestPassFormState) => void;
+  loadPasses: () => Promise<void>;
+}
+
+async function submitGuestPass({
+  form,
+  policy,
+  setFormErrors,
+  setIsSubmitting,
+  setForm,
+  loadPasses,
+}: SubmitGuestPassOptions): Promise<void> {
+  const maxDurationHours = policy?.max_duration_hours ?? DEFAULT_MAX_DURATION_HOURS;
+  const validationErrors = validateForm(form, maxDurationHours);
+  if (Object.keys(validationErrors).length > 0) {
+    setFormErrors(validationErrors);
+    toast.error("Revisa los campos del formulario.");
+    return;
+  }
+
+  const start = parseDateTimeLocal(form.valid_from);
+  const end = parseDateTimeLocal(form.valid_until);
+  if (!(start && end)) {
+    toast.error("Formato de fecha/hora inválido.");
+    return;
+  }
+
+  setIsSubmitting(true);
+  setFormErrors({});
+
+  try {
+    const created = await createMyGuestPass({
+      guest_first_name: form.guest_first_name.trim(),
+      guest_last_name: form.guest_last_name.trim(),
+      valid_from: start.toISOString(),
+      valid_until: end.toISOString(),
+      comment: form.comment.trim(),
+    });
+    toast.success("Pase creado correctamente.", {
+      description: `Código asignado: ${created.pass_code}`,
+    });
+    setForm(buildInitialFormState());
+    await loadPasses();
+  } catch (unknownError) {
+    handleCreateError(unknownError, setFormErrors);
+  } finally {
+    setIsSubmitting(false);
+  }
+}
+
 export function ActiveGuestPassesPage({ onGoToProfile, onLogout }: ActiveGuestPassesPageProps) {
   const [activePasses, setActivePasses] = useState<GuestPass[]>([]);
   const [upcomingPasses, setUpcomingPasses] = useState<GuestPass[]>([]);
@@ -218,11 +330,7 @@ export function ActiveGuestPassesPage({ onGoToProfile, onLogout }: ActiveGuestPa
       setActivePasses(active);
       setUpcomingPasses(upcoming);
     } catch (unknownError) {
-      const message =
-        unknownError instanceof Error
-          ? unknownError.message
-          : "No se pudieron cargar los pases de invitados.";
-      setError(message);
+      setError(toErrorMessage(unknownError));
     } finally {
       setLoading(false);
     }
@@ -233,18 +341,7 @@ export function ActiveGuestPassesPage({ onGoToProfile, onLogout }: ActiveGuestPa
   }, [loadPasses]);
 
   useEffect(() => {
-    const loadPolicy = async () => {
-      try {
-        const data = await getMyGuestPassPolicy();
-        setPolicy(data);
-      } catch {
-        setPolicy({
-          max_duration_hours: DEFAULT_MAX_DURATION_HOURS,
-          max_concurrent_passes: DEFAULT_MAX_CONCURRENT_PASSES,
-        });
-      }
-    };
-    void loadPolicy();
+    void loadGuestPassPolicy(setPolicy);
   }, []);
 
   const setField = <K extends keyof GuestPassFormState,>(field: K, value: GuestPassFormState[K]) => {
@@ -252,52 +349,9 @@ export function ActiveGuestPassesPage({ onGoToProfile, onLogout }: ActiveGuestPa
     setFormErrors((previous) => ({ ...previous, [field]: undefined }));
   };
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-
-    const maxDurationHours = policy?.max_duration_hours ?? DEFAULT_MAX_DURATION_HOURS;
-    const validationErrors = validateForm(form, maxDurationHours);
-    if (Object.keys(validationErrors).length > 0) {
-      setFormErrors(validationErrors);
-      toast.error("Revisa los campos del formulario.");
-      return;
-    }
-
-    const start = parseDateTimeLocal(form.valid_from);
-    const end = parseDateTimeLocal(form.valid_until);
-    if (!start || !end) {
-      toast.error("Formato de fecha/hora inválido.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    setFormErrors({});
-
-    try {
-      const created = await createMyGuestPass({
-        guest_first_name: form.guest_first_name.trim(),
-        guest_last_name: form.guest_last_name.trim(),
-        valid_from: start.toISOString(),
-        valid_until: end.toISOString(),
-        comment: form.comment.trim(),
-      });
-
-      toast.success("Pase creado correctamente.", {
-        description: `Código asignado: ${created.pass_code}`,
-      });
-
-      setForm(buildInitialFormState());
-      await loadPasses();
-    } catch (unknownError) {
-      if (unknownError instanceof GuestPassApiError) {
-        setFormErrors((unknownError.fieldErrors || {}) as GuestPassFormErrors);
-        toast.error(unknownError.message);
-      } else {
-        toast.error("No se pudo crear el pase de invitado.");
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
+    void submitGuestPass({ form, policy, setFormErrors, setIsSubmitting, setForm, loadPasses });
   };
 
   return (
@@ -453,24 +507,15 @@ export function ActiveGuestPassesPage({ onGoToProfile, onLogout }: ActiveGuestPa
           </Button>
         </header>
 
-        {loading ? (
-          <LoadingState />
-        ) : error ? (
-          <ErrorState message={error} onRetry={() => void loadPasses()} />
-        ) : activePasses.length === 0 ? (
-          <EmptyState message="No tienes pases de invitados activos en este momento." />
-        ) : (
-          <div className="space-y-4">
-            {activePasses.map((pass) => (
-              <GuestPassCard
-                key={pass.id}
-                pass={pass}
-                statusLabel="Activo"
-                badgeClassName="bg-primary/10 text-primary hover:bg-primary/10"
-              />
-            ))}
-          </div>
-        )}
+        <PassList
+          loading={loading}
+          error={error}
+          passes={activePasses}
+          emptyMessage="No tienes pases de invitados activos en este momento."
+          statusLabel="Activo"
+          badgeClassName="bg-primary/10 text-primary hover:bg-primary/10"
+          onRetry={loadPasses}
+        />
       </section>
 
       <section className="space-y-4">
@@ -481,24 +526,15 @@ export function ActiveGuestPassesPage({ onGoToProfile, onLogout }: ActiveGuestPa
           </p>
         </header>
 
-        {loading ? (
-          <LoadingState />
-        ) : error ? (
-          <ErrorState message={error} onRetry={() => void loadPasses()} />
-        ) : upcomingPasses.length === 0 ? (
-          <EmptyState message="No tienes pases de invitados programados próximamente." />
-        ) : (
-          <div className="space-y-4">
-            {upcomingPasses.map((pass) => (
-              <GuestPassCard
-                key={pass.id}
-                pass={pass}
-                statusLabel="Próximo"
-                badgeClassName="bg-accent/20 text-accent-foreground hover:bg-accent/20"
-              />
-            ))}
-          </div>
-        )}
+        <PassList
+          loading={loading}
+          error={error}
+          passes={upcomingPasses}
+          emptyMessage="No tienes pases de invitados programados próximamente."
+          statusLabel="Próximo"
+          badgeClassName="bg-accent/20 text-accent-foreground hover:bg-accent/20"
+          onRetry={loadPasses}
+        />
       </section>
     </section>
     </div>

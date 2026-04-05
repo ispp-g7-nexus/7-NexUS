@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.utils import timezone
 from rest_framework import serializers
 
 from .models import GuestPass, GuestPassPolicy
@@ -30,6 +31,11 @@ class GuestPassCreateSerializer(serializers.Serializer):
         valid_until = attrs["valid_until"]
         max_duration_hours = self.context.get("max_duration_hours", 24)
         max_duration = timedelta(hours=max_duration_hours)
+
+        if valid_from < timezone.now():
+            raise serializers.ValidationError(
+                {"valid_from": "La fecha de inicio no puede ser en el pasado."}
+            )
 
         if valid_until <= valid_from:
             raise serializers.ValidationError(
