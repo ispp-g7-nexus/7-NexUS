@@ -11,24 +11,11 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from apps.common.utils.jwt_auth import resolve_user_from_request
-from django.db.models import Count, Q
-from apps.membership.models import Membership
+from apps.common.utils.permissions import _is_admin_for_residence
+from django.db.models import Count
 
 
 OBJECT_NAME_PATTERN = re.compile(r"^[\w\-\.\(\), ]+$")
-
-
-def _is_admin_for_residence(user, residence) -> bool:
-    if getattr(user, "is_staff", False):
-        return True
-
-    return Membership.objects.filter(
-        user=user,
-        is_active=True,
-    ).filter(
-        Q(role__name__iexact="residence_admin", residence=residence)
-        | Q(role__name__iexact="portfolio_admin")
-    ).exists()
 
 
 def _parse_datetime_or_none(value):
@@ -98,7 +85,7 @@ class ObjectListView(AuthenticatedView):
     def post(self, request):
         if not hasattr(request, 'residence') or not request.residence:
             return JsonResponse({"detail": "No residence context."}, status=400)
-        if not request.user.is_staff:
+        if not _is_admin_for_residence(request.user, request.residence):
             return JsonResponse({"detail": "No tienes permisos para crear objetos."}, status=403)
         try:
             body = json.loads(request.body)
@@ -147,7 +134,7 @@ class ObjectDetailView(AuthenticatedView):
         obj, error_response = get_residence_object(request, object_id)
         if error_response:
             return error_response
-        if not request.user.is_staff:
+        if not _is_admin_for_residence(request.user, request.residence):
             return JsonResponse({"detail": "Unauthorized"}, status=403)
         try:
             obj.delete()
@@ -239,6 +226,8 @@ class ObjectRentalsView(AuthenticatedView):
     def get(self, request, object_id):
         if not hasattr(request, 'residence') or not request.residence:
             return JsonResponse({"detail": "No residence context."}, status=400)
+        if not _is_admin_for_residence(request.user, request.residence):
+            return JsonResponse({"detail": "No tienes permisos para ver las reservas."}, status=403)
         obj, error_response = get_residence_object(request, object_id)
         if error_response:
             return error_response

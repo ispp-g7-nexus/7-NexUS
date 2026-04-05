@@ -59,7 +59,7 @@ class BedroomListView(AdminRequiredView):
 		if capacidad_maxima:
 			filters["capacidad_maxima__gte"] = capacidad_maxima
 
-		queryset = Bedroom.objects.filter(**filters)
+		queryset = Bedroom.objects.filter(residence=request.residence, **filters)
 		serializer = BedroomSerializer(queryset, many=True)
 		return JsonResponse(serializer.data, safe=False)
 
@@ -129,6 +129,8 @@ class BedroomUpdateView(AdminRequiredView):
 class BedroomDeleteView(AdminRequiredView):
 	def delete(self, request, bedroom_id):
 		"""Elimina una habitación. Devuelve 409 si tiene residentes activos."""
+		if not hasattr(request, "residence") or not request.residence:
+			return JsonResponse({"detail": "No residence context."}, status=400)
 		try:
 			deleted = delete_bedroom(bedroom_id, request.residence)
 		except ValueError as exc:

@@ -16,12 +16,14 @@ from .serializers import (
     GuestPassReadSerializer,
 )
 from .services import (
+    cancel_guest_pass_for_resident,
     create_guest_pass_for_resident,
     get_active_guest_passes_queryset,
     get_or_create_guest_pass_policy,
     get_resident_membership_for_user,
     get_upcoming_guest_passes_queryset,
     get_guest_pass_history_queryset,
+    revoke_guest_pass_admin,
 )
 
 ERROR_NO_RESIDENCE = "No se ha determinado la residencia."
@@ -93,6 +95,13 @@ class ResidentGuestPassCreateView(ResidentGuestPassBaseView):
         )
 
 
+class ResidentGuestPassCancelView(ResidentGuestPassBaseView):
+    def post(self, request, pass_id: int):
+        membership, residence = self.get_membership(request)
+        guest_pass = cancel_guest_pass_for_resident(pass_id, membership, residence)
+        return Response(GuestPassReadSerializer(guest_pass).data)
+
+
 class ResidentGuestPassPolicyView(ResidentGuestPassBaseView):
     permission_classes = [IsResident]
 
@@ -105,13 +114,25 @@ class ResidentGuestPassPolicyView(ResidentGuestPassBaseView):
         )
 
 
-class AdminGuestPassListView(APIView):
+class AdminGuestPassBaseView(APIView):
     permission_classes = [IsAuthenticated, IsResidenceAdmin]
 
-    def get(self, request):
+    def _get_residence(self, request):
         residence = getattr(request, "residence", None)
         if not residence:
             raise ValidationError({"detail": ERROR_NO_RESIDENCE})
+        return residence
+
+
+class AdminGuestPassRevokeView(AdminGuestPassBaseView):
+    def post(self, request, pass_id: int):
+        guest_pass = revoke_guest_pass_admin(pass_id, self._get_residence(request))
+        return Response(GuestPassAdminReadSerializer(guest_pass).data)
+
+
+class AdminGuestPassListView(AdminGuestPassBaseView):
+    def get(self, request):
+        residence = self._get_residence(request)
 
         queryset = (
             residence.guest_passes
@@ -144,15 +165,7 @@ class AdminGuestPassListView(APIView):
         return Response(serializer.data)
 
 
-class AdminGuestPassPolicyView(APIView):
-    permission_classes = [IsAuthenticated, IsResidenceAdmin]
-
-    def _get_residence(self, request):
-        residence = getattr(request, "residence", None)
-        if not residence:
-            raise ValidationError({"detail": ERROR_NO_RESIDENCE})
-        return residence
-
+class AdminGuestPassPolicyView(AdminGuestPassBaseView):
     def get(self, request):
         policy = get_or_create_guest_pass_policy(self._get_residence(request))
         return Response(

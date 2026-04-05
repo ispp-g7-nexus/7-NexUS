@@ -23,16 +23,18 @@ export function ReservationModal({ object, isOpen, onClose, onSuccess }: Reserva
 
   useEffect(() => {
     if (isOpen) {
-      // Set default values to today and next hour
-      const now = new Date();
-      const today = now.toISOString().split('T')[0];
-      const currentHour = now.getHours();
-      const nextHour = (currentHour + 1) % 24;
-      
-      setStartDate(today);
-      setStartTime(`${currentHour.toString().padStart(2, '0')}:00`);
-      setEndDate(today);
-      setEndTime(`${nextHour.toString().padStart(2, '0')}:00`);
+      // Set default values to now (local) and +1 hour using Date arithmetic
+      const start = new Date();
+      const end = new Date(start);
+      end.setHours(start.getHours() + 1);
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const startDate = start.toISOString().split("T")[0];
+      const endDate = end.toISOString().split("T")[0];
+
+      setStartDate(startDate);
+      setStartTime(`${pad(start.getHours())}:00`);
+      setEndDate(endDate);
+      setEndTime(`${pad(end.getHours())}:00`);
       setError(null);
     }
   }, [isOpen]);
