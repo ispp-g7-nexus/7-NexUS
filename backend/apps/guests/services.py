@@ -131,6 +131,18 @@ def create_guest_pass_for_resident(
     comment: str | None = "",
     policy: GuestPassPolicy | None = None,
 ) -> GuestPass:
+    now = timezone.now()
+
+    if valid_from < now:
+        raise ValidationError(
+            {"valid_from": "La fecha/hora de inicio no puede ser anterior al momento actual."}
+        )
+
+    if valid_until < now:
+        raise ValidationError(
+            {"valid_until": "La fecha/hora de fin no puede ser anterior al momento actual."}
+        )
+
     if valid_until <= valid_from:
         raise ValidationError(
             {"valid_until": "La fecha de fin debe ser posterior a la de inicio."}
@@ -258,4 +270,22 @@ def get_upcoming_guest_passes_queryset(membership: Membership, residence):
         )
         .select_related("resident__user", "resident__bedroom")
         .order_by("valid_from", "valid_until", "-created_at")
+    )
+
+
+def get_guest_pass_history_queryset(membership: Membership, residence):
+    now = timezone.now()
+    return (
+        GuestPass.objects.filter(
+            residence=residence,
+            resident=membership,
+        )
+        .exclude(
+            status=GuestPass.Status.ACTIVE,
+            cancelled_at__isnull=True,
+            revoked_at__isnull=True,
+            valid_until__gte=now,
+        )
+        .select_related("resident__user", "resident__bedroom")
+        .order_by("-valid_until", "-created_at")
     )

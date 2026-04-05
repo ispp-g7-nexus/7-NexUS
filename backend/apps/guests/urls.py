@@ -9,6 +9,7 @@ from .views import (
     ResidentGuestPassCreateView,
     ResidentGuestPassPolicyView,
     ResidentUpcomingGuestPassListView,
+    ResidentGuestPassHistoryListView,
 )
 
 
@@ -27,6 +28,11 @@ urlpatterns = [
         "guest-passes/me/upcoming/",
         ResidentUpcomingGuestPassListView.as_view(),
         name="guest-pass-me-upcoming-list",
+    ),
+    path(
+        "guest-passes/me/history/",
+        ResidentGuestPassHistoryListView.as_view(),
+        name="guest-pass-me-history-list"
     ),
     path(
         "guest-passes/me/<int:pass_id>/cancel/",

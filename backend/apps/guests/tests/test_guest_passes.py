@@ -303,6 +303,62 @@ class GuestPassesApiTests(TenantTestCase):
         response = self.admin_client.get("/api/guest-passes/me/upcoming/")
         self.assertEqual(response.status_code, 403)
 
+    def test_resident_history_includes_expired_active_passes_as_inactive(self):
+        now = timezone.now()
+
+        expired_active = self._create_pass(
+            resident=self.resident_membership,
+            pass_code="PASS-HISTORY-EXPIRED-1",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now - timedelta(days=2),
+            valid_until=now - timedelta(hours=1),
+        )
+        self._create_pass(
+            resident=self.resident_membership,
+            pass_code="PASS-HISTORY-ACTIVE-NOW-1",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now - timedelta(hours=1),
+            valid_until=now + timedelta(hours=2),
+        )
+        self._create_pass(
+            resident=self.resident_membership,
+            pass_code="PASS-HISTORY-UPCOMING-1",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now + timedelta(hours=1),
+            valid_until=now + timedelta(hours=3),
+        )
+        revoked = self._create_pass(
+            resident=self.resident_membership,
+            pass_code="PASS-HISTORY-REVOKED-1",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now - timedelta(days=1),
+            valid_until=now + timedelta(hours=3),
+            revoked_at=now - timedelta(minutes=5),
+        )
+        used = self._create_pass(
+            resident=self.resident_membership,
+            pass_code="PASS-HISTORY-USED-1",
+            status=GuestPass.Status.USED,
+            valid_from=now - timedelta(days=1),
+            valid_until=now - timedelta(hours=20),
+        )
+
+        response = self.resident_client.get("/api/guest-passes/me/history/")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        ids = {item["id"] for item in payload}
+        self.assertIn(expired_active.id, ids)
+        self.assertIn(used.id, ids)
+
+        by_code = {item["pass_code"]: item for item in payload}
+        self.assertEqual(by_code["PASS-HISTORY-EXPIRED-1"]["status"], GuestPass.Status.INACTIVE)
+        self.assertEqual(by_code["PASS-HISTORY-REVOKED-1"]["status"], GuestPass.Status.REVOKED)
+        self.assertEqual(by_code["PASS-HISTORY-USED-1"]["status"], GuestPass.Status.USED)
+        self.assertIn(revoked.id, ids)
+        self.assertNotIn("PASS-HISTORY-ACTIVE-NOW-1", by_code)
+        self.assertNotIn("PASS-HISTORY-UPCOMING-1", by_code)
+
     def test_resident_creates_guest_pass_with_valid_data(self):
         now = timezone.now()
         valid_from = now + timedelta(hours=1)
@@ -349,6 +405,38 @@ class GuestPassesApiTests(TenantTestCase):
         valid_from = now + timedelta(hours=4)
         valid_until = valid_from
         payload = self._build_create_payload(valid_from=valid_from, valid_until=valid_until)
+
+        response = self.resident_client.post(
+            self.create_url,
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("valid_until", response.json())
+
+    def test_create_rejects_when_start_datetime_is_in_the_past(self):
+        now = timezone.now()
+        payload = self._build_create_payload(
+            valid_from=now - timedelta(minutes=10),
+            valid_until=now + timedelta(hours=1),
+        )
+
+        response = self.resident_client.post(
+            self.create_url,
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("valid_from", response.json())
+
+    def test_create_rejects_when_end_datetime_is_in_the_past(self):
+        now = timezone.now()
+        payload = self._build_create_payload(
+            valid_from=now + timedelta(hours=1),
+            valid_until=now - timedelta(minutes=5),
+        )
 
         response = self.resident_client.post(
             self.create_url,

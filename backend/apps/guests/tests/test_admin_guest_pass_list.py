@@ -38,7 +38,7 @@ class AdminGuestPassListTests(TenantTestCase):
         except ProgrammingError as exc:
             message = str(exc).strip()
             expected = 'relation "announcements_announcement" does not exist'
-            if message != expected:
+            if expected not in message:
                 raise
 
     def setUp(self):
@@ -251,6 +251,56 @@ class AdminGuestPassListTests(TenantTestCase):
         payload = response.json()
         self.assertEqual(len(payload), 1)
         self.assertEqual(payload[0]["pass_code"], "FILTER-ACTIVE-1")
+
+    def test_admin_active_filter_excludes_expired_active_passes(self):
+        now = timezone.now()
+        self._create_pass(
+            resident=self.resident_membership,
+            pass_code="ACTIVE-NOW-1",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now - timedelta(hours=1),
+            valid_until=now + timedelta(hours=1),
+        )
+        self._create_pass(
+            resident=self.resident_membership,
+            pass_code="ACTIVE-EXPIRED-1",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now - timedelta(days=1),
+            valid_until=now - timedelta(hours=1),
+        )
+
+        response = self.admin_client.get(ADMIN_LIST_URL + "?status=ACTIVE")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(len(payload), 1)
+        self.assertEqual(payload[0]["pass_code"], "ACTIVE-NOW-1")
+        self.assertEqual(payload[0]["status"], GuestPass.Status.ACTIVE)
+
+    def test_admin_inactive_filter_returns_expired_active_passes(self):
+        now = timezone.now()
+        self._create_pass(
+            resident=self.resident_membership,
+            pass_code="INACTIVE-EXPIRED-1",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now - timedelta(days=1),
+            valid_until=now - timedelta(hours=1),
+        )
+        self._create_pass(
+            resident=self.resident_membership,
+            pass_code="INACTIVE-ACTIVE-1",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now - timedelta(hours=1),
+            valid_until=now + timedelta(hours=2),
+        )
+
+        response = self.admin_client.get(ADMIN_LIST_URL + "?status=INACTIVE")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(len(payload), 1)
+        self.assertEqual(payload[0]["pass_code"], "INACTIVE-EXPIRED-1")
+        self.assertEqual(payload[0]["status"], GuestPass.Status.INACTIVE)
 
     def test_admin_sees_empty_list_when_no_passes_exist(self):
         response = self.admin_client.get(ADMIN_LIST_URL)

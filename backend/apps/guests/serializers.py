@@ -2,8 +2,22 @@ from datetime import timedelta
 
 from django.utils import timezone
 from rest_framework import serializers
+from django.utils import timezone
 
 from .models import GuestPass, GuestPassPolicy
+
+
+def get_effective_guest_pass_status(guest_pass: GuestPass) -> str:
+    if guest_pass.cancelled_at is not None:
+        return GuestPass.Status.CANCELLED
+    if guest_pass.revoked_at is not None:
+        return GuestPass.Status.REVOKED
+    if (
+        guest_pass.status == GuestPass.Status.ACTIVE
+        and guest_pass.valid_until < timezone.now()
+    ):
+        return GuestPass.Status.INACTIVE
+    return guest_pass.status
 
 
 class GuestPassCreateSerializer(serializers.Serializer):
@@ -29,12 +43,26 @@ class GuestPassCreateSerializer(serializers.Serializer):
     def validate(self, attrs):
         valid_from = attrs["valid_from"]
         valid_until = attrs["valid_until"]
+        now = timezone.now()
         max_duration_hours = self.context.get("max_duration_hours", 24)
         max_duration = timedelta(hours=max_duration_hours)
 
-        if valid_from < timezone.now():
+        if valid_from < now:
             raise serializers.ValidationError(
-                {"valid_from": "La fecha de inicio no puede ser en el pasado."}
+                {
+                    "valid_from": (
+                        "La fecha/hora de inicio no puede ser anterior al momento actual."
+                    )
+                }
+            )
+
+        if valid_until < now:
+            raise serializers.ValidationError(
+                {
+                    "valid_until": (
+                        "La fecha/hora de fin no puede ser anterior al momento actual."
+                    )
+                }
             )
 
         if valid_until <= valid_from:
@@ -55,6 +83,11 @@ class GuestPassCreateSerializer(serializers.Serializer):
 
 
 class GuestPassReadSerializer(serializers.ModelSerializer):
+    status = serializers.SerializerMethodField()
+
+    def get_status(self, obj: GuestPass) -> str:
+        return get_effective_guest_pass_status(obj)
+
     class Meta:
         model = GuestPass
         fields = [
@@ -70,6 +103,10 @@ class GuestPassReadSerializer(serializers.ModelSerializer):
 
 class GuestPassAdminReadSerializer(serializers.ModelSerializer):
     resident_name = serializers.SerializerMethodField()
+    status = serializers.SerializerMethodField()
+
+    def get_status(self, obj: GuestPass) -> str:
+        return get_effective_guest_pass_status(obj)
 
     class Meta:
         model = GuestPass
