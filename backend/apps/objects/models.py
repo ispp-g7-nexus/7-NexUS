@@ -12,6 +12,7 @@ class Object(models.Model):
     stock_total = models.PositiveIntegerField(default=1)
     image_url = models.URLField(blank=True, null=True)
     tags = models.CharField(max_length=255, blank=True)
+    labels = models.ManyToManyField('ObjectLabel', blank=True, related_name='tagged_objects')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -51,3 +52,27 @@ class ObjectRental(models.Model):
 
     def __str__(self):
         return f"{self.user} -> {self.object} ({self.start_date.isoformat()} - {self.end_date.isoformat()}) [{self.status}]"
+
+
+class ObjectLabel(models.Model):
+    """Etiquetas personalizadas de objetos creadas por el admin."""
+
+    residence = models.ForeignKey(
+        Residence,
+        on_delete=models.CASCADE,
+        related_name='object_labels',
+    )
+    name = models.CharField(max_length=30)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['name']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['residence', 'name'],
+                name='uniq_object_label_per_residence',
+            )
+        ]
+
+    def __str__(self):
+        return self.name

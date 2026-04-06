@@ -55,8 +55,15 @@ export interface ObjectItem {
   current_available_stock: number;
   image_url?: string;
   tags: string;
+  labels: ObjectLabelItem[];
   rentals_count: number;
   can_rent: boolean;
+}
+
+export interface ObjectLabelItem {
+  id: number;
+  name: string;
+  created_at: string;
 }
 
 export interface CreateObjectRequest {
@@ -64,6 +71,7 @@ export interface CreateObjectRequest {
   description?: string;
   location?: string;
   stock_total?: number;
+  label_ids?: number[];
   image_url?: string;
   tags?: string;
 }
@@ -138,6 +146,48 @@ export const objectsService = {
     }
     
     return response.json();
+  },
+
+  // Labels management
+  listLabels: async (): Promise<ObjectLabelItem[]> => {
+    const response = await fetch(`${OBJECTS_URL}/labels/`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (!response.ok) {
+      throw await buildApiError(response, 'Error al obtener etiquetas de objetos');
+    }
+
+    return response.json();
+  },
+
+  createLabel: async (name: string): Promise<ObjectLabelItem> => {
+    const response = await fetch(`${OBJECTS_URL}/labels/`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name })
+    });
+
+    if (!response.ok) {
+      throw await buildApiError(response, 'Error al crear etiqueta de objeto');
+    }
+
+    return response.json();
+  },
+
+  deleteLabel: async (labelId: number): Promise<void> => {
+    const response = await fetch(`${OBJECTS_URL}/labels/${labelId}/`, {
+      method: 'DELETE',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (!response.ok) {
+      throw await buildApiError(response, 'Error al eliminar etiqueta de objeto');
+    }
   },
 
   // Get object availability for a date

@@ -2,11 +2,12 @@ import json
 import re
 from datetime import datetime, time, timedelta
 from typing import Any
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.views import View
 from django.utils.decorators import method_decorator
-from .models import Object, ObjectRental
+from .models import Object, ObjectLabel, ObjectRental
 from django.db.utils import IntegrityError
+from django.db import OperationalError, ProgrammingError
 from django.db import transaction
 from django.contrib.auth import get_user_model
 from django.views.decorators.csrf import csrf_exempt
@@ -50,6 +51,17 @@ def _serialize_object(obj):
     current_available_stock = max(obj.stock_total - current_reserved_stock, 0)
     is_available_now = obj.available and current_available_stock > 0
     rentals_count = getattr(obj, "rentals_count", obj.rentals.count())
+    try:
+        labels_payload = [
+            {
+                'id': label.id,
+                'name': label.name,
+            }
+            for label in obj.labels.all()
+        ]
+    except (OperationalError, ProgrammingError):
+        labels_payload = []
+
     return {
         'id': obj.id,
         'name': obj.name,
@@ -63,8 +75,17 @@ def _serialize_object(obj):
         'current_available_stock': current_available_stock,
         'image_url': obj.image_url,
         'tags': obj.tags,
+        'labels': labels_payload,
         'rentals_count': rentals_count,
         'can_rent': is_available_now,
+    }
+
+
+def _serialize_object_label(label: ObjectLabel) -> dict[str, Any]:
+    return {
+        'id': label.id,
+        'name': label.name,
+        'created_at': label.created_at.isoformat(),
     }
 
 
@@ -149,7 +170,7 @@ class ObjectListView(AuthenticatedView):
         if not hasattr(request, 'residence') or not request.residence:
             return JsonResponse({"detail": "No residence context."}, status=400)
 
-        objs = Object.objects.filter(residence=request.residence).annotate(
+        objs = Object.objects.filter(residence=request.residence).prefetch_related('labels').annotate(
             rentals_count=Count("rentals")
         )
         data = [_serialize_object(obj) for obj in objs]
@@ -174,20 +195,100 @@ class ObjectListView(AuthenticatedView):
             stock_total = int(raw_stock_total or 1)
             if stock_total < 1:
                 raise ValueError("stock_total debe ser positivo")
+            label_ids_raw = body.get('label_ids', [])
+            if label_ids_raw is None:
+                label_ids_raw = []
+            if not isinstance(label_ids_raw, list):
+                raise ValueError("label_ids debe ser una lista")
+            label_ids = [int(item) for item in label_ids_raw]
+            labels = list(
+                ObjectLabel.objects.filter(
+                    residence=request.residence,
+                    id__in=label_ids,
+                )
+            )
+            if len(labels) != len(set(label_ids)):
+                return JsonResponse({"detail": "Alguna etiqueta no existe o no pertenece a la residencia."}, status=400)
+            computed_tags = ", ".join(sorted({label.name for label in labels}))
             obj = Object.objects.create(
                 name=name,
                 description=body.get('description', ''),
                 location=body.get('location', ''),
                 stock_total=stock_total,
                 image_url=body.get('image_url', None),
-                tags=body.get('tags', ''),
+                tags=computed_tags,
                 residence=request.residence,
             )
+            if labels:
+                obj.labels.set(labels)
             return JsonResponse({'id': obj.id, 'detail': 'Object created successfully'}, status=201)
         except ValueError:
-            return JsonResponse({"detail": "stock_total debe ser un entero positivo."}, status=400)
+            return JsonResponse({"detail": "stock_total debe ser un entero positivo y label_ids debe ser una lista de enteros."}, status=400)
         except Exception as e:
             return JsonResponse({"detail": str(e)}, status=400)
+
+
+class ObjectLabelListCreateView(AuthenticatedView):
+    def get(self, request):
+        if not hasattr(request, 'residence') or not request.residence:
+            return JsonResponse({"detail": "No residence context."}, status=400)
+
+        try:
+            labels = ObjectLabel.objects.filter(residence=request.residence)
+            return JsonResponse([_serialize_object_label(label) for label in labels], safe=False)
+        except (OperationalError, ProgrammingError):
+            return JsonResponse(
+                {"detail": "Las etiquetas de objetos no estan disponibles aun. Ejecuta las migraciones pendientes."},
+                status=503,
+            )
+
+    def post(self, request):
+        if not hasattr(request, 'residence') or not request.residence:
+            return JsonResponse({"detail": "No residence context."}, status=400)
+        if not _is_admin_for_residence(request.user, request.residence):
+            return JsonResponse({"detail": "No tienes permisos para gestionar etiquetas."}, status=403)
+
+        try:
+            body = json.loads(request.body or "{}")
+        except json.JSONDecodeError:
+            return JsonResponse({"detail": "JSON inválido."}, status=400)
+
+        name = str(body.get('name', '')).strip()
+        if not name:
+            return JsonResponse({"detail": "El nombre de la etiqueta es obligatorio."}, status=400)
+
+        if len(name) > 30:
+            return JsonResponse({"detail": "La etiqueta no puede superar 30 caracteres."}, status=400)
+
+        label, created = ObjectLabel.objects.get_or_create(
+            residence=request.residence,
+            name=name,
+        )
+        if not created:
+            return JsonResponse({"detail": "Esa etiqueta ya existe."}, status=400)
+
+        return JsonResponse(_serialize_object_label(label), status=201)
+
+
+class ObjectLabelDetailView(AuthenticatedView):
+    def delete(self, request, label_id: int):
+        if not hasattr(request, 'residence') or not request.residence:
+            return JsonResponse({"detail": "No residence context."}, status=400)
+        if not _is_admin_for_residence(request.user, request.residence):
+            return JsonResponse({"detail": "No tienes permisos para gestionar etiquetas."}, status=403)
+
+        try:
+            label = ObjectLabel.objects.get(id=label_id, residence=request.residence)
+        except ObjectLabel.DoesNotExist:
+            return JsonResponse({"detail": "Etiqueta no encontrada."}, status=404)
+        except (OperationalError, ProgrammingError):
+            return JsonResponse(
+                {"detail": "Las etiquetas de objetos no estan disponibles aun. Ejecuta las migraciones pendientes."},
+                status=503,
+            )
+
+        label.delete()
+        return HttpResponse(status=204)
 
 
 def get_residence_object(request, object_id):

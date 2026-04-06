@@ -1,4 +1,4 @@
-import { Plus, RefreshCw, Package } from "lucide-react";
+import { Plus, RefreshCw, Package, Tag, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -9,7 +9,7 @@ import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "../../components/ui/sheet";
-import { objectsService, ObjectItem, RentalsByStatus } from "../../services/objects";
+import { objectsService, ObjectItem, ObjectLabelItem, RentalsByStatus } from "../../services/objects";
 import { RentalHistoryView } from "../../components/RentalHistoryView";
 
 const OBJECT_NAME_REGEX = /^[\p{L}\p{N} _().,-]+$/u;
@@ -89,7 +89,13 @@ function ObjectCard({
 
 export function AdminObjects() {
   const [objects, setObjects] = useState<ObjectItem[]>([]);
+  const [labels, setLabels] = useState<ObjectLabelItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingLabels, setLoadingLabels] = useState(true);
+  const [isLabelsOpen, setIsLabelsOpen] = useState(false);
+  const [newLabelName, setNewLabelName] = useState("");
+  const [creatingLabel, setCreatingLabel] = useState(false);
+  const [deletingLabelIds, setDeletingLabelIds] = useState<number[]>([]);
   const objectsRequestIdRef = useRef(0);
 
   // Create form
@@ -100,7 +106,7 @@ export function AdminObjects() {
     description: "",
     location: "",
     stock_total: "1",
-    tags: "",
+    label_ids: [] as number[],
     image_url: "",
   });
 
@@ -149,18 +155,95 @@ export function AdminObjects() {
     }
   };
 
+  const loadLabels = useCallback(async () => {
+    setLoadingLabels(true);
+    try {
+      const data = await objectsService.listLabels();
+      setLabels(data);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Error al cargar etiquetas de objetos"));
+    } finally {
+      setLoadingLabels(false);
+    }
+  }, []);
+
   useEffect(() => {
     void loadObjects();
   }, [loadObjects]);
 
+  useEffect(() => {
+    void loadLabels();
+  }, [loadLabels]);
+
   const handleOpenForm = () => {
-    setFormData({ name: "", description: "", location: "", stock_total: "1", tags: "", image_url: "" });
+    setFormData({ name: "", description: "", location: "", stock_total: "1", label_ids: [], image_url: "" });
     setFormOpen(true);
   };
 
   const handleCloseForm = () => {
     setFormOpen(false);
-    setFormData({ name: "", description: "", location: "", stock_total: "1", tags: "", image_url: "" });
+    setFormData({ name: "", description: "", location: "", stock_total: "1", label_ids: [], image_url: "" });
+  };
+
+  const toggleLabelSelection = (labelId: number) => {
+    setFormData((prev) => {
+      const isSelected = prev.label_ids.includes(labelId);
+      return {
+        ...prev,
+        label_ids: isSelected ? prev.label_ids.filter((id) => id !== labelId) : [...prev.label_ids, labelId],
+      };
+    });
+  };
+
+  const handleCreateLabel = async () => {
+    const trimmed = newLabelName.trim();
+    if (!trimmed) {
+      toast.error("El nombre de la etiqueta es obligatorio");
+      return;
+    }
+
+    setCreatingLabel(true);
+    try {
+      const created = await objectsService.createLabel(trimmed);
+      setLabels((prev) => [...prev, created]);
+      setNewLabelName("");
+      toast.success(`Etiqueta "${trimmed}" creada.`);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Error al crear etiqueta"));
+    } finally {
+      setCreatingLabel(false);
+    }
+  };
+
+  const handleDeleteLabel = async (label: ObjectLabelItem) => {
+    if (deletingLabelIds.includes(label.id)) {
+      return;
+    }
+
+    setDeletingLabelIds((prev) => [...prev, label.id]);
+    try {
+      await objectsService.deleteLabel(label.id);
+      setLabels((prev) => prev.filter((item) => item.id !== label.id));
+      setFormData((prev) => ({
+        ...prev,
+        label_ids: prev.label_ids.filter((id) => id !== label.id),
+      }));
+      toast.success("Etiqueta eliminada.");
+    } catch (err: unknown) {
+      const message = getErrorMessage(err, "Error al eliminar etiqueta");
+      if (message.includes("Etiqueta no encontrada")) {
+        setLabels((prev) => prev.filter((item) => item.id !== label.id));
+        setFormData((prev) => ({
+          ...prev,
+          label_ids: prev.label_ids.filter((id) => id !== label.id),
+        }));
+        toast.success("Etiqueta eliminada.");
+      } else {
+        toast.error(message);
+      }
+    } finally {
+      setDeletingLabelIds((prev) => prev.filter((id) => id !== label.id));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -183,7 +266,7 @@ export function AdminObjects() {
         description: formData.description || undefined,
         location: formData.location || undefined,
         stock_total: Number.parseInt(formData.stock_total, 10) || 1,
-        tags: formData.tags || undefined,
+        label_ids: formData.label_ids,
         image_url: formData.image_url || undefined,
       });
       toast.success("Objeto creado exitosamente");
@@ -233,6 +316,14 @@ export function AdminObjects() {
             </p>
           </div>
           <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsLabelsOpen(true)}
+            >
+              <Tag className="mr-2 h-4 w-4" />
+              Gestionar etiquetas
+            </Button>
             <Button
               type="button"
               variant="outline"
@@ -340,13 +431,32 @@ export function AdminObjects() {
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="tags">Etiquetas (separadas por comas)</Label>
-                <Input
-                  id="tags"
-                  value={formData.tags}
-                  onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                  placeholder="Ej: deportes, exterior, bicicleta"
-                />
+                <Label>Etiquetas</Label>
+                {loadingLabels ? (
+                  <p className="text-sm text-gray-500">Cargando etiquetas...</p>
+                ) : labels.length === 0 ? (
+                  <p className="text-sm text-gray-500">No hay etiquetas disponibles. Crea una en el panel de gestion.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {labels.map((label) => {
+                      const selected = formData.label_ids.includes(label.id);
+                      return (
+                        <button
+                          key={label.id}
+                          type="button"
+                          onClick={() => toggleLabelSelection(label.id)}
+                          className={`rounded-md border px-2 py-1 text-xs font-medium transition-colors ${
+                            selected
+                              ? "border-green-700 bg-green-700 text-white"
+                              : "border-border bg-background text-gray-700 hover:border-green-700 hover:text-green-700"
+                          }`}
+                        >
+                          {label.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -379,6 +489,79 @@ export function AdminObjects() {
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Dialog: Gestionar etiquetas */}
+      <Dialog open={isLabelsOpen} onOpenChange={setIsLabelsOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Gestionar etiquetas</DialogTitle>
+            <DialogDescription>
+              Crea o elimina etiquetas personalizadas. Estarán disponibles al crear un objeto.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Input
+                value={newLabelName}
+                onChange={(e) => setNewLabelName(e.target.value)}
+                placeholder="Nombre de la etiqueta..."
+                className="flex-1"
+                maxLength={30}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    void handleCreateLabel();
+                  }
+                }}
+              />
+              <Button
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+                onClick={() => void handleCreateLabel()}
+                disabled={creatingLabel || !newLabelName.trim()}
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                Añadir
+              </Button>
+            </div>
+
+            {loadingLabels ? (
+              <p className="text-sm text-gray-500">Cargando etiquetas...</p>
+            ) : labels.length === 0 ? (
+              <p className="text-sm text-gray-500">No hay etiquetas personalizadas.</p>
+            ) : (
+              <>
+                <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Personalizadas</div>
+                <div className="flex flex-wrap gap-2">
+                  {labels.map((label) => (
+                    <span
+                      key={label.id}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-primary/10 text-primary"
+                    >
+                      <Tag className="w-3 h-3" /> {label.name}
+                      <button
+                        type="button"
+                        onClick={() => void handleDeleteLabel(label)}
+                        className="ml-1 hover:text-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Eliminar etiqueta"
+                        disabled={deletingLabelIds.includes(label.id)}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsLabelsOpen(false)}>
+              Cerrar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
