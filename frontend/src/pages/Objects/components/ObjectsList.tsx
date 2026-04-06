@@ -1,17 +1,29 @@
 import { Calendar, Clock, MapPin, Package, Tag } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent } from "../../../components/ui/card";
-import { ObjectItem } from "../../../services/objects.ts";
+import { ObjectAvailability, ObjectItem } from "../../../services/objects.ts";
 
 interface ObjectsListProps {
   objects: ObjectItem[];
   loading: boolean;
   error: string | null;
+  selectedDate: string;
+  loadingAvailability: boolean;
+  availabilityByObjectId: Record<number, ObjectAvailability>;
   onReserve: (object: ObjectItem) => void;
   onRetry: () => void;
 }
 
-export function ObjectsList({ objects, loading, error, onReserve, onRetry }: ObjectsListProps) {
+export function ObjectsList({
+  objects,
+  loading,
+  error,
+  selectedDate,
+  loadingAvailability,
+  availabilityByObjectId,
+  onReserve,
+  onRetry,
+}: ObjectsListProps) {
   if (loading) {
     return (
       <Card className="border-border/80 shadow-sm">
@@ -50,13 +62,58 @@ export function ObjectsList({ objects, loading, error, onReserve, onRetry }: Obj
   return (
     <div className="space-y-4">
       {objects.map((object) => (
-        <ObjectCard key={object.id} object={object} onReserve={() => onReserve(object)} />
+        <ObjectCard
+          key={object.id}
+          object={object}
+          selectedDate={selectedDate}
+          loadingAvailability={loadingAvailability}
+          availability={availabilityByObjectId[object.id]}
+          onReserve={() => onReserve(object)}
+        />
       ))}
     </div>
   );
 }
 
-function ObjectCard({ object, onReserve }: { object: ObjectItem; onReserve: () => void }) {
+function formatClock(value: string): string {
+  return new Intl.DateTimeFormat("es-ES", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+function formatInterval(startTime: string, endTime: string): string {
+  return `${formatClock(startTime)} - ${formatClock(endTime)}`;
+}
+
+function getReservationUserDisplayName(user: {
+  first_name: string;
+  last_name: string;
+  email: string;
+}): string {
+  const fullName = `${user.first_name} ${user.last_name}`.trim();
+  return fullName || user.email;
+}
+
+function ObjectCard({
+  object,
+  selectedDate,
+  loadingAvailability,
+  availability,
+  onReserve,
+}: {
+  object: ObjectItem;
+  selectedDate: string;
+  loadingAvailability: boolean;
+  availability?: ObjectAvailability;
+  onReserve: () => void;
+}) {
+  const slots = availability?.available_slots ?? [];
+  const availableSlots = slots.filter((slot) => slot.status === "available");
+  const visibleSlots = availableSlots.slice(0, 3);
+  const remainingSlots = availableSlots.length - visibleSlots.length;
+  const hasSlots = availableSlots.length > 0;
+
   return (
     <Card className="border-border/80 shadow-sm">
       <CardContent className="p-4 space-y-4">
@@ -106,12 +163,61 @@ function ObjectCard({ object, onReserve }: { object: ObjectItem; onReserve: () =
           )}
         </div>
 
+        <div>
+          <p className="mb-2 text-sm font-semibold text-gray-900">Reservas activas</p>
+          {loadingAvailability ? (
+            <p className="text-sm text-gray-500">Cargando disponibilidad...</p>
+          ) : (availability?.reservations.length ?? 0) === 0 ? (
+            <p className="text-sm text-gray-500">No hay reservas para esta fecha.</p>
+          ) : (
+            <ul className="space-y-2">
+              {availability?.reservations.map((reservation) => (
+                <li key={reservation.id} className="rounded-md border border-border/70 bg-background px-3 py-2 text-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium text-gray-900">
+                      {getReservationUserDisplayName(reservation.user)}
+                    </span>
+                    <span className="text-gray-500">
+                      {formatInterval(reservation.start_date, reservation.end_date)}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-sm font-semibold text-gray-900">Disponibilidad rápida</p>
+            <span className="text-xs text-gray-500">Tramos de 60 min</span>
+          </div>
+          {loadingAvailability ? (
+            <p className="text-sm text-gray-500">Calculando huecos...</p>
+          ) : !hasSlots ? (
+            <p className="text-sm text-gray-500">No quedan huecos libres para esta fecha.</p>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2">
+              {visibleSlots.map((slot) => (
+                <span
+                  key={`${slot.start_time}-${slot.end_time}`}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-green-700/30 bg-green-700/5 px-2.5 py-1 text-xs font-medium text-green-700"
+                >
+                  {formatInterval(slot.start_time, slot.end_time)}
+                </span>
+              ))}
+              {remainingSlots > 0 && <span className="ml-1 text-xs font-medium text-gray-500">+ {remainingSlots} tramos más</span>}
+            </div>
+          )}
+        </div>
+
         <div className="flex justify-end">
-          <Button onClick={onReserve} disabled={!object.can_rent}>
+          <Button onClick={onReserve} disabled={loadingAvailability || !hasSlots}>
             <Calendar className="mr-2 h-4 w-4" />
             Reservar
           </Button>
         </div>
+        <p className="text-right text-xs text-gray-500">Fecha seleccionada: {selectedDate}</p>
       </CardContent>
     </Card>
   );
