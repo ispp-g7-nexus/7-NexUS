@@ -212,6 +212,7 @@ class ObjectAvailabilityView(AuthenticatedView):
         reservations = list(
             ObjectRental.objects.filter(
                 object=obj,
+                status='ACTIVE',
                 start_date__lt=day_end,
                 end_date__gt=day_start,
             )

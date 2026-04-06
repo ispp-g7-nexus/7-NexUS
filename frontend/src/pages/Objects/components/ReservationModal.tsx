@@ -111,10 +111,22 @@ export function ReservationModal({ object, isOpen, onClose, onSuccess }: Reserva
     return `${formatTime(start)} - ${formatTime(end)}`;
   }
 
+  function formatDateLabel(dateValue: string): string {
+    const [year, month, day] = dateValue.split("-");
+    if (!year || !month || !day) {
+      return dateValue;
+    }
+    return `${day}/${month}/${year}`;
+  }
+
   function reservationUserDisplay(reservation: ObjectAvailabilityReservation): string {
     const fullName = `${reservation.user.first_name} ${reservation.user.last_name}`.trim();
     return fullName || reservation.user.email;
   }
+
+  const reservations = [...(availability?.reservations ?? [])].sort(
+    (left, right) => new Date(left.start_date).getTime() - new Date(right.start_date).getTime(),
+  );
 
   const handleReservation = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -170,16 +182,16 @@ export function ReservationModal({ object, isOpen, onClose, onSuccess }: Reserva
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-gray-900">Reservas activas</p>
+              <p className="text-sm font-medium text-gray-900">Reservas para {formatDateLabel(selectedDate)}</p>
               <span className="text-xs text-gray-500">Tramos de 60 min</span>
             </div>
             {loadingAvailability ? (
               <p className="text-sm text-gray-500">Cargando reservas...</p>
-            ) : (availability?.reservations.length ?? 0) === 0 ? (
-              <p className="text-sm text-gray-500">No hay reservas para este objeto en la fecha elegida.</p>
+            ) : reservations.length === 0 ? (
+              <p className="text-sm text-gray-500">No hay reservas activas para este objeto en la fecha elegida.</p>
             ) : (
               <ul className="max-h-28 space-y-2 overflow-y-auto rounded-md border border-border/70 bg-muted/20 p-2">
-                {availability?.reservations.map((reservation) => (
+                {reservations.map((reservation) => (
                   <li key={reservation.id} className="flex items-center justify-between gap-2 rounded-md bg-background px-2 py-1.5 text-xs">
                     <span className="font-medium text-gray-900">{reservationUserDisplay(reservation)}</span>
                     <span className="text-gray-500">
