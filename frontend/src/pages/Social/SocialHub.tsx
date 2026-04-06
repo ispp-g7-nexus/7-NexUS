@@ -34,6 +34,8 @@ export function SocialHub({
   readonly onLogout?: () => void;
 }) {
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
+  const [manualGroupNews, setManualGroupNews] = useState(false);
+  const [targetGroupId, setTargetGroupId] = useState<number | null>(null);
 
   useEffect(() => {
     onChatTabActiveChange?.(activeTab === "chat");
@@ -41,6 +43,30 @@ export function SocialHub({
       onChatTabActiveChange?.(false);
     };
   }, [activeTab, onChatTabActiveChange]);
+
+  const handleNavigateToChat = (groupId?: number) => {
+    setActiveTab("chat");
+    if (Number.isFinite(groupId) && Number(groupId) > 0) {
+      setTargetGroupId(Number(groupId));
+    }
+    onChatSubTabActiveChange?.("grupos");
+  };
+
+  const effectiveHasGroupChatNews = hasGroupChatNews || manualGroupNews;
+  const effectiveHasChatNews = hasChatNews || effectiveHasGroupChatNews;
+
+  const handleChatSubTabActiveChange = (tab: "grupos" | "privados") => {
+    if (tab === "grupos" && activeTab === "chat") {
+      setManualGroupNews(false);
+    }
+    onChatSubTabActiveChange?.(tab);
+  };
+
+  useEffect(() => {
+    if (activeTab === "chat") {
+      setManualGroupNews(false);
+    }
+  }, [activeTab]);
 
   return (
     <div className="flex flex-col w-full bg-background">
@@ -83,7 +109,7 @@ export function SocialHub({
             onClick={() => setActiveTab(tab)}
           >
             {tab}
-            {tab === "chat" && hasChatNews && (
+            {tab === "chat" && effectiveHasChatNews && (
               <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-red-500" />
             )}
           </Button>
@@ -91,17 +117,24 @@ export function SocialHub({
       </div>
 
       <div className="mt-2">
-        {activeTab === "eventos" && <Events />}
+        {activeTab === "eventos" && (
+          <Events
+            onNavigateToChat={handleNavigateToChat}
+            onEventChatJoined={() => setManualGroupNews(true)}
+          />
+        )}
         {activeTab === "perfil" && <Profile />}
         {activeTab === "chat" && (
           <StudentChats
             enableRealtimeStream={false}
             realtimeTick={chatRealtimeTick}
             realtimeEvent={chatRealtimeEvent}
-            hasGroupNews={hasGroupChatNews}
+            hasGroupNews={effectiveHasGroupChatNews}
             hasPrivateNews={hasPrivateChatNews}
-            onSubTabActiveChange={onChatSubTabActiveChange}
+            onSubTabActiveChange={handleChatSubTabActiveChange}
             onUnreadStatusChange={onChatUnreadStatusChange}
+            focusGroupId={targetGroupId}
+            onFocusGroupHandled={() => setTargetGroupId(null)}
           />
         )}
         {activeTab === "matches" && <MyMatchesPage />}
