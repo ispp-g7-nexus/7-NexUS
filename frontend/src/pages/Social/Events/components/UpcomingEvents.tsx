@@ -5,13 +5,17 @@ export function UpcomingEvents({
     loading,
     handleJoinEvent,
     handleLeaveEvent,
-    handleOpenDetails
+    handleOpenDetails,
+    handleJoinEventChat,
+    handleNavigateToChat,
 }: {
     events: any[];
     loading: boolean;
     handleJoinEvent: (id: number) => Promise<void>;
     handleLeaveEvent: (id: number) => Promise<void>;
     handleOpenDetails: (event: any) => void;
+    handleJoinEventChat: (id: number) => Promise<void>;
+    handleNavigateToChat?: (groupId?: number) => void;
 }) {
     if (loading) return <p className="text-center text-gray-500 py-10">Cargando eventos...</p>;
     if (events.length === 0) {
@@ -37,9 +41,14 @@ export function UpcomingEvents({
                     tags={event.tags}
                     isJoined={event.is_joined}
                     canJoin={event.can_join}
+                    chatGroup={event.chat_group}
+                    isChatMember={event.is_chat_member}
+                    host={event.host}
                     isPast={false}
                     onJoin={handleJoinEvent}
                     onLeave={handleLeaveEvent}
+                    onJoinChat={handleJoinEventChat}
+                    onOpenChat={handleNavigateToChat}
                     onClick={() => handleOpenDetails(event)}
                 />
             ))}
