@@ -6,15 +6,24 @@ export function CommunityEvent({
     image,
     tags,
     isJoined,
+    host,
+    chatGroup,
+    isChatMember,
     canJoin,
     isPast,
     onJoin,
     onLeave,
+    onJoinChat,
+    onOpenChat,
     onClick,
 }: any) {
     const displayTag = tags ? tags.split(',')[0].trim() : null;
     const isAdmin = localStorage.getItem('userRole') === 'admin';
     const canUserJoin = typeof canJoin === 'boolean' ? canJoin : true;
+    const isHost = Number(localStorage.getItem('currentUserId')) === Number(host?.id);
+    const hasChat = Boolean(chatGroup?.id);
+    const canOpenChat = !isPast && hasChat && (isHost || isChatMember);
+    const canManuallyJoinChat = !isPast && hasChat && isJoined && !isChatMember;
 
     return (
         <div
@@ -43,6 +52,23 @@ export function CommunityEvent({
                             {attendees} {"asistentes"}
                         </span>
                     </div>
+                    <div className="w-full sm:w-auto flex flex-col gap-2">
+                    {canOpenChat ? (
+                        <button
+                            className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-lg font-medium text-sm shadow-sm transition-colors"
+                            onClick={() => onOpenChat?.(Number(chatGroup?.id))}
+                        >
+                            Ir al chat
+                        </button>
+                    ) : null}
+                    {canManuallyJoinChat ? (
+                        <button
+                            className="w-full sm:w-auto bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100 px-4 py-2 rounded-lg font-medium text-sm transition-colors"
+                            onClick={() => onJoinChat?.(id)}
+                        >
+                            Unirme al chat
+                        </button>
+                    ) : null}
                     {isPast ? (
                         <div className="w-full sm:w-auto">
                             <button className="w-full bg-gray-50 text-gray-500 px-4 py-2 rounded-lg font-medium text-sm cursor-default" disabled>
@@ -76,6 +102,7 @@ export function CommunityEvent({
                             Apuntarme
                         </button>
                     )}
+                    </div>
                 </div>
             </div>
         </div>

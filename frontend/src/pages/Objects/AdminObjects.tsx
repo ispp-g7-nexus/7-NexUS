@@ -8,7 +8,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
-import { objectsService, ObjectItem, ObjectRental } from "../../services/objects";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "../../components/ui/sheet";
+import { objectsService, ObjectItem, RentalsByStatus } from "../../services/objects";
+import { RentalHistoryView } from "../../components/RentalHistoryView";
 
 const OBJECT_NAME_REGEX = /^[\p{L}\p{N} _().,-]+$/u;
 
@@ -100,7 +102,11 @@ export function AdminObjects() {
   // Rentals drawer
   const [rentalsOpen, setRentalsOpen] = useState(false);
   const [selectedObject, setSelectedObject] = useState<ObjectItem | null>(null);
-  const [rentals, setRentals] = useState<ObjectRental[]>([]);
+  const [rentalsByStatus, setRentalsByStatus] = useState<RentalsByStatus>({
+    active: [],
+    cancelled: [],
+    completed: [],
+  });
   const [loadingRentals, setLoadingRentals] = useState(false);
   const getErrorMessage = (err: unknown, fallback: string) =>
     err instanceof Error && err.message ? err.message : fallback;
@@ -130,7 +136,7 @@ export function AdminObjects() {
     setLoadingRentals(true);
     try {
       const data = await objectsService.getObjectRentals(objectId);
-      setRentals(data);
+      setRentalsByStatus(data);
     } catch (err: unknown) {
       toast.error(getErrorMessage(err, "Error al cargar préstamos"));
     } finally {
@@ -191,7 +197,7 @@ export function AdminObjects() {
     if (selectedObject?.id === object.id) {
       setRentalsOpen(false);
       setSelectedObject(null);
-      setRentals([]);
+      setRentalsByStatus({ active: [], cancelled: [], completed: [] });
     }
 
     try {
@@ -336,54 +342,23 @@ export function AdminObjects() {
         </DialogContent>
       </Dialog>
 
-      {/* Rentals Drawer */}
-      <Dialog open={rentalsOpen} onOpenChange={setRentalsOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Préstamos de {selectedObject?.name}</DialogTitle>
-            <DialogDescription>
-              Historial de préstamos activos y pasados
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="max-h-[400px] overflow-y-auto">
-            {loadingRentals ? (
-              <p className="text-sm text-gray-500 p-4">Cargando préstamos...</p>
-            ) : rentals.length === 0 ? (
-              <p className="text-sm text-gray-500 p-4 text-center">
-                No hay préstamos registrados para este objeto
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {rentals.map((rental) => (
-                  <div
-                    key={rental.id}
-                    className="rounded-lg border border-gray-200 p-3 text-sm"
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <p className="font-medium">
-                          {rental.user.first_name} {rental.user.last_name}
-                        </p>
-                      </div>
-</div>
-                    <div className="grid grid-cols-2 gap-2 text-xs text-gray-500">
-                      <div>
-                        <span className="font-medium">Inicio:</span>{" "}
-                        {new Date(rental.start_date).toLocaleString("es-ES")}
-                      </div>
-                      <div>
-                        <span className="font-medium">Fin:</span>{" "}
-                        {new Date(rental.end_date).toLocaleString("es-ES")}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+      {/* Rentals Sheet */}
+      <Sheet open={rentalsOpen} onOpenChange={setRentalsOpen}>
+        <SheetContent className="w-full sm:max-w-2xl">
+          <SheetHeader className="mb-6">
+            <SheetTitle>Historial de Reservas</SheetTitle>
+            <SheetDescription>
+              {selectedObject?.name}
+            </SheetDescription>
+          </SheetHeader>
+          <div className="overflow-y-auto max-h-[calc(100vh-120px)]">
+            <RentalHistoryView 
+              rentalsByStatus={rentalsByStatus} 
+              loading={loadingRentals} 
+            />
           </div>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </section>
   );
 }

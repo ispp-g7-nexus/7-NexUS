@@ -8,12 +8,15 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.test import RequestFactory
 from django.utils import timezone
-from django.utils.dateparse import parse_datetime
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
+from apps.chats.models import ChatGroup, ChatGroupMember
+from apps.chats.realtime import publish_chat_event
+from apps.chats.serializers import ChatGroupSerializer
 from apps.common.utils.jwt_auth import resolve_user_from_request
+from apps.membership.models import Membership
 from apps.spaces.models import CommonSpace, SpaceReservation
 from apps.spaces.views import SpaceReservationCreateView
 
@@ -28,63 +31,106 @@ def _normalize_event_type(raw_event_type) -> str | None:
     return event_type
 
 
-def _parse_and_validate_times(
-    start_time_str: str, end_time_str: str, *, validate_future: bool
-):
-    if not start_time_str or not end_time_str:
+def _parse_and_validate_times(start_time_str, end_time_str, validate_future=False):
+    """
+    Parse and validate event times.
+    Returns (start_time, end_time, error_response) or (start_time, end_time, None) if valid.
+    """
+    try:
+        start_time = datetime.fromisoformat(str(start_time_str).replace("Z", "+00:00"))
+        end_time = datetime.fromisoformat(str(end_time_str).replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return (
+            None,
+            None,
+            JsonResponse({"detail": "Formato de fecha inválido."}, status=400),
+        )
+
+    if start_time >= end_time:
         return (
             None,
             None,
             JsonResponse(
-                {"detail": "Se requiere fecha de inicio y fin."},
+                {"detail": "La hora de inicio debe ser anterior a la de fin."},
                 status=400,
             ),
         )
 
-    start_time = parse_datetime(start_time_str)
-    end_time = parse_datetime(end_time_str)
-
-    if not start_time or not end_time:
+    if validate_future and start_time <= timezone.now():
         return (
             None,
             None,
-            JsonResponse(
-                {"detail": "Formato de fecha/hora inválido."},
-                status=400,
-            ),
-        )
-
-    if timezone.is_naive(start_time):
-        start_time = timezone.make_aware(start_time, timezone.get_current_timezone())
-    if timezone.is_naive(end_time):
-        end_time = timezone.make_aware(end_time, timezone.get_current_timezone())
-
-    if validate_future and start_time < timezone.now():
-        return (
-            None,
-            None,
-            JsonResponse(
-                {"detail": "La fecha de inicio no puede ser en el pasado."},
-                status=400,
-            ),
-        )
-
-    if end_time <= start_time:
-        return (
-            None,
-            None,
-            JsonResponse(
-                {"detail": "La fecha de fin debe ser posterior a la de inicio."},
-                status=400,
-            ),
+            JsonResponse({"detail": "El evento debe ser en el futuro."}, status=400),
         )
 
     return start_time, end_time, None
 
 
+def _create_event_chat_group(
+    event: Event, host_user
+) -> tuple[ChatGroup | None, str | None]:
+    """
+    Create a chat group for an event and add the host as admin.
+    Returns (chat_group, error_message)
+    """
+    try:
+        chat_name = f"Evento: {event.title}"
+
+        chat_group = ChatGroup.objects.create(
+            residence=event.residence,
+            name=chat_name,
+            description=f"Chat del evento {event.title}",
+            label=ChatGroup.LabelChoices.GENERAL,
+            created_by=host_user,
+        )
+
+        host_membership = Membership.objects.filter(
+            user=host_user,
+            residence=event.residence,
+            is_active=True,
+        ).first()
+
+        if host_membership:
+            ChatGroupMember.objects.create(
+                group=chat_group,
+                membership=host_membership,
+                is_admin=True,
+            )
+
+        return chat_group, None
+    except Exception as e:
+        return None, str(e)
+
+
+def _publish_group_created_for_event(request, chat_group: ChatGroup) -> None:
+    residence = getattr(request, "residence", None)
+    if not residence:
+        return
+
+    payload = {
+        "group": ChatGroupSerializer(chat_group, context={"request": request}).data,
+    }
+    publish_chat_event(residence.id, "group_created", payload)
+
+
 def _serialize_event(event: Event, current_user, residence):
     is_joined = event.participations.filter(user=current_user).exists()
     can_edit = event.host == current_user or is_events_admin(current_user, residence)
+
+    is_chat_member = False
+    if event.chat_group_id and current_user.is_authenticated:
+        user_membership = Membership.objects.filter(
+            user=current_user,
+            residence=event.residence,
+            is_active=True,
+        ).first()
+        if user_membership:
+            is_chat_member = ChatGroupMember.objects.filter(
+                group=event.chat_group,
+                membership=user_membership,
+                can_interact=True,
+            ).exists()
+
     return {
         "id": event.id,
         "title": event.title,
@@ -115,6 +161,13 @@ def _serialize_event(event: Event, current_user, residence):
             "first_name": event.host.first_name,
             "last_name": event.host.last_name,
         },
+        "chat_group": {
+            "id": event.chat_group.id,
+            "name": event.chat_group.name,
+        }
+        if event.chat_group
+        else None,
+        "is_chat_member": is_chat_member,
     }
 
 
@@ -402,6 +455,22 @@ class EventListView(AuthenticatedView):
                     residence=request.residence,
                     host=request.user,
                 )
+
+                chat_group, chat_error = _create_event_chat_group(event, request.user)
+                if chat_error:
+                    transaction.set_rollback(True)
+                    return JsonResponse(
+                        {
+                            "detail": f"Evento creado pero no se pudo crear el chat: {chat_error}"
+                        },
+                        status=400,
+                    )
+
+                if chat_group:
+                    event.chat_group = chat_group
+                    event.save(update_fields=["chat_group"])
+                    _publish_group_created_for_event(request, chat_group)
+
                 EventParticipation.objects.create(event=event, user=request.user)
             return JsonResponse(
                 {"id": event.id, "detail": "Event created successfully"}, status=201
@@ -442,9 +511,7 @@ class EventDetailView(AuthenticatedView):
             if time_error:
                 return time_error
 
-            # Validar superposición de horarios solo si las fechas cambiaron
             if start_time != event.start_time or end_time != event.end_time:
-                # Validar superposición de horarios solo para asistencia
                 overlapping_participating = (
                     EventParticipation.objects.exclude(event=event)
                     .filter(
@@ -584,6 +651,7 @@ class EventDetailView(AuthenticatedView):
                     and normalized_max_participants is not None
                     and normalized_max_participants < event.participants_count
                 ):
+                    transaction.set_rollback(True)
                     return JsonResponse(
                         {
                             "detail": (
@@ -630,7 +698,19 @@ class EventDetailView(AuthenticatedView):
             return JsonResponse({"detail": "Unauthorized"}, status=403)
 
         reservation = event.reservation
+        chat_group = event.chat_group
+        residence = getattr(request, "residence", None)
         with transaction.atomic():
+            if chat_group:
+                group_id = chat_group.id
+                ChatGroupMember.objects.filter(group=chat_group).delete()
+                chat_group.delete()
+                if residence:
+                    publish_chat_event(
+                        residence.id,
+                        "group_deleted",
+                        {"group_id": group_id},
+                    )
             event.delete()
             if reservation:
                 reservation.delete()
@@ -674,7 +754,9 @@ class EventJoinView(AuthenticatedView):
             )
 
         try:
-            EventParticipation.objects.create(event=event, user=request.user)
+            with transaction.atomic():
+                EventParticipation.objects.create(event=event, user=request.user)
+
             return JsonResponse(
                 {"detail": "Te has inscrito correctamente en el evento."}, status=201
             )
@@ -684,16 +766,85 @@ class EventJoinView(AuthenticatedView):
             )
 
 
+class EventJoinChatView(AuthenticatedView):
+    def post(self, request, event_id):
+        event = get_object_or_404(Event, id=event_id, residence=request.residence)
+
+        if not event.chat_group_id:
+            return JsonResponse(
+                {"detail": "Este evento no tiene chat asociado."}, status=400
+            )
+
+        is_participant = EventParticipation.objects.filter(
+            event=event, user=request.user
+        ).exists()
+        if not is_participant:
+            return JsonResponse(
+                {"detail": "Debes estar apuntado al evento para unirte al chat."},
+                status=403,
+            )
+
+        user_membership = Membership.objects.filter(
+            user=request.user,
+            residence=event.residence,
+            is_active=True,
+        ).first()
+        if not user_membership:
+            return JsonResponse(
+                {"detail": "No tienes membresía activa en la residencia."}, status=403
+            )
+
+        member, created = ChatGroupMember.objects.get_or_create(
+            group=event.chat_group,
+            membership=user_membership,
+            defaults={"is_admin": False, "can_interact": True},
+        )
+
+        if not created and member.can_interact:
+            return JsonResponse(
+                {"detail": "Ya perteneces al chat del evento."}, status=200
+            )
+
+        if not created and not member.can_interact:
+            member.can_interact = True
+            member.interaction_disabled_at = None
+            member.save(update_fields=["can_interact", "interaction_disabled_at"])
+
+        return JsonResponse({"detail": "Te has unido al chat del evento."}, status=201)
+
+
 class EventLeaveView(AuthenticatedView):
     def post(self, request, event_id):
         event = get_object_or_404(Event, id=event_id, residence=request.residence)
-        deleted, _ = EventParticipation.objects.filter(
-            event=event, user=request.user
-        ).delete()
 
-        if deleted:
-            return JsonResponse({"detail": "Has abandonado el evento."}, status=200)
-        return JsonResponse({"detail": "No estás inscrito en este evento."}, status=400)
+        try:
+            with transaction.atomic():
+                deleted, _ = EventParticipation.objects.filter(
+                    event=event, user=request.user
+                ).delete()
+
+                if deleted and event.chat_group_id:
+                    user_membership = Membership.objects.filter(
+                        user=request.user,
+                        residence=event.residence,
+                        is_active=True,
+                    ).first()
+
+                    if user_membership:
+                        ChatGroupMember.objects.filter(
+                            group=event.chat_group,
+                            membership=user_membership,
+                        ).delete()
+
+                if deleted:
+                    return JsonResponse(
+                        {"detail": "Has abandonado el evento."}, status=200
+                    )
+                return JsonResponse(
+                    {"detail": "No estás inscrito en este evento."}, status=400
+                )
+        except Exception as e:
+            return JsonResponse({"detail": str(e)}, status=400)
 
 
 class EventParticipantsView(AuthenticatedView):

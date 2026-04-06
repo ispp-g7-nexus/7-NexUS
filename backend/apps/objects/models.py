@@ -26,18 +26,26 @@ class Object(models.Model):
 
         # If there are any active rentals overlapping 'now', object is not available
         now = timezone.now()
-        return not self.rentals.filter(start_date__lt=now, end_date__gt=now).exists()
+        return not self.rentals.filter(status='ACTIVE', start_date__lt=now, end_date__gt=now).exists()
 
 
 class ObjectRental(models.Model):
+    STATUS_CHOICES = (
+        ('ACTIVE', 'Activa'),
+        ('CANCELLED', 'Cancelada'),
+        ('COMPLETED', 'Completada'),
+    )
+    
     object = models.ForeignKey(Object, on_delete=models.CASCADE, related_name='rentals')
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='object_rentals')
     start_date = models.DateTimeField()
     end_date = models.DateTimeField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ACTIVE')
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ['-start_date']
 
     def __str__(self):
-        return f"{self.user} -> {self.object} ({self.start_date.isoformat()} - {self.end_date.isoformat()})"
+        return f"{self.user} -> {self.object} ({self.start_date.isoformat()} - {self.end_date.isoformat()}) [{self.status}]"
