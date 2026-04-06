@@ -86,6 +86,14 @@ function formatInterval(startTime: string, endTime: string): string {
   return `${formatClock(startTime)} - ${formatClock(endTime)}`;
 }
 
+function formatDateLabel(dateValue: string): string {
+  const [year, month, day] = dateValue.split("-");
+  if (!year || !month || !day) {
+    return dateValue;
+  }
+  return `${day}/${month}/${year}`;
+}
+
 function getReservationUserDisplayName(user: {
   first_name: string;
   last_name: string;
@@ -108,6 +116,9 @@ function ObjectCard({
   availability?: ObjectAvailability;
   onReserve: () => void;
 }) {
+  const reservations = [...(availability?.reservations ?? [])].sort(
+    (left, right) => new Date(left.start_date).getTime() - new Date(right.start_date).getTime(),
+  );
   const slots = availability?.available_slots ?? [];
   const availableSlots = slots.filter((slot) => slot.status === "available");
   const visibleSlots = availableSlots.slice(0, 3);
@@ -164,14 +175,14 @@ function ObjectCard({
         </div>
 
         <div>
-          <p className="mb-2 text-sm font-semibold text-gray-900">Reservas activas</p>
+          <p className="mb-2 text-sm font-semibold text-gray-900">Reservas para {formatDateLabel(selectedDate)}</p>
           {loadingAvailability ? (
             <p className="text-sm text-gray-500">Cargando disponibilidad...</p>
-          ) : (availability?.reservations.length ?? 0) === 0 ? (
-            <p className="text-sm text-gray-500">No hay reservas para esta fecha.</p>
+          ) : reservations.length === 0 ? (
+            <p className="text-sm text-gray-500">No hay reservas activas para esta fecha.</p>
           ) : (
             <ul className="space-y-2">
-              {availability?.reservations.map((reservation) => (
+              {reservations.map((reservation) => (
                 <li key={reservation.id} className="rounded-md border border-border/70 bg-background px-3 py-2 text-sm">
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-medium text-gray-900">
@@ -217,7 +228,7 @@ function ObjectCard({
             Reservar
           </Button>
         </div>
-        <p className="text-right text-xs text-gray-500">Fecha seleccionada: {selectedDate}</p>
+        <p className="text-right text-xs text-gray-500">Fecha seleccionada: {formatDateLabel(selectedDate)}</p>
       </CardContent>
     </Card>
   );
