@@ -96,6 +96,8 @@ function formatSlotAvailability(slot: { start_time: string; end_time: string; av
   }
 
   return `${formatInterval(slot.start_time, slot.end_time)} · ${slot.available_stock} disponibles`;
+}
+
 function formatDateLabel(dateValue: string): string {
   const [year, month, day] = dateValue.split("-");
   if (!year || !month || !day) {
