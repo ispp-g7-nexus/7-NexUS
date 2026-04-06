@@ -41,7 +41,14 @@ def _validate_object_name(raw_name) -> tuple[str, str | None]:
 
 
 def _serialize_object(obj):
-    is_available_now = obj.can_rent()
+    now = timezone.now()
+    current_reserved_stock = obj.rentals.filter(
+        status='ACTIVE',
+        start_date__lt=now,
+        end_date__gt=now,
+    ).count()
+    current_available_stock = max(obj.stock_total - current_reserved_stock, 0)
+    is_available_now = obj.available and current_available_stock > 0
     rentals_count = getattr(obj, "rentals_count", obj.rentals.count())
     return {
         'id': obj.id,
@@ -51,6 +58,9 @@ def _serialize_object(obj):
         'availability': is_available_now,
         'lending_enabled': obj.available,
         'is_enabled': obj.available,
+        'stock_total': obj.stock_total,
+        'current_reserved_stock': current_reserved_stock,
+        'current_available_stock': current_available_stock,
         'image_url': obj.image_url,
         'tags': obj.tags,
         'rentals_count': rentals_count,
@@ -72,7 +82,20 @@ def _serialize_object_reservation(rental: ObjectRental) -> dict[str, Any]:
     }
 
 
-def _compute_object_available_slots(*, target_date, reservations: list[ObjectRental]) -> list[dict[str, str]]:
+def _count_active_rentals_in_interval(*, obj: Object, interval_start: datetime, interval_end: datetime) -> int:
+    return obj.rentals.filter(
+        status="ACTIVE",
+        start_date__lt=interval_end,
+        end_date__gt=interval_start,
+    ).count()
+
+
+def _compute_object_available_slots(
+    *,
+    target_date,
+    obj: Object,
+    reservations: list[ObjectRental],
+) -> list[dict[str, Any]]:
     tz = timezone.get_current_timezone()
     day_start = timezone.make_aware(datetime.combine(target_date, time.min), tz)
     day_end = day_start + timedelta(days=1)
@@ -85,12 +108,19 @@ def _compute_object_available_slots(*, target_date, reservations: list[ObjectRen
     while current + interval <= day_end:
         slot_end = current + interval
         is_past = current < now
+        active_rentals = _count_active_rentals_in_interval(
+            obj=obj,
+            interval_start=current,
+            interval_end=slot_end,
+        )
+        available_stock = max(obj.stock_total - active_rentals, 0)
 
         slots.append(
             {
                 "start_time": current.isoformat(),
                 "end_time": slot_end.isoformat(),
-                "status": "past" if is_past else "available",
+                "available_stock": available_stock,
+                "status": "past" if is_past else ("available" if available_stock > 0 else "occupied"),
             }
         )
         current = slot_end
@@ -140,15 +170,22 @@ class ObjectListView(AuthenticatedView):
             return JsonResponse({"detail": name_error}, status=400)
 
         try:
+            raw_stock_total = body.get('stock_total', 1)
+            stock_total = int(raw_stock_total or 1)
+            if stock_total < 1:
+                raise ValueError("stock_total debe ser positivo")
             obj = Object.objects.create(
                 name=name,
                 description=body.get('description', ''),
                 location=body.get('location', ''),
+                stock_total=stock_total,
                 image_url=body.get('image_url', None),
                 tags=body.get('tags', ''),
                 residence=request.residence,
             )
             return JsonResponse({'id': obj.id, 'detail': 'Object created successfully'}, status=201)
+        except ValueError:
+            return JsonResponse({"detail": "stock_total debe ser un entero positivo."}, status=400)
         except Exception as e:
             return JsonResponse({"detail": str(e)}, status=400)
 
@@ -212,6 +249,7 @@ class ObjectAvailabilityView(AuthenticatedView):
         reservations = list(
             ObjectRental.objects.filter(
                 object=obj,
+                status='ACTIVE',
                 start_date__lt=day_end,
                 end_date__gt=day_start,
             )
@@ -225,10 +263,7 @@ class ObjectAvailabilityView(AuthenticatedView):
                 "reservation_interval_minutes": OBJECT_RESERVATION_INTERVAL_MINUTES,
                 "object": _serialize_object(obj),
                 "reservations": [_serialize_object_reservation(item) for item in reservations],
-                "available_slots": _compute_object_available_slots(
-                    target_date=target_date,
-                    reservations=reservations,
-                ),
+                "available_slots": _compute_object_available_slots(target_date=target_date, obj=obj, reservations=reservations),
             }
         )
 
@@ -274,8 +309,6 @@ class ObjectReserveView(AuthenticatedView):
                 already_reserved_by_user = ObjectRental.objects.filter(
                     object=obj,
                     status='ACTIVE',
-                    start_date__lt=end,
-                    end_date__gt=start,
                     user=request.user,
                     start_date=start,
                     end_date=end,
@@ -283,6 +316,18 @@ class ObjectReserveView(AuthenticatedView):
                 if already_reserved_by_user:
                     return JsonResponse(
                         {"detail": "Ya tienes una reserva para este objeto en ese tramo horario."},
+                        status=400,
+                    )
+
+                active_rentals_in_slot = ObjectRental.objects.filter(
+                    object=obj,
+                    status='ACTIVE',
+                    start_date__lt=end,
+                    end_date__gt=start,
+                ).count()
+                if active_rentals_in_slot >= obj.stock_total:
+                    return JsonResponse(
+                        {"detail": "No hay stock disponible para ese horario."},
                         status=400,
                     )
 

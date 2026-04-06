@@ -9,6 +9,7 @@ class Object(models.Model):
     location = models.CharField(max_length=255, blank=True)
     residence = models.ForeignKey('residences.Residence', on_delete=models.CASCADE, related_name='residence_objects')
     available = models.BooleanField(default=True)
+    stock_total = models.PositiveIntegerField(default=1)
     image_url = models.URLField(blank=True, null=True)
     tags = models.CharField(max_length=255, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -24,9 +25,10 @@ class Object(models.Model):
         if not self.available:
             return False
 
-        # If there are any active rentals overlapping 'now', object is not available
+        # An object is rentable when at least one unit is free right now.
         now = timezone.now()
-        return not self.rentals.filter(status='ACTIVE', start_date__lt=now, end_date__gt=now).exists()
+        active_rentals_now = self.rentals.filter(status='ACTIVE', start_date__lt=now, end_date__gt=now).count()
+        return active_rentals_now < self.stock_total
 
 
 class ObjectRental(models.Model):

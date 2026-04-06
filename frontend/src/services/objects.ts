@@ -50,6 +50,9 @@ export interface ObjectItem {
   description: string;
   location: string;
   availability: boolean;
+  stock_total: number;
+  current_reserved_stock: number;
+  current_available_stock: number;
   image_url?: string;
   tags: string;
   rentals_count: number;
@@ -60,6 +63,7 @@ export interface CreateObjectRequest {
   name: string;
   description?: string;
   location?: string;
+  stock_total?: number;
   image_url?: string;
   tags?: string;
 }
@@ -82,6 +86,7 @@ export interface ObjectAvailabilitySlot {
   start_time: string;
   end_time: string;
   status: "available" | "occupied" | "past";
+  available_stock: number;
 }
 
 export interface ObjectAvailabilityReservation {

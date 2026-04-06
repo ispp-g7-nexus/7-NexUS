@@ -45,14 +45,18 @@ function ObjectCard({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 text-sm">
+      <div className="grid grid-cols-3 gap-2 text-sm">
         <div className="rounded-lg bg-muted/60 px-3 py-2">
           <p className="text-xs text-gray-500">Ubicación</p>
           <p className="font-semibold text-gray-900 truncate">{object.location || "No especificada"}</p>
         </div>
         <div className="rounded-lg bg-muted/60 px-3 py-2 text-center">
-          <p className="text-xs text-gray-500">Reservas</p>
-          <p className="font-semibold text-gray-900">{object.rentals_count}</p>
+          <p className="text-xs text-gray-500">Stock total</p>
+          <p className="font-semibold text-gray-900">{object.stock_total}</p>
+        </div>
+        <div className="rounded-lg bg-muted/60 px-3 py-2 text-center">
+          <p className="text-xs text-gray-500">Stock asignado ahora</p>
+          <p className="font-semibold text-gray-900">{object.current_reserved_stock}</p>
         </div>
       </div>
 
@@ -95,6 +99,7 @@ export function AdminObjects() {
     name: "",
     description: "",
     location: "",
+    stock_total: "1",
     tags: "",
     image_url: "",
   });
@@ -149,13 +154,13 @@ export function AdminObjects() {
   }, [loadObjects]);
 
   const handleOpenForm = () => {
-    setFormData({ name: "", description: "", location: "", tags: "", image_url: "" });
+    setFormData({ name: "", description: "", location: "", stock_total: "1", tags: "", image_url: "" });
     setFormOpen(true);
   };
 
   const handleCloseForm = () => {
     setFormOpen(false);
-    setFormData({ name: "", description: "", location: "", tags: "", image_url: "" });
+    setFormData({ name: "", description: "", location: "", stock_total: "1", tags: "", image_url: "" });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -177,6 +182,7 @@ export function AdminObjects() {
         name: trimmedName,
         description: formData.description || undefined,
         location: formData.location || undefined,
+        stock_total: Number.parseInt(formData.stock_total, 10) || 1,
         tags: formData.tags || undefined,
         image_url: formData.image_url || undefined,
       });
@@ -316,6 +322,20 @@ export function AdminObjects() {
                   value={formData.location}
                   onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                   placeholder="Ej: Almacén principal"
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="stock_total">Stock total *</Label>
+                <Input
+                  id="stock_total"
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={formData.stock_total}
+                  onChange={(e) => setFormData({ ...formData, stock_total: e.target.value })}
+                  required
+                  placeholder="Ej: 10"
                 />
               </div>
 
