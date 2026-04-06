@@ -1,9 +1,10 @@
 import { motion } from "framer-motion";
-import { Bed, Building2, Edit2, Grid3x3, List, Plus, Search as SearchIcon, Trash2, User, Users } from "lucide-react";
+import { Bed, Building2, Edit2, Eye, Grid3x3, List, Mail, Plus, Search as SearchIcon, Trash2, User, Users } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import roomSvg from "../../assets/room.svg";
 import "../../index.css";
+import { Avatar, AvatarFallback } from "../../components/ui/avatar";
 import {
   createBedroom,
   deleteBedroom,
@@ -12,6 +13,7 @@ import {
   type Bedroom,
   type BedroomResident,
 } from "../../services/bedrooms";
+import { getAdminStudentProfile, type StudentProfileDetails } from "../../services/studentProfiles";
 
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
@@ -31,6 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../../components/ui/select";
+import { ResidentProfileDialog } from "./components/ResidentProfileDialog";
 
 
 function validateNumero(v: string): string {
@@ -78,6 +81,11 @@ export function Rooms() {
   const [filter] = useState("todos");
   const [viewLayout, setViewLayout] = useState<"list" | "map">("list");
   const [selectedRoom, setSelectedRoom] = useState<Bedroom | null>(null);
+  const [selectedResident, setSelectedResident] = useState<BedroomResident | null>(null);
+  const [selectedResidentProfile, setSelectedResidentProfile] = useState<StudentProfileDetails | null>(null);
+  const [isResidentProfileOpen, setIsResidentProfileOpen] = useState(false);
+  const [isResidentProfileLoading, setIsResidentProfileLoading] = useState(false);
+  const [residentProfileError, setResidentProfileError] = useState<string | null>(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -105,6 +113,19 @@ export function Rooms() {
     unidades: 1,
   });
 
+  const closeResidentProfile = () => {
+    setIsResidentProfileOpen(false);
+    setSelectedResident(null);
+    setSelectedResidentProfile(null);
+    setResidentProfileError(null);
+    setIsResidentProfileLoading(false);
+  };
+
+  const closeRoomDetails = () => {
+    setSelectedRoom(null);
+    closeResidentProfile();
+  };
+
   useEffect(() => {
     fetchRooms();
   }, []);
@@ -114,6 +135,11 @@ export function Rooms() {
       if (e.key !== "Escape") return;
       setIsModalOpen(false);
       setSelectedRoom(null);
+      setIsResidentProfileOpen(false);
+      setSelectedResident(null);
+      setSelectedResidentProfile(null);
+      setResidentProfileError(null);
+      setIsResidentProfileLoading(false);
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
@@ -247,7 +273,7 @@ export function Rooms() {
       const res = await deleteBedroom(room.id);
       if (res.ok) {
         toast.success("Habitación eliminada correctamente.");
-        setSelectedRoom(null);
+        closeRoomDetails();
         fetchRooms();
       } else {
         const body = await res.json().catch(() => ({}));
@@ -258,6 +284,25 @@ export function Rooms() {
       }
     } catch {
       toast.error("Error de conexión al eliminar la habitación.");
+    }
+  };
+
+  const handleViewResidentProfile = async (resident: BedroomResident) => {
+    setSelectedResident(resident);
+    setSelectedResidentProfile(null);
+    setResidentProfileError(null);
+    setIsResidentProfileOpen(true);
+    setIsResidentProfileLoading(true);
+
+    try {
+      const profile = await getAdminStudentProfile(resident.user_id);
+      setSelectedResidentProfile(profile);
+    } catch (error) {
+      console.error("Error al cargar el perfil del residente", error);
+      const message = error instanceof Error ? error.message : "No se pudo cargar el perfil del estudiante.";
+      setResidentProfileError(message);
+    } finally {
+      setIsResidentProfileLoading(false);
     }
   };
 
@@ -418,8 +463,8 @@ export function Rooms() {
       {/* Detalle habitación */}
       {selectedRoom && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div role="button" tabIndex={-1} aria-label="Cerrar detalle" className="fixed inset-0 bg-black/50" onClick={() => setSelectedRoom(null)} onKeyDown={(e) => { if (e.key === "Escape" || e.key === "Enter") setSelectedRoom(null); }} />
-          <div className="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
+          <div role="button" tabIndex={-1} aria-label="Cerrar detalle" className="fixed inset-0 bg-black/50" onClick={closeRoomDetails} onKeyDown={(e) => { if (e.key === "Escape" || e.key === "Enter") closeRoomDetails(); }} />
+          <div className="relative w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl">
             <div className="flex items-center gap-3 mb-4">
               <div className={`p-2 rounded-xl ${selectedRoom.ocupantes_actuales > 0 ? "bg-red-100" : "bg-primary/10"}`}>
                 <Bed className={`w-5 h-5 ${selectedRoom.ocupantes_actuales > 0 ? "text-red-600" : "text-primary"}`} />
@@ -444,9 +489,14 @@ export function Rooms() {
                   {getRoomState(selectedRoom.ocupantes_actuales, selectedRoom.capacidad_maxima).label}
                 </Badge>
               </div>
-              <div className="col-span-2 bg-gray-50 p-3 rounded-xl border border-gray-200">
-                <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-2">Residentes</p>
-                <ResidentsInlineList residents={selectedRoom.residentes} showEmail />
+              <div className="col-span-2 rounded-xl border border-gray-200 bg-gray-50 p-3">
+                <p className="mb-3 text-[10px] font-bold uppercase tracking-wider text-gray-500">Residentes</p>
+                <ResidentsDetailList
+                  residents={selectedRoom.residentes}
+                  selectedResidentId={selectedResident?.id ?? null}
+                  loadingResidentProfile={isResidentProfileLoading}
+                  onViewProfile={handleViewResidentProfile}
+                />
               </div>
             </div>
 
@@ -456,7 +506,7 @@ export function Rooms() {
                 className="flex-1"
                 variant="outline"
                 onClick={() => {
-                  setSelectedRoom(null);
+                  closeRoomDetails();
                   openEdit(selectedRoom);
                 }}
               >
@@ -473,6 +523,21 @@ export function Rooms() {
           </div>
         </div>
       )}
+
+      <ResidentProfileDialog
+        open={isResidentProfileOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            closeResidentProfile();
+            return;
+          }
+          setIsResidentProfileOpen(true);
+        }}
+        resident={selectedResident}
+        profile={selectedResidentProfile}
+        loading={isResidentProfileLoading}
+        error={residentProfileError}
+      />
 
       {/* Modal crear/editar */}
       {isModalOpen && (
@@ -654,6 +719,78 @@ function ResidentsInlineList({ residents, showEmail = false }: { readonly reside
         </li>
       ))}
     </ul>
+  );
+}
+
+function getInitials(value: string): string {
+  return value
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("") || "ST";
+}
+
+function ResidentsDetailList({
+  residents,
+  selectedResidentId,
+  loadingResidentProfile,
+  onViewProfile,
+}: Readonly<{
+  residents: BedroomResident[];
+  selectedResidentId: number | null;
+  loadingResidentProfile: boolean;
+  onViewProfile: (resident: BedroomResident) => void;
+}>) {
+  if (residents.length === 0) {
+    return <p className="text-sm text-muted-foreground">No hay residentes asignados</p>;
+  }
+
+  return (
+    <div className="space-y-3">
+      {residents.map((resident) => {
+        const isLoadingThisProfile = loadingResidentProfile && selectedResidentId === resident.id;
+
+        return (
+          <div
+            key={resident.id}
+            className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div className="flex min-w-0 items-center gap-3">
+              <Avatar className="h-11 w-11 border border-slate-200">
+                <AvatarFallback className="bg-primary/10 font-semibold text-primary">
+                  {getInitials(resident.full_name)}
+                </AvatarFallback>
+              </Avatar>
+
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-slate-900">{resident.full_name}</p>
+                {resident.email ? (
+                  <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
+                    <Mail className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{resident.email}</span>
+                  </div>
+                ) : (
+                  <p className="mt-1 text-xs text-slate-400">Sin email disponible</p>
+                )}
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="rounded-xl border-primary/20 text-primary hover:bg-primary/5 hover:text-primary"
+              onClick={() => onViewProfile(resident)}
+              disabled={isLoadingThisProfile}
+            >
+              <Eye className="h-4 w-4" />
+              {isLoadingThisProfile ? "Cargando..." : "Ver perfil"}
+            </Button>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 

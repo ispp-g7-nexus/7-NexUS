@@ -5,6 +5,7 @@ from .models import Bedroom
 
 class BedroomResidentSerializer(serializers.Serializer):
     id = serializers.IntegerField()
+    user_id = serializers.IntegerField()
     full_name = serializers.CharField()
     email = serializers.EmailField(allow_null=True)
 
@@ -49,6 +50,7 @@ class BedroomSerializer(serializers.ModelSerializer):
         payload = [
             {
                 "id": resident.id,
+                "user_id": resident.user_id,
                 "full_name": resident.user.get_full_name().strip() or resident.user.username,
                 "email": getattr(resident.user, "email", None),
             }

@@ -1,5 +1,6 @@
 from apps.common.views import (
     AdminCreateResidentView,
+    AdminStudentProfileView,
     AuthLoginView,
     AuthLogoutView,
     AuthMeView,
@@ -32,6 +33,7 @@ urlpatterns = [
     ),
     path("api/auth/password-reset/confirm/", PasswordResetConfirmView.as_view(), name="password-reset-confirm"),
     path("api/admin/residents/create/", AdminCreateResidentView.as_view(), name="admin-create-resident"),
+    path("api/admin/students/<int:user_id>/profile/", AdminStudentProfileView.as_view(), name="admin-student-profile"),
     path("api/student/profile/", StudentProfileView.as_view(), name="student-profile"),
     path("api/", include("apps.residents.urls")),
     path("api/", include("apps.events.urls")),

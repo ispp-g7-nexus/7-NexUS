@@ -142,6 +142,7 @@ class BedroomDetailViewTests(FastTenantTestCase):
         data = response.json()
         self.assertEqual(len(data["residentes"]), 1)
         residente = data["residentes"][0]
+        self.assertEqual(residente["user_id"], self.student_user.id)
         self.assertEqual(residente["full_name"], "Carlos Ruiz")
         self.assertIn("email", residente)
         self.assertEqual(residente["email"], "student@bedrooms.test")
