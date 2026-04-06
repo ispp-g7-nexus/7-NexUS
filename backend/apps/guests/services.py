@@ -131,6 +131,18 @@ def create_guest_pass_for_resident(
     comment: str | None = "",
     policy: GuestPassPolicy | None = None,
 ) -> GuestPass:
+    now = timezone.now()
+
+    if valid_from < now:
+        raise ValidationError(
+            {"valid_from": "La fecha/hora de inicio no puede ser anterior al momento actual."}
+        )
+
+    if valid_until < now:
+        raise ValidationError(
+            {"valid_until": "La fecha/hora de fin no puede ser anterior al momento actual."}
+        )
+
     if valid_until <= valid_from:
         raise ValidationError(
             {"valid_until": "La fecha de fin debe ser posterior a la de inicio."}
@@ -196,6 +208,38 @@ def create_guest_pass_for_resident(
     return guest_pass
 
 
+def cancel_guest_pass_for_resident(pass_id: int, membership: Membership, residence) -> GuestPass:
+    try:
+        guest_pass = GuestPass.objects.get(
+            id=pass_id, resident=membership, residence=residence
+        )
+    except GuestPass.DoesNotExist:
+        raise ValidationError({"detail": "Pase no encontrado."}) from None
+
+    if guest_pass.status != GuestPass.Status.ACTIVE:
+        raise ValidationError({"detail": "Solo se pueden cancelar pases activos."})
+
+    guest_pass.status = GuestPass.Status.CANCELLED
+    guest_pass.cancelled_at = timezone.now()
+    guest_pass.save(update_fields=["status", "cancelled_at"])
+    return guest_pass
+
+
+def revoke_guest_pass_admin(pass_id: int, residence) -> GuestPass:
+    try:
+        guest_pass = GuestPass.objects.get(id=pass_id, residence=residence)
+    except GuestPass.DoesNotExist:
+        raise ValidationError({"detail": "Pase no encontrado."}) from None
+
+    if guest_pass.status == GuestPass.Status.REVOKED:
+        raise ValidationError({"detail": "El pase ya está revocado."}) from None
+
+    guest_pass.status = GuestPass.Status.REVOKED
+    guest_pass.revoked_at = timezone.now()
+    guest_pass.save(update_fields=["status", "revoked_at"])
+    return guest_pass
+
+
 def get_active_guest_passes_queryset(membership: Membership, residence):
     now = timezone.now()
     return (
@@ -226,4 +270,22 @@ def get_upcoming_guest_passes_queryset(membership: Membership, residence):
         )
         .select_related("resident__user", "resident__bedroom")
         .order_by("valid_from", "valid_until", "-created_at")
+    )
+
+
+def get_guest_pass_history_queryset(membership: Membership, residence):
+    now = timezone.now()
+    return (
+        GuestPass.objects.filter(
+            residence=residence,
+            resident=membership,
+        )
+        .exclude(
+            status=GuestPass.Status.ACTIVE,
+            cancelled_at__isnull=True,
+            revoked_at__isnull=True,
+            valid_until__gte=now,
+        )
+        .select_related("resident__user", "resident__bedroom")
+        .order_by("-valid_until", "-created_at")
     )
