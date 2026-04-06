@@ -340,7 +340,6 @@ class ObjectRentalsView(AuthenticatedView):
         now = timezone.now()
         rentals = obj.rentals.select_related('user').all()
         
-        # Organize rentals by status and date
         active = []
         cancelled = []
         completed = []
@@ -367,7 +366,6 @@ class ObjectRentalsView(AuthenticatedView):
             else:  # ACTIVE
                 active.append(rental_data)
         
-        # Sort each category by date (most recent first)
         active.sort(key=lambda x: x['start_date'], reverse=True)
         cancelled.sort(key=lambda x: x['updated_at'], reverse=True)
         completed.sort(key=lambda x: x['end_date'], reverse=True)
@@ -385,9 +383,13 @@ class UserReservationsView(AuthenticatedView):
         if not hasattr(request, 'residence') or not request.residence:
             return JsonResponse({"detail": "No residence context."}, status=400)
 
+        now = timezone.now()
+
         rentals = ObjectRental.objects.filter(
             user=request.user,
-            object__residence=request.residence
+            object__residence=request.residence,
+            status='ACTIVE',
+            end_date__gt=now,
         ).select_related('object').order_by('-start_date')
 
         data = []
