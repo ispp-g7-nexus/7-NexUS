@@ -1,5 +1,7 @@
 import json
 import re
+from datetime import datetime, time, timedelta
+from typing import Any
 from django.http import JsonResponse
 from django.views import View
 from django.utils.decorators import method_decorator
@@ -9,13 +11,14 @@ from django.db import transaction
 from django.contrib.auth import get_user_model
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
-from django.utils.dateparse import parse_datetime
+from django.utils.dateparse import parse_date, parse_datetime
 from apps.common.utils.jwt_auth import resolve_user_from_request
 from apps.common.utils.permissions import _is_admin_for_residence
 from django.db.models import Count
 
 
 OBJECT_NAME_PATTERN = re.compile(r"^[\w\-\.\(\), ]+$")
+OBJECT_RESERVATION_INTERVAL_MINUTES = 60
 
 
 def _parse_datetime_or_none(value):
@@ -53,6 +56,46 @@ def _serialize_object(obj):
         'rentals_count': rentals_count,
         'can_rent': is_available_now,
     }
+
+
+def _serialize_object_reservation(rental: ObjectRental) -> dict[str, Any]:
+    return {
+        "id": rental.id,
+        "start_date": rental.start_date.isoformat(),
+        "end_date": rental.end_date.isoformat(),
+        "user": {
+            "id": rental.user_id,
+            "first_name": rental.user.first_name,
+            "last_name": rental.user.last_name,
+            "email": rental.user.email,
+        },
+    }
+
+
+def _compute_object_available_slots(*, target_date, reservations: list[ObjectRental]) -> list[dict[str, str]]:
+    tz = timezone.get_current_timezone()
+    day_start = timezone.make_aware(datetime.combine(target_date, time.min), tz)
+    day_end = day_start + timedelta(days=1)
+
+    interval = timedelta(minutes=OBJECT_RESERVATION_INTERVAL_MINUTES)
+    now = timezone.now()
+    slots: list[dict[str, str]] = []
+
+    current = day_start
+    while current + interval <= day_end:
+        slot_end = current + interval
+        is_past = current < now
+
+        slots.append(
+            {
+                "start_time": current.isoformat(),
+                "end_time": slot_end.isoformat(),
+                "status": "past" if is_past else "available",
+            }
+        )
+        current = slot_end
+
+    return slots
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -145,6 +188,51 @@ class ObjectDetailView(AuthenticatedView):
             return JsonResponse({"detail": str(e)}, status=500)
 
 
+class ObjectAvailabilityView(AuthenticatedView):
+    def get(self, request, object_id):
+        if not hasattr(request, 'residence') or not request.residence:
+            return JsonResponse({"detail": "No residence context."}, status=400)
+
+        date_str = str(request.GET.get("date", "")).strip()
+        if not date_str:
+            return JsonResponse({"detail": "Debes enviar la fecha en formato YYYY-MM-DD."}, status=400)
+
+        target_date = parse_date(date_str)
+        if not target_date:
+            return JsonResponse({"detail": "Formato de fecha inválido."}, status=400)
+
+        obj, error_response = get_residence_object(request, object_id)
+        if error_response:
+            return error_response
+
+        tz = timezone.get_current_timezone()
+        day_start = timezone.make_aware(datetime.combine(target_date, time.min), tz)
+        day_end = day_start + timedelta(days=1)
+
+        reservations = list(
+            ObjectRental.objects.filter(
+                object=obj,
+                start_date__lt=day_end,
+                end_date__gt=day_start,
+            )
+            .select_related("user")
+            .order_by("start_date")
+        )
+
+        return JsonResponse(
+            {
+                "date": target_date.isoformat(),
+                "reservation_interval_minutes": OBJECT_RESERVATION_INTERVAL_MINUTES,
+                "object": _serialize_object(obj),
+                "reservations": [_serialize_object_reservation(item) for item in reservations],
+                "available_slots": _compute_object_available_slots(
+                    target_date=target_date,
+                    reservations=reservations,
+                ),
+            }
+        )
+
+
 class ObjectReserveView(AuthenticatedView):
     def post(self, request, object_id):
         if not hasattr(request, 'residence') or not request.residence:
@@ -163,6 +251,16 @@ class ObjectReserveView(AuthenticatedView):
             return JsonResponse({"detail": "La fecha de fin debe ser posterior a la de inicio."}, status=400)
         if start < timezone.now():
             return JsonResponse({"detail": "No se pueden crear reservas en el pasado."}, status=400)
+        if any([start.minute, start.second, start.microsecond, end.minute, end.second, end.microsecond]):
+            return JsonResponse(
+                {"detail": "Las reservas deben comenzar y terminar en punto (HH:00)."},
+                status=400,
+            )
+        if (end - start) != timedelta(hours=1):
+            return JsonResponse(
+                {"detail": "Las reservas de objetos deben ser de exactamente 1 hora."},
+                status=400,
+            )
 
         try:
             with transaction.atomic():
@@ -173,15 +271,20 @@ class ObjectReserveView(AuthenticatedView):
                 if not obj.available:
                     return JsonResponse({"detail": "Este objeto no está disponible para préstamo."}, status=400)
 
-                overlapping = ObjectRental.objects.select_for_update().filter(
+                already_reserved_by_user = ObjectRental.objects.filter(
                     object=obj,
                     status='ACTIVE',
                     start_date__lt=end,
                     end_date__gt=start,
+                    user=request.user,
+                    start_date=start,
+                    end_date=end,
                 ).exists()
-
-                if overlapping:
-                    return JsonResponse({"detail": "No hay disponibilidad para ese horario."}, status=400)
+                if already_reserved_by_user:
+                    return JsonResponse(
+                        {"detail": "Ya tienes una reserva para este objeto en ese tramo horario."},
+                        status=400,
+                    )
 
                 rental = ObjectRental.objects.create(
                     object=obj,
