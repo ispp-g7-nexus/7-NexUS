@@ -69,6 +69,32 @@ export interface UserObjectReservation {
   object: ObjectItem;
 }
 
+export interface ObjectAvailabilitySlot {
+  start_time: string;
+  end_time: string;
+  status: "available" | "occupied" | "past";
+}
+
+export interface ObjectAvailabilityReservation {
+  id: number;
+  start_date: string;
+  end_date: string;
+  user: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    email: string;
+  };
+}
+
+export interface ObjectAvailability {
+  date: string;
+  reservation_interval_minutes: number;
+  object: ObjectItem;
+  reservations: ObjectAvailabilityReservation[];
+  available_slots: ObjectAvailabilitySlot[];
+}
+
 export const objectsService = {
   // Get all objects
   getObjects: async (): Promise<ObjectItem[]> => {
@@ -97,6 +123,21 @@ export const objectsService = {
       throw await buildApiError(response, 'Error al obtener detalles del objeto');
     }
     
+    return response.json();
+  },
+
+  // Get object availability for a date
+  getObjectAvailability: async (objectId: number, date: string): Promise<ObjectAvailability> => {
+    const response = await fetch(`${OBJECTS_URL}/${objectId}/availability/?date=${encodeURIComponent(date)}`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (!response.ok) {
+      throw await buildApiError(response, 'Error al obtener disponibilidad del objeto');
+    }
+
     return response.json();
   },
 

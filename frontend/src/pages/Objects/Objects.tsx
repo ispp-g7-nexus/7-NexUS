@@ -1,7 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Search } from "lucide-react";
 import { toast } from "sonner";
-import { objectsService, ObjectItem, UserObjectReservation } from "../../services/objects.ts";
+import { InteractiveDatePicker } from "../../components/ui/InteractiveDatePicker";
+import {
+  objectsService,
+  ObjectItem,
+  ObjectAvailability,
+  UserObjectReservation,
+} from "../../services/objects.ts";
 import { ObjectsList } from "./components/ObjectsList";
 import { ReservationModal } from "./components/ReservationModal";
 import { MyReservations } from "./components/MyReservations";
@@ -12,10 +18,20 @@ interface ObjectsProps {
   onReservationSuccess?: () => void;
 }
 
+function getTodayDateString(): string {
+  const now = new Date();
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split("T")[0];
+}
+
 export function Objects({ onReservationSuccess }: ObjectsProps) {
+  const todayDate = useMemo(() => getTodayDateString(), []);
+
   const [objects, setObjects] = useState<ObjectItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState(todayDate);
+  const [availabilityByObjectId, setAvailabilityByObjectId] = useState<Record<number, ObjectAvailability>>({});
+  const [loadingAvailability, setLoadingAvailability] = useState(false);
   const [selectedObject, setSelectedObject] = useState<ObjectItem | null>(null);
   const [isReservationModalOpen, setIsReservationModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -26,9 +42,17 @@ export function Objects({ onReservationSuccess }: ObjectsProps) {
   const [cancellingRentalId, setCancellingRentalId] = useState<number | null>(null);
 
   useEffect(() => {
-    fetchObjects();
-    fetchReservations();
+    void fetchObjects();
+    void fetchReservations();
   }, []);
+
+  useEffect(() => {
+    if (objects.length === 0) {
+      setAvailabilityByObjectId({});
+      return;
+    }
+    void fetchAvailability(objects, selectedDate);
+  }, [objects, selectedDate]);
 
   const fetchObjects = async () => {
     try {
@@ -40,6 +64,24 @@ export function Objects({ onReservationSuccess }: ObjectsProps) {
       setError(err instanceof Error ? err.message : "Error al cargar objetos");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAvailability = async (objectsToLoad: ObjectItem[], date: string) => {
+    try {
+      setLoadingAvailability(true);
+      const entries = await Promise.all(
+        objectsToLoad.map(async (object) => {
+          const data = await objectsService.getObjectAvailability(object.id, date);
+          return [object.id, data] as const;
+        }),
+      );
+      setAvailabilityByObjectId(Object.fromEntries(entries));
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Error al cargar disponibilidad de objetos";
+      toast.error(errorMessage);
+    } finally {
+      setLoadingAvailability(false);
     }
   };
 
@@ -66,8 +108,11 @@ export function Objects({ onReservationSuccess }: ObjectsProps) {
   const handleReservationSuccess = () => {
     setIsReservationModalOpen(false);
     setSelectedObject(null);
-    fetchObjects();
-    fetchReservations();
+    void fetchObjects();
+    void fetchReservations();
+    if (objects.length > 0) {
+      void fetchAvailability(objects, selectedDate);
+    }
     if (onReservationSuccess) {
       onReservationSuccess();
     }
@@ -80,6 +125,7 @@ export function Objects({ onReservationSuccess }: ObjectsProps) {
       toast.success("Reserva cancelada correctamente.");
       await fetchReservations();
       await fetchObjects();
+      await fetchAvailability(objects, selectedDate);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Error al cancelar reserva";
       toast.error(errorMessage);
@@ -107,6 +153,13 @@ export function Objects({ onReservationSuccess }: ObjectsProps) {
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <InteractiveDatePicker
+              value={selectedDate}
+              onChange={(newDate) => setSelectedDate(newDate)}
+              minDate={todayDate}
+              className="group relative flex items-center gap-2 border-b-2 border-transparent pb-1 transition-all focus-within:border-green-700 hover:border-green-700/50"
+              inputClassName="w-[130px] text-sm font-medium"
+            />
             <label htmlFor="objects-search" className="inline-flex items-center gap-2 text-sm font-medium">
               <Search className="h-4 w-4" /> Buscar
             </label>
@@ -130,6 +183,9 @@ export function Objects({ onReservationSuccess }: ObjectsProps) {
             objects={filteredObjects}
             loading={loading}
             error={error}
+            selectedDate={selectedDate}
+            loadingAvailability={loadingAvailability}
+            availabilityByObjectId={availabilityByObjectId}
             onReserve={handleReserveObject}
             onRetry={fetchObjects}
           />
