@@ -111,6 +111,8 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
     const location = useLocation();
     const [activeTab, setActiveTab] = useState<AdminTab>(() => getAdminTabFromPath(location.pathname));
 
+    const [fullUser, setFullUser] = useState<AuthMeUser | null>(null);
+
     const [totalChats, setTotalChats] = useState<number>(0);
     const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
     const [unreadChatKeys, setUnreadChatKeys] = useState<Set<string>>(new Set());
@@ -257,8 +259,11 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
 
     useEffect(() => {
         authService.me().then((session) => {
-            if (session.user?.email) {
-                setCurrentUserEmail(session.user.email);
+            if (session.user) {
+                setFullUser(session.user);
+                if (session.user.email) {
+                    setCurrentUserEmail(session.user.email);
+                }
             }
         }).catch(() => { });
     }, []);
@@ -357,24 +362,45 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
     const [pendingIncidences, setPendingIncidences] = useState<number>(0);
     const [totalRoles, setTotalRoles] = useState<number>(0);
 
+
+    const activeUser = fullUser || currentUser;
+
     useEffect(() => {
         if (activeTab !== "dashboard") return;
 
-        residentsService.list().then((d) => setTotalResidents(d.length)).catch(() => setTotalResidents(0));
+        if (hasScreenPermission(activeUser, 'students')) {
+            residentsService.list().then((d) => setTotalResidents(d.length)).catch(() => setTotalResidents(0));
+        }
 
-        listBedrooms().then((d) => {
-            const totalPlazas = d.reduce((sum, r) => sum + r.capacidad_maxima, 0);
-            const plazasOcupadas = d.reduce((sum, r) => sum + r.ocupantes_actuales, 0);
-            const pct = totalPlazas > 0 ? Math.round((plazasOcupadas / totalPlazas) * 100) : 0;
-            setOccupiedRoomsPercent(`${pct}%`);
-        }).catch(() => setOccupiedRoomsPercent('—'));
+        if (hasScreenPermission(activeUser, 'rooms')) {
+            listBedrooms().then((d) => {
+                const totalPlazas = d.reduce((sum, r) => sum + r.capacidad_maxima, 0);
+                const plazasOcupadas = d.reduce((sum, r) => sum + r.ocupantes_actuales, 0);
+                const pct = totalPlazas > 0 ? Math.round((plazasOcupadas / totalPlazas) * 100) : 0;
+                setOccupiedRoomsPercent(`${pct}%`);
+            }).catch(() => setOccupiedRoomsPercent('—'));
+        }
 
-        staffService.list().then((d) => setTotalStaff(d.length)).catch(() => setTotalStaff(0));
-        listAdminGuestPasses("active").then((d) => setTotalActiveGuests(d.length)).catch(() => setTotalActiveGuests(0));
-        IncidenceService.getAll().then((d) => setPendingIncidences(d.filter(i => i.status === 'pending').length)).catch(() => setPendingIncidences(0));
-        roleService.getRoles().then((d) => setTotalRoles(d.length)).catch(() => setTotalRoles(0));
-        loadChatsCount();
-    }, [activeTab]);
+        if (hasScreenPermission(activeUser, 'staff')) {
+            staffService.list().then((d) => setTotalStaff(d.length)).catch(() => setTotalStaff(0));
+        }
+
+        if (hasScreenPermission(activeUser, 'guests')) {
+            listAdminGuestPasses("active").then((d) => setTotalActiveGuests(d.length)).catch(() => setTotalActiveGuests(0));
+        }
+
+        if (hasScreenPermission(activeUser, 'incidences')) {
+            IncidenceService.getAll().then((d) => setPendingIncidences(d.filter(i => i.status === 'pending').length)).catch(() => setPendingIncidences(0));
+        }
+
+        if (hasScreenPermission(activeUser, 'roles')) {
+            roleService.getRoles().then((d) => setTotalRoles(d.length)).catch(() => setTotalRoles(0));
+        }
+
+        if (hasScreenPermission(activeUser, 'chats')) {
+            loadChatsCount();
+        }
+    }, [activeTab, activeUser]);
 
     const rawNavItems = [
         { id: "dashboard", label: "Panel de Control", icon: <LayoutDashboard className="w-5 h-5" /> },
@@ -394,9 +420,10 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
         { id: "chats", label: "Chats", icon: <MessageSquare className="w-5 h-5" />, permission: "chats" },
     ];
 
+
     const allNavItems = rawNavItems.filter(item => {
         if (!item.permission) return true;
-        return hasScreenPermission(currentUser, item.permission);
+        return hasScreenPermission(activeUser, item.permission);
     });
 
     const rawMetricsData = [
@@ -418,7 +445,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
     ];
 
     const metricsData = rawMetricsData.filter(metric => {
-        return hasScreenPermission(currentUser, metric.id);
+        return hasScreenPermission(activeUser, metric.id);
     });
 
     const today = new Date().toLocaleDateString('es-ES', {
@@ -429,7 +456,8 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
     const currentTab = allNavItems.find((item) => item.id === activeTab) || allNavItems[0];
 
     const renderContent = () => {
-        const isAllowed = allNavItems.some(item => item.id === activeTab);
+        const alwaysAllowed = ["dashboard", "profile", "branding"];
+        const isAllowed = alwaysAllowed.includes(activeTab) || allNavItems.some(item => item.id === activeTab);
 
         if (!isAllowed) {
             return (

@@ -1,5 +1,6 @@
 // src/components/RoleModal.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { Role, RoleFormData } from '../services/roles';
 
 interface RoleModalProps {
@@ -28,6 +29,8 @@ const RoleModal: React.FC<RoleModalProps> = ({ isOpen, onClose, onSave, editingR
     const [formData, setFormData] = useState<RoleFormData>({ name: '', description: '', permissions: [] });
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         if (editingRole) {
@@ -40,7 +43,21 @@ const RoleModal: React.FC<RoleModalProps> = ({ isOpen, onClose, onSave, editingR
             setFormData({ name: '', description: '', permissions: [] });
         }
         setError(null);
+        setIsDropdownOpen(false);
     }, [editingRole, isOpen]);
+
+    // Cerrar el desplegable si hacemos clic fuera
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsDropdownOpen(false);
+            }
+        };
+        if (isDropdownOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isDropdownOpen]);
 
     if (!isOpen) return null;
 
@@ -73,6 +90,8 @@ const RoleModal: React.FC<RoleModalProps> = ({ isOpen, onClose, onSave, editingR
         });
     };
 
+    const selectedCount = formData.permissions?.length || 0;
+
     return (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
@@ -86,7 +105,7 @@ const RoleModal: React.FC<RoleModalProps> = ({ isOpen, onClose, onSave, editingR
                     </div>
                 )}
 
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-4 relative">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
                         <input
@@ -110,31 +129,50 @@ const RoleModal: React.FC<RoleModalProps> = ({ isOpen, onClose, onSave, editingR
                         />
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Permisos de Acceso</label>
-                        <p className="text-xs text-gray-500 mb-3">Selecciona los módulos a los que este rol tendrá acceso administrativo.</p>
+                    {/* Desplegable de Permisos */}
+                    <div className="relative" ref={dropdownRef}>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Permisos de Acceso</label>
 
-                        <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-1">
-                            {AVAILABLE_PERMISSIONS.map(perm => {
-                                const isSelected = (formData.permissions || []).includes(perm.id);
-                                return (
-                                    <label
-                                        key={perm.id}
-                                        className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors text-sm
-                                            ${isSelected ? 'bg-green-50 border-green-200 text-green-800' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
-                                    >
-                                        <input
-                                            type="checkbox"
-                                            className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-600"
-                                            checked={isSelected}
-                                            onChange={() => togglePermission(perm.id)}
-                                        />
-                                        <span className="select-none">{perm.label}</span>
-                                    </label>
-                                );
-                            })}
-                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                            className="w-full flex items-center justify-between border border-gray-300 rounded-lg p-2.5 bg-white hover:bg-gray-50 transition-colors focus:ring-2 focus:ring-green-600 outline-none"
+                        >
+                            <span className={selectedCount === 0 ? "text-gray-400" : "text-gray-900 font-medium"}>
+                                {selectedCount === 0
+                                    ? 'Seleccionar módulos permitidos...'
+                                    : `${selectedCount} módulo${selectedCount > 1 ? 's' : ''} seleccionado${selectedCount > 1 ? 's' : ''}`}
+                            </span>
+                            {isDropdownOpen ? <ChevronUp size={18} className="text-gray-500" /> : <ChevronDown size={18} className="text-gray-500" />}
+                        </button>
+
+                        {isDropdownOpen && (
+                            <div className="absolute z-10 w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-xl max-h-60 overflow-y-auto p-2">
+                                <div className="grid grid-cols-1 gap-1">
+                                    {AVAILABLE_PERMISSIONS.map(perm => {
+                                        const isSelected = (formData.permissions || []).includes(perm.id);
+                                        return (
+                                            <label
+                                                key={perm.id}
+                                                className={`flex items-center gap-3 p-2.5 rounded-md cursor-pointer transition-colors text-sm
+                                                    ${isSelected ? 'bg-green-50 text-green-900' : 'hover:bg-gray-50 text-gray-700'}`}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-600"
+                                                    checked={isSelected}
+                                                    onChange={() => togglePermission(perm.id)}
+                                                />
+                                                <span className="select-none flex-1">{perm.label}</span>
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
                     </div>
+                    {/* Espaciador para evitar que el botón quede oculto debajo del dropdown si este último se sale */}
+                    {isDropdownOpen && <div className="h-40 pointer-events-none opacity-0"></div>}
 
                     <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
                         <button
@@ -148,7 +186,7 @@ const RoleModal: React.FC<RoleModalProps> = ({ isOpen, onClose, onSave, editingR
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
+                            className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 relative z-0"
                         >
                             {isLoading ? 'Guardando...' : 'Guardar'}
                         </button>

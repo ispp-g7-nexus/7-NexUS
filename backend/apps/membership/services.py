@@ -11,7 +11,9 @@ logger = logging.getLogger(__name__)
 
 class RoleService:
     @staticmethod
-    def create_role(name: str, description: str, residence) -> Role:
+    def create_role(
+        name: str, description: str, residence, permissions: list = None
+    ) -> Role:
         logger.debug(
             f"Iniciando creación de rol: name='{name}', residence={getattr(residence, 'id', None)}"
         )
@@ -41,6 +43,7 @@ class RoleService:
             description=description,
             is_system_default=False,
             residence=residence,
+            permissions=permissions or [],
         )
         logger.debug(f"Rol creado exitosamente: ID={role.id}, Name='{role.name}'")
         return role

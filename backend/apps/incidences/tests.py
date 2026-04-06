@@ -33,6 +33,10 @@ class IncidenceViewSetTests(TenantTestCase):
         self.mock_has_perm = self.patcher.start()
         self.addCleanup(self.patcher.stop)
 
+        self.patcher_ser = patch("apps.incidences.serializers.has_screen_permission")
+        self.mock_has_perm_ser = self.patcher_ser.start()
+        self.addCleanup(self.patcher_ser.stop)
+
         with schema_context(self.tenant.schema_name):
             self.residence_obj = Residence.objects.create(
                 name="Residencia Demo", slug="demo"
@@ -92,6 +96,7 @@ class IncidenceViewSetTests(TenantTestCase):
             return user == self.admin_user or getattr(user, "is_staff", False)
 
         self.mock_has_perm.side_effect = mock_has_screen_permission
+        self.mock_has_perm_ser.side_effect = mock_has_screen_permission
 
     def tearDown(self):
         with schema_context(self.tenant.schema_name):
@@ -223,7 +228,6 @@ class IncidenceViewSetTests(TenantTestCase):
         self.assertIn("location_label", results[0])
 
     def test_serializer_for_user_without_roles(self):
-        """Verifica que un usuario sin roles usa AdminIncidenceSerializer al ver una zona común"""
         with schema_context(self.tenant.schema_name):
             inc_comun = Incidence.objects.create(
                 title="Bombilla fundida", location_type="cocina", student=self.student_b
@@ -235,11 +239,9 @@ class IncidenceViewSetTests(TenantTestCase):
         )
 
         self.assertEqual(res.status_code, status.HTTP_200_OK)
-
         self.assertIn("student", res.data)
 
     def test_notifications_sorting_and_limit(self):
-        """Verifica que las notificaciones respetan el límite de 8 y el orden cronológico"""
         self.admin_user.is_staff = True
         self.admin_user.save()
         self.client.force_authenticate(user=self.admin_user)
@@ -255,9 +257,7 @@ class IncidenceViewSetTests(TenantTestCase):
         self.assertIn("Test 9", res.data["results"][0]["message"])
 
     def test_notifications_resident_privacy_filter(self):
-        """Verifica que los residentes NO ven notificaciones de habitaciones ajenas"""
         with schema_context(self.tenant.schema_name):
-            # Student B crea algo en su habitación
             Incidence.objects.create(
                 title="Secreto", location_type="habitacion", student=self.student_b
             )
@@ -265,7 +265,6 @@ class IncidenceViewSetTests(TenantTestCase):
         self.client.force_authenticate(user=self.student_a)
         res = self.client.get(reverse("incidence-notifications"), HTTP_HOST=self.host)
 
-        # Student A no debería recibir nada
         messages = [n["message"] for n in res.data["results"]]
         for msg in messages:
             self.assertNotIn("Secreto", msg)
@@ -274,6 +273,12 @@ class IncidenceViewSetTests(TenantTestCase):
 class IncidenceSerializersTests(TestCase):
     def setUp(self):
         self.factory = RequestFactory()
+
+        self.patcher = patch("apps.incidences.serializers.has_screen_permission")
+        self.mock_has_perm = self.patcher.start()
+        self.mock_has_perm.return_value = False  # Por defecto no son admin
+        self.addCleanup(self.patcher.stop)
+
         # Usuario mock
         self.user = MagicMock()
         self.user.id = 1
@@ -433,6 +438,8 @@ class IncidenceSerializersTests(TestCase):
             serializer.is_valid(raise_exception=True)
 
     def test_admin_can_change_status(self):
+        self.mock_has_perm.return_value = True
+
         request = self.factory.patch("/")
         admin = MagicMock()
         admin.id = 2

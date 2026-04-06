@@ -16,7 +16,7 @@ from apps.residences.models import Residence, ResidenceDomain
 class GuestPassesApiTests(TenantTestCase):
     @classmethod
     def get_test_tenant_domain(cls):
-        return "guests.test.local"
+        return f"{cls.__name__.lower()}.test.local"
 
     @classmethod
     def setup_tenant(cls, tenant):
@@ -24,6 +24,7 @@ class GuestPassesApiTests(TenantTestCase):
         tenant.slug = "tenant-guests"
         tenant.is_active = True
         tenant.on_trial = True
+        tenant.schema_name = f"test_schema_{cls.__name__.lower()}"
 
     @classmethod
     def setup_domain(cls, domain):

@@ -196,14 +196,14 @@ class HelperFunctionsTests(BaseTestMixin, FastTenantTestCase):
             reservation=self.reservation,
             location="",
         )
-        data = _serialize_event(event, self.user)
+        data = _serialize_event(event, self.user, self.residence)
         self.assertEqual(data["title"], "P Event")
         self.assertEqual(data["space"]["id"], self.space.id)
         self.assertFalse(data["can_edit"])
         self.assertFalse(data["is_joined"])
 
         # Edit permission for host
-        data_host = _serialize_event(event, self.host_user)
+        data_host = _serialize_event(event, self.host_user, self.residence)
         self.assertTrue(data_host["can_edit"])
 
     def test_parse_max_participants(self):

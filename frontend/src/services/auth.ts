@@ -20,6 +20,11 @@ export interface AuthMeUser {
     is_staff?: boolean;
     first_name?: string;
     last_name?: string;
+    raw?: {
+        roles?: string[];
+        permissions?: string[];
+        [key: string]: unknown;
+    };
 }
 
 interface AuthMeResponse {
@@ -32,8 +37,10 @@ export function hasScreenPermission(user: AuthMeUser | null | undefined, screenN
 
     if (user.is_staff) return true;
 
-    const roles = (user.roles || []).map(r => r.toLowerCase());
-    const permissions = user.permissions || [];
+    const rawRoles = user.roles || user.raw?.roles || [];
+    const roles = rawRoles.map(r => r.toLowerCase());
+
+    const permissions = user.permissions || user.raw?.permissions || [];
 
     if (
         roles.includes("admin") ||

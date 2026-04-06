@@ -1,14 +1,10 @@
 from rest_framework import permissions
 
+from apps.membership.models import Membership
 from apps.membership.permissions import has_screen_permission
 
 
 class IsResidenceAdmin(permissions.BasePermission):
-    """
-    Permite acceso únicamente a administradores con permiso para el módulo de 'students' (Residentes).
-    Compatible con el modelo dinámico de entidad Role.
-    """
-
     message = "No tienes permisos para gestionar residentes en esta residencia."
 
     def has_permission(self, request, view):
@@ -16,5 +12,14 @@ class IsResidenceAdmin(permissions.BasePermission):
             return False
 
         residence = getattr(request, "residence", None)
+
+        if request.method in permissions.SAFE_METHODS:
+            return (
+                Membership.objects.filter(
+                    user=request.user, residence=residence, is_active=True
+                )
+                .exclude(role__name__iexact="student")
+                .exists()
+            )
 
         return has_screen_permission(request.user, residence, "students")
