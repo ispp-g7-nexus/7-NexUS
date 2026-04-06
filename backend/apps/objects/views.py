@@ -175,6 +175,7 @@ class ObjectReserveView(AuthenticatedView):
 
                 overlapping = ObjectRental.objects.select_for_update().filter(
                     object=obj,
+                    status='ACTIVE',
                     start_date__lt=end,
                     end_date__gt=start,
                 ).exists()
@@ -207,17 +208,18 @@ class ObjectCancelView(AuthenticatedView):
             body = json.loads(request.body) if request.body else {}
             rental_id = body.get('rental_id')
             if rental_id:
-                deleted, _ = ObjectRental.objects.filter(id=rental_id, object=obj, user=request.user).delete()
+                updated = ObjectRental.objects.filter(id=rental_id, object=obj, user=request.user, status__in=['ACTIVE']).update(status='CANCELLED')
             else:
-                deleted, _ = ObjectRental.objects.filter(
+                updated = ObjectRental.objects.filter(
                     object=obj,
                     user=request.user,
+                    status='ACTIVE',
                     end_date__gt=timezone.now(),
-                ).delete()
+                ).update(status='CANCELLED')
 
-            if deleted:
+            if updated:
                 return JsonResponse({"detail": "Reserva cancelada."}, status=200)
-            return JsonResponse({"detail": "No existe reserva para este usuario y objeto."}, status=400)
+            return JsonResponse({"detail": "No existe reserva activa para este usuario y objeto."}, status=400)
         except Exception as e:
             return JsonResponse({"detail": str(e)}, status=400)
 
@@ -231,20 +233,48 @@ class ObjectRentalsView(AuthenticatedView):
         obj, error_response = get_residence_object(request, object_id)
         if error_response:
             return error_response
+        
+        now = timezone.now()
         rentals = obj.rentals.select_related('user').all()
-        data = []
+        
+        # Organize rentals by status and date
+        active = []
+        cancelled = []
+        completed = []
+        
         for r in rentals:
-            data.append({
+            rental_data = {
                 'id': r.id,
                 'start_date': r.start_date.isoformat(),
                 'end_date': r.end_date.isoformat(),
+                'status': r.status,
+                'created_at': r.created_at.isoformat(),
+                'updated_at': r.updated_at.isoformat(),
                 'user': {
                     'id': r.user.id,
                     'first_name': getattr(r.user, 'first_name', ''),
                     'last_name': getattr(r.user, 'last_name', ''),
                 }
-            })
-        return JsonResponse(data, safe=False)
+            }
+            
+            if r.status == 'CANCELLED':
+                cancelled.append(rental_data)
+            elif r.status == 'COMPLETED' or r.end_date <= now:
+                completed.append(rental_data)
+            else:  # ACTIVE
+                active.append(rental_data)
+        
+        # Sort each category by date (most recent first)
+        active.sort(key=lambda x: x['start_date'], reverse=True)
+        cancelled.sort(key=lambda x: x['updated_at'], reverse=True)
+        completed.sort(key=lambda x: x['end_date'], reverse=True)
+        
+        return JsonResponse({
+            'active': active,
+            'cancelled': cancelled,
+            'completed': completed,
+        })
+
 
 
 class UserReservationsView(AuthenticatedView):
@@ -264,6 +294,7 @@ class UserReservationsView(AuthenticatedView):
                     'id': rental.id,
                     'start_date': rental.start_date.isoformat(),
                     'end_date': rental.end_date.isoformat(),
+                    'status': rental.status,
                     'user': {
                         'id': rental.user.id,
                         'first_name': rental.user.first_name,
@@ -290,6 +321,7 @@ class AdminObjectNotificationsView(AuthenticatedView):
         rentals = (
             ObjectRental.objects.filter(
                 object__residence=residence,
+                status='ACTIVE',
                 end_date__gt=now,
             )
             .exclude(user=request.user)

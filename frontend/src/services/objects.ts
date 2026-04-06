@@ -28,11 +28,20 @@ export interface ObjectRental {
   id: number;
   start_date: string;
   end_date: string;
+  status: 'ACTIVE' | 'CANCELLED' | 'COMPLETED';
+  created_at?: string;
+  updated_at?: string;
   user: {
     id: number;
     first_name: string;
     last_name: string;
   };
+}
+
+export interface RentalsByStatus {
+  active: ObjectRental[];
+  cancelled: ObjectRental[];
+  completed: ObjectRental[];
 }
 
 export interface ObjectItem {
@@ -162,7 +171,7 @@ export const objectsService = {
   },
 
   // Get object rentals
-  getObjectRentals: async (objectId: number): Promise<ObjectRental[]> => {
+  getObjectRentals: async (objectId: number): Promise<RentalsByStatus> => {
     const response = await fetch(`${OBJECTS_URL}/${objectId}/rentals/`, {
       method: 'GET',
       credentials: 'include',
