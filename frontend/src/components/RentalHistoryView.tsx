@@ -1,0 +1,312 @@
+import { useState } from "react";
+import { AlertCircle, CheckCircle, XCircle, Calendar, Search } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import { Input } from "./ui/input";
+import { Button } from "./ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import { ObjectRental } from "../services/objects";
+
+interface RentalsByStatus {
+  active: ObjectRental[];
+  cancelled: ObjectRental[];
+  completed: ObjectRental[];
+}
+
+interface RentalHistoryViewProps {
+  rentalsByStatus: RentalsByStatus;
+  loading: boolean;
+}
+
+function formatDate(date: string): string {
+  const d = new Date(date);
+  const formatter = new Intl.DateTimeFormat("es-ES", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  return formatter.format(d);
+}
+
+function RentalCard({
+  rental,
+  status,
+}: {
+  rental: ObjectRental;
+  status: "ACTIVE" | "CANCELLED" | "COMPLETED";
+}) {
+  const getStatusConfig = (status: string) => {
+    switch (status) {
+      case "ACTIVE":
+        return {
+          icon: Calendar,
+          color: "text-blue-600",
+          bg: "bg-blue-50",
+          badge: "bg-blue-100 text-blue-700",
+          label: "Activa",
+        };
+      case "CANCELLED":
+        return {
+          icon: XCircle,
+          color: "text-red-600",
+          bg: "bg-red-50",
+          badge: "bg-red-100 text-red-700",
+          label: "Cancelada",
+        };
+      case "COMPLETED":
+        return {
+          icon: CheckCircle,
+          color: "text-emerald-600",
+          bg: "bg-emerald-50",
+          badge: "bg-emerald-100 text-emerald-700",
+          label: "Completada",
+        };
+      default:
+        return {
+          icon: AlertCircle,
+          color: "text-gray-600",
+          bg: "bg-gray-50",
+          badge: "bg-gray-100 text-gray-700",
+          label: "Desconocido",
+        };
+    }
+  };
+
+  const config = getStatusConfig(status);
+  const Icon = config.icon;
+  const userName = `${rental.user.first_name || ""} ${rental.user.last_name || ""}`.trim() || "Usuario";
+
+  return (
+    <div className={`rounded-lg border border-gray-200 ${config.bg} p-4`}>
+      <div className="flex items-start justify-between">
+        <div className="flex items-start gap-3 flex-1">
+          <Icon className={`${config.color} mt-1 h-5 w-5 flex-shrink-0`} />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h4 className="font-semibold text-gray-900">{userName}</h4>
+              <span className={`text-xs font-medium px-2 py-1 rounded ${config.badge} whitespace-nowrap`}>
+                {config.label}
+              </span>
+            </div>
+            <div className="mt-2 space-y-1 text-sm text-gray-600">
+              <p>
+                <span className="font-medium">Inicio:</span> {formatDate(rental.start_date)}
+              </p>
+              <p>
+                <span className="font-medium">Fin:</span> {formatDate(rental.end_date)}
+              </p>
+              {rental.updated_at && status === "CANCELLED" && (
+                <p>
+                  <span className="font-medium">Cancelada:</span> {formatDate(rental.updated_at)}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RentalSection({
+  title,
+  description,
+  rentals,
+  status,
+  icon: Icon,
+  empty,
+}: {
+  title: string;
+  description: string;
+  rentals: ObjectRental[];
+  status: "ACTIVE" | "CANCELLED" | "COMPLETED";
+  icon: React.ReactNode;
+  empty: string;
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        {Icon}
+        <div>
+          <h3 className="font-semibold text-gray-900">{title}</h3>
+          <p className="text-sm text-gray-500">{description}</p>
+        </div>
+      </div>
+      {rentals.length === 0 ? (
+        <p className="text-sm text-gray-500 italic">{empty}</p>
+      ) : (
+        <div className="space-y-2">
+          {rentals.map((rental) => (
+            <RentalCard key={rental.id} rental={rental} status={status} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function filterRentals(
+  rentals: ObjectRental[],
+  searchUserName: string,
+  searchDate: string
+): ObjectRental[] {
+  const normalizedNameQuery = searchUserName.trim().toLowerCase();
+
+  return rentals.filter((rental) => {
+    const userName = `${rental.user.first_name || ""} ${rental.user.last_name || ""}`.toLowerCase();
+    const matchesUserName = userName.includes(normalizedNameQuery);
+
+    let matchesDate = true;
+    if (searchDate) {
+      const dayStart = new Date(`${searchDate}T00:00:00`);
+      const dayEnd = new Date(`${searchDate}T23:59:59.999`);
+      const rentalStartDate = new Date(rental.start_date);
+      const rentalEndDate = new Date(rental.end_date);
+
+      // Match when the reservation interval overlaps the selected calendar day.
+      matchesDate = rentalStartDate <= dayEnd && rentalEndDate >= dayStart;
+    }
+
+    return matchesUserName && matchesDate;
+  });
+}
+
+export function RentalHistoryView({ rentalsByStatus, loading }: RentalHistoryViewProps) {
+  const [searchUserName, setSearchUserName] = useState("");
+  const [searchDate, setSearchDate] = useState("");
+  const hasActiveFilters = searchUserName.trim().length > 0 || searchDate.length > 0;
+
+  const clearFilters = () => {
+    setSearchUserName("");
+    setSearchDate("");
+  };
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="p-4 text-sm text-gray-500">Cargando historial de reservas...</CardContent>
+      </Card>
+    );
+  }
+
+  const totalRentals =
+    rentalsByStatus.active.length + rentalsByStatus.cancelled.length + rentalsByStatus.completed.length;
+
+  if (totalRentals === 0) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center p-8 text-center">
+          <Calendar className="h-12 w-12 text-gray-300 mb-3" />
+          <h3 className="text-lg font-semibold text-gray-900">No hay reservas</h3>
+          <p className="text-sm text-gray-500 mt-1">Este objeto aún no tiene reservas registradas</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Filter rentals based on search criteria
+  const filteredActive = filterRentals(rentalsByStatus.active, searchUserName, searchDate);
+  const filteredCancelled = filterRentals(rentalsByStatus.cancelled, searchUserName, searchDate);
+  const filteredCompleted = filterRentals(rentalsByStatus.completed, searchUserName, searchDate);
+
+  const filteredTotal = filteredActive.length + filteredCancelled.length + filteredCompleted.length;
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Historial de Reservas</CardTitle>
+          <CardDescription>
+            Total de {filteredTotal} de {totalRentals} reserva{totalRentals !== 1 ? "s" : ""}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Search Bar */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <h4 className="font-medium text-gray-900">Buscar reservas</h4>
+              {hasActiveFilters && (
+                <Button type="button" variant="outline" size="sm" onClick={clearFilters}>
+                  Limpiar filtros
+                </Button>
+              )}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Buscar por nombre..."
+                  value={searchUserName}
+                  onChange={(e) => setSearchUserName(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  type="date"
+                  value={searchDate}
+                  onChange={(e) => setSearchDate(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            {hasActiveFilters && (
+              <p className="text-sm text-gray-600">
+                Mostrando {filteredTotal} de {totalRentals} resultado{totalRentals !== 1 ? "s" : ""}
+              </p>
+            )}
+          </div>
+
+          <Tabs defaultValue="active" className="w-full">
+            <TabsList className="w-full">
+              <TabsTrigger value="active">
+                Activas ({filteredActive.length})
+              </TabsTrigger>
+              <TabsTrigger value="completed">
+                Finalizadas ({filteredCompleted.length})
+              </TabsTrigger>
+              <TabsTrigger value="cancelled">
+                Canceladas ({filteredCancelled.length})
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="active" className="pt-4">
+              <RentalSection
+                title="Reservas Activas"
+                description={`${filteredActive.length} de ${rentalsByStatus.active.length} en progreso`}
+                rentals={filteredActive}
+                status="ACTIVE"
+                icon={<Calendar className="h-5 w-5 text-blue-600" />}
+                empty="No hay reservas activas que coincidan con la búsqueda"
+              />
+            </TabsContent>
+
+            <TabsContent value="completed" className="pt-4">
+              <RentalSection
+                title="Reservas Completadas"
+                description={`${filteredCompleted.length} de ${rentalsByStatus.completed.length} finalizadas`}
+                rentals={filteredCompleted}
+                status="COMPLETED"
+                icon={<CheckCircle className="h-5 w-5 text-emerald-600" />}
+                empty="No hay reservas completadas que coincidan con la búsqueda"
+              />
+            </TabsContent>
+
+            <TabsContent value="cancelled" className="pt-4">
+              <RentalSection
+                title="Reservas Canceladas"
+                description={`${filteredCancelled.length} de ${rentalsByStatus.cancelled.length} canceladas`}
+                rentals={filteredCancelled}
+                status="CANCELLED"
+                icon={<XCircle className="h-5 w-5 text-red-600" />}
+                empty="No hay reservas canceladas que coincidan con la búsqueda"
+              />
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
