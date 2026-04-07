@@ -44,7 +44,8 @@ export function ReservationModal({ object, isOpen, onClose, onSuccess }: Reserva
     return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split("T")[0];
   }, []);
 
-  const availableSlots = availability?.available_slots.filter((slot) => slot.status === "available") ?? [];
+  const allSlots = availability?.available_slots ?? [];
+  const selectableSlots = allSlots.filter((slot) => slot.status === "available");
 
   const loadAvailability = async (date: string) => {
     try {
@@ -124,6 +125,18 @@ export function ReservationModal({ object, isOpen, onClose, onSuccess }: Reserva
     return fullName || reservation.user.email;
   }
 
+  function formatSlotLabel(slot: ObjectAvailabilitySlot): string {
+    const interval = formatInterval(slot.start_time, slot.end_time);
+    if (slot.status === "occupied") {
+      return `${interval} · Completo`;
+    }
+
+    return interval;
+  }
+
+  const selectedSlotAvailabilityText = selectedSlot
+    ? `${selectedSlot.available_stock} disponibles`
+    : "Selecciona una hora";
   const reservations = [...(availability?.reservations ?? [])].sort(
     (left, right) => new Date(left.start_date).getTime() - new Date(right.start_date).getTime(),
   );
@@ -207,11 +220,11 @@ export function ReservationModal({ object, isOpen, onClose, onSuccess }: Reserva
             <label className="text-sm font-medium text-gray-900">Horas disponibles</label>
             {loadingAvailability ? (
               <p className="text-sm text-gray-500">Calculando huecos...</p>
-            ) : (availability?.available_slots.length ?? 0) === 0 ? (
+            ) : (allSlots.length ?? 0) === 0 ? (
               <p className="text-sm text-gray-500">No hay tramos disponibles para esta fecha.</p>
             ) : (
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {availability?.available_slots.map((slot) => {
+                {allSlots.map((slot) => {
                   const isSelected = selectedSlot?.start_time === slot.start_time;
                   const isPast = slot.status === "past";
                   const alreadyReservedByMe =
@@ -222,7 +235,8 @@ export function ReservationModal({ object, isOpen, onClose, onSuccess }: Reserva
                         reservation.start_date === slot.start_time &&
                         reservation.end_date === slot.end_time,
                     ) ?? false);
-                  const isDisabled = isPast || alreadyReservedByMe;
+                  const isFull = slot.status === "occupied";
+                  const isDisabled = isPast || alreadyReservedByMe || isFull;
                   const isPastLike = isPast || alreadyReservedByMe;
 
                   return (
@@ -234,18 +248,20 @@ export function ReservationModal({ object, isOpen, onClose, onSuccess }: Reserva
                       className={`relative flex items-center justify-center rounded-md px-3 py-2 text-sm font-medium transition-all duration-200 ${
                         isPastLike
                           ? "cursor-not-allowed border border-transparent bg-muted/20 text-muted-foreground/40"
+                          : isFull
+                          ? "cursor-not-allowed border border-transparent bg-muted/60 text-muted-foreground/60"
                           : isSelected
                           ? "scale-[1.02] border border-green-700 bg-green-700 text-white shadow-md"
                           : "border border-gray-200 bg-background text-gray-900 hover:border-green-700 hover:bg-green-700/5 hover:text-green-700"
                       }`}
                     >
-                      {formatInterval(slot.start_time, slot.end_time)}
+                      {formatSlotLabel(slot)}
                     </button>
                   );
                 })}
               </div>
             )}
-            {!loadingAvailability && availableSlots.length === 0 && (
+            {!loadingAvailability && selectableSlots.length === 0 && (
               <p className="text-xs text-gray-500">No quedan tramos libres en esta fecha.</p>
             )}
           </div>
@@ -257,13 +273,18 @@ export function ReservationModal({ object, isOpen, onClose, onSuccess }: Reserva
           )}
 
           <SheetFooter className="mt-auto pt-4 border-t border-gray-200">
-            <div className="flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
-                Cancelar
-              </Button>
+            <div className="flex w-full flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-xs text-gray-500 sm:order-1">
+                Disponibles para la hora elegida: {selectedSlotAvailabilityText}
+              </div>
+              <div className="flex w-full flex-col-reverse gap-2 sm:order-2 sm:w-auto sm:flex-row sm:justify-end">
+                <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
+                  Cancelar
+                </Button>
               <Button type="submit" disabled={loading || !selectedSlot || loadingAvailability} className="bg-green-700 hover:bg-green-700/90 text-white">
                 {loading ? "Reservando..." : "Confirmar reserva"}
               </Button>
+              </div>
             </div>
           </SheetFooter>
         </form>
