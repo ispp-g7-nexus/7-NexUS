@@ -8,6 +8,7 @@ export interface CommonSpace {
   id: number;
   name: string;
   description: string;
+  img?: string;
   capacity: number;
   is_active: boolean;
   open_time: string;
