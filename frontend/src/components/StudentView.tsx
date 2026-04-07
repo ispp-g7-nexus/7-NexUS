@@ -255,6 +255,12 @@ export function StudentView({ onLogout }: StudentViewProps) {
             globalThis.localStorage.setItem(HOME_INCIDENCES_SEEN_AT_KEY, new Date().toISOString());
         }
 
+        if (activeTab === "reservations") {
+            import("../services/objects").then((m) => {
+                m.objectsService.markRemindersAsViewed().catch(() => {});
+            });
+        }
+
         if (activeTab !== "announcements") {
             if (markAsViewedTimeoutRef.current) {
                 globalThis.clearTimeout(markAsViewedTimeoutRef.current);
