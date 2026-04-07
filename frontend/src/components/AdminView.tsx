@@ -1,4 +1,4 @@
-import { AlertCircle, BedDouble, Bell, BookOpen, Briefcase, Calendar, Home, LayoutDashboard, LogOut, Menu, MessageSquare, Package, Palette, Shield, User, UserCheck, Users, Utensils } from "lucide-react";
+import { AlertCircle, AreaChart, BedDouble, Bell, BookOpen, Briefcase, Calendar, Home, LayoutDashboard, LogOut, Menu, MessageSquare, Package, Palette, Shield, User, UserCheck, Users, Utensils } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { chatsService, type ChatRealtimeEvent } from "../services/chats";
@@ -26,6 +26,7 @@ import { AdminReservations } from "./AdminReservations";
 import { AdminPackages } from "../pages/Packages/AdminPackages";
 
 import { StatCard } from "./statCard";
+import { AdminAnalytics } from "../pages/Analytics/AdminAnalytics";
 import { AdminBrandingPage } from "../pages/Branding/AdminBrandingPage";
 import { brandingService, type ResidenceBranding } from "../services/branding";
 import { Button } from "./ui/button";
@@ -409,6 +410,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
         { label: 'Paquetería',         value: 'Ver',             icon: Package,       theme: 'orange'  as const, onClick: () => setActiveTab('packages')      },
         { label: 'Menú Comedor',       value: 'Ver',             icon: Utensils,      theme: 'blue'   as const, onClick: () => setActiveTab('kitchen')       },
         { label: 'Recursos & Reservas',value: 'Ver',             icon: BookOpen,      theme: 'green'  as const, onClick: () => setActiveTab('reservations')  },
+        { label: 'Analíticas',         value: 'Ver',             icon: AreaChart,     theme: 'green'  as const, onClick: () => setActiveTab('analytics')     },
     ];
 
     const today = new Date().toLocaleDateString('es-ES', {
@@ -519,6 +521,13 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
                 );
             case "kitchen":
                 return <AdminMenuView />;
+
+            case "analytics":
+                return (
+                    <div className="p-4">
+                        <AdminAnalytics />
+                    </div>
+                );
 
             default:
                 return (
