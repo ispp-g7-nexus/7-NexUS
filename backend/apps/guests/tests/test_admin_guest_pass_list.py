@@ -83,7 +83,7 @@ class AdminGuestPassListTests(TenantTestCase):
         )
 
         student_role = Role.objects.create(
-            name="Student-AdminList",
+            name="Student",
             description="Residente",
             is_system_default=True,
             residence=None,
@@ -123,7 +123,9 @@ class AdminGuestPassListTests(TenantTestCase):
         client.defaults["HTTP_AUTHORIZATION"] = f"Bearer {token}"
         return client
 
-    def _create_pass(self, *, resident, pass_code, status, valid_from, valid_until, residence=None):
+    def _create_pass(
+        self, *, resident, pass_code, status, valid_from, valid_until, residence=None
+    ):
         return GuestPass.objects.create(
             residence=residence or self.residence,
             resident=resident,
@@ -179,7 +181,17 @@ class AdminGuestPassListTests(TenantTestCase):
 
         self.assertEqual(response.status_code, 200)
         item = response.json()[0]
-        for field in ["id", "full_name", "pass_code", "valid_from", "valid_until", "status", "comment", "created_at", "resident_name"]:
+        for field in [
+            "id",
+            "full_name",
+            "pass_code",
+            "valid_from",
+            "valid_until",
+            "status",
+            "comment",
+            "created_at",
+            "resident_name",
+        ]:
             self.assertIn(field, item)
 
     def test_resident_name_is_full_name_when_available(self):

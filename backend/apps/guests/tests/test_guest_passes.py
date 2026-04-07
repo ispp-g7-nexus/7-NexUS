@@ -16,7 +16,7 @@ from apps.residences.models import Residence, ResidenceDomain
 class GuestPassesApiTests(TenantTestCase):
     @classmethod
     def get_test_tenant_domain(cls):
-        return "guests.test.local"
+        return f"{cls.__name__.lower()}.test.local"
 
     @classmethod
     def setup_tenant(cls, tenant):
@@ -24,6 +24,7 @@ class GuestPassesApiTests(TenantTestCase):
         tenant.slug = "tenant-guests"
         tenant.is_active = True
         tenant.on_trial = True
+        tenant.schema_name = f"test_schema_{cls.__name__.lower()}"
 
     @classmethod
     def setup_domain(cls, domain):
@@ -352,9 +353,15 @@ class GuestPassesApiTests(TenantTestCase):
         self.assertIn(used.id, ids)
 
         by_code = {item["pass_code"]: item for item in payload}
-        self.assertEqual(by_code["PASS-HISTORY-EXPIRED-1"]["status"], GuestPass.Status.INACTIVE)
-        self.assertEqual(by_code["PASS-HISTORY-REVOKED-1"]["status"], GuestPass.Status.REVOKED)
-        self.assertEqual(by_code["PASS-HISTORY-USED-1"]["status"], GuestPass.Status.USED)
+        self.assertEqual(
+            by_code["PASS-HISTORY-EXPIRED-1"]["status"], GuestPass.Status.INACTIVE
+        )
+        self.assertEqual(
+            by_code["PASS-HISTORY-REVOKED-1"]["status"], GuestPass.Status.REVOKED
+        )
+        self.assertEqual(
+            by_code["PASS-HISTORY-USED-1"]["status"], GuestPass.Status.USED
+        )
         self.assertIn(revoked.id, ids)
         self.assertNotIn("PASS-HISTORY-ACTIVE-NOW-1", by_code)
         self.assertNotIn("PASS-HISTORY-UPCOMING-1", by_code)
@@ -389,7 +396,9 @@ class GuestPassesApiTests(TenantTestCase):
         now = timezone.now()
         valid_from = now + timedelta(hours=1)
         valid_until = valid_from + timedelta(hours=24, minutes=1)
-        payload = self._build_create_payload(valid_from=valid_from, valid_until=valid_until)
+        payload = self._build_create_payload(
+            valid_from=valid_from, valid_until=valid_until
+        )
 
         response = self.resident_client.post(
             self.create_url,
@@ -404,7 +413,9 @@ class GuestPassesApiTests(TenantTestCase):
         now = timezone.now()
         valid_from = now + timedelta(hours=4)
         valid_until = valid_from
-        payload = self._build_create_payload(valid_from=valid_from, valid_until=valid_until)
+        payload = self._build_create_payload(
+            valid_from=valid_from, valid_until=valid_until
+        )
 
         response = self.resident_client.post(
             self.create_url,
