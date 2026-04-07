@@ -79,7 +79,7 @@ def _create_event_chat_group(
     Returns (chat_group, error_message)
     """
     try:
-        chat_name = f"Evento: {event.title}"
+        chat_name = f"Evento: {event.title} ({event.start_time.strftime('%d/%m/%Y')})"
 
         chat_group = ChatGroup.objects.create(
             residence=event.residence,
@@ -103,8 +103,10 @@ def _create_event_chat_group(
             )
 
         return chat_group, None
-    except Exception as e:
-        return None, str(e)
+    except IntegrityError:
+        return None, "Este evento ya tiene un chat asociado o el nombre del chat está duplicado."
+    except Exception:
+        return None, "No se pudo crear el grupo de chat para este evento."
 
 
 def _publish_group_created_for_event(request, chat_group: ChatGroup) -> None:
@@ -118,7 +120,30 @@ def _publish_group_created_for_event(request, chat_group: ChatGroup) -> None:
     publish_chat_event(residence.id, "group_created", payload)
 
 
-def _serialize_event(event: Event, current_user, residence):
+def _get_user_interests(user) -> set:
+    if not hasattr(user, "student_profile"):
+        return set()
+    profile = user.student_profile
+    interests = profile.interests or []
+    custom_interests = profile.custom_interests or []
+    
+    user_tastes = set()
+    for taste in list(interests) + list(custom_interests):
+        if taste and isinstance(taste, str):
+            user_tastes.add(taste.strip().lower())
+    return user_tastes
+
+
+def _calculate_recommendation_score(event_tags: str, user_interests: set) -> int:
+    if not event_tags or not user_interests:
+        return 0
+    
+    tags = [tag.strip().lower() for tag in event_tags.split(",") if tag.strip()]
+    score = sum(1 for tag in tags if tag in user_interests)
+    return score
+
+
+def _serialize_event(event: Event, current_user, residence, recommendation_score=0, is_recommended=False):
     is_joined = event.participations.filter(user=current_user).exists()
     can_edit = event.host == current_user or is_events_admin(current_user, residence)
 
@@ -173,6 +198,8 @@ def _serialize_event(event: Event, current_user, residence):
         if event.chat_group
         else None,
         "is_chat_member": is_chat_member,
+        "recommendation_score": recommendation_score,
+        "is_recommended": is_recommended,
     }
 
 
@@ -317,11 +344,32 @@ class EventListView(AuthenticatedView):
         if not hasattr(request, "residence") or not request.residence:
             return JsonResponse({"detail": "No residence context."}, status=400)
 
-        events = Event.objects.filter(residence=request.residence).select_related(
+        events = list(Event.objects.filter(residence=request.residence).select_related(
             "host", "space"
-        )
+        ))
+
+        user_interests = _get_user_interests(request.user)
+        only_recommended = request.GET.get("recommended", "false").lower() == "true"
+
+        event_tuples = []
+        for event in events:
+            score = _calculate_recommendation_score(event.tags, user_interests)
+            is_recommended = score > 0
+            if only_recommended and not is_recommended:
+                continue
+            event_tuples.append((score, event.start_time, event, is_recommended))
+
+        # Order by recommendation score descending, then start_time descending
+        event_tuples.sort(key=lambda x: (x[0], x[1]), reverse=True)
+
         data = [
-            _serialize_event(event, request.user, request.residence) for event in events
+            _serialize_event(
+                event=tup[2],
+                current_user=request.user,
+                residence=request.residence,
+                recommendation_score=tup[0],
+                is_recommended=tup[3]
+            ) for tup in event_tuples
         ]
         return JsonResponse(data, safe=False)
 
@@ -354,6 +402,22 @@ class EventListView(AuthenticatedView):
                 return JsonResponse(
                     {"detail": "Ya asistes a otro evento en ese horario."}, status=400
                 )
+
+            # Validar que no haya otro evento con el mismo título para la misma fecha
+            event_title = str(body.get("title") or "").strip()
+            if event_title:
+                event_date = start_time.date()
+                if Event.objects.filter(
+                    residence=request.residence,
+                    title__iexact=event_title,
+                    start_time__date=event_date,
+                ).exists():
+                    return JsonResponse(
+                        {
+                            "detail": f"Ya existe un evento con el título '{event_title}' para la fecha seleccionada."
+                        },
+                        status=400,
+                    )
 
             location = str(body.get("location") or "").strip()
             space_id = body.get("space_id")
@@ -487,7 +551,9 @@ class EventDetailView(AuthenticatedView):
             id=event_id,
             residence=request.residence,
         )
-        return JsonResponse(_serialize_event(event, request.user, request.residence))
+        user_interests = _get_user_interests(request.user)
+        score = _calculate_recommendation_score(event.tags, user_interests)
+        return JsonResponse(_serialize_event(event, request.user, request.residence, recommendation_score=score, is_recommended=score > 0))
 
     def put(self, request, event_id):
         event = get_object_or_404(Event, id=event_id, residence=request.residence)
@@ -526,6 +592,27 @@ class EventDetailView(AuthenticatedView):
                 if overlapping_participating:
                     return JsonResponse(
                         {"detail": "Ya asistes a otro evento en ese horario."},
+                        status=400,
+                    )
+
+            # Validar que no haya otro evento con el mismo título para la misma fecha
+            raw_title = body.get("title", event.title)
+            event_title = str(raw_title or "").strip()
+            if event_title:
+                event_date = start_time.date()
+                if (
+                    Event.objects.filter(
+                        residence=request.residence,
+                        title__iexact=event_title,
+                        start_time__date=event_date,
+                    )
+                    .exclude(id=event_id)
+                    .exists()
+                ):
+                    return JsonResponse(
+                        {
+                            "detail": f"Ya existe otro evento con el título '{event_title}' para la fecha seleccionada."
+                        },
                         status=400,
                     )
 
