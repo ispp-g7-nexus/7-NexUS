@@ -9,11 +9,13 @@ export interface Role {
     description: string;
     is_system_default: boolean;
     residence: number | null;
+    permissions?: string[];
 }
 
 export interface RoleFormData {
     name: string;
     description: string;
+    permissions?: string[];
 }
 
 const getHeaders = (): HeadersInit => {

@@ -56,6 +56,7 @@ class RoleViewSet(viewsets.ModelViewSet):
                 name=serializer.validated_data.get("name"),
                 description=serializer.validated_data.get("description", ""),
                 residence=residence,
+                permissions=serializer.validated_data.get("permissions", []),
             )
             serializer.instance = role_instance
             logger.debug(

@@ -1,11 +1,18 @@
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from django.db import transaction
+
 from apps.membership.models import Membership, Role
+
 from .models import Staff
-from .serializers import StaffCreateSerializer, StaffReadSerializer, StaffUpdateSerializer
+from .permissions import IsStaffAdmin
+from .serializers import (
+    StaffCreateSerializer,
+    StaffReadSerializer,
+    StaffUpdateSerializer,
+)
 
 UserModel = get_user_model()
 
@@ -19,9 +26,9 @@ def _assign_role_membership(user, role_id, residence):
     except Role.DoesNotExist:
         return
     # Elimina memberships admin anteriores para este usuario en esta residencia
-    Membership.objects.filter(
-        user=user, residence=residence
-    ).exclude(role__name__iexact="Student").delete()
+    Membership.objects.filter(user=user, residence=residence).exclude(
+        role__name__iexact="Student"
+    ).delete()
     Membership.objects.create(
         user=user,
         role=role,
@@ -41,7 +48,11 @@ class StaffViewSet(viewsets.ModelViewSet):
     PATCH  /staff/{id}/   → actualizar parcial
     DELETE /staff/{id}/   → eliminar
     """
+
+    permission_classes = [IsAuthenticated, IsStaffAdmin]
+
     queryset = Staff.objects.select_related("user").all()
+
     def get_serializer_class(self):
         if self.action == "create":
             return StaffCreateSerializer

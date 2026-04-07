@@ -13,10 +13,10 @@ from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
 from apps.common.utils.jwt_auth import resolve_user_from_request
-from apps.common.utils.permissions import _is_admin_for_residence
 from apps.residences.models import Residence
 
 from .models import CommonSpace, SpaceReservation
+from .permissions import is_reservations_admin
 
 
 def _serialize_space(space: CommonSpace) -> dict:
@@ -106,7 +106,9 @@ def _compute_available_slots(
             {
                 "start_time": current.isoformat(),
                 "end_time": slot_end.isoformat(),
-                "status": "past" if is_past else ("occupied" if is_occupied else "available"),
+                "status": "past"
+                if is_past
+                else ("occupied" if is_occupied else "available"),
             }
         )
 
@@ -302,7 +304,6 @@ class SpaceReservationCreateView(AuthenticatedView):
                 is_active=True,
             )
 
-            # Serializa reservas concurrentes del mismo usuario para validar solapes entre espacios.
             get_user_model().objects.select_for_update().filter(
                 id=request.user.id
             ).exists()
@@ -414,7 +415,7 @@ class SpaceReservationCancelView(AuthenticatedView):
             residence=residence,
         )
 
-        can_cancel = reservation.user_id == request.user.id or _is_admin_for_residence(
+        can_cancel = reservation.user_id == request.user.id or is_reservations_admin(
             request.user, residence
         )
         if not can_cancel:
@@ -436,11 +437,11 @@ class SpaceReservationCancelView(AuthenticatedView):
 
 
 class AdminRequiredMixin:
-    """Mixin que verifica que el usuario es admin de la residencia."""
+    """Mixin que verifica que el usuario tiene permisos de administrador de espacios."""
 
     def check_permissions(self, request):
         residence = _validate_residence(request)
-        if not residence or not _is_admin_for_residence(request.user, residence):
+        if not residence or not is_reservations_admin(request.user, residence):
             return JsonResponse(
                 {"detail": "No tienes permisos de administrador."}, status=403
             )
@@ -484,7 +485,6 @@ class AdminSpaceListCreateView(AdminRequiredMixin, AuthenticatedView):
                 {"detail": "capacity debe ser un entero positivo."}, status=400
             )
 
-        from django.core.exceptions import ValidationError
         from datetime import time as dt_time
 
         try:

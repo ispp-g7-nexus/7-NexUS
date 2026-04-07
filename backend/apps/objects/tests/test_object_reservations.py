@@ -2,14 +2,14 @@ from datetime import datetime, time, timedelta
 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from django_tenants.test.cases import TenantTestCase
+from django_tenants.test.cases import FastTenantTestCase
 from django_tenants.test.client import TenantClient
 
 from apps.objects.models import Object, ObjectRental
 from apps.residences.models import Residence, ResidenceDomain
 
 
-class ObjectReservationApiTests(TenantTestCase):
+class ObjectReservationApiTests(FastTenantTestCase):
     @classmethod
     def get_test_tenant_domain(cls):
         return "objects.test.local"
@@ -20,11 +20,13 @@ class ObjectReservationApiTests(TenantTestCase):
         tenant.slug = "tenant-test-objects"
         tenant.is_active = True
         tenant.on_trial = True
+        return tenant
 
     @classmethod
     def setup_domain(cls, domain):
         domain.domain = cls.get_test_tenant_domain()
         domain.is_primary = True
+        return domain
 
     def setUp(self):
         super().setUp()
