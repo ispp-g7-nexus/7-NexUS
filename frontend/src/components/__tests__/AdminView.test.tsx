@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AdminView } from '../AdminView'
@@ -53,18 +53,20 @@ vi.mock('../useAdminNotifications', () => ({
 vi.mock('../../hooks/useTenantBranding', () => ({ applyGlobalBranding: vi.fn() }))
 
 // ── Services ─────────────────────────────────────────────────────────────────
-vi.mock('../../services/auth', () => ({
-  authService: {
-    me: vi.fn().mockResolvedValue({ user: { email: 'admin@test.com' } }),
-    logout: vi.fn(),
-  },
-}))
+vi.mock('../../services/auth', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...(actual as object),
+    hasScreenPermission: vi.fn().mockReturnValue(true),
+    authService: {
+      me: vi.fn().mockResolvedValue({ user: { email: 'admin@test.com' } }),
+      logout: vi.fn(),
+    },
+  };
+})
 
 vi.mock('../../services/bedrooms', () => ({
-  listBedrooms: vi.fn().mockResolvedValue([
-    { id: 1, numero: '101', capacidad_maxima: 4, ocupantes_actuales: 2, tipo: 'Doble', edificio: 'A', planta: 1, residentes: [] },
-    { id: 2, numero: '102', capacidad_maxima: 2, ocupantes_actuales: 2, tipo: 'Doble', edificio: 'A', planta: 1, residentes: [] },
-  ]),
+  listBedrooms: vi.fn().mockResolvedValue([]), // Lo dejamos vacío por defecto, lo inyectaremos en cada test
 }))
 
 vi.mock('../../services/guestPasses', () => ({
@@ -99,12 +101,14 @@ vi.mock('../../services/chats', () => ({
 }))
 
 // ── Helper ───────────────────────────────────────────────────────────────────
-function renderAdminView(currentUser: { name: string; email: string } | null = { name: 'Carlos Admin', email: 'admin@test.com' }) {
-  return render(
-    <MemoryRouter>
-      <AdminView onLogout={vi.fn()} currentUser={currentUser} />
-    </MemoryRouter>,
-  )
+async function renderAdminView(currentUser: { name: string; email: string } | null = { name: 'Carlos Admin', email: 'admin@test.com' }) {
+  await act(async () => {
+    render(
+      <MemoryRouter>
+        <AdminView onLogout={vi.fn()} currentUser={currentUser} />
+      </MemoryRouter>,
+    )
+  });
 }
 
 describe('AdminView — [NX-S2.08 / NX-S1.15]', () => {
@@ -114,18 +118,18 @@ describe('AdminView — [NX-S2.08 / NX-S1.15]', () => {
 
   // ── S2.08: Vista de usuario activo en el menú lateral ──────────────────────
   describe('S2.08 — usuario activo en menú lateral', () => {
-    it('muestra el nombre del usuario en el saludo del dashboard', () => {
-      renderAdminView()
+    it('muestra el nombre del usuario en el saludo del dashboard', async () => {
+      await renderAdminView()
       expect(screen.getByText('Carlos Admin')).toBeInTheDocument()
     })
 
-    it('muestra "Administrador" como fallback cuando currentUser es null', () => {
-      renderAdminView(null)
+    it('muestra "Administrador" como fallback cuando currentUser es null', async () => {
+      await renderAdminView(null)
       expect(screen.getByText('Administrador')).toBeInTheDocument()
     })
 
-    it('el saludo contiene "Bienvenido/a"', () => {
-      renderAdminView()
+    it('el saludo contiene "Bienvenido/a"', async () => {
+      await renderAdminView()
       expect(screen.getByText(/Bienvenido\/a/)).toBeInTheDocument()
     })
   })
@@ -133,7 +137,13 @@ describe('AdminView — [NX-S2.08 / NX-S1.15]', () => {
   // ── S1.15: Ocupación en tiempo real ───────────────────────────────────────
   describe('S1.15 — visualización de ocupación', () => {
     it('muestra el porcentaje de ocupación en la métrica "Habitaciones"', async () => {
-      renderAdminView()
+      const { listBedrooms } = await import('../../services/bedrooms')
+      vi.mocked(listBedrooms).mockResolvedValue([
+        { id: 1, numero: '101', capacidad_maxima: 4, ocupantes_actuales: 2, tipo: 'Doble', edificio: 'A', planta: 1, residentes: [] },
+        { id: 2, numero: '102', capacidad_maxima: 2, ocupantes_actuales: 2, tipo: 'Doble', edificio: 'A', planta: 1, residentes: [] },
+      ])
+
+      await renderAdminView()
       // 4+2=6 plazas, 2+2=4 ocupadas → Math.round(4/6*100) = 67%
       await waitFor(() => {
         const habitacionesStat = screen.getByTestId('stat-Habitaciones')
@@ -143,8 +153,9 @@ describe('AdminView — [NX-S2.08 / NX-S1.15]', () => {
 
     it('muestra "—" en ocupación cuando el servicio falla', async () => {
       const { listBedrooms } = await import('../../services/bedrooms')
-      vi.mocked(listBedrooms).mockRejectedValueOnce(new Error('Network error'))
-      renderAdminView()
+      vi.mocked(listBedrooms).mockRejectedValue(new Error('Network error'))
+
+      await renderAdminView()
       await waitFor(() => {
         const habitacionesStat = screen.getByTestId('stat-Habitaciones')
         expect(habitacionesStat.textContent).toBe('—')
@@ -153,10 +164,11 @@ describe('AdminView — [NX-S2.08 / NX-S1.15]', () => {
 
     it('muestra 0% cuando todas las habitaciones están libres', async () => {
       const { listBedrooms } = await import('../../services/bedrooms')
-      vi.mocked(listBedrooms).mockResolvedValueOnce([
+      vi.mocked(listBedrooms).mockResolvedValue([
         { id: 1, numero: '101', capacidad_maxima: 2, ocupantes_actuales: 0, tipo: 'Doble', edificio: 'A', planta: 1, residentes: [] },
       ])
-      renderAdminView()
+
+      await renderAdminView()
       await waitFor(() => {
         const habitacionesStat = screen.getByTestId('stat-Habitaciones')
         expect(habitacionesStat.textContent).toBe('0%')

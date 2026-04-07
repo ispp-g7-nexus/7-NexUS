@@ -7,9 +7,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.membership.permissions import IsResident
-from apps.residents.permissions import IsResidenceAdmin
 
 from .models import Package
+from .permissions import IsPackageAdmin
 from .serializers import (
     LabelPreviewInputSerializer,
     PackageCreateSerializer,
@@ -34,7 +34,7 @@ ERROR_NO_RESIDENCE = "No se ha determinado la residencia."
 
 
 class PackageAdminViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsResidenceAdmin]
+    permission_classes = [IsPackageAdmin]
     parser_classes = [JSONParser, MultiPartParser, FormParser]
     http_method_names = ["get", "post", "patch", "put", "delete", "head", "options"]
 
@@ -137,7 +137,7 @@ class PackageAdminViewSet(viewsets.ModelViewSet):
 
 
 class PackageLabelPreviewView(APIView):
-    permission_classes = [IsResidenceAdmin]
+    permission_classes = [IsPackageAdmin]
     parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request):
