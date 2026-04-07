@@ -231,8 +231,8 @@ def revoke_guest_pass_admin(pass_id: int, residence) -> GuestPass:
     except GuestPass.DoesNotExist:
         raise ValidationError({"detail": "Pase no encontrado."}) from None
 
-    if guest_pass.status == GuestPass.Status.REVOKED:
-        raise ValidationError({"detail": "El pase ya está revocado."}) from None
+    if guest_pass.status != GuestPass.Status.ACTIVE:
+        raise ValidationError({"detail": "Solo se pueden revocar pases activos."}) from None
 
     guest_pass.status = GuestPass.Status.REVOKED
     guest_pass.revoked_at = timezone.now()

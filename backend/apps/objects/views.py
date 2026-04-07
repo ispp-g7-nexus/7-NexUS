@@ -174,11 +174,11 @@ class ObjectDetailView(AuthenticatedView):
     def delete(self, request, object_id):
         if not hasattr(request, 'residence') or not request.residence:
             return JsonResponse({"detail": "No residence context."}, status=400)
+        if not _is_admin_for_residence(request.user, request.residence):
+            return JsonResponse({"detail": "Unauthorized"}, status=403)
         obj, error_response = get_residence_object(request, object_id)
         if error_response:
             return error_response
-        if not _is_admin_for_residence(request.user, request.residence):
-            return JsonResponse({"detail": "Unauthorized"}, status=403)
         try:
             obj.delete()
             return JsonResponse({"detail": "Object deleted"}, status=200)
