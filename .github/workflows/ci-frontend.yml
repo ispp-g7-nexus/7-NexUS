@@ -38,3 +38,15 @@ jobs:
       - name: Build frontend app
         working-directory: frontend
         run: npm run build
+
+      - name: Run unit and component tests
+        working-directory: frontend
+        run: npm run test
+
+      - name: Install Playwright browsers
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E tests
+        working-directory: frontend
+        run: npm run test:e2e

@@ -318,6 +318,32 @@ class CommonViewsTests(FastTenantTestCase):
 
     # --- TESTS AUTH ME ---
 
+    # --- NX-S2.08: Vista de usuario activo en el menú lateral ---
+
+    def test_auth_me_get_returns_authenticated_true(self):
+        url = reverse("auth-me")
+        response = self.student_client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["authenticated"])
+
+    def test_auth_me_get_includes_first_and_last_name(self):
+        self.user.first_name = "Carlos"
+        self.user.last_name = "Admin"
+        self.user.save()
+
+        url = reverse("auth-me")
+        response = self.student_client.get(url)
+
+        user_data = response.json()["user"]
+        self.assertEqual(user_data["first_name"], "Carlos")
+        self.assertEqual(user_data["last_name"], "Admin")
+
+    def test_auth_me_get_unauthenticated_returns_false(self):
+        url = reverse("auth-me")
+        response = self.anon_client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()["authenticated"])
+
     def test_auth_me_view_patch(self):
         url = reverse("auth-me")
         response = self.student_client.patch(
@@ -625,3 +651,97 @@ class AdminCreateResidentViewsTests(FastTenantTestCase):
         payload["state"] = "Pending"
         response = self.admin_client.post(self.url, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class IsAdminForResidenceTests(FastTenantTestCase):
+    @classmethod
+    def get_test_tenant_domain(cls):
+        return "perm-utils.test.local"
+
+    @classmethod
+    def setup_tenant(cls, tenant):
+        tenant.name = "Perm Utils Tenant"
+        tenant.slug = "perm-utils-tenant"
+        tenant.is_active = True
+
+    @classmethod
+    def setup_domain(cls, domain):
+        domain.domain = cls.get_test_tenant_domain()
+        domain.is_primary = True
+
+    def setUp(self):
+        super().setUp()
+        from apps.common.utils.permissions import _is_admin_for_residence as _fn
+        self._fn = _fn
+
+        self.residence = Residence.objects.create(
+            name="Residencia Perm",
+            slug="res-perm",
+            code="RP-001",
+            timezone="Europe/Madrid",
+            is_active=True,
+        )
+        self.other_residence = Residence.objects.create(
+            name="Residencia Other",
+            slug="res-other",
+            code="RP-002",
+            timezone="Europe/Madrid",
+            is_active=True,
+        )
+        self.user = UserModel.objects.create_user(
+            username="perm-user",
+            email="perm@test.com",
+            password=PASSWORD,
+        )
+        self.admin_role = Role.objects.create(
+            name="Admin",
+            description="Admin",
+            is_system_default=True,
+            residence=None,
+        )
+        self.student_role, _ = Role.objects.get_or_create(
+            name="Student",
+            defaults={"description": "Student", "is_system_default": True, "residence": None},
+        )
+
+    def test_returns_false_when_residence_is_none(self):
+        self.assertFalse(self._fn(self.user, None))
+
+    def test_returns_true_when_user_is_staff(self):
+        self.user.is_staff = True
+        self.assertTrue(self._fn(self.user, self.residence))
+
+    def test_returns_true_for_admin_membership_in_same_residence(self):
+        Membership.objects.create(
+            user=self.user, role=self.admin_role,
+            residence=self.residence, is_active=True,
+        )
+        self.assertTrue(self._fn(self.user, self.residence))
+
+    def test_returns_false_for_admin_membership_in_other_residence(self):
+        Membership.objects.create(
+            user=self.user, role=self.admin_role,
+            residence=self.other_residence, is_active=True,
+        )
+        self.assertFalse(self._fn(self.user, self.residence))
+
+    def test_returns_false_for_student_membership(self):
+        Membership.objects.create(
+            user=self.user, role=self.student_role,
+            residence=self.residence, is_active=True,
+        )
+        self.assertFalse(self._fn(self.user, self.residence))
+
+    def test_returns_false_for_admin_of_different_residence(self):
+        Membership.objects.create(
+            user=self.user, role=self.admin_role,
+            residence=self.other_residence, is_active=True,
+        )
+        self.assertFalse(self._fn(self.user, self.residence))
+
+    def test_returns_false_when_membership_is_inactive(self):
+        Membership.objects.create(
+            user=self.user, role=self.admin_role,
+            residence=self.residence, is_active=False,
+        )
+        self.assertFalse(self._fn(self.user, self.residence))

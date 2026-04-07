@@ -187,7 +187,6 @@ class ObjectDetailView(AuthenticatedView):
     def delete(self, request, object_id):
         if not hasattr(request, "residence") or not request.residence:
             return JsonResponse({"detail": "No residence context."}, status=400)
-
         obj, error_response = get_residence_object(request, object_id)
         if error_response:
             return error_response
