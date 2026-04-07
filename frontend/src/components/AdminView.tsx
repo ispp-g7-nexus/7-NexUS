@@ -1,4 +1,4 @@
-import { AlertCircle, BedDouble, Bell, BookOpen, Briefcase, Calendar, Home, LayoutDashboard, LogOut, Menu, MessageSquare, Package, Palette, Shield, User, UserCheck, Users, Utensils } from "lucide-react";
+import { AlertCircle, BedDouble, Bell, BookOpen, Briefcase, Calendar, Home, LayoutDashboard, LogOut, Menu, MessageSquare, Package, Palette, Shield, User, UserCheck, Users, Utensils, X } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { chatsService, type ChatRealtimeEvent } from "../services/chats";
@@ -350,6 +350,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
         hasUnreadNotifications,
         handleNotificationsOpenChange,
         handleOpenNotification,
+        handleDismissNotification,
         handleNavbarModuleAccess,
     } = useAdminNotifications();
 
@@ -577,23 +578,40 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
                                                 const isSeen = seenNotificationIds.includes(notification.id);
 
                                                 return (
-                                                    <button
+                                                    <div
                                                         key={notification.id}
-                                                        type="button"
-                                                        onClick={() => {
-                                                            const source = handleOpenNotification(notification);
-                                                            if (source === "reservations") setReservationsSubTab(notification.id.startsWith("object-reservations-") ? "objetos" : "espacios");
-                                                            goToTab(getTabByNotificationSource(source));
-                                                        }}
-                                                        className={`w-full rounded-lg border p-3 text-left transition-colors hover:shadow-sm ${getCardClassesBySource(notification.source)}`}
+                                                        className={`relative w-full rounded-lg border transition-colors hover:shadow-sm ${getCardClassesBySource(notification.source)}`}
                                                     >
-                                                        <div className="mb-1 flex items-start justify-between gap-2">
-                                                            <p className="text-sm font-semibold text-gray-900">{notification.title}</p>
-                                                            {!isSeen && <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-red-500" />}
-                                                        </div>
-                                                        <p className="line-clamp-2 text-xs text-gray-600">{notification.message}</p>
-                                                        <p className="mt-2 text-[11px] text-gray-400">{formatRelativeTime(notification.timestamp)}</p>
-                                                    </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const source = handleOpenNotification(notification);
+                                                                if (source === "reservations") setReservationsSubTab(notification.id.startsWith("object-reservations-") ? "objetos" : "espacios");
+                                                                goToTab(getTabByNotificationSource(source));
+                                                            }}
+                                                            className="w-full p-3 pr-10 text-left"
+                                                        >
+                                                            <div className="mb-1 flex items-start justify-between gap-2">
+                                                                <p className="text-sm font-semibold text-gray-900">{notification.title}</p>
+                                                                {!isSeen && <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-red-500" />}
+                                                            </div>
+                                                            <p className="line-clamp-2 text-xs text-gray-600">{notification.message}</p>
+                                                            <p className="mt-2 text-[11px] text-gray-400">{formatRelativeTime(notification.timestamp)}</p>
+                                                        </button>
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={(event) => {
+                                                                event.stopPropagation();
+                                                                handleDismissNotification(notification);
+                                                            }}
+                                                            className="absolute right-2 top-2 inline-flex h-6 w-6 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-700"
+                                                            aria-label="Descartar notificación"
+                                                            title="Descartar notificación"
+                                                        >
+                                                            <X className="h-4 w-4" />
+                                                        </button>
+                                                    </div>
                                                 );
                                             })
                                         )}
