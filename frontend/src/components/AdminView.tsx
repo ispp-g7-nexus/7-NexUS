@@ -419,6 +419,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
         { id: "announcements", label: "Avisos", icon: <Bell className="w-5 h-5" />, permission: "announcements" },
         { id: "visitors", label: "Visitantes", icon: <UserCheck className="w-5 h-5" />, permission: "guests" },
         { id: "chats", label: "Chats", icon: <MessageSquare className="w-5 h-5" />, permission: "chats" },
+        { id: "analytics", label: "Analíticas", icon: <AreaChart className="w-5 h-5" />, permission: "analytics" },
     ];
 
 
@@ -443,7 +444,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
         { id: 'packages', label: 'Paquetería', value: 'Ver', icon: Package, theme: 'orange' as const, onClick: () => goToTab('packages') },
         { id: 'kitchen', label: 'Menú Comedor', value: 'Ver', icon: Utensils, theme: 'blue' as const, onClick: () => goToTab('kitchen') },
         { id: 'reservations', label: 'Recursos & Reservas', value: 'Ver', icon: BookOpen, theme: 'green' as const, onClick: () => goToTab('reservations') },
-        { label: 'Analíticas',         value: 'Ver',             icon: AreaChart,     theme: 'green'  as const, onClick: () => setActiveTab('analytics')     },
+        { id: 'analytics', label: 'Analíticas', value: 'Ver', icon: AreaChart, theme: 'green' as const, onClick: () => goToTab('analytics') },
     ];
 
     const metricsData = rawMetricsData.filter(metric => {
