@@ -659,3 +659,46 @@ class AdminObjectNotificationsView(AuthenticatedView):
         ]
 
         return JsonResponse(data, safe=False)
+
+
+class UserPendingRemindersCountView(AuthenticatedView):
+    def get(self, request):
+        if not hasattr(request, "residence") or not request.residence:
+            return JsonResponse({"detail": "No residence context."}, status=400)
+
+        now = timezone.now()
+        window_end = now + timedelta(minutes=15)
+
+        count = ObjectRental.objects.filter(
+            user=request.user,
+            object__residence=request.residence,
+            status="ACTIVE",
+            end_date__lte=window_end,
+            end_date__gt=now,
+            reminder_viewed_at__isnull=True,
+        ).count()
+
+        return JsonResponse({"count": count})
+
+
+class UserMarkRemindersAsViewedView(AuthenticatedView):
+    def post(self, request):
+        if not hasattr(request, "residence") or not request.residence:
+            return JsonResponse({"detail": "No residence context."}, status=400)
+
+        now = timezone.now()
+        window_end = now + timedelta(minutes=15)
+
+        count = ObjectRental.objects.filter(
+            user=request.user,
+            object__residence=request.residence,
+            status="ACTIVE",
+            end_date__lte=window_end,
+            end_date__gt=now,
+            reminder_viewed_at__isnull=True,
+        ).update(reminder_viewed_at=now)
+
+        return JsonResponse({
+            "message": "Recordatorios marcados como vistos.",
+            "marked_count": count
+        })
