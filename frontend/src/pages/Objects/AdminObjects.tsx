@@ -1,5 +1,5 @@
-import { Plus, RefreshCw, Package, Tag, X } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Plus, RefreshCw, Package, Search, Tag, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "../../components/ui/button";
@@ -62,7 +62,7 @@ function ObjectCard({
 
       {object.tags && (
         <div className="flex flex-wrap gap-1">
-          {object.tags.split(',').map((tag, idx) => (
+          {object.tags.split(",").map((tag, idx) => (
             <span key={idx} className="rounded-md bg-blue-100 px-2 py-1 text-xs text-blue-700">
               {tag.trim()}
             </span>
@@ -89,6 +89,7 @@ function ObjectCard({
 
 export function AdminObjects() {
   const [objects, setObjects] = useState<ObjectItem[]>([]);
+  const [search, setSearch] = useState("");
   const [labels, setLabels] = useState<ObjectLabelItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingLabels, setLoadingLabels] = useState(true);
@@ -121,6 +122,25 @@ export function AdminObjects() {
   const [loadingRentals, setLoadingRentals] = useState(false);
   const getErrorMessage = (err: unknown, fallback: string) =>
     err instanceof Error && err.message ? err.message : fallback;
+
+  const filteredObjects = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
+    if (!query) {
+      return objects;
+    }
+
+    return objects.filter((object) => {
+      const searchableFields = [
+        object.name,
+        object.description ?? "",
+        object.location ?? "",
+        object.tags ?? "",
+      ];
+
+      return searchableFields.some((field) => field.toLowerCase().includes(query));
+    });
+  }, [objects, search]);
 
   const loadObjects = useCallback(async (options?: { silent?: boolean }) => {
     const requestId = ++objectsRequestIdRef.current;
@@ -312,24 +332,17 @@ export function AdminObjects() {
           <div>
             <h2 className="text-2xl font-bold tracking-tight">Gestión de objetos</h2>
             <p className="mt-1 text-sm text-gray-500">
-              Administra los objetos disponibles para préstamo
+              {search.trim()
+                ? `Mostrando ${filteredObjects.length} de ${objects.length} objeto${objects.length === 1 ? "" : "s"}`
+                : `Administra ${objects.length} objeto${objects.length === 1 ? "" : "s"} disponibles para préstamo`}
             </p>
           </div>
           <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsLabelsOpen(true)}
-            >
+            <Button type="button" variant="outline" onClick={() => setIsLabelsOpen(true)}>
               <Tag className="mr-2 h-4 w-4" />
               Gestionar etiquetas
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => void loadObjects()}
-              disabled={loading}
-            >
+            <Button type="button" variant="outline" onClick={() => void loadObjects()} disabled={loading}>
               <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
               Actualizar
             </Button>
@@ -337,6 +350,18 @@ export function AdminObjects() {
               <Plus className="mr-2 h-4 w-4" />
               Crear objeto
             </Button>
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por nombre, ubicación o etiqueta..."
+              className="pl-10"
+            />
           </div>
         </div>
       </header>
@@ -348,9 +373,9 @@ export function AdminObjects() {
       ) : objects.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center p-12 text-center">
-            <Package className="h-12 w-12 text-gray-500 mb-3" />
-            <h3 className="text-lg font-semibold mb-2">No hay objetos</h3>
-            <p className="text-sm text-gray-500 mb-4">
+            <Package className="mb-3 h-12 w-12 text-gray-500" />
+            <h3 className="mb-2 text-lg font-semibold">No hay objetos</h3>
+            <p className="mb-4 text-sm text-gray-500">
               Comienza creando el primer objeto disponible para préstamo
             </p>
             <Button onClick={handleOpenForm}>
@@ -359,9 +384,22 @@ export function AdminObjects() {
             </Button>
           </CardContent>
         </Card>
+      ) : filteredObjects.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center p-12 text-center">
+            <Search className="mb-3 h-12 w-12 text-gray-500" />
+            <h3 className="mb-2 text-lg font-semibold">Sin coincidencias</h3>
+            <p className="mb-4 text-sm text-gray-500">
+              No hay objetos que coincidan con la búsqueda actual.
+            </p>
+            <Button variant="outline" onClick={() => setSearch("")}>
+              Limpiar búsqueda
+            </Button>
+          </CardContent>
+        </Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
-          {objects.map((object) => (
+          {filteredObjects.map((object) => (
             <ObjectCard
               key={object.id}
               object={object}
@@ -477,14 +515,12 @@ export function AdminObjects() {
         <SheetContent className="w-full sm:max-w-2xl">
           <SheetHeader className="mb-6">
             <SheetTitle>Historial de Reservas</SheetTitle>
-            <SheetDescription>
-              {selectedObject?.name}
-            </SheetDescription>
+            <SheetDescription>{selectedObject?.name}</SheetDescription>
           </SheetHeader>
-          <div className="overflow-y-auto max-h-[calc(100vh-120px)]">
-            <RentalHistoryView 
-              rentalsByStatus={rentalsByStatus} 
-              loading={loadingRentals} 
+          <div className="max-h-[calc(100vh-120px)] overflow-y-auto">
+            <RentalHistoryView
+              rentalsByStatus={rentalsByStatus}
+              loading={loadingRentals}
             />
           </div>
         </SheetContent>
@@ -520,7 +556,7 @@ export function AdminObjects() {
                 onClick={() => void handleCreateLabel()}
                 disabled={creatingLabel || !newLabelName.trim()}
               >
-                <Plus className="w-4 h-4 mr-1" />
+                <Plus className="mr-1 h-4 w-4" />
                 Añadir
               </Button>
             </div>
@@ -531,22 +567,22 @@ export function AdminObjects() {
               <p className="text-sm text-gray-500">No hay etiquetas personalizadas.</p>
             ) : (
               <>
-                <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Personalizadas</div>
+                <div className="text-xs font-medium uppercase tracking-wide text-gray-500">Personalizadas</div>
                 <div className="flex flex-wrap gap-2">
                   {labels.map((label) => (
                     <span
                       key={label.id}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-primary/10 text-primary"
+                      className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary"
                     >
-                      <Tag className="w-3 h-3" /> {label.name}
+                      <Tag className="h-3 w-3" /> {label.name}
                       <button
                         type="button"
                         onClick={() => void handleDeleteLabel(label)}
-                        className="ml-1 hover:text-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="ml-1 transition-colors hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
                         title="Eliminar etiqueta"
                         disabled={deletingLabelIds.includes(label.id)}
                       >
-                        <X className="w-3 h-3" />
+                        <X className="h-3 w-3" />
                       </button>
                     </span>
                   ))}
