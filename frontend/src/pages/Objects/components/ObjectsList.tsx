@@ -86,6 +86,18 @@ function formatInterval(startTime: string, endTime: string): string {
   return `${formatClock(startTime)} - ${formatClock(endTime)}`;
 }
 
+function formatSlotAvailability(slot: { start_time: string; end_time: string; available_stock: number; status: string }): string {
+  if (slot.status === "past") {
+    return formatInterval(slot.start_time, slot.end_time);
+  }
+
+  if (slot.status === "occupied") {
+    return `${formatInterval(slot.start_time, slot.end_time)} · Completo`;
+  }
+
+  return `${formatInterval(slot.start_time, slot.end_time)} · ${slot.available_stock} disponibles`;
+}
+
 function formatDateLabel(dateValue: string): string {
   const [year, month, day] = dateValue.split("-");
   if (!year || !month || !day) {
@@ -163,6 +175,10 @@ function ObjectCard({
             </div>
           )}
           <div className="flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            <span>Stock total: {object.stock_total}</span>
+          </div>
+          <div className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
             <span>{object.rentals_count} reserva(s)</span>
           </div>
@@ -214,7 +230,7 @@ function ObjectCard({
                   key={`${slot.start_time}-${slot.end_time}`}
                   className="inline-flex items-center gap-1.5 rounded-md border border-green-700/30 bg-green-700/5 px-2.5 py-1 text-xs font-medium text-green-700"
                 >
-                  {formatInterval(slot.start_time, slot.end_time)}
+                  {formatSlotAvailability(slot)}
                 </span>
               ))}
               {remainingSlots > 0 && <span className="ml-1 text-xs font-medium text-gray-500">+ {remainingSlots} tramos más</span>}

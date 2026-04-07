@@ -1,5 +1,5 @@
-import { Plus, RefreshCw, Package } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Plus, RefreshCw, Package, Search, Tag, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "../../components/ui/button";
@@ -9,7 +9,7 @@ import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "../../components/ui/sheet";
-import { objectsService, ObjectItem, RentalsByStatus } from "../../services/objects";
+import { objectsService, ObjectItem, ObjectLabelItem, RentalsByStatus } from "../../services/objects";
 import { RentalHistoryView } from "../../components/RentalHistoryView";
 
 const OBJECT_NAME_REGEX = /^[\p{L}\p{N} _().,-]+$/u;
@@ -45,20 +45,24 @@ function ObjectCard({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 text-sm">
+      <div className="grid grid-cols-3 gap-2 text-sm">
         <div className="rounded-lg bg-muted/60 px-3 py-2">
           <p className="text-xs text-gray-500">Ubicación</p>
           <p className="font-semibold text-gray-900 truncate">{object.location || "No especificada"}</p>
         </div>
         <div className="rounded-lg bg-muted/60 px-3 py-2 text-center">
-          <p className="text-xs text-gray-500">Reservas</p>
-          <p className="font-semibold text-gray-900">{object.rentals_count}</p>
+          <p className="text-xs text-gray-500">Stock total</p>
+          <p className="font-semibold text-gray-900">{object.stock_total}</p>
+        </div>
+        <div className="rounded-lg bg-muted/60 px-3 py-2 text-center">
+          <p className="text-xs text-gray-500">Stock asignado ahora</p>
+          <p className="font-semibold text-gray-900">{object.current_reserved_stock}</p>
         </div>
       </div>
 
       {object.tags && (
         <div className="flex flex-wrap gap-1">
-          {object.tags.split(',').map((tag, idx) => (
+          {object.tags.split(",").map((tag, idx) => (
             <span key={idx} className="rounded-md bg-blue-100 px-2 py-1 text-xs text-blue-700">
               {tag.trim()}
             </span>
@@ -85,7 +89,14 @@ function ObjectCard({
 
 export function AdminObjects() {
   const [objects, setObjects] = useState<ObjectItem[]>([]);
+  const [search, setSearch] = useState("");
+  const [labels, setLabels] = useState<ObjectLabelItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingLabels, setLoadingLabels] = useState(true);
+  const [isLabelsOpen, setIsLabelsOpen] = useState(false);
+  const [newLabelName, setNewLabelName] = useState("");
+  const [creatingLabel, setCreatingLabel] = useState(false);
+  const [deletingLabelIds, setDeletingLabelIds] = useState<number[]>([]);
   const objectsRequestIdRef = useRef(0);
 
   // Create form
@@ -95,7 +106,8 @@ export function AdminObjects() {
     name: "",
     description: "",
     location: "",
-    tags: "",
+    stock_total: "1",
+    label_ids: [] as number[],
     image_url: "",
   });
 
@@ -110,6 +122,25 @@ export function AdminObjects() {
   const [loadingRentals, setLoadingRentals] = useState(false);
   const getErrorMessage = (err: unknown, fallback: string) =>
     err instanceof Error && err.message ? err.message : fallback;
+
+  const filteredObjects = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
+    if (!query) {
+      return objects;
+    }
+
+    return objects.filter((object) => {
+      const searchableFields = [
+        object.name,
+        object.description ?? "",
+        object.location ?? "",
+        object.tags ?? "",
+      ];
+
+      return searchableFields.some((field) => field.toLowerCase().includes(query));
+    });
+  }, [objects, search]);
 
   const loadObjects = useCallback(async (options?: { silent?: boolean }) => {
     const requestId = ++objectsRequestIdRef.current;
@@ -144,18 +175,95 @@ export function AdminObjects() {
     }
   };
 
+  const loadLabels = useCallback(async () => {
+    setLoadingLabels(true);
+    try {
+      const data = await objectsService.listLabels();
+      setLabels(data);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Error al cargar etiquetas de objetos"));
+    } finally {
+      setLoadingLabels(false);
+    }
+  }, []);
+
   useEffect(() => {
     void loadObjects();
   }, [loadObjects]);
 
+  useEffect(() => {
+    void loadLabels();
+  }, [loadLabels]);
+
   const handleOpenForm = () => {
-    setFormData({ name: "", description: "", location: "", tags: "", image_url: "" });
+    setFormData({ name: "", description: "", location: "", stock_total: "1", label_ids: [], image_url: "" });
     setFormOpen(true);
   };
 
   const handleCloseForm = () => {
     setFormOpen(false);
-    setFormData({ name: "", description: "", location: "", tags: "", image_url: "" });
+    setFormData({ name: "", description: "", location: "", stock_total: "1", label_ids: [], image_url: "" });
+  };
+
+  const toggleLabelSelection = (labelId: number) => {
+    setFormData((prev) => {
+      const isSelected = prev.label_ids.includes(labelId);
+      return {
+        ...prev,
+        label_ids: isSelected ? prev.label_ids.filter((id) => id !== labelId) : [...prev.label_ids, labelId],
+      };
+    });
+  };
+
+  const handleCreateLabel = async () => {
+    const trimmed = newLabelName.trim();
+    if (!trimmed) {
+      toast.error("El nombre de la etiqueta es obligatorio");
+      return;
+    }
+
+    setCreatingLabel(true);
+    try {
+      const created = await objectsService.createLabel(trimmed);
+      setLabels((prev) => [...prev, created]);
+      setNewLabelName("");
+      toast.success(`Etiqueta "${trimmed}" creada.`);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Error al crear etiqueta"));
+    } finally {
+      setCreatingLabel(false);
+    }
+  };
+
+  const handleDeleteLabel = async (label: ObjectLabelItem) => {
+    if (deletingLabelIds.includes(label.id)) {
+      return;
+    }
+
+    setDeletingLabelIds((prev) => [...prev, label.id]);
+    try {
+      await objectsService.deleteLabel(label.id);
+      setLabels((prev) => prev.filter((item) => item.id !== label.id));
+      setFormData((prev) => ({
+        ...prev,
+        label_ids: prev.label_ids.filter((id) => id !== label.id),
+      }));
+      toast.success("Etiqueta eliminada.");
+    } catch (err: unknown) {
+      const message = getErrorMessage(err, "Error al eliminar etiqueta");
+      if (message.includes("Etiqueta no encontrada")) {
+        setLabels((prev) => prev.filter((item) => item.id !== label.id));
+        setFormData((prev) => ({
+          ...prev,
+          label_ids: prev.label_ids.filter((id) => id !== label.id),
+        }));
+        toast.success("Etiqueta eliminada.");
+      } else {
+        toast.error(message);
+      }
+    } finally {
+      setDeletingLabelIds((prev) => prev.filter((id) => id !== label.id));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -177,7 +285,8 @@ export function AdminObjects() {
         name: trimmedName,
         description: formData.description || undefined,
         location: formData.location || undefined,
-        tags: formData.tags || undefined,
+        stock_total: Number.parseInt(formData.stock_total, 10) || 1,
+        label_ids: formData.label_ids,
         image_url: formData.image_url || undefined,
       });
       toast.success("Objeto creado exitosamente");
@@ -223,16 +332,17 @@ export function AdminObjects() {
           <div>
             <h2 className="text-2xl font-bold tracking-tight">Gestión de objetos</h2>
             <p className="mt-1 text-sm text-gray-500">
-              Administra los objetos disponibles para préstamo
+              {search.trim()
+                ? `Mostrando ${filteredObjects.length} de ${objects.length} objeto${objects.length === 1 ? "" : "s"}`
+                : `Administra ${objects.length} objeto${objects.length === 1 ? "" : "s"} disponibles para préstamo`}
             </p>
           </div>
           <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => void loadObjects()}
-              disabled={loading}
-            >
+            <Button type="button" variant="outline" onClick={() => setIsLabelsOpen(true)}>
+              <Tag className="mr-2 h-4 w-4" />
+              Gestionar etiquetas
+            </Button>
+            <Button type="button" variant="outline" onClick={() => void loadObjects()} disabled={loading}>
               <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
               Actualizar
             </Button>
@@ -240,6 +350,18 @@ export function AdminObjects() {
               <Plus className="mr-2 h-4 w-4" />
               Crear objeto
             </Button>
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por nombre, ubicación o etiqueta..."
+              className="pl-10"
+            />
           </div>
         </div>
       </header>
@@ -251,9 +373,9 @@ export function AdminObjects() {
       ) : objects.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center p-12 text-center">
-            <Package className="h-12 w-12 text-gray-500 mb-3" />
-            <h3 className="text-lg font-semibold mb-2">No hay objetos</h3>
-            <p className="text-sm text-gray-500 mb-4">
+            <Package className="mb-3 h-12 w-12 text-gray-500" />
+            <h3 className="mb-2 text-lg font-semibold">No hay objetos</h3>
+            <p className="mb-4 text-sm text-gray-500">
               Comienza creando el primer objeto disponible para préstamo
             </p>
             <Button onClick={handleOpenForm}>
@@ -262,9 +384,22 @@ export function AdminObjects() {
             </Button>
           </CardContent>
         </Card>
+      ) : filteredObjects.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center p-12 text-center">
+            <Search className="mb-3 h-12 w-12 text-gray-500" />
+            <h3 className="mb-2 text-lg font-semibold">Sin coincidencias</h3>
+            <p className="mb-4 text-sm text-gray-500">
+              No hay objetos que coincidan con la búsqueda actual.
+            </p>
+            <Button variant="outline" onClick={() => setSearch("")}>
+              Limpiar búsqueda
+            </Button>
+          </CardContent>
+        </Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
-          {objects.map((object) => (
+          {filteredObjects.map((object) => (
             <ObjectCard
               key={object.id}
               object={object}
@@ -320,13 +455,46 @@ export function AdminObjects() {
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="tags">Etiquetas (separadas por comas)</Label>
+                <Label htmlFor="stock_total">Stock total *</Label>
                 <Input
-                  id="tags"
-                  value={formData.tags}
-                  onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                  placeholder="Ej: deportes, exterior, bicicleta"
+                  id="stock_total"
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={formData.stock_total}
+                  onChange={(e) => setFormData({ ...formData, stock_total: e.target.value })}
+                  required
+                  placeholder="Ej: 10"
                 />
+              </div>
+
+              <div className="grid gap-2">
+                <Label>Etiquetas</Label>
+                {loadingLabels ? (
+                  <p className="text-sm text-gray-500">Cargando etiquetas...</p>
+                ) : labels.length === 0 ? (
+                  <p className="text-sm text-gray-500">No hay etiquetas disponibles. Crea una en el panel de gestion.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {labels.map((label) => {
+                      const selected = formData.label_ids.includes(label.id);
+                      return (
+                        <button
+                          key={label.id}
+                          type="button"
+                          onClick={() => toggleLabelSelection(label.id)}
+                          className={`rounded-md border px-2 py-1 text-xs font-medium transition-colors ${
+                            selected
+                              ? "border-green-700 bg-green-700 text-white"
+                              : "border-border bg-background text-gray-700 hover:border-green-700 hover:text-green-700"
+                          }`}
+                        >
+                          {label.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -347,18 +515,89 @@ export function AdminObjects() {
         <SheetContent className="w-full sm:max-w-2xl">
           <SheetHeader className="mb-6">
             <SheetTitle>Historial de Reservas</SheetTitle>
-            <SheetDescription>
-              {selectedObject?.name}
-            </SheetDescription>
+            <SheetDescription>{selectedObject?.name}</SheetDescription>
           </SheetHeader>
-          <div className="overflow-y-auto max-h-[calc(100vh-120px)]">
-            <RentalHistoryView 
-              rentalsByStatus={rentalsByStatus} 
-              loading={loadingRentals} 
+          <div className="max-h-[calc(100vh-120px)] overflow-y-auto">
+            <RentalHistoryView
+              rentalsByStatus={rentalsByStatus}
+              loading={loadingRentals}
             />
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Dialog: Gestionar etiquetas */}
+      <Dialog open={isLabelsOpen} onOpenChange={setIsLabelsOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Gestionar etiquetas</DialogTitle>
+            <DialogDescription>
+              Crea o elimina etiquetas personalizadas. Estarán disponibles al crear un objeto.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Input
+                value={newLabelName}
+                onChange={(e) => setNewLabelName(e.target.value)}
+                placeholder="Nombre de la etiqueta..."
+                className="flex-1"
+                maxLength={30}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    void handleCreateLabel();
+                  }
+                }}
+              />
+              <Button
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+                onClick={() => void handleCreateLabel()}
+                disabled={creatingLabel || !newLabelName.trim()}
+              >
+                <Plus className="mr-1 h-4 w-4" />
+                Añadir
+              </Button>
+            </div>
+
+            {loadingLabels ? (
+              <p className="text-sm text-gray-500">Cargando etiquetas...</p>
+            ) : labels.length === 0 ? (
+              <p className="text-sm text-gray-500">No hay etiquetas personalizadas.</p>
+            ) : (
+              <>
+                <div className="text-xs font-medium uppercase tracking-wide text-gray-500">Personalizadas</div>
+                <div className="flex flex-wrap gap-2">
+                  {labels.map((label) => (
+                    <span
+                      key={label.id}
+                      className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary"
+                    >
+                      <Tag className="h-3 w-3" /> {label.name}
+                      <button
+                        type="button"
+                        onClick={() => void handleDeleteLabel(label)}
+                        className="ml-1 transition-colors hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                        title="Eliminar etiqueta"
+                        disabled={deletingLabelIds.includes(label.id)}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsLabelsOpen(false)}>
+              Cerrar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

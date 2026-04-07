@@ -40,6 +40,7 @@ export function UpcomingEvents({
                     image={event.image_url || "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&q=80&w=400"}
                     tags={event.tags}
                     isJoined={event.is_joined}
+                    isRecommended={event.is_recommended}
                     canJoin={event.can_join}
                     chatGroup={event.chat_group}
                     isChatMember={event.is_chat_member}
