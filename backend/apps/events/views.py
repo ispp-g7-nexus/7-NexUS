@@ -79,7 +79,7 @@ def _create_event_chat_group(
     Returns (chat_group, error_message)
     """
     try:
-        chat_name = f"Evento: {event.title}"
+        chat_name = f"Evento: {event.title} ({event.start_time.strftime('%d/%m/%Y')})"
 
         chat_group = ChatGroup.objects.create(
             residence=event.residence,
@@ -103,8 +103,10 @@ def _create_event_chat_group(
             )
 
         return chat_group, None
-    except Exception as e:
-        return None, str(e)
+    except IntegrityError:
+        return None, "Este evento ya tiene un chat asociado o el nombre del chat está duplicado."
+    except Exception:
+        return None, "No se pudo crear el grupo de chat para este evento."
 
 
 def _publish_group_created_for_event(request, chat_group: ChatGroup) -> None:
@@ -355,6 +357,22 @@ class EventListView(AuthenticatedView):
                     {"detail": "Ya asistes a otro evento en ese horario."}, status=400
                 )
 
+            # Validar que no haya otro evento con el mismo título para la misma fecha
+            event_title = str(body.get("title") or "").strip()
+            if event_title:
+                event_date = start_time.date()
+                if Event.objects.filter(
+                    residence=request.residence,
+                    title__iexact=event_title,
+                    start_time__date=event_date,
+                ).exists():
+                    return JsonResponse(
+                        {
+                            "detail": f"Ya existe un evento con el título '{event_title}' para la fecha seleccionada."
+                        },
+                        status=400,
+                    )
+
             location = str(body.get("location") or "").strip()
             space_id = body.get("space_id")
 
@@ -526,6 +544,27 @@ class EventDetailView(AuthenticatedView):
                 if overlapping_participating:
                     return JsonResponse(
                         {"detail": "Ya asistes a otro evento en ese horario."},
+                        status=400,
+                    )
+
+            # Validar que no haya otro evento con el mismo título para la misma fecha
+            raw_title = body.get("title", event.title)
+            event_title = str(raw_title or "").strip()
+            if event_title:
+                event_date = start_time.date()
+                if (
+                    Event.objects.filter(
+                        residence=request.residence,
+                        title__iexact=event_title,
+                        start_time__date=event_date,
+                    )
+                    .exclude(id=event_id)
+                    .exists()
+                ):
+                    return JsonResponse(
+                        {
+                            "detail": f"Ya existe otro evento con el título '{event_title}' para la fecha seleccionada."
+                        },
                         status=400,
                     )
 

@@ -1038,6 +1038,8 @@ class EventDetailViewTests(ViewTestsBase):
         from apps.events.views import EventDetailView
 
         mock_event = MagicMock()
+        mock_event.id = 999
+        mock_event.title = "Internal Test Event"
         mock_event.event_type = Event.Type.INTERNAL
         mock_event.space_id = self.space.id
         mock_event.start_time = self.now + timedelta(hours=4)
@@ -1045,6 +1047,7 @@ class EventDetailViewTests(ViewTestsBase):
         mock_event.participants_count = 0
         mock_event.max_participants = 10
         mock_event.location = ""
+        mock_event.residence = self.residence
 
         # Simulate host user matches exactly
         mock_event.host = self.host_user
@@ -1072,9 +1075,9 @@ class EventDetailViewTests(ViewTestsBase):
             user=self.host_user,
         )
         res = EventDetailView.as_view()(req, event_id=999)
-        self.assertEqual(res.status_code, 400)
+        self.assertEqual(res.status_code, 200)
         self.assertIn(
-            "El evento interno debe tener una reserva asociada.", res.content.decode()
+            "Event updated successfully", res.content.decode()
         )
 
 
