@@ -8,6 +8,7 @@ import { ObjectRental } from "../services/objects";
 
 interface RentalsByStatus {
   active: ObjectRental[];
+  in_progress: ObjectRental[];
   cancelled: ObjectRental[];
   completed: ObjectRental[];
 }
@@ -15,6 +16,8 @@ interface RentalsByStatus {
 interface RentalHistoryViewProps {
   rentalsByStatus: RentalsByStatus;
   loading: boolean;
+  onMarkReturned?: (rental: ObjectRental) => Promise<void>;
+  completingRentalIds?: number[];
 }
 
 function formatDate(date: string): string {
@@ -32,9 +35,13 @@ function formatDate(date: string): string {
 function RentalCard({
   rental,
   status,
+  onMarkReturned,
+  isCompleting,
 }: {
   rental: ObjectRental;
-  status: "ACTIVE" | "CANCELLED" | "COMPLETED";
+  status: "ACTIVE" | "IN_PROGRESS" | "CANCELLED" | "COMPLETED";
+  onMarkReturned?: (rental: ObjectRental) => Promise<void>;
+  isCompleting?: boolean;
 }) {
   const getStatusConfig = (status: string) => {
     switch (status) {
@@ -44,7 +51,15 @@ function RentalCard({
           color: "text-blue-600",
           bg: "bg-blue-50",
           badge: "bg-blue-100 text-blue-700",
-          label: "Activa",
+          label: "Reservada",
+        };
+      case "IN_PROGRESS":
+        return {
+          icon: Calendar,
+          color: "text-amber-700",
+          bg: "bg-amber-50",
+          badge: "bg-amber-100 text-amber-800",
+          label: "En curso",
         };
       case "CANCELLED":
         return {
@@ -102,6 +117,35 @@ function RentalCard({
                 </p>
               )}
             </div>
+            {status === "IN_PROGRESS" && (
+              <div className="mt-2 space-y-1 text-sm">
+                {rental.is_overdue ? (
+                  <p className="font-medium text-amber-700">
+                    Retraso: {rental.overdue_human ?? `${rental.overdue_minutes ?? 0} min`}
+                  </p>
+                ) : (
+                  <p className="text-gray-600">
+                    Tiempo restante: {rental.remaining_human ?? `${rental.remaining_minutes ?? 0} min`}
+                  </p>
+                )}
+                {rental.elapsed_human && (
+                  <p className="text-gray-600">En uso desde hace: {rental.elapsed_human}</p>
+                )}
+              </div>
+            )}
+            {status === "IN_PROGRESS" && onMarkReturned && (
+              <div className="mt-3">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => void onMarkReturned(rental)}
+                  disabled={isCompleting}
+                >
+                  {isCompleting ? "Marcando..." : "Marcar como devuelto"}
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -116,13 +160,17 @@ function RentalSection({
   status,
   icon: Icon,
   empty,
+  onMarkReturned,
+  completingRentalIds,
 }: {
   title: string;
   description: string;
   rentals: ObjectRental[];
-  status: "ACTIVE" | "CANCELLED" | "COMPLETED";
+  status: "ACTIVE" | "IN_PROGRESS" | "CANCELLED" | "COMPLETED";
   icon: React.ReactNode;
   empty: string;
+  onMarkReturned?: (rental: ObjectRental) => Promise<void>;
+  completingRentalIds?: number[];
 }) {
   return (
     <div className="space-y-3">
@@ -138,7 +186,13 @@ function RentalSection({
       ) : (
         <div className="space-y-2">
           {rentals.map((rental) => (
-            <RentalCard key={rental.id} rental={rental} status={status} />
+            <RentalCard
+              key={rental.id}
+              rental={rental}
+              status={status}
+              onMarkReturned={onMarkReturned}
+              isCompleting={Boolean(completingRentalIds?.includes(rental.id))}
+            />
           ))}
         </div>
       )}
@@ -172,7 +226,12 @@ function filterRentals(
   });
 }
 
-export function RentalHistoryView({ rentalsByStatus, loading }: RentalHistoryViewProps) {
+export function RentalHistoryView({
+  rentalsByStatus,
+  loading,
+  onMarkReturned,
+  completingRentalIds = [],
+}: RentalHistoryViewProps) {
   const [searchUserName, setSearchUserName] = useState("");
   const [searchDate, setSearchDate] = useState("");
   const hasActiveFilters = searchUserName.trim().length > 0 || searchDate.length > 0;
@@ -191,7 +250,10 @@ export function RentalHistoryView({ rentalsByStatus, loading }: RentalHistoryVie
   }
 
   const totalRentals =
-    rentalsByStatus.active.length + rentalsByStatus.cancelled.length + rentalsByStatus.completed.length;
+    rentalsByStatus.active.length +
+    rentalsByStatus.in_progress.length +
+    rentalsByStatus.cancelled.length +
+    rentalsByStatus.completed.length;
 
   if (totalRentals === 0) {
     return (
@@ -207,10 +269,15 @@ export function RentalHistoryView({ rentalsByStatus, loading }: RentalHistoryVie
 
   // Filter rentals based on search criteria
   const filteredActive = filterRentals(rentalsByStatus.active, searchUserName, searchDate);
+  const filteredInProgress = filterRentals(rentalsByStatus.in_progress, searchUserName, searchDate);
   const filteredCancelled = filterRentals(rentalsByStatus.cancelled, searchUserName, searchDate);
   const filteredCompleted = filterRentals(rentalsByStatus.completed, searchUserName, searchDate);
 
-  const filteredTotal = filteredActive.length + filteredCancelled.length + filteredCompleted.length;
+  const filteredTotal =
+    filteredActive.length +
+    filteredInProgress.length +
+    filteredCancelled.length +
+    filteredCompleted.length;
 
   return (
     <div className="space-y-6">
@@ -259,10 +326,13 @@ export function RentalHistoryView({ rentalsByStatus, loading }: RentalHistoryVie
             )}
           </div>
 
-          <Tabs defaultValue="active" className="w-full">
+          <Tabs defaultValue="in-progress" className="w-full">
             <TabsList className="w-full">
+              <TabsTrigger value="in-progress">
+                En curso ({filteredInProgress.length})
+              </TabsTrigger>
               <TabsTrigger value="active">
-                Activas ({filteredActive.length})
+                Reservadas ({filteredActive.length})
               </TabsTrigger>
               <TabsTrigger value="completed">
                 Finalizadas ({filteredCompleted.length})
@@ -272,14 +342,27 @@ export function RentalHistoryView({ rentalsByStatus, loading }: RentalHistoryVie
               </TabsTrigger>
             </TabsList>
 
+            <TabsContent value="in-progress" className="pt-4">
+              <RentalSection
+                title="Préstamos en curso"
+                description={`${filteredInProgress.length} de ${rentalsByStatus.in_progress.length} actualmente en uso`}
+                rentals={filteredInProgress}
+                status="IN_PROGRESS"
+                icon={<Calendar className="h-5 w-5 text-amber-700" />}
+                empty="No hay préstamos en curso que coincidan con la búsqueda"
+                onMarkReturned={onMarkReturned}
+                completingRentalIds={completingRentalIds}
+              />
+            </TabsContent>
+
             <TabsContent value="active" className="pt-4">
               <RentalSection
-                title="Reservas Activas"
-                description={`${filteredActive.length} de ${rentalsByStatus.active.length} en progreso`}
+                title="Reservas programadas"
+                description={`${filteredActive.length} de ${rentalsByStatus.active.length} pendientes de inicio`}
                 rentals={filteredActive}
                 status="ACTIVE"
                 icon={<Calendar className="h-5 w-5 text-blue-600" />}
-                empty="No hay reservas activas que coincidan con la búsqueda"
+                empty="No hay reservas programadas que coincidan con la búsqueda"
               />
             </TabsContent>
 

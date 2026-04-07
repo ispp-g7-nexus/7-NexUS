@@ -12,6 +12,7 @@ from django.db import transaction
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.db.models import Q
 from django.db.models import Count
 from django.db.utils import IntegrityError
 from django.http import JsonResponse
@@ -28,6 +29,7 @@ from .permissions import is_reservations_admin
 
 OBJECT_NAME_PATTERN = re.compile(r"^[\w\-\.\(\), ]+$")
 OBJECT_RESERVATION_INTERVAL_MINUTES = 60
+ACTIVE_RENTAL_STATUSES = ["ACTIVE", "IN_PROGRESS"]
 
 
 def _parse_datetime_or_none(value):
@@ -49,12 +51,19 @@ def _validate_object_name(raw_name) -> tuple[str, str | None]:
     return name, None
 
 
+def _sync_started_rentals_for_residence(residence) -> None:
+    now = timezone.now()
+    ObjectRental.objects.filter(
+        object__residence=residence,
+        status="ACTIVE",
+        start_date__lte=now,
+    ).update(status="IN_PROGRESS")
+
+
 def _serialize_object(obj):
     now = timezone.now()
     current_reserved_stock = obj.rentals.filter(
-        status='ACTIVE',
-        start_date__lt=now,
-        end_date__gt=now,
+        Q(status='IN_PROGRESS') | Q(status='ACTIVE', start_date__lt=now, end_date__gt=now),
     ).count()
     current_available_stock = max(obj.stock_total - current_reserved_stock, 0)
     is_available_now = obj.available and current_available_stock > 0
@@ -111,11 +120,79 @@ def _serialize_object_reservation(rental: ObjectRental) -> dict[str, Any]:
     }
 
 
+def _serialize_admin_rental(rental: ObjectRental) -> dict[str, Any]:
+    now = timezone.now()
+    rental_duration_seconds = max(int((rental.end_date - rental.start_date).total_seconds()), 0)
+    payload: dict[str, Any] = {
+        "id": rental.id,
+        "start_date": rental.start_date.isoformat(),
+        "end_date": rental.end_date.isoformat(),
+        "status": rental.status,
+        "created_at": rental.created_at.isoformat(),
+        "updated_at": rental.updated_at.isoformat(),
+        "user": {
+            "id": rental.user.id,
+            "first_name": getattr(rental.user, "first_name", ""),
+            "last_name": getattr(rental.user, "last_name", ""),
+            "email": getattr(rental.user, "email", ""),
+        },
+        "planned_duration_minutes": rental_duration_seconds // 60,
+    }
+
+    if rental.status == "IN_PROGRESS":
+        elapsed_seconds = max(int((now - rental.start_date).total_seconds()), 0)
+        payload["elapsed_minutes"] = elapsed_seconds // 60
+        payload["elapsed_human"] = _format_duration_human(elapsed_seconds)
+
+        if now > rental.end_date:
+            overdue_seconds = int((now - rental.end_date).total_seconds())
+            payload["is_overdue"] = True
+            payload["overdue_minutes"] = overdue_seconds // 60
+            payload["overdue_human"] = _format_duration_human(overdue_seconds)
+        else:
+            remaining_seconds = int((rental.end_date - now).total_seconds())
+            payload["is_overdue"] = False
+            payload["remaining_minutes"] = max(remaining_seconds // 60, 0)
+            payload["remaining_human"] = _format_duration_human(max(remaining_seconds, 0))
+
+    return payload
+
+
+def _format_duration_human(total_seconds: int) -> str:
+    seconds = max(total_seconds, 0)
+    total_minutes = seconds // 60
+    days, rem_minutes = divmod(total_minutes, 60 * 24)
+    hours, minutes = divmod(rem_minutes, 60)
+
+    chunks: list[str] = []
+    if days:
+        chunks.append(f"{days}d")
+    if hours:
+        chunks.append(f"{hours}h")
+    if minutes or not chunks:
+        chunks.append(f"{minutes}m")
+    return " ".join(chunks)
+
+
+def _sync_rental_progress_status(rental: ObjectRental, now: datetime | None = None) -> ObjectRental:
+    if rental.status != "ACTIVE":
+        return rental
+
+    reference = now or timezone.now()
+    if rental.start_date <= reference:
+        rental.status = "IN_PROGRESS"
+        rental.save(update_fields=["status", "updated_at"])
+    return rental
+
+
 def _count_active_rentals_in_interval(*, obj: Object, interval_start: datetime, interval_end: datetime) -> int:
     return obj.rentals.filter(
-        status="ACTIVE",
-        start_date__lt=interval_end,
-        end_date__gt=interval_start,
+        Q(status="IN_PROGRESS")
+        | Q(
+            status="ACTIVE",
+            start_date__lt=interval_end,
+            end_date__gt=interval_start,
+        )
     ).count()
 
 
@@ -180,6 +257,8 @@ class ObjectListView(AuthenticatedView):
     def get(self, request):
         if not hasattr(request, "residence") or not request.residence:
             return JsonResponse({"detail": "No residence context."}, status=400)
+
+        _sync_started_rentals_for_residence(request.residence)
 
         objs = Object.objects.filter(residence=request.residence).prefetch_related('labels').annotate(
             rentals_count=Count("rentals")
@@ -319,6 +398,7 @@ class ObjectDetailView(AuthenticatedView):
     def get(self, request, object_id):
         if not hasattr(request, "residence") or not request.residence:
             return JsonResponse({"detail": "No residence context."}, status=400)
+        _sync_started_rentals_for_residence(request.residence)
         obj, error_response = get_residence_object(request, object_id)
         if error_response:
             return error_response
@@ -351,6 +431,8 @@ class ObjectAvailabilityView(AuthenticatedView):
         if not hasattr(request, "residence") or not request.residence:
             return JsonResponse({"detail": "No residence context."}, status=400)
 
+        _sync_started_rentals_for_residence(request.residence)
+
         date_str = str(request.GET.get("date", "")).strip()
         if not date_str:
             return JsonResponse(
@@ -372,7 +454,7 @@ class ObjectAvailabilityView(AuthenticatedView):
         reservations = list(
             ObjectRental.objects.filter(
                 object=obj,
-                status="ACTIVE",
+                status__in=ACTIVE_RENTAL_STATUSES,
                 start_date__lt=day_end,
                 end_date__gt=day_start,
             )
@@ -395,6 +477,8 @@ class ObjectReserveView(AuthenticatedView):
     def post(self, request, object_id):
         if not hasattr(request, "residence") or not request.residence:
             return JsonResponse({"detail": "No residence context."}, status=400)
+
+        _sync_started_rentals_for_residence(request.residence)
 
         try:
             body = json.loads(request.body or "{}")
@@ -452,7 +536,7 @@ class ObjectReserveView(AuthenticatedView):
 
                 already_reserved_by_user = ObjectRental.objects.filter(
                     object=obj,
-                    status='ACTIVE',
+                    status__in=ACTIVE_RENTAL_STATUSES,
                     user=request.user,
                     start_date=start,
                     end_date=end,
@@ -466,10 +550,13 @@ class ObjectReserveView(AuthenticatedView):
                     )
 
                 active_rentals_in_slot = ObjectRental.objects.filter(
-                    object=obj,
-                    status='ACTIVE',
-                    start_date__lt=end,
-                    end_date__gt=start,
+                    Q(object=obj, status="IN_PROGRESS")
+                    | Q(
+                        object=obj,
+                        status="ACTIVE",
+                        start_date__lt=end,
+                        end_date__gt=start,
+                    )
                 ).count()
                 if active_rentals_in_slot >= obj.stock_total:
                     return JsonResponse(
@@ -499,6 +586,8 @@ class ObjectCancelView(AuthenticatedView):
         if not hasattr(request, "residence") or not request.residence:
             return JsonResponse({"detail": "No residence context."}, status=400)
 
+        _sync_started_rentals_for_residence(request.residence)
+
         obj, error_response = get_residence_object(request, object_id)
         if error_response:
             return error_response
@@ -507,13 +596,13 @@ class ObjectCancelView(AuthenticatedView):
             rental_id = body.get("rental_id")
             if rental_id:
                 updated = ObjectRental.objects.filter(
-                    id=rental_id, object=obj, user=request.user, status__in=["ACTIVE"]
+                    id=rental_id, object=obj, user=request.user, status__in=ACTIVE_RENTAL_STATUSES
                 ).update(status="CANCELLED")
             else:
                 updated = ObjectRental.objects.filter(
                     object=obj,
                     user=request.user,
-                    status="ACTIVE",
+                    status__in=ACTIVE_RENTAL_STATUSES,
                     end_date__gt=timezone.now(),
                 ).update(status="CANCELLED")
 
@@ -532,6 +621,8 @@ class ObjectRentalsView(AuthenticatedView):
         if not hasattr(request, "residence") or not request.residence:
             return JsonResponse({"detail": "No residence context."}, status=400)
 
+        _sync_started_rentals_for_residence(request.residence)
+
         if not is_reservations_admin(request.user, request.residence):
             return JsonResponse(
                 {"detail": "No tienes permisos para ver las reservas."}, status=403
@@ -545,41 +636,87 @@ class ObjectRentalsView(AuthenticatedView):
         rentals = obj.rentals.select_related("user").all()
 
         active = []
+        in_progress = []
         cancelled = []
         completed = []
 
         for r in rentals:
-            rental_data = {
-                "id": r.id,
-                "start_date": r.start_date.isoformat(),
-                "end_date": r.end_date.isoformat(),
-                "status": r.status,
-                "created_at": r.created_at.isoformat(),
-                "updated_at": r.updated_at.isoformat(),
-                "user": {
-                    "id": r.user.id,
-                    "first_name": getattr(r.user, "first_name", ""),
-                    "last_name": getattr(r.user, "last_name", ""),
-                },
-            }
+            r = _sync_rental_progress_status(r, now=now)
+            rental_data = _serialize_admin_rental(r)
 
             if r.status == "CANCELLED":
                 cancelled.append(rental_data)
-            elif r.status == "COMPLETED" or r.end_date <= now:
+            elif r.status == "COMPLETED":
                 completed.append(rental_data)
+            elif r.status == "IN_PROGRESS":
+                in_progress.append(rental_data)
             else:  # ACTIVE
                 active.append(rental_data)
 
         active.sort(key=lambda x: x["start_date"], reverse=True)
+        in_progress.sort(key=lambda x: x["end_date"])
         cancelled.sort(key=lambda x: x["updated_at"], reverse=True)
         completed.sort(key=lambda x: x["end_date"], reverse=True)
 
         return JsonResponse(
             {
                 "active": active,
+                "in_progress": in_progress,
                 "cancelled": cancelled,
                 "completed": completed,
             }
+        )
+
+
+class ObjectCompleteRentalView(AuthenticatedView):
+    def post(self, request, object_id, rental_id):
+        if not hasattr(request, "residence") or not request.residence:
+            return JsonResponse({"detail": "No residence context."}, status=400)
+
+        _sync_started_rentals_for_residence(request.residence)
+
+        if not is_reservations_admin(request.user, request.residence):
+            return JsonResponse(
+                {"detail": "No tienes permisos para gestionar préstamos."}, status=403
+            )
+
+        obj, error_response = get_residence_object(request, object_id)
+        if error_response:
+            return error_response
+
+        try:
+            rental = ObjectRental.objects.select_related("user").get(
+                id=rental_id,
+                object=obj,
+            )
+        except ObjectRental.DoesNotExist:
+            return JsonResponse({"detail": "Préstamo no encontrado."}, status=404)
+
+        if rental.status == "CANCELLED":
+            return JsonResponse(
+                {"detail": "No se puede marcar como devuelto un préstamo cancelado."},
+                status=400,
+            )
+
+        rental = _sync_rental_progress_status(rental)
+
+        if rental.status != "IN_PROGRESS":
+            return JsonResponse(
+                {
+                    "detail": "Solo se pueden marcar como devueltos los préstamos en curso.",
+                },
+                status=400,
+            )
+
+        rental.status = "COMPLETED"
+        rental.save(update_fields=["status", "updated_at"])
+
+        return JsonResponse(
+            {
+                "detail": "Préstamo marcado como devuelto.",
+                "rental": _serialize_admin_rental(rental),
+            },
+            status=200,
         )
 
 
@@ -588,14 +725,18 @@ class UserReservationsView(AuthenticatedView):
         if not hasattr(request, "residence") or not request.residence:
             return JsonResponse({"detail": "No residence context."}, status=400)
 
+        _sync_started_rentals_for_residence(request.residence)
+
         now = timezone.now()
 
         rentals = (
             ObjectRental.objects.filter(
                 user=request.user,
                 object__residence=request.residence,
-                status="ACTIVE",
-                end_date__gt=now,
+            )
+            .filter(
+                Q(status="ACTIVE", end_date__gt=now)
+                | Q(status="IN_PROGRESS")
             )
             .select_related("object")
             .order_by("-start_date")
@@ -635,11 +776,13 @@ class AdminObjectNotificationsView(AuthenticatedView):
                 {"detail": "No tienes permisos de administrador."}, status=403
             )
 
+        _sync_started_rentals_for_residence(residence)
+
         now = timezone.now()
         rentals = (
             ObjectRental.objects.filter(
                 object__residence=residence,
-                status="ACTIVE",
+                status__in=ACTIVE_RENTAL_STATUSES,
                 end_date__gt=now,
             )
             .exclude(user=request.user)

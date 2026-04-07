@@ -28,18 +28,28 @@ export interface ObjectRental {
   id: number;
   start_date: string;
   end_date: string;
-  status: 'ACTIVE' | 'CANCELLED' | 'COMPLETED';
+  status: 'ACTIVE' | 'IN_PROGRESS' | 'CANCELLED' | 'COMPLETED';
   created_at?: string;
   updated_at?: string;
+  planned_duration_minutes?: number;
+  elapsed_minutes?: number;
+  elapsed_human?: string;
+  remaining_minutes?: number;
+  remaining_human?: string;
+  is_overdue?: boolean;
+  overdue_minutes?: number;
+  overdue_human?: string;
   user: {
     id: number;
     first_name: string;
     last_name: string;
+    email?: string;
   };
 }
 
 export interface RentalsByStatus {
   active: ObjectRental[];
+  in_progress: ObjectRental[];
   cancelled: ObjectRental[];
   completed: ObjectRental[];
 }
@@ -88,6 +98,11 @@ export interface CancelReservationRequest {
 export interface UserObjectReservation {
   rental: ObjectRental;
   object: ObjectItem;
+}
+
+export interface CompleteRentalResponse {
+  detail: string;
+  rental: ObjectRental;
 }
 
 export interface ObjectAvailabilitySlot {
@@ -278,6 +293,20 @@ export const objectsService = {
       throw await buildApiError(response, 'Error al obtener reservas del objeto');
     }
     
+    return response.json();
+  },
+
+  completeObjectRental: async (objectId: number, rentalId: number): Promise<CompleteRentalResponse> => {
+    const response = await fetch(`${OBJECTS_URL}/${objectId}/rentals/${rentalId}/complete/`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (!response.ok) {
+      throw await buildApiError(response, 'Error al marcar el préstamo como devuelto');
+    }
+
     return response.json();
   },
 

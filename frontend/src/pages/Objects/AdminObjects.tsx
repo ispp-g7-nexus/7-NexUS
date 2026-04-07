@@ -116,10 +116,12 @@ export function AdminObjects() {
   const [selectedObject, setSelectedObject] = useState<ObjectItem | null>(null);
   const [rentalsByStatus, setRentalsByStatus] = useState<RentalsByStatus>({
     active: [],
+    in_progress: [],
     cancelled: [],
     completed: [],
   });
   const [loadingRentals, setLoadingRentals] = useState(false);
+  const [completingRentalIds, setCompletingRentalIds] = useState<number[]>([]);
   const getErrorMessage = (err: unknown, fallback: string) =>
     err instanceof Error && err.message ? err.message : fallback;
 
@@ -306,7 +308,7 @@ export function AdminObjects() {
     if (selectedObject?.id === object.id) {
       setRentalsOpen(false);
       setSelectedObject(null);
-      setRentalsByStatus({ active: [], cancelled: [], completed: [] });
+      setRentalsByStatus({ active: [], in_progress: [], cancelled: [], completed: [] });
     }
 
     try {
@@ -323,6 +325,23 @@ export function AdminObjects() {
     setSelectedObject(object);
     setRentalsOpen(true);
     loadRentals(object.id);
+  };
+
+  const handleMarkRentalReturned = async (rentalId: number) => {
+    if (!selectedObject || completingRentalIds.includes(rentalId)) {
+      return;
+    }
+
+    setCompletingRentalIds((prev) => [...prev, rentalId]);
+    try {
+      await objectsService.completeObjectRental(selectedObject.id, rentalId);
+      toast.success("Préstamo marcado como devuelto");
+      await Promise.all([loadRentals(selectedObject.id), loadObjects({ silent: true })]);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Error al marcar préstamo como devuelto"));
+    } finally {
+      setCompletingRentalIds((prev) => prev.filter((id) => id !== rentalId));
+    }
   };
 
   return (
@@ -521,6 +540,10 @@ export function AdminObjects() {
             <RentalHistoryView
               rentalsByStatus={rentalsByStatus}
               loading={loadingRentals}
+              onMarkReturned={async (rental) => {
+                await handleMarkRentalReturned(rental.id);
+              }}
+              completingRentalIds={completingRentalIds}
             />
           </div>
         </SheetContent>
