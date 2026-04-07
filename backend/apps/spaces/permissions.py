@@ -4,8 +4,8 @@ from apps.membership.models import Membership
 from apps.membership.permissions import has_screen_permission
 
 
-class IsResidenceAdmin(permissions.BasePermission):
-    message = "No tienes permisos para gestionar residentes en esta residencia."
+class IsSpacesAdmin(permissions.BasePermission):
+    message = "No tienes permisos para gestionar espacios comunes."
 
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
@@ -22,4 +22,11 @@ class IsResidenceAdmin(permissions.BasePermission):
                 .exists()
             )
 
-        return has_screen_permission(request.user, residence, "students")
+        return has_screen_permission(request.user, residence, "reservations")
+
+
+# Mantenemos la función original
+def is_reservations_admin(user, residence) -> bool:
+    if not user or not user.is_authenticated:
+        return False
+    return has_screen_permission(user, residence, "reservations")

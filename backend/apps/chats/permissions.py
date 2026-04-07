@@ -1,10 +1,11 @@
 from rest_framework import permissions
 
 from apps.membership.models import Membership
+from apps.membership.permissions import has_screen_permission
 
 
 class IsResidenceAdmin(permissions.BasePermission):
-    """Permite acceso solo a miembros activos con rol Admin en la residencia actual."""
+    """Permite acceso solo a administradores con permiso de 'chats'."""
 
     message = "No tienes permisos para gestionar chats."
 
@@ -13,21 +14,11 @@ class IsResidenceAdmin(permissions.BasePermission):
             return False
 
         residence = getattr(request, "residence", None)
-
-        qs = Membership.objects.filter(
-            user=request.user,
-            is_active=True,
-            role__name__iexact="Admin",
-        )
-
-        if residence:
-            return qs.filter(residence=residence).exists()
-
-        return False
+        return has_screen_permission(request.user, residence, "chats")
 
 
 class IsChatGroupManager(permissions.BasePermission):
-    """Permite gestionar grupos a Admin de residencia o Admin de grupo (segun queryset)."""
+    """Permite gestionar grupos a Admin de chats o Admin de grupo (segun queryset)."""
 
     message = "No tienes permisos para gestionar chats."
 
@@ -39,23 +30,21 @@ class IsChatGroupManager(permissions.BasePermission):
         if not residence:
             return False
 
-        membership = Membership.objects.filter(
-            user=request.user,
-            residence=residence,
-            is_active=True,
-        ).select_related("role").first()
-        if not membership:
-            return False
-
-        if membership.role and membership.role.name.lower() == "admin":
+        # Si tiene el permiso del módulo, acceso total
+        if has_screen_permission(request.user, residence, "chats"):
             return True
 
-        # Crear/eliminar grupos queda reservado al admin de residencia.
+        # Crear/eliminar grupos queda reservado estrictamente a los admins de chats
         action = getattr(view, "action", None)
         if action in {"create", "destroy"}:
             return False
 
-        return True
+        # Para participar, simplemente verificamos que sea un residente activo
+        return Membership.objects.filter(
+            user=request.user,
+            residence=residence,
+            is_active=True,
+        ).exists()
 
 
 class IsAuthenticatedResident(permissions.BasePermission):
