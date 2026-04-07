@@ -1182,3 +1182,386 @@ class UrlsTests(FastTenantTestCase):
         self.assertEqual(
             resolve("/api/events/1/participants/").url_name, "event-participants"
         )
+
+
+from apps.residences.models import StudentProfile
+
+
+class EventRecommendationTests(ViewTestsBase):
+    def setUp(self):
+        super().setUp()
+        from apps.events.views import (
+            _calculate_recommendation_score,
+            _get_user_interests,
+        )
+
+        self._get_user_interests = _get_user_interests
+        self._calculate_recommendation_score = _calculate_recommendation_score
+
+    def test_get_user_interests(self):
+        # User without profile
+        self.assertEqual(self._get_user_interests(self.user), set())
+
+        # User with profile
+        StudentProfile.objects.create(
+            user=self.user, interests=["Music", "Sports"], custom_interests=["Coding "]
+        )
+        interests = self._get_user_interests(self.user)
+        self.assertEqual(interests, {"music", "sports", "coding"})
+
+    def test_calculate_recommendation_score(self):
+        interests = {"music", "sports"}
+
+        # No tags
+        self.assertEqual(self._calculate_recommendation_score("", interests), 0)
+
+        # No matching tags
+        self.assertEqual(
+            self._calculate_recommendation_score("coding, art", interests), 0
+        )
+
+        # Matching tags
+        self.assertEqual(
+            self._calculate_recommendation_score("Music, sports, Art", interests), 2
+        )
+
+    def test_list_view_recommendation_filtering(self):
+        from apps.events.views import EventListView
+
+        # Create events with different tags
+        e1 = Event.objects.create(
+            title="Music Event",
+            start_time=self.now + timedelta(hours=1),
+            end_time=self.now + timedelta(hours=2),
+            event_type=Event.Type.EXTERNAL,
+            residence=self.residence,
+            host=self.host_user,
+            location="Somewhere",
+            tags="music, fun",
+        )
+        e2 = Event.objects.create(
+            title="Sports Event",
+            start_time=self.now + timedelta(hours=3),
+            end_time=self.now + timedelta(hours=4),
+            event_type=Event.Type.EXTERNAL,
+            residence=self.residence,
+            host=self.host_user,
+            location="Somewhere",
+            tags="sports",
+        )
+
+        # Setup user profile with "music"
+        StudentProfile.objects.create(user=self.user, interests=["Music"])
+
+        # Get only recommended
+        req = self.setup_request(self.rf.get("/?recommended=true"))
+        res = EventListView.as_view()(req)
+        self.assertEqual(res.status_code, 200)
+        data = json.loads(res.content)
+
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["title"], "Music Event")
+        self.assertTrue(data[0]["is_recommended"])
+
+        # Get all, check sorting (Music should be first due to score)
+        req2 = self.setup_request(self.rf.get("/"))
+        res2 = EventListView.as_view()(req2)
+        data2 = json.loads(res2.content)
+        self.assertEqual(data2[0]["title"], "Music Event")
+
+    def test_detail_view_recommendation_info(self):
+        from apps.events.views import EventDetailView
+
+        event = Event.objects.create(
+            title="Music Event",
+            start_time=self.now + timedelta(hours=1),
+            end_time=self.now + timedelta(hours=2),
+            event_type=Event.Type.EXTERNAL,
+            residence=self.residence,
+            host=self.host_user,
+            location="Somewhere",
+            tags="music",
+        )
+
+        StudentProfile.objects.create(user=self.user, interests=["Music"])
+
+        req = self.setup_request(self.rf.get("/"))
+        res = EventDetailView.as_view()(req, event_id=event.id)
+        data = json.loads(res.content)
+        self.assertEqual(data["recommendation_score"], 1)
+        self.assertTrue(data["is_recommended"])
+
+
+class CoverageImprovementTests(ViewTestsBase):
+    def test_create_chat_group_failures(self):
+        from apps.chats.models import ChatGroup
+        from apps.events.views import _create_event_chat_group
+        from apps.membership.models import Membership
+
+        event = Event.objects.create(
+            title="Fail Event",
+            start_time=self.now + timedelta(hours=1),
+            end_time=self.now + timedelta(hours=2),
+            event_type=Event.Type.EXTERNAL,
+            residence=self.residence,
+            host=self.host_user,
+            location="Loc",
+        )
+
+        # 1. No membership for host
+        Membership.objects.filter(user=self.host_user).delete()
+        chat_group, error = _create_event_chat_group(event, self.host_user)
+        self.assertIsNone(error)
+        self.assertIsNotNone(chat_group)
+
+        # 2. IntegrityError on create
+        with patch("apps.chats.models.ChatGroup.objects.create") as mock_create:
+            from django.db.utils import IntegrityError
+            mock_create.side_effect = IntegrityError("Duplicate")
+            cg, err = _create_event_chat_group(event, self.host_user)
+            self.assertIn("duplicado", err)
+
+        # 3. Generic Exception
+        with patch("apps.chats.models.ChatGroup.objects.create") as mock_create:
+            mock_create.side_effect = Exception("General")
+            cg, err = _create_event_chat_group(event, self.host_user)
+            self.assertIn("No se pudo crear el grupo", err)
+
+    def test_publish_event_no_residence(self):
+        from apps.events.views import _publish_group_created_for_event
+        from apps.chats.models import ChatGroup
+        
+        cg = ChatGroup.objects.create(
+            residence=self.residence,
+            name="Test",
+            created_by=self.host_user
+        )
+        req = self.rf.get("/")
+        # Request has no residence attribute
+        _publish_group_created_for_event(req, cg)
+        # Should just return without error
+
+    def test_serialize_event_is_chat_member(self):
+        from apps.events.views import _serialize_event
+        from apps.chats.models import ChatGroup, ChatGroupMember
+        from apps.membership.models import Role, Membership
+        
+        cg = ChatGroup.objects.create(
+            residence=self.residence,
+            name="Chat",
+            created_by=self.host_user
+        )
+        event = Event.objects.create(
+            title="Chat Event",
+            start_time=self.now + timedelta(hours=1),
+            end_time=self.now + timedelta(hours=2),
+            event_type=Event.Type.EXTERNAL,
+            residence=self.residence,
+            host=self.host_user,
+            location="Loc",
+            chat_group=cg
+        )
+        
+        # User with membership and group member
+        role = Role.objects.create(name="Student", is_system_default=True)
+        mem = Membership.objects.create(
+            user=self.user,
+            residence=self.residence,
+            role=role,
+            is_active=True
+        )
+        ChatGroupMember.objects.create(group=cg, membership=mem, can_interact=True)
+        
+        data = _serialize_event(event, self.user, self.residence)
+        self.assertTrue(data["is_chat_member"])
+        self.assertIsNotNone(data["chat_group"])
+
+
+class EventJoinChatViewTests(ViewTestsBase):
+    def setUp(self):
+        super().setUp()
+        from apps.chats.models import ChatGroup
+        from apps.membership.models import Role, Membership
+
+        self.cg = ChatGroup.objects.create(
+            residence=self.residence,
+            name="Chat",
+            created_by=self.host_user
+        )
+        self.event = Event.objects.create(
+            title="Chat Event",
+            start_time=self.now + timedelta(hours=1),
+            end_time=self.now + timedelta(hours=2),
+            event_type=Event.Type.EXTERNAL,
+            residence=self.residence,
+            host=self.host_user,
+            location="Loc",
+            chat_group=self.cg
+        )
+        self.role = Role.objects.create(name="Student", is_system_default=True)
+        self.membership = Membership.objects.create(
+            user=self.user,
+            residence=self.residence,
+            role=self.role,
+            is_active=True
+        )
+
+    def test_join_chat_no_chat(self):
+        from apps.events.views import EventJoinChatView
+        self.event.chat_group = None
+        self.event.save()
+        req = self.setup_request(self.rf.post("/"))
+        res = EventJoinChatView.as_view()(req, event_id=self.event.id)
+        self.assertEqual(res.status_code, 400)
+
+    def test_join_chat_not_participant(self):
+        from apps.events.views import EventJoinChatView
+        req = self.setup_request(self.rf.post("/"))
+        res = EventJoinChatView.as_view()(req, event_id=self.event.id)
+        self.assertEqual(res.status_code, 403)
+
+    def test_join_chat_no_membership(self):
+        from apps.events.views import EventJoinChatView
+        from apps.events.models import EventParticipation
+        EventParticipation.objects.create(event=self.event, user=self.user)
+        self.membership.is_active = False
+        self.membership.save()
+        req = self.setup_request(self.rf.post("/"))
+        res = EventJoinChatView.as_view()(req, event_id=self.event.id)
+        self.assertEqual(res.status_code, 403)
+
+    def test_join_chat_success_and_rejoin(self):
+        from apps.events.views import EventJoinChatView
+        from apps.events.models import EventParticipation
+        from apps.chats.models import ChatGroupMember
+        EventParticipation.objects.create(event=self.event, user=self.user)
+        
+        req = self.setup_request(self.rf.post("/"))
+        res = EventJoinChatView.as_view()(req, event_id=self.event.id)
+        self.assertEqual(res.status_code, 201)
+        
+        # Re-join
+        res2 = EventJoinChatView.as_view()(req, event_id=self.event.id)
+        self.assertEqual(res2.status_code, 200)
+
+        # Interaction disabled then re-enabled
+        member = ChatGroupMember.objects.get(group=self.cg, membership=self.membership)
+        member.can_interact = False
+        member.save()
+        res3 = EventJoinChatView.as_view()(req, event_id=self.event.id)
+        self.assertEqual(res3.status_code, 201)
+        member.refresh_from_db()
+        self.assertTrue(member.can_interact)
+
+class MoreEventViewTests(ViewTestsBase):
+    def test_leave_event_cleans_chat_member(self):
+        from apps.events.views import EventLeaveView
+        from apps.chats.models import ChatGroup, ChatGroupMember
+        from apps.membership.models import Role, Membership
+        from apps.events.models import EventParticipation
+        
+        cg = ChatGroup.objects.create(residence=self.residence, name="C", created_by=self.host_user)
+        event = Event.objects.create(
+            title="E", start_time=self.now+timedelta(hours=1), end_time=self.now+timedelta(hours=2),
+            event_type=Event.Type.EXTERNAL, residence=self.residence, host=self.host_user,
+            location="L", chat_group=cg
+        )
+        role = Role.objects.create(name="Student", is_system_default=True)
+        mem = Membership.objects.create(user=self.user, residence=self.residence, role=role)
+        EventParticipation.objects.create(event=event, user=self.user)
+        ChatGroupMember.objects.create(group=cg, membership=mem)
+        
+        req = self.setup_request(self.rf.post("/"))
+        res = EventLeaveView.as_view()(req, event_id=event.id)
+        self.assertEqual(res.status_code, 200)
+        self.assertFalse(ChatGroupMember.objects.filter(group=cg, membership=mem).exists())
+
+    def test_join_event_overlap_validation(self):
+        from apps.events.views import EventJoinView
+        from apps.events.models import EventParticipation
+        
+        e1 = Event.objects.create(
+            title="E1", start_time=self.now+timedelta(hours=1), end_time=self.now+timedelta(hours=3),
+            event_type=Event.Type.EXTERNAL, residence=self.residence, host=self.host_user, location="L1"
+        )
+        e2 = Event.objects.create(
+            title="E2", start_time=self.now+timedelta(hours=2), end_time=self.now+timedelta(hours=4),
+            event_type=Event.Type.EXTERNAL, residence=self.residence, host=self.host_user, location="L2"
+        )
+        EventParticipation.objects.create(event=e1, user=self.user)
+        
+        req = self.setup_request(self.rf.post("/"))
+        res = EventJoinView.as_view()(req, event_id=e2.id)
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("coincide en horario", json.loads(res.content)["detail"])
+
+    def test_post_event_duplicate_title_same_date(self):
+        from apps.events.views import EventListView
+        Event.objects.create(
+            title="Duplicate", start_time=self.now+timedelta(days=1), end_time=self.now+timedelta(days=1, hours=1),
+            event_type=Event.Type.EXTERNAL, residence=self.residence, host=self.host_user, location="L"
+        )
+        payload = {
+            "title": "Duplicate",
+            "event_type": "external",
+            "start_time": (self.now + timedelta(days=1)).isoformat(),
+            "end_time": (self.now + timedelta(days=1, hours=1)).isoformat(),
+            "location": "L2"
+        }
+        req = self.setup_request(self.rf.post("/", data=json.dumps(payload), content_type="application/json"))
+        res = EventListView.as_view()(req)
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("Ya existe un evento", json.loads(res.content)["detail"])
+
+    def test_put_event_errors(self):
+        from apps.events.views import EventDetailView
+        event = Event.objects.create(
+            title="E", start_time=self.now+timedelta(hours=1), end_time=self.now+timedelta(hours=2),
+            event_type=Event.Type.EXTERNAL, residence=self.residence, host=self.host_user, location="L"
+        )
+        # 1. Time error (invalid/empty)
+        req = self.setup_request(self.rf.put("/", data=json.dumps({"start_time": ""}), content_type="application/json"), user=self.host_user)
+        res = EventDetailView.as_view()(req, event_id=event.id)
+        self.assertEqual(res.status_code, 400)
+        
+        # 2. Limit error (internal) - assigning reservation to satisfy constraint
+        event.event_type = Event.Type.INTERNAL
+        event.space = self.space
+        event.reservation = self.reservation
+        event.location = ""
+        event.save()
+        payload = {
+            "max_participants": 999,
+            "start_time": event.start_time.isoformat(),
+            "end_time": event.end_time.isoformat(),
+        }
+        req2 = self.setup_request(self.rf.put("/", data=json.dumps(payload), content_type="application/json"), user=self.host_user)
+        res2 = EventDetailView.as_view()(req2, event_id=event.id)
+        self.assertEqual(res2.status_code, 400)
+        self.assertIn("no puede superar", json.loads(res2.content)["detail"])
+
+    def test_leave_event_exception(self):
+        from apps.events.views import EventLeaveView
+        event = Event.objects.create(
+            title="E", start_time=self.now+timedelta(hours=1), end_time=self.now+timedelta(hours=2),
+            event_type=Event.Type.EXTERNAL, residence=self.residence, host=self.host_user, location="L"
+        )
+        with patch("apps.events.models.EventParticipation.objects.filter") as mock_filter:
+            mock_filter.side_effect = Exception("DB Error")
+            req = self.setup_request(self.rf.post("/"))
+            res = EventLeaveView.as_view()(req, event_id=event.id)
+            self.assertEqual(res.status_code, 400)
+
+    def test_create_chat_group_host_membership_success(self):
+        from apps.events.views import _create_event_chat_group
+        from apps.membership.models import Role, Membership
+        role = Role.objects.create(name="Admin", is_system_default=True)
+        Membership.objects.create(user=self.host_user, residence=self.residence, role=role)
+        event = Event.objects.create(
+            title="E", start_time=self.now+timedelta(hours=1), end_time=self.now+timedelta(hours=2),
+            event_type=Event.Type.EXTERNAL, residence=self.residence, host=self.host_user, location="L"
+        )
+        cg, err = _create_event_chat_group(event, self.host_user)
+        self.assertIsNone(err)
+        from apps.chats.models import ChatGroupMember
+        self.assertTrue(ChatGroupMember.objects.filter(group=cg, membership__user=self.host_user).exists())
