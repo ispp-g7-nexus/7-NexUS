@@ -8,6 +8,7 @@ from .views import (
 	BedroomResidentsView,
 	BedroomResidentsDetailView,
 	AvailableBedroomsView,
+	BedroomAuditLogView,
 	BuildingListView,
 )
 
@@ -18,6 +19,7 @@ urlpatterns = [
 	path('bedrooms/available/', AvailableBedroomsView.as_view(), name='bedroom-available'),
 	path('bedrooms/residents/', BedroomResidentsView.as_view(), name='bedroom-residents'),
 	path('bedrooms/<int:bedroom_id>/residents/', BedroomResidentsDetailView.as_view(), name='bedroom-residents-detail'),
+	path('bedrooms/<int:bedroom_id>/audit/', BedroomAuditLogView.as_view(), name='bedroom-audit'),
 	path('bedrooms/<int:bedroom_id>/', BedroomRetrieveView.as_view(), name='bedroom-retrieve'),
 	path('bedrooms/<int:bedroom_id>/update/', BedroomUpdateView.as_view(), name='bedroom-update'),
 	path('bedrooms/<int:bedroom_id>/delete/', BedroomDeleteView.as_view(), name='bedroom-delete'),

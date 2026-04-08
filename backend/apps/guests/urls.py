@@ -4,6 +4,7 @@ from .views import (
     AdminGuestPassListView,
     AdminGuestPassPolicyView,
     AdminGuestPassRevokeView,
+    AdminVisitorsAnalyticsView,
     ResidentActiveGuestPassListView,
     ResidentGuestPassCancelView,
     ResidentGuestPassCreateView,
@@ -58,5 +59,10 @@ urlpatterns = [
         "admin/guest-passes/policy/",
         AdminGuestPassPolicyView.as_view(),
         name="admin-guest-pass-policy",
+    ),
+    path(
+        "admin/analytics/visitors/",
+        AdminVisitorsAnalyticsView.as_view(),
+        name="admin-visitors-analytics",
     ),
 ]
