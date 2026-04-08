@@ -73,7 +73,7 @@ class ResidentViewSet(viewsets.ViewSet):
         serializer = ResidentUpdateSerializer(data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
         residence = self._get_residence(request)
-        result = update_resident(pk, serializer.validated_data, residence)
+        result = update_resident(pk, serializer.validated_data, residence, performed_by=request.user)
         if not result:
             raise NotFound("Residente no encontrado.")
         return Response(ResidentReadSerializer(result).data)
@@ -81,7 +81,7 @@ class ResidentViewSet(viewsets.ViewSet):
     def destroy(self, request, pk=None):
         """DELETE /residents/{id}/ — Hard-delete: elimina Membership y, si aplica, User."""
         residence = self._get_residence(request)
-        deleted = delete_resident(pk, residence)
+        deleted = delete_resident(pk, residence, user=request.user)
         if not deleted:
             raise NotFound("Residente no encontrado.")
         return Response(status=status.HTTP_204_NO_CONTENT)

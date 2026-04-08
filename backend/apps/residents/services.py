@@ -3,6 +3,7 @@ import logging
 from django.contrib.auth import get_user_model
 from rest_framework.exceptions import ValidationError
 
+from apps.bedrooms.models import BedroomAuditLog
 from apps.membership.models import Membership, Role
 from apps.common.services import process_password_reset_request, SMTPServerError
 from apps.packages.services import update_resident_packages_snapshot
@@ -136,6 +137,14 @@ def create_resident(data: dict, residence, request) -> dict:
             setattr(existing_membership, attr, val)
         existing_membership.save()
 
+    if bedroom is not None:
+        BedroomAuditLog.objects.create(
+            bedroom=bedroom,
+            user=request.user if request and hasattr(request, "user") else None,
+            action=BedroomAuditLog.Action.RESIDENT_ASSIGNED,
+            changes={"resident_email": user.email},
+        )
+
     _sync_user_active_status(user)
 
     passwd = data.get("password")
@@ -194,7 +203,7 @@ def get_resident(membership_id: int, residence):
     return _membership_to_dict(membership)
 
 
-def update_resident(membership_id: int, data: dict, residence) -> dict | None:
+def update_resident(membership_id: int, data: dict, residence, performed_by=None) -> dict | None:
     """
     Actualiza los datos de un residente (email, full_name, is_active, bedroom).
     Retorna el dict actualizado o None si no existe.
@@ -224,6 +233,8 @@ def update_resident(membership_id: int, data: dict, residence) -> dict | None:
         membership.is_active = data["is_active"]
         membership_dirty = True
 
+    old_bedroom = membership.bedroom if "bedroom_id" in data else None
+
     if "bedroom_id" in data:
         if data["bedroom_id"] is None:
             # Desasignar habitación explícitamente
@@ -238,6 +249,23 @@ def update_resident(membership_id: int, data: dict, residence) -> dict | None:
     if membership_dirty:
         membership.save()
 
+    if "bedroom_id" in data:
+        new_bedroom = membership.bedroom
+        if old_bedroom is not None and old_bedroom != new_bedroom:
+            BedroomAuditLog.objects.create(
+                bedroom=old_bedroom,
+                user=performed_by,
+                action=BedroomAuditLog.Action.RESIDENT_REMOVED,
+                changes={"resident_email": user.email},
+            )
+        if new_bedroom is not None and new_bedroom != old_bedroom:
+            BedroomAuditLog.objects.create(
+                bedroom=new_bedroom,
+                user=performed_by,
+                action=BedroomAuditLog.Action.RESIDENT_ASSIGNED,
+                changes={"resident_email": user.email},
+            )
+
     # si se cambió el nombre o la habitación, actualizar el snapshot de paquetes para que refleje esos cambios
     if "full_name" in data or "bedroom_id" in data:
         update_resident_packages_snapshot(membership)
@@ -248,27 +276,36 @@ def update_resident(membership_id: int, data: dict, residence) -> dict | None:
     return _membership_to_dict(membership)
 
 
-def delete_resident(membership_id: int, residence) -> bool:
+def delete_resident(membership_id: int, residence, user=None) -> bool:
     """
     Hard-delete: elimina físicamente la Membership del residente.
     Si el usuario se queda sin memberships, elimina también su cuenta.
     Devuelve True si se eliminó, False si no existía.
     """
     try:
-        membership = Membership.objects.select_related("user").get(
+        membership = Membership.objects.select_related("user", "bedroom").get(
             id=membership_id, role__name="Student", residence=residence
         )
     except Membership.DoesNotExist:
         return False
 
-    user = membership.user
+    member_user = membership.user
+    bedroom = membership.bedroom
 
     membership.delete()
 
-    has_other_memberships = Membership.objects.filter(user=user).exists()
+    if bedroom is not None:
+        BedroomAuditLog.objects.create(
+            bedroom=bedroom,
+            user=user,
+            action=BedroomAuditLog.Action.RESIDENT_REMOVED,
+            changes={"resident_email": member_user.email},
+        )
+
+    has_other_memberships = Membership.objects.filter(user=member_user).exists()
     if not has_other_memberships:
-        user.delete()
+        member_user.delete()
     else:
-        _sync_user_active_status(user)
+        _sync_user_active_status(member_user)
 
     return True
