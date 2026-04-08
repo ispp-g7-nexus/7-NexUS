@@ -466,7 +466,7 @@ const DayMenuCardAdmin = ({ day, onAddMeal, onEditMeal, onDeleteMeal }: DayMenuC
         </div>
         <button
           onClick={() => onAddMeal(day.date, day.id || '')}
-          className="flex items-center gap-2 px-3 py-2 bg-white text-primary rounded-lg hover:bg-primary/10 transition-colors font-medium"
+          className="flex items-center gap-2 px-3 py-2 bg-white text-primary rounded-lg hover:bg-gray-100 hover:shadow-lg scale-100 hover:scale-105 transition-all font-medium"
           title="Agregar comida"
         >
           <Plus className="w-4 h-4" />
