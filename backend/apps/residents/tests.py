@@ -488,6 +488,7 @@ class ResidentAuditLogTests(FastTenantTestCase):
         ).first()
         self.assertIsNotNone(log)
         self.assertEqual(log.changes["resident_email"], "nuevo-audit@test.com")
+        self.assertEqual(log.user, self.admin_user)
 
     # --- RESIDENT_REMOVED ---
 
@@ -523,7 +524,8 @@ class ResidentAuditLogTests(FastTenantTestCase):
         self.membership.save()
 
         count_before = self.BedroomAuditLog.objects.count()
-        self.admin_client.delete(self._url(self.membership.id))
+        response = self.admin_client.delete(self._url(self.membership.id))
+        self.assertEqual(response.status_code, 204)
         self.assertEqual(self.BedroomAuditLog.objects.count(), count_before)
 
     # --- Cambio de habitación ---
