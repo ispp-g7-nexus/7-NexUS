@@ -13,6 +13,7 @@ from .views import (
     UserReservationsView,
     UserObjectNotificationsView,
     UserDismissReservationView,
+    AdminAllObjectRentalsView,
     AdminObjectNotificationsView,
 )
 
@@ -30,5 +31,6 @@ urlpatterns = [
     path('my-reservations/', UserReservationsView.as_view(), name='user-reservations'),
     path('objects/notifications/', UserObjectNotificationsView.as_view(), name='user-object-notifications'),
     path('my-reservations/<int:rental_id>/dismiss/', UserDismissReservationView.as_view(), name='user-reservation-dismiss'),
+    path('admin/objects/rentals/', AdminAllObjectRentalsView.as_view(), name='admin-all-object-rentals'),
     path('admin/objects/notifications/', AdminObjectNotificationsView.as_view(), name='admin-object-notifications'),
 ]

@@ -943,7 +943,7 @@ class UserReservationsView(AuthenticatedView):
 
 
 class UserObjectNotificationsView(AuthenticatedView):
-    NOTIFICATION_LIMIT = 10
+    NOTIFICATION_LIMIT = 5
 
     def get(self, request):
         residence = getattr(request, "residence", None)
@@ -964,7 +964,7 @@ class UserObjectNotificationsView(AuthenticatedView):
             .order_by("start_date")[: self.NOTIFICATION_LIMIT]
         )
 
-        data: list[dict[str, Any]] = []
+        grouped_notifications: dict[int, dict[str, Any]] = {}
 
         # Notify the user when their reserved slot is blocked because all stock is
         # still in overdue IN_PROGRESS rentals from other users after the 5-minute gap.
@@ -985,19 +985,52 @@ class UserObjectNotificationsView(AuthenticatedView):
                 start_local = reservation.start_date.astimezone(
                     timezone.get_current_timezone()
                 )
-                data.append(
-                    {
-                        "id": f"object-stock-blocked-{reservation.id}",
-                        "rental_id": reservation.id,
-                        "title": f"Posible retraso en tu reserva de {reservation.object.name}",
+                object_id = reservation.object_id
+                if object_id not in grouped_notifications:
+                    grouped_notifications[object_id] = {
+                        "id": f"object-stock-blocked-{object_id}",
+                        "rental_ids": [reservation.id],
+                        "title": f"Posible retraso en {reservation.object.name}",
                         "message": (
-                            f"Tu tramo de las {start_local.strftime('%H:%M')} está afectado: "
-                            "todo el stock sigue pendiente de devolución."
+                            f"Tu reserva de {reservation.object.name} puede verse afectada porque "
+                            "el stock sigue pendiente de devolución."
                         ),
                         "created_at": now.isoformat(),
                         "source": "objects",
+                        "object": {
+                            "id": reservation.object.id,
+                            "name": reservation.object.name,
+                        },
+                        "affected_slots": 1,
+                        "next_slot": start_local.strftime("%H:%M"),
                     }
+                else:
+                    grouped_notifications[object_id]["rental_ids"].append(reservation.id)
+                    grouped_notifications[object_id]["affected_slots"] += 1
+                    current_next_slot = grouped_notifications[object_id]["next_slot"]
+                    if start_local.strftime("%H:%M") < current_next_slot:
+                        grouped_notifications[object_id]["next_slot"] = start_local.strftime("%H:%M")
+
+        data = list(grouped_notifications.values())
+        for item in data:
+            affected_slots = item.get("affected_slots", 1)
+            next_slot = item.get("next_slot", "")
+            if affected_slots > 1:
+                item["title"] = f"Posible retraso en {item['object']['name']} ({affected_slots} tramos)"
+                item["message"] = (
+                    f"Tu reserva de {item['object']['name']} puede verse afectada en {affected_slots} tramos. "
+                    f"El primero es a las {next_slot}."
                 )
+            else:
+                item["message"] = (
+                    f"Tu reserva de {item['object']['name']} puede verse afectada. "
+                    f"El tramo empieza a las {next_slot}."
+                )
+
+            item.pop("object", None)
+            item.pop("affected_slots", None)
+            item.pop("next_slot", None)
+            item.pop("rental_ids", None)
 
         data.sort(key=lambda item: item["created_at"], reverse=True)
         data = data[: self.NOTIFICATION_LIMIT]
@@ -1028,6 +1061,41 @@ class UserDismissReservationView(AuthenticatedView):
         rental.save(update_fields=["user_dismissed_at", "updated_at"])
 
         return JsonResponse({"detail": "Reserva descartada."}, status=200)
+
+
+class AdminAllObjectRentalsView(AuthenticatedView):
+    NOTIFICATION_LIMIT = 300
+
+    def get(self, request):
+        residence = getattr(request, "residence", None)
+        if not residence:
+            return JsonResponse({"detail": "No residence context."}, status=400)
+
+        if not is_reservations_admin(request.user, residence):
+            return JsonResponse(
+                {"detail": "No tienes permisos de administrador."}, status=403
+            )
+
+        _sync_started_rentals_for_residence(residence)
+
+        rentals = (
+            ObjectRental.objects.filter(object__residence=residence)
+            .select_related("object", "user", "admin_cancelled_by")
+            .order_by("-start_date")[: self.NOTIFICATION_LIMIT]
+        )
+
+        data = []
+        for rental in rentals:
+            rental_payload = _serialize_admin_rental(rental)
+            rental_payload["object"] = {
+                "id": rental.object.id,
+                "name": rental.object.name,
+                "location": rental.object.location,
+                "stock_total": rental.object.stock_total,
+            }
+            data.append(rental_payload)
+
+        return JsonResponse(data, safe=False)
 
 
 class AdminObjectNotificationsView(AuthenticatedView):

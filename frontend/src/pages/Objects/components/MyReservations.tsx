@@ -45,8 +45,10 @@ interface MyReservationsProps {
   error: string | null;
   cancellingRentalId: number | null;
   dismissingRentalId: number | null;
+  markingReturnedRentalId: number | null;
   onCancel: (objectId: number, rentalId: number) => void;
   onDismiss: (rentalId: number) => void;
+  onMarkReturned: (objectId: number, rentalId: number) => void;
   onRetry: () => void;
 }
 
@@ -65,7 +67,7 @@ function canCancelReservation(rental: any): boolean {
   );
 }
 
-export function MyReservations({ reservations, loading, error, cancellingRentalId, dismissingRentalId, onCancel, onDismiss, onRetry }: MyReservationsProps) {
+export function MyReservations({ reservations, loading, error, cancellingRentalId, dismissingRentalId, markingReturnedRentalId, onCancel, onDismiss, onMarkReturned, onRetry }: MyReservationsProps) {
   return (
     <Card className="border-border/80 shadow-sm min-w-0 overflow-hidden">
       <CardHeader>
@@ -96,8 +98,10 @@ export function MyReservations({ reservations, loading, error, cancellingRentalI
                 rental={rental}
                 isCancelling={cancellingRentalId === rental.id}
                 isDismissing={dismissingRentalId === rental.id}
+                isMarkingReturned={markingReturnedRentalId === rental.id}
                 onCancel={() => onCancel(object.id, rental.id)}
                 onDismiss={() => onDismiss(rental.id)}
+                onMarkReturned={() => onMarkReturned(object.id, rental.id)}
               />
             ))}
           </div>
@@ -112,15 +116,19 @@ function ReservationCard({
   rental,
   isCancelling,
   isDismissing,
+  isMarkingReturned,
   onCancel,
   onDismiss,
+  onMarkReturned,
 }: { 
   object: any; 
   rental: any;
   isCancelling: boolean;
   isDismissing: boolean;
+  isMarkingReturned: boolean;
   onCancel: () => void;
   onDismiss: () => void;
+  onMarkReturned: () => void;
 }) {
   const [showReasonDetailModal, setShowReasonDetailModal] = useState(false);
   const isCancelled = rental.status === "CANCELLED";
@@ -212,26 +220,38 @@ function ReservationCard({
           </div>
         </div>
         
-        {canCancelReservation(rental) && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onCancel}
-            disabled={isCancelling}
-          >
-            {isCancelling ? "Cancelando..." : "Cancelar"}
-          </Button>
-        )}
-        {isCancelled && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onDismiss}
-            disabled={isDismissing}
-          >
-            {isDismissing ? "Descartando..." : "Descartar"}
-          </Button>
-        )}
+        <div className="flex flex-col gap-2 sm:flex-row">
+          {isInProgress && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onMarkReturned}
+              disabled={isMarkingReturned}
+            >
+              {isMarkingReturned ? "Marcando..." : "Marcar como devuelto"}
+            </Button>
+          )}
+          {canCancelReservation(rental) && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onCancel}
+              disabled={isCancelling}
+            >
+              {isCancelling ? "Cancelando..." : "Cancelar"}
+            </Button>
+          )}
+          {isCancelled && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onDismiss}
+              disabled={isDismissing}
+            >
+              {isDismissing ? "Descartando..." : "Descartar"}
+            </Button>
+          )}
+        </div>
       </div>
 
       {showReasonDetailModal && normalizedCancelReason && (

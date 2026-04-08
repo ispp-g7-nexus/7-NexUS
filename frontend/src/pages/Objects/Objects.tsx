@@ -43,6 +43,7 @@ export function Objects({ onReservationSuccess }: ObjectsProps) {
   const [reservationsError, setReservationsError] = useState<string | null>(null);
   const [cancellingRentalId, setCancellingRentalId] = useState<number | null>(null);
   const [dismissingRentalId, setDismissingRentalId] = useState<number | null>(null);
+  const [markingReturnedRentalId, setMarkingReturnedRentalId] = useState<number | null>(null);
 
   useEffect(() => {
     void fetchObjects();
@@ -165,6 +166,24 @@ export function Objects({ onReservationSuccess }: ObjectsProps) {
     }
   };
 
+  const handleMarkObjectReturned = async (objectId: number, rentalId: number) => {
+    setMarkingReturnedRentalId(rentalId);
+    try {
+      await objectsService.completeObjectRental(objectId, rentalId);
+      toast.success("Objeto marcado como devuelto.");
+      await fetchReservations();
+      await fetchObjectNotifications();
+      await fetchObjects();
+      await fetchAvailability(objects, selectedDate);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Error al marcar como devuelto";
+      toast.error(errorMessage);
+      console.error('Error marking rental as returned:', err);
+    } finally {
+      setMarkingReturnedRentalId(null);
+    }
+  };
+
   const filteredObjects = objects.filter(object =>
     object.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     object.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -241,8 +260,10 @@ export function Objects({ onReservationSuccess }: ObjectsProps) {
             error={reservationsError}
             cancellingRentalId={cancellingRentalId}
             dismissingRentalId={dismissingRentalId}
+            markingReturnedRentalId={markingReturnedRentalId}
             onCancel={handleCancelReservation}
             onDismiss={handleDismissReservation}
+            onMarkReturned={handleMarkObjectReturned}
             onRetry={fetchReservations}
           />
         </div>

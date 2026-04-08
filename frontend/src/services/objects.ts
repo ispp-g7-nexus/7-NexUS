@@ -151,6 +151,15 @@ export interface UserObjectNotification {
   source: "objects";
 }
 
+export interface AdminObjectRental extends ObjectRental {
+  object: {
+    id: number;
+    name: string;
+    location?: string;
+    stock_total: number;
+  };
+}
+
 export const objectsService = {
   // Get all objects
   getObjects: async (): Promise<ObjectItem[]> => {
@@ -312,6 +321,20 @@ export const objectsService = {
       throw await buildApiError(response, 'Error al obtener reservas del objeto');
     }
     
+    return response.json();
+  },
+
+  getAllObjectRentals: async (): Promise<AdminObjectRental[]> => {
+    const response = await fetch(`${API_URL}/admin/objects/rentals/`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (!response.ok) {
+      throw await buildApiError(response, 'Error al obtener el historial general de reservas');
+    }
+
     return response.json();
   },
 

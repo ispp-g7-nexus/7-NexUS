@@ -1,4 +1,4 @@
-import { Plus, RefreshCw, Package, Search, Tag, X } from "lucide-react";
+import { Filter, Plus, RefreshCw, Package, Search, Tag, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -9,10 +9,359 @@ import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "../../components/ui/sheet";
-import { objectsService, ObjectItem, ObjectLabelItem, RentalsByStatus } from "../../services/objects";
+import { objectsService, AdminObjectRental, ObjectItem, ObjectLabelItem, RentalsByStatus } from "../../services/objects";
 import { RentalHistoryView } from "../../components/RentalHistoryView";
 
 const OBJECT_NAME_REGEX = /^[\p{L}\p{N} _().,-]+$/u;
+const ADMIN_CANCELLATION_REASON_MAX_LENGTH = 200;
+
+function formatDateTime(date: string): string {
+  return new Intl.DateTimeFormat("es-ES", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(date));
+}
+
+function getGlobalRentalStatusLabel(rental: AdminObjectRental): string {
+  const overdueInProgress = rental.status === "IN_PROGRESS" && new Date(rental.end_date).getTime() <= Date.now();
+  if (overdueInProgress) return "Con retraso";
+  if (rental.status === "ACTIVE") return "Reservada";
+  if (rental.status === "IN_PROGRESS") return "En curso";
+  if (rental.status === "COMPLETED") return rental.is_overdue ? "Finalizada con retraso" : "Finalizada";
+  if (rental.status === "CANCELLED") return "Cancelada";
+  return rental.status;
+}
+
+function getGlobalRentalStatusTone(rental: AdminObjectRental): string {
+  const overdueInProgress = rental.status === "IN_PROGRESS" && new Date(rental.end_date).getTime() <= Date.now();
+  if (overdueInProgress) return "bg-red-100 text-red-700 border-red-200";
+  if (rental.status === "ACTIVE") return "bg-blue-100 text-blue-700 border-blue-200";
+  if (rental.status === "IN_PROGRESS") return "bg-amber-100 text-amber-800 border-amber-200";
+  if (rental.status === "COMPLETED") {
+    return rental.is_overdue ? "bg-red-100 text-red-700 border-red-200" : "bg-emerald-100 text-emerald-700 border-emerald-200";
+  }
+  if (rental.status === "CANCELLED") return "bg-slate-100 text-slate-700 border-slate-200";
+  return "bg-slate-100 text-slate-700 border-slate-200";
+}
+
+function getGlobalEffectiveStatus(rental: AdminObjectRental): "ACTIVE" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED" {
+  if (rental.status === "CANCELLED") {
+    return "CANCELLED";
+  }
+
+  if (rental.status === "COMPLETED") {
+    return "COMPLETED";
+  }
+
+  if (rental.status === "IN_PROGRESS" && new Date(rental.end_date).getTime() <= Date.now()) {
+    return "COMPLETED";
+  }
+
+  return rental.status;
+}
+
+function isGlobalRentalOverdue(rental: AdminObjectRental): boolean {
+  const overdueInProgress = rental.status === "IN_PROGRESS" && new Date(rental.end_date).getTime() <= Date.now();
+  return overdueInProgress || (rental.status === "COMPLETED" && Boolean(rental.is_overdue));
+}
+
+function GlobalRentalHistory({
+  rentals,
+  loading,
+  onRefresh,
+  onMarkReturned,
+  onCancelRental,
+}: {
+  rentals: AdminObjectRental[];
+  loading: boolean;
+  onRefresh: () => void;
+  onMarkReturned: (objectId: number, rentalId: number) => Promise<void>;
+  onCancelRental: (objectId: number, rentalId: number, reason: string) => Promise<void>;
+}) {
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED">("ALL");
+  const [onlyOverdue, setOnlyOverdue] = useState(false);
+  const [dateFilter, setDateFilter] = useState("");
+  const [cancelTarget, setCancelTarget] = useState<AdminObjectRental | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelError, setCancelError] = useState("");
+  const [isCancelling, setIsCancelling] = useState(false);
+
+  const filteredRentals = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return rentals.filter((rental) => {
+      const fields = [
+        rental.object.name,
+        rental.object.location ?? "",
+        `${rental.user.first_name ?? ""} ${rental.user.last_name ?? ""}`,
+        getGlobalRentalStatusLabel(rental),
+      ];
+      const matchesQuery = !query || fields.some((field) => field.toLowerCase().includes(query));
+      const matchesStatus = statusFilter === "ALL" || getGlobalEffectiveStatus(rental) === statusFilter;
+      const matchesOverdue = !onlyOverdue || isGlobalRentalOverdue(rental);
+      const matchesDate = !dateFilter || rental.start_date.slice(0, 10) === dateFilter || rental.end_date.slice(0, 10) === dateFilter;
+      return matchesQuery && matchesStatus && matchesOverdue && matchesDate;
+    });
+  }, [rentals, search, statusFilter, onlyOverdue, dateFilter]);
+
+  const counts = useMemo(() => ({
+    total: rentals.length,
+    active: rentals.filter((r) => getGlobalEffectiveStatus(r) === "ACTIVE").length,
+    inProgress: rentals.filter((r) => getGlobalEffectiveStatus(r) === "IN_PROGRESS").length,
+    completed: rentals.filter((r) => getGlobalEffectiveStatus(r) === "COMPLETED").length,
+    cancelled: rentals.filter((r) => r.status === "CANCELLED").length,
+  }), [rentals]);
+
+  const handleCancelSubmit = async () => {
+    if (!cancelTarget) {
+      return;
+    }
+
+    const reason = cancelReason.trim();
+    if (!reason) {
+      setCancelError("El motivo es requerido");
+      return;
+    }
+    if (reason.length > ADMIN_CANCELLATION_REASON_MAX_LENGTH) {
+      setCancelError(`El motivo no puede exceder ${ADMIN_CANCELLATION_REASON_MAX_LENGTH} caracteres`);
+      return;
+    }
+
+    try {
+      setIsCancelling(true);
+      setCancelError("");
+      await onCancelRental(cancelTarget.object.id, cancelTarget.id, reason);
+      setCancelTarget(null);
+      setCancelReason("");
+    } catch (error) {
+      setCancelError(error instanceof Error ? error.message : "Error desconocido");
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
+  const renderRentalCard = (rental: AdminObjectRental) => {
+    const titleBadge = getGlobalRentalStatusLabel(rental);
+    const badgeTone = getGlobalRentalStatusTone(rental);
+    const canMarkReturned = rental.status === "IN_PROGRESS";
+    const canCancel = rental.status === "ACTIVE";
+    const overdue = isGlobalRentalOverdue(rental);
+
+    return (
+      <article key={rental.id} className="rounded-xl border border-border/80 bg-white p-5 shadow-sm min-w-0 overflow-hidden">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h4 className="font-semibold text-gray-900 break-all">{rental.object.name}</h4>
+              <span className={`rounded-full border px-2.5 py-1 text-xs font-medium ${badgeTone}`}>
+                {titleBadge}
+              </span>
+            </div>
+            <p className="mt-1 text-sm text-gray-600 break-all">
+              <span className="font-medium">Usuario:</span> {rental.user.first_name} {rental.user.last_name}
+            </p>
+            {rental.object.location && (
+              <p className="text-sm text-gray-500 break-all">
+                <span className="font-medium">Ubicación:</span> {rental.object.location}
+              </p>
+            )}
+            <div className="mt-2 space-y-1 text-sm text-gray-600">
+              <p>Inicio: {formatDateTime(rental.start_date)}</p>
+              <p>Fin: {formatDateTime(rental.end_date)}</p>
+            </div>
+            {getGlobalEffectiveStatus(rental) === "IN_PROGRESS" && (
+              <div className="mt-2 space-y-1 text-sm text-gray-600">
+                {rental.remaining_human && (
+                  <p>Tiempo restante: {rental.remaining_human}</p>
+                )}
+                {rental.elapsed_human && (
+                  <p>En uso desde hace: {rental.elapsed_human}</p>
+                )}
+              </div>
+            )}
+            {overdue && (
+              <p className="mt-2 text-sm font-medium text-red-700">
+                Retraso: {rental.overdue_human ?? `${rental.overdue_minutes ?? 0} min`}
+              </p>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2 lg:w-48 lg:items-stretch pt-1">
+            {canMarkReturned && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void onMarkReturned(rental.object.id, rental.id)}
+              >
+                Marcar como devuelto
+              </Button>
+            )}
+            {canCancel && (
+              <Button
+                type="button"
+                variant="outline"
+                className="text-red-600 hover:text-red-700 border-red-300 hover:bg-red-50"
+                onClick={() => {
+                  setCancelTarget(rental);
+                  setCancelReason("");
+                  setCancelError("");
+                }}
+              >
+                Cancelar
+              </Button>
+            )}
+          </div>
+        </div>
+      </article>
+    );
+  };
+
+  return (
+    <div className="space-y-5">
+      <div className="rounded-xl border border-border/80 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <Button type="button" variant="outline" onClick={onRefresh} disabled={loading}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            Actualizar
+          </Button>
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-lg bg-slate-50 px-3 py-2">
+            <p className="text-xs text-gray-500">Total</p>
+            <p className="font-semibold text-gray-900">{counts.total}</p>
+          </div>
+          <div className="rounded-lg bg-blue-50 px-3 py-2">
+            <p className="text-xs text-gray-500">Reservadas</p>
+            <p className="font-semibold text-blue-700">{counts.active}</p>
+          </div>
+          <div className="rounded-lg bg-amber-50 px-3 py-2">
+            <p className="text-xs text-gray-500">En curso</p>
+            <p className="font-semibold text-amber-800">{counts.inProgress}</p>
+          </div>
+          <div className="rounded-lg bg-emerald-50 px-3 py-2">
+            <p className="text-xs text-gray-500">Finalizadas</p>
+            <p className="font-semibold text-emerald-700">{counts.completed}</p>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-3 lg:grid-cols-[1.4fr_1fr_1fr_auto]">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por objeto, usuario o estado..."
+              className="pl-10"
+            />
+          </div>
+
+          <div className="relative">
+            <Filter className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+              className="h-10 w-full rounded-md border border-input bg-background pl-10 pr-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <option value="ALL">Todos los estados</option>
+              <option value="ACTIVE">Reservadas</option>
+              <option value="IN_PROGRESS">En curso</option>
+              <option value="COMPLETED">Finalizadas</option>
+              <option value="CANCELLED">Canceladas</option>
+            </select>
+          </div>
+
+          <Input
+            type="date"
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value)}
+          />
+
+          <Button
+            type="button"
+            variant={onlyOverdue ? "default" : "outline"}
+            onClick={() => setOnlyOverdue((prev) => !prev)}
+          >
+            Solo con retraso
+          </Button>
+        </div>
+      </div>
+
+      {loading ? (
+        <Card>
+          <CardContent className="p-4 text-sm text-gray-500">Cargando historial general...</CardContent>
+        </Card>
+      ) : filteredRentals.length === 0 ? (
+        <Card>
+          <CardContent className="p-4 text-sm text-gray-500 italic">No hay reservas que coincidan con la búsqueda.</CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-3 px-1 pb-2">{filteredRentals.map(renderRentalCard)}</div>
+      )}
+
+      <Dialog open={Boolean(cancelTarget)} onOpenChange={(open) => {
+        if (!open) {
+          setCancelTarget(null);
+          setCancelReason("");
+          setCancelError("");
+        }
+      }}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle>Cancelar reserva</DialogTitle>
+            <DialogDescription>
+              {cancelTarget ? `Reserva de ${cancelTarget.object.name}` : ""}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2">
+            <Label htmlFor="global-cancel-reason">Motivo *</Label>
+            <Textarea
+              id="global-cancel-reason"
+              value={cancelReason}
+              onChange={(e) => {
+                setCancelReason(e.target.value);
+                setCancelError("");
+              }}
+              placeholder="Describe el motivo de la cancelación..."
+              rows={4}
+              maxLength={ADMIN_CANCELLATION_REASON_MAX_LENGTH}
+            />
+            <p className="text-xs text-gray-500">
+              {cancelReason.length}/{ADMIN_CANCELLATION_REASON_MAX_LENGTH} caracteres
+            </p>
+            {cancelError && (
+              <p className="text-sm text-red-600">{cancelError}</p>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setCancelTarget(null);
+                setCancelReason("");
+                setCancelError("");
+              }}
+              disabled={isCancelling}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => void handleCancelSubmit()}
+              disabled={isCancelling || !cancelReason.trim()}
+            >
+              {isCancelling ? "Cancelando..." : "Confirmar cancelación"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
 
 function ObjectCard({
   object,
@@ -113,6 +462,7 @@ export function AdminObjects() {
 
   // Rentals drawer
   const [rentalsOpen, setRentalsOpen] = useState(false);
+  const [globalRentalsOpen, setGlobalRentalsOpen] = useState(false);
   const [selectedObject, setSelectedObject] = useState<ObjectItem | null>(null);
   const [rentalsByStatus, setRentalsByStatus] = useState<RentalsByStatus>({
     active: [],
@@ -121,6 +471,8 @@ export function AdminObjects() {
     completed: [],
   });
   const [loadingRentals, setLoadingRentals] = useState(false);
+  const [globalRentals, setGlobalRentals] = useState<AdminObjectRental[]>([]);
+  const [loadingGlobalRentals, setLoadingGlobalRentals] = useState(false);
   const [completingRentalIds, setCompletingRentalIds] = useState<number[]>([]);
   const [cancellingRentalIds, setCancellingRentalIds] = useState<number[]>([]);
   const getErrorMessage = (err: unknown, fallback: string) =>
@@ -178,6 +530,24 @@ export function AdminObjects() {
     }
   };
 
+  const loadGlobalRentals = async (options?: { silent?: boolean }) => {
+    const silent = options?.silent ?? false;
+    if (!silent) {
+      setLoadingGlobalRentals(true);
+    }
+
+    try {
+      const data = await objectsService.getAllObjectRentals();
+      setGlobalRentals(data);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Error al cargar el historial general"));
+    } finally {
+      if (!silent) {
+        setLoadingGlobalRentals(false);
+      }
+    }
+  };
+
   const loadLabels = useCallback(async () => {
     setLoadingLabels(true);
     try {
@@ -197,6 +567,12 @@ export function AdminObjects() {
   useEffect(() => {
     void loadLabels();
   }, [loadLabels]);
+
+  useEffect(() => {
+    if (globalRentalsOpen && globalRentals.length === 0) {
+      void loadGlobalRentals();
+    }
+  }, [globalRentalsOpen, globalRentals.length]);
 
   const handleOpenForm = () => {
     setFormData({ name: "", description: "", location: "", stock_total: "1", label_ids: [], image_url: "" });
@@ -328,16 +704,27 @@ export function AdminObjects() {
     loadRentals(object.id);
   };
 
-  const handleMarkRentalReturned = async (rentalId: number) => {
-    if (!selectedObject || completingRentalIds.includes(rentalId)) {
+  const handleOpenGlobalRentals = () => {
+    setGlobalRentalsOpen(true);
+    if (globalRentals.length === 0) {
+      void loadGlobalRentals();
+    }
+  };
+
+  const handleMarkRentalReturnedForObject = async (objectId: number, rentalId: number) => {
+    if (completingRentalIds.includes(rentalId)) {
       return;
     }
 
     setCompletingRentalIds((prev) => [...prev, rentalId]);
     try {
-      await objectsService.completeObjectRental(selectedObject.id, rentalId);
+      await objectsService.completeObjectRental(objectId, rentalId);
       toast.success("Préstamo marcado como devuelto");
-      await Promise.all([loadRentals(selectedObject.id), loadObjects({ silent: true })]);
+      await Promise.all([
+        loadObjects({ silent: true }),
+        selectedObject?.id === objectId ? loadRentals(objectId) : Promise.resolve(),
+        globalRentalsOpen ? loadGlobalRentals({ silent: true }) : Promise.resolve(),
+      ]);
     } catch (err: unknown) {
       toast.error(getErrorMessage(err, "Error al marcar préstamo como devuelto"));
     } finally {
@@ -345,21 +732,41 @@ export function AdminObjects() {
     }
   };
 
-  const handleCancelRental = async (rentalId: number, reason: string) => {
-    if (!selectedObject || cancellingRentalIds.includes(rentalId)) {
+  const handleCancelRentalForObject = async (objectId: number, rentalId: number, reason: string) => {
+    if (cancellingRentalIds.includes(rentalId)) {
       return;
     }
 
     setCancellingRentalIds((prev) => [...prev, rentalId]);
     try {
-      await objectsService.cancelAdminRental(selectedObject.id, rentalId, reason);
+      await objectsService.cancelAdminRental(objectId, rentalId, reason);
       toast.success("Préstamo cancelado correctamente");
-      await Promise.all([loadRentals(selectedObject.id), loadObjects({ silent: true })]);
+      await Promise.all([
+        loadObjects({ silent: true }),
+        selectedObject?.id === objectId ? loadRentals(objectId) : Promise.resolve(),
+        globalRentalsOpen ? loadGlobalRentals({ silent: true }) : Promise.resolve(),
+      ]);
     } catch (err: unknown) {
       toast.error(getErrorMessage(err, "Error al cancelar préstamo"));
     } finally {
       setCancellingRentalIds((prev) => prev.filter((id) => id !== rentalId));
     }
+  };
+
+  const handleMarkRentalReturned = async (rentalId: number) => {
+    if (!selectedObject) {
+      return;
+    }
+
+    await handleMarkRentalReturnedForObject(selectedObject.id, rentalId);
+  };
+
+  const handleCancelRental = async (rentalId: number, reason: string) => {
+    if (!selectedObject) {
+      return;
+    }
+
+    await handleCancelRentalForObject(selectedObject.id, rentalId, reason);
   };
 
   return (
@@ -378,6 +785,10 @@ export function AdminObjects() {
             <Button type="button" variant="outline" onClick={() => setIsLabelsOpen(true)}>
               <Tag className="mr-2 h-4 w-4" />
               Gestionar etiquetas
+            </Button>
+            <Button type="button" variant="outline" onClick={handleOpenGlobalRentals}>
+              <Search className="mr-2 h-4 w-4" />
+              Historial global
             </Button>
             <Button type="button" variant="outline" onClick={() => void loadObjects()} disabled={loading}>
               <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
@@ -566,6 +977,24 @@ export function AdminObjects() {
               }}
               completingRentalIds={completingRentalIds}
               cancellingRentalIds={cancellingRentalIds}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={globalRentalsOpen} onOpenChange={setGlobalRentalsOpen}>
+        <SheetContent className="w-full sm:max-w-3xl">
+          <SheetHeader className="mb-1">
+            <SheetTitle>Historial general de reservas</SheetTitle>
+            <SheetDescription>Todas las reservas de todos los objetos en la residencia</SheetDescription>
+          </SheetHeader>
+          <div className="max-h-[calc(100vh-120px)] overflow-y-auto">
+            <GlobalRentalHistory
+              rentals={globalRentals}
+              loading={loadingGlobalRentals}
+              onRefresh={() => void loadGlobalRentals()}
+              onMarkReturned={handleMarkRentalReturnedForObject}
+              onCancelRental={handleCancelRentalForObject}
             />
           </div>
         </SheetContent>
