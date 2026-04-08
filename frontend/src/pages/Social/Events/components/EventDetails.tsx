@@ -25,7 +25,7 @@ export function EventDetails({
     const venueLabel = selectedEvent.event_type === 'internal'
         ? `Espacio común: ${selectedEvent.space?.name || 'Sin espacio'}`
         : `Ubicación: ${selectedEvent.location}`;
-
+    
     return (
         <div className="dialog-overlay" onClick={() => setSelectedEvent(null)}>
             <div className="dialog-content event-details-modal" onClick={e => e.stopPropagation()}>

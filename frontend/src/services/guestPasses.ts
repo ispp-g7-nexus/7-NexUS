@@ -167,6 +167,17 @@ export async function cancelMyGuestPass(guestPassId: number): Promise<GuestPass>
   return payload.guest_pass;
 }
 
+export async function listMyGuestPassHistory(): Promise<GuestPass[]> {
+  const response = await fetchWithAuth(`${GUEST_PASSES_API_BASE}/me/history/`);
+  if (!response.ok) {
+    throw await parseError(response, {
+      fallbackMessage: "No se pudo cargar el historial de pases.",
+      forbiddenMessage: "No tienes permisos para consultar el historial de pases de invitados.",
+    });
+  }
+  return (await response.json()) as GuestPass[];
+}
+
 export async function createMyGuestPass(payload: CreateGuestPassPayload): Promise<GuestPass> {
   const response = await fetchWithAuth(`${GUEST_PASSES_API_BASE}/me/`, {
     method: "POST",

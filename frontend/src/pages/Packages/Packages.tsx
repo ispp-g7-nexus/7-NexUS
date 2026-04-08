@@ -3,7 +3,12 @@ import StudentPackages, { SimplePackage } from "./StudentPackages";
 import { packagesService } from "../../services/packages";
 import { toast } from "sonner";
 
-export function PackagesPage() {
+interface PackagesPageProps {
+  onGoToProfile?: () => void;
+  onLogout?: () => void;
+}
+
+export function PackagesPage({ onGoToProfile, onLogout }: PackagesPageProps) {
   const [packages, setPackages] = useState<SimplePackage[]>([]);
   const [loading, setLoading] = useState(false);
   const [qrData, setQrData] = useState<{ token: string; expires_at?: string; resident_name?: string } | null>(null);
@@ -57,7 +62,13 @@ export function PackagesPage() {
 
   return (
     <div className="h-full">
-      <StudentPackages packages={packages} onShowQr={handleShowQr} qrData={qrData} />
+      <StudentPackages
+        packages={packages}
+        onShowQr={handleShowQr}
+        qrData={qrData}
+        onGoToProfile={onGoToProfile}
+        onLogout={onLogout}
+      />
       {loading && <div className="fixed bottom-24 left-1/2 -translate-x-1/2">Cargando...</div>}
     </div>
   );

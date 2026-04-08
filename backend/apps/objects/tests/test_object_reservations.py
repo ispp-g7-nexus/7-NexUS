@@ -2,14 +2,14 @@ from datetime import datetime, time, timedelta
 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from django_tenants.test.cases import TenantTestCase
+from django_tenants.test.cases import FastTenantTestCase
 from django_tenants.test.client import TenantClient
 
 from apps.objects.models import Object, ObjectRental
 from apps.residences.models import Residence, ResidenceDomain
 
 
-class ObjectReservationApiTests(TenantTestCase):
+class ObjectReservationApiTests(FastTenantTestCase):
     @classmethod
     def get_test_tenant_domain(cls):
         return "objects.test.local"
@@ -20,11 +20,13 @@ class ObjectReservationApiTests(TenantTestCase):
         tenant.slug = "tenant-test-objects"
         tenant.is_active = True
         tenant.on_trial = True
+        return tenant
 
     @classmethod
     def setup_domain(cls, domain):
         domain.domain = cls.get_test_tenant_domain()
         domain.is_primary = True
+        return domain
 
     def setUp(self):
         super().setUp()
@@ -112,7 +114,7 @@ class ObjectReservationApiTests(TenantTestCase):
         self.assertEqual(response.status_code, 201)
         self.assertEqual(ObjectRental.objects.count(), 1)
 
-    def test_blocks_overlapping_object_reservation(self):
+    def test_allows_overlapping_object_reservation_with_infinite_stock(self):
         start_time, end_time = self._build_slot(
             day_offset=1,
             start_hour=10,
@@ -130,14 +132,42 @@ class ObjectReservationApiTests(TenantTestCase):
         response = self.client.post(
             f"/api/objects/{self.object.id}/reserve/",
             data={
-                "start_date": (start_time + timedelta(minutes=15)).isoformat(),
-                "end_date": (end_time + timedelta(minutes=15)).isoformat(),
+                "start_date": start_time.isoformat(),
+                "end_date": end_time.isoformat(),
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(ObjectRental.objects.count(), 2)
+
+    def test_rejects_duplicate_same_user_same_object_same_slot(self):
+        start_time, end_time = self._build_slot(
+            day_offset=1,
+            start_hour=10,
+            start_minute=0,
+            end_hour=11,
+            end_minute=0,
+        )
+        ObjectRental.objects.create(
+            object=self.object,
+            user=self.user,
+            start_date=start_time,
+            end_date=end_time,
+        )
+
+        response = self.client.post(
+            f"/api/objects/{self.object.id}/reserve/",
+            data={
+                "start_date": start_time.isoformat(),
+                "end_date": end_time.isoformat(),
             },
             content_type="application/json",
         )
 
         self.assertEqual(response.status_code, 400)
-        self.assertIn("disponibilidad", response.json()["detail"].lower())
+        self.assertIn("ya tienes una reserva", response.json()["detail"].lower())
+        self.assertEqual(ObjectRental.objects.count(), 1)
 
     def test_allows_back_to_back_reservations(self):
         first_start, first_end = self._build_slot(
@@ -193,3 +223,79 @@ class ObjectReservationApiTests(TenantTestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("posterior", response.json()["detail"].lower())
+
+    def test_rejects_non_hourly_slot_boundaries(self):
+        start_time, end_time = self._build_slot(
+            day_offset=1,
+            start_hour=10,
+            start_minute=30,
+            end_hour=11,
+            end_minute=30,
+        )
+
+        response = self.client.post(
+            f"/api/objects/{self.object.id}/reserve/",
+            data={
+                "start_date": start_time.isoformat(),
+                "end_date": end_time.isoformat(),
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("hh:00", response.json()["detail"].lower())
+
+    def test_rejects_duration_different_from_one_hour(self):
+        start_time, end_time = self._build_slot(
+            day_offset=1,
+            start_hour=10,
+            start_minute=0,
+            end_hour=12,
+            end_minute=0,
+        )
+
+        response = self.client.post(
+            f"/api/objects/{self.object.id}/reserve/",
+            data={
+                "start_date": start_time.isoformat(),
+                "end_date": end_time.isoformat(),
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("exactamente 1 hora", response.json()["detail"].lower())
+
+    def test_availability_returns_slots_and_existing_reservations(self):
+        start_time, end_time = self._build_slot(
+            day_offset=1,
+            start_hour=10,
+            start_minute=0,
+            end_hour=11,
+            end_minute=0,
+        )
+        rental = ObjectRental.objects.create(
+            object=self.object,
+            user=self.other_user,
+            start_date=start_time,
+            end_date=end_time,
+        )
+
+        target_date = (timezone.localdate() + timedelta(days=1)).isoformat()
+        response = self.client.get(
+            f"/api/objects/{self.object.id}/availability/?date={target_date}"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["reservation_interval_minutes"], 60)
+        self.assertEqual(len(payload["available_slots"]), 24)
+        self.assertEqual(len(payload["reservations"]), 1)
+        self.assertEqual(payload["reservations"][0]["id"], rental.id)
+
+        target_slot = next(
+            slot
+            for slot in payload["available_slots"]
+            if slot["start_time"] == start_time.isoformat()
+        )
+        self.assertEqual(target_slot["status"], "available")

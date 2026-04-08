@@ -1,8 +1,13 @@
+import logging
+
 from django.contrib.auth import get_user_model
 from rest_framework.exceptions import ValidationError
 
 from apps.membership.models import Membership, Role
-from apps.common.services import process_password_reset_request
+from apps.common.services import process_password_reset_request, SMTPServerError
+from apps.packages.services import update_resident_packages_snapshot
+
+logger = logging.getLogger(__name__)
 
 UserModel = get_user_model()
 
@@ -141,8 +146,8 @@ def create_resident(data: dict, residence, request) -> dict:
     else:
         try:
             process_password_reset_request(user.email, request)
-        except Exception:
-            pass
+        except SMTPServerError:
+            logger.exception("Error sending password reset email for user_id=%s", user.id)
 
     return {"created": created, "email": user.email}
 
@@ -232,6 +237,10 @@ def update_resident(membership_id: int, data: dict, residence) -> dict | None:
 
     if membership_dirty:
         membership.save()
+
+    # si se cambió el nombre o la habitación, actualizar el snapshot de paquetes para que refleje esos cambios
+    if "full_name" in data or "bedroom_id" in data:
+        update_resident_packages_snapshot(membership)
 
     if "is_active" in data:
         _sync_user_active_status(user)

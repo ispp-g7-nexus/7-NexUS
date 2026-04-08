@@ -1,9 +1,15 @@
-import { Clock, Flame, Leaf } from "lucide-react";
+import { Clock, Flame, Leaf, LogOut, User, Loader2, Send, MessageSquare } from "lucide-react";
+import { useState, useEffect, JSX } from "react";
 import { MenuWeek, MenuDay, Meal } from "../../types/menu.types";
+import { NotificationBell } from "../../components/announcement/NotificationBell";
+import { Button } from "../../components/ui/button";
 
 interface ResidentMenuViewProps {
-  menuWeek?: MenuWeek;
+  readonly onGoToProfile?: () => void;
+  readonly onLogout?: () => void;
 }
+import menuService from "../../services/menu.service";
+import { toast } from "sonner";
 
 const getMealTypeLabel = (type: Meal['type']): string => {
   switch (type) {
@@ -42,36 +48,45 @@ const getMealTypeIcon = (type: Meal['type']): JSX.Element => {
 
 const MealCard = ({ meal }: { meal: Meal }) => {
   return (
-    <div className={`border rounded-lg p-4 ${getMealTypeColor(meal.type)}`}>
+    <div className={`border rounded-xl p-4 overflow-hidden shadow-sm transition-all hover:shadow-md relative ${getMealTypeColor(meal.type)}`}>
+      {meal.image && (
+        <div className="w-full h-40 mb-3 -mt-4 -mx-4 w-[calc(100%+2rem)] border-b border-black/5 relative group">
+          <img src={meal.image} alt={meal.name} className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
+        </div>
+      )}
       <div className="flex items-start justify-between mb-2">
-        <div className="flex items-center gap-2">
-          {getMealTypeIcon(meal.type)}
-          <div>
-            <p className="font-semibold text-gray-900">{meal.name}</p>
+        <div className="flex items-center gap-3 flex-1">
+          <div className={`shrink-0 ${meal.image ? '-mt-8 p-1.5 bg-white/90 backdrop-blur rounded-lg shadow-sm border border-white/50 z-10 relative' : ''}`}>
+            {getMealTypeIcon(meal.type)}
+          </div>
+          <div className="flex-1">
+            <p className="font-semibold text-gray-900 leading-tight">{meal.name}</p>
             {meal.description && (
-              <p className="text-sm text-gray-500">{meal.description}</p>
+              <p className="text-sm text-gray-600 mt-0.5">{meal.description}</p>
             )}
           </div>
         </div>
       </div>
 
-      {(meal.allergens || meal.isVegetarian || meal.isVegan) && (
-        <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-current border-opacity-20">
+      {(meal.isGlutenFree || meal.isVegetarian || meal.isVegan) && (
+        <div className={`flex flex-wrap gap-2 mt-3 pt-3 border-t border-current border-opacity-20 ${meal.image ? 'relative z-10' : ''}`}>
           {meal.isVegetarian && (
             <span className="inline-flex items-center gap-1 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
               <Leaf className="w-3 h-3" />
-              Vegetariano
+              <span className="ml-1">Vegetariano</span>
             </span>
           )}
           {meal.isVegan && (
             <span className="inline-flex items-center gap-1 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
               <Flame className="w-3 h-3" />
-              Vegano
+              <span className="ml-1">Vegano</span>
             </span>
           )}
-          {meal.allergens && meal.allergens.length > 0 && (
-            <span className="inline-flex items-center gap-1 text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">
-              ⚠️ Alérgenos: {meal.allergens.join(', ')}
+          {meal.isGlutenFree && (
+            <span className="inline-flex items-center gap-1 text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full">
+              <span className="text-xs">🌾</span>
+              <span className="ml-1">Sin Gluten</span>
             </span>
           )}
         </div>
@@ -81,7 +96,7 @@ const MealCard = ({ meal }: { meal: Meal }) => {
 };
 
 const DayMenuCard = ({ day }: { day: MenuDay }) => {
-  const dayDate = new Date(day.date);
+  const dayDate = new Date(day.date + 'T00:00:00');
   const dayName = dayDate.toLocaleDateString('es-ES', { weekday: 'long' });
   const formattedDate = dayDate.toLocaleDateString('es-ES', {
     day: 'numeric',
@@ -90,11 +105,11 @@ const DayMenuCard = ({ day }: { day: MenuDay }) => {
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-      <div className="bg-primary pt-12 pb-24 px-6 rounded-b-[2.5rem] relative">
-        <h3 className="text-lg font-semibold text-primary-foreground capitalize">
+      <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4">
+        <h3 className="text-lg font-semibold text-white capitalize">
           {dayName}
         </h3>
-        <p className="text-sm text-primary-foreground/80">{formattedDate}</p>
+        <p className="text-sm text-green-50">{formattedDate}</p>
       </div>
 
       <div className="p-6 space-y-4">
@@ -115,137 +130,119 @@ const DayMenuCard = ({ day }: { day: MenuDay }) => {
           </div>
         )}
       </div>
+
     </div>
   );
 };
 
-export function ResidentMenuView({ menuWeek }: ResidentMenuViewProps) {
-  const mockMenuWeek: MenuWeek = menuWeek || {
-    weekStart: '2026-03-09',
-    weekEnd: '2026-03-15',
-    days: [
-      {
-        day: 'lunes',
-        date: '2026-03-09',
-        meals: [
-          {
-            name: 'Café con tostadas',
-            type: 'breakfast',
-            isVegetarian: true,
-          },
-          {
-            name: 'Arroz con pollo',
-            description: 'Acompañado de ensalada fresca',
-            type: 'lunch',
-          },
-          {
-            name: 'Sopa de verduras',
-            type: 'dinner',
-            isVegetarian: true,
-            isVegan: true,
-          },
-        ],
-      },
-      {
-        day: 'martes',
-        date: '2026-03-10',
-        meals: [
-          {
-            name: 'Zumo de naranja y cereales',
-            type: 'breakfast',
-            isVegetarian: true,
-            isVegan: true,
-          },
-          {
-            name: 'Pasta a la boloñesa',
-            type: 'lunch',
-            allergens: ['Gluten', 'Huevo'],
-          },
-          {
-            name: 'Hamburguesas caseras',
-            type: 'dinner',
-          },
-        ],
-      },
-      {
-        day: 'miércoles',
-        date: '2026-03-11',
-        meals: [
-          {
-            name: 'Tostadas con mermelada',
-            type: 'breakfast',
-            isVegetarian: true,
-          },
-          {
-            name: 'Caldereta de res',
-            type: 'lunch',
-          },
-          {
-            name: 'Pizza Margarita',
-            type: 'dinner',
-            isVegetarian: true,
-          },
-        ],
-      },
-      {
-        day: 'jueves',
-        date: '2026-03-12',
-        meals: [
-          {
-            name: 'Yogur con granola',
-            type: 'breakfast',
-            isVegetarian: true,
-          },
-          {
-            name: 'Cuscús con verduras',
-            type: 'lunch',
-            isVegetarian: true,
-            isVegan: true,
-          },
-          {
-            name: 'Pollo al horno con papas',
-            type: 'dinner',
-          },
-        ],
-      },
-      {
-        day: 'viernes',
-        date: '2026-03-13',
-        meals: [
-          {
-            name: 'Desayuno completo',
-            description: 'Huevos, jamón, pan',
-            type: 'breakfast',
-          },
-          {
-            name: 'Paella de mariscos',
-            type: 'lunch',
-          },
-          {
-            name: 'Filete de pescado',
-            type: 'dinner',
-          },
-        ],
-      },
-    ],
+export function ResidentMenuView({ onGoToProfile, onLogout }: ResidentMenuViewProps) {
+  const [menuWeek, setMenuWeek] = useState<MenuWeek | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [requestText, setRequestText] = useState("");
+
+  useEffect(() => {
+    const loadMenu = async () => {
+      try {
+        setLoading(true);
+        const week = await menuService.getCurrentWeek();
+        setMenuWeek(week);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Error al cargar el menú');
+        setMenuWeek(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadMenu();
+  }, []);
+
+  const handleSendRequest = async () => {
+    if (requestText.trim()) {
+      try {
+        await menuService.createSpecialRequest({
+          description: requestText,
+          date: new Date().toISOString().split('T')[0]
+        });
+
+      toast.success("Petición enviada");
+      setIsModalOpen(false);
+      setRequestText("");
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Error al enviar la petición");
+      }
+    }
   };
 
-  const week = menuWeek || mockMenuWeek;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-green-600 mx-auto mb-4" />
+          <p className="text-gray-500">Cargando menú...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!menuWeek) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="mb-8">
+            <h1 className="text-4xl font-serif text-gray-900 mb-2">
+              Menú del Comedor
+            </h1>
+            <p className="text-gray-600">
+              {error || 'No hay menú disponible para esta semana'}
+            </p>
+          </div>
+
+          <div className="col-span-full text-center py-16 text-gray-400">
+            <p className="text-lg">No hay menú disponible para esta semana</p>
+            <p className="text-sm mt-2">El menú se actualizará cuando el personal lo publique</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col w-full bg-background">
+    <div className="flex flex-col w-full bg-[#F6F7F9]">
       {/* Header */}
       <header className="bg-primary p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg sticky top-0 z-20">
         <h1 className="text-primary-foreground text-2xl font-bold">Menú</h1>
+        <div className="flex items-center gap-2">
+          <NotificationBell />
+          <Button
+            className="text-primary-foreground hover:bg-primary-foreground/20 hover:scale-110 rounded-full transition-all"
+            onClick={() => onGoToProfile?.()}
+            aria-label="Ir al perfil"
+          >
+            <User className="w-5 h-5" />
+          </Button>
+          {onLogout ? (
+            <Button
+              className="text-primary-foreground hover:bg-primary-foreground/20 hover:scale-110 rounded-full transition-all"
+              onClick={onLogout}
+              aria-label="Cerrar sesión"
+            >
+              <LogOut className="w-5 h-5" />
+            </Button>
+          ) : null}
+        </div>
       </header>
       
-      <div className="min-h-screen bg-background pt-6">
+      <div className="min-h-screen bg-[#F6F7F9] pt-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         {/* Menu Days Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {week.days && week.days.length > 0 ? (
-            week.days.map((day, index) => (
+          {menuWeek.days && menuWeek.days.length > 0 ? (
+            menuWeek.days.map((day, index) => (
               <DayMenuCard key={day.id || index} day={day} />
             ))
           ) : (
@@ -260,9 +257,7 @@ export function ResidentMenuView({ menuWeek }: ResidentMenuViewProps) {
           <h3 className="font-semibold text-blue-900 mb-4">Información dietética</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-blue-800">
             <div className="flex items-center gap-2">
-              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                <Leaf className="w-5 h-5 text-primary" />
-              </div>
+              <Leaf className="w-5 h-5 text-green-600" />
               <span>Las opciones vegetarianas disponibles están marcadas</span>
             </div>
             <div className="flex items-center gap-2">
@@ -270,13 +265,53 @@ export function ResidentMenuView({ menuWeek }: ResidentMenuViewProps) {
               <span>Las opciones veganas están indicadas</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-lg">⚠️</span>
-              <span>Los alérgenos comunes están listados</span>
+              <span className="text-lg">🌾</span>
+              <span>Las opciones sin gluten están identificadas</span>
             </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
+    {/* Botón de Petición Especial */}
+<div className="mt-4 pt-4 border-t border-gray-100">
+  {/* Botón flotante corregido */}
+<div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-40 w-full max-w-xs px-4">
+  <button
+    onClick={() => setIsModalOpen(true)}
+    className="w-full flex items-center justify-center gap-2 py-3 bg-orange-500 text-white rounded-full font-bold shadow-lg hover:bg-orange-600 transition-transform active:scale-95"
+  >
+    <MessageSquare size={20} />
+    Petición especial
+  </button>
+</div>
+</div>
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl animate-in fade-in zoom-in duration-200">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Petición Especial</h3>
+            <textarea
+              className="w-full h-32 p-3 border border-gray-200 rounded-xl mb-4 focus:ring-2 focus:ring-amber-500 outline-none resize-none text-gray-700"
+              placeholder="Describe tu necesidad (picnic, dieta médica...)"
+              value={requestText}
+              onChange={(e) => setRequestText(e.target.value)}
+            />
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setIsModalOpen(false)} 
+                className="flex-1 rounded-xl border border-gray-300 py-2 text-sm font-medium hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={handleSendRequest} 
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-xl flex items-center justify-center gap-2 font-bold"
+              >
+                <Send size={16} /> Enviar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
