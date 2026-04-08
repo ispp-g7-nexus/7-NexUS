@@ -11,6 +11,7 @@ import { Select1, SelectContent, SelectItem, SelectTrigger, SelectValue } from "
 import { Textarea } from "../../components/ui/textarea";
 import { NotificationBell } from "../../components/announcement/NotificationBell";
 import {
+  cancelMyGuestPass,
   createMyGuestPass,
   GuestPassApiError,
   type GuestPass,
@@ -236,10 +237,14 @@ function GuestPassCard({
   pass,
   statusLabel,
   badgeClassName,
+  onCancel,
+  isCancelling = false,
 }: {
   readonly pass: GuestPass;
   readonly statusLabel: string;
   readonly badgeClassName: string;
+  readonly onCancel?: (pass: GuestPass) => void;
+  readonly isCancelling?: boolean;
 }) {
   return (
     <article className="rounded-xl border border-border/80 bg-white p-4 shadow-sm">
@@ -266,6 +271,14 @@ function GuestPassCard({
           </span>
         </div>
       </div>
+
+      {onCancel ? (
+        <div className="mt-4 flex justify-end">
+          <Button type="button" variant="destructive" onClick={() => onCancel(pass)} disabled={isCancelling}>
+            {isCancelling ? "Cancelando..." : "Cancelar pase"}
+          </Button>
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -279,6 +292,8 @@ interface PassesListProps {
   readonly badgeClassName: string;
   readonly isHistory?: boolean;
   readonly onRetry?: () => void;
+  readonly onCancel?: (pass: GuestPass) => void;
+  readonly cancellingPassId?: number | null;
 }
 
 function PassesList({
@@ -290,6 +305,8 @@ function PassesList({
   badgeClassName,
   isHistory = false,
   onRetry,
+  onCancel,
+  cancellingPassId = null,
 }: PassesListProps) {
   if (loading) {
     return <LoadingState />;
@@ -314,6 +331,8 @@ function PassesList({
             pass={pass}
             statusLabel={finalStatusLabel}
             badgeClassName={finalBadgeClass}
+            onCancel={isHistory ? undefined : onCancel}
+            isCancelling={cancellingPassId === pass.id}
           />
         );
       })}
@@ -334,6 +353,8 @@ interface GuestPassSectionProps {
   readonly isHistory?: boolean;
   readonly onRetry: () => void;
   readonly onRefresh?: () => void;
+  readonly onCancel?: (pass: GuestPass) => void;
+  readonly cancellingPassId?: number | null;
 }
 
 interface TimeSelectProps {
@@ -413,6 +434,8 @@ function GuestPassSection({
   isHistory = false,
   onRetry,
   onRefresh,
+  onCancel,
+  cancellingPassId,
 }: GuestPassSectionProps) {
   return (
     <section className="space-y-4">
@@ -440,6 +463,8 @@ function GuestPassSection({
         badgeClassName={badgeClassName}
         isHistory={isHistory}
         onRetry={onRetry}
+        onCancel={onCancel}
+        cancellingPassId={cancellingPassId}
       />
     </section>
   );
@@ -741,6 +766,7 @@ export function ActiveGuestPassesPage({ onGoToProfile, onLogout }: ActiveGuestPa
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [cancellingPassId, setCancellingPassId] = useState<number | null>(null);
   const [form, setForm] = useState<GuestPassFormState>(() => buildInitialFormState());
   const [formErrors, setFormErrors] = useState<GuestPassFormErrors>({});
 
@@ -779,6 +805,30 @@ export function ActiveGuestPassesPage({ onGoToProfile, onLogout }: ActiveGuestPa
   const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
     await submitGuestPass({ form, policy, setFormErrors, setIsSubmitting, setForm, loadPasses });
+  };
+
+  const handleCancelPass = async (pass: GuestPass) => {
+    const confirmed = window.confirm(
+      `¿Quieres cancelar el pase ${pass.pass_code} de ${pass.full_name}?`
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setCancellingPassId(pass.id);
+    try {
+      await cancelMyGuestPass(pass.id);
+      toast.success("Pase cancelado correctamente.");
+      await loadPasses();
+    } catch (unknownError) {
+      const message =
+        unknownError instanceof Error
+          ? unknownError.message
+          : "No se pudo cancelar el pase de invitado.";
+      toast.error(message);
+    } finally {
+      setCancellingPassId(null);
+    }
   };
 
   return (
@@ -834,8 +884,10 @@ export function ActiveGuestPassesPage({ onGoToProfile, onLogout }: ActiveGuestPa
           emptyMessage="No tienes pases de invitados activos en este momento."
           statusLabel="Activo"
           badgeClassName="bg-primary/10 text-primary hover:bg-primary/10"
-          onRetry={() => loadPasses()}
-          onRefresh={() => loadPasses()}
+          onRetry={() => void loadPasses()}
+          onRefresh={() => void loadPasses()}
+          onCancel={handleCancelPass}
+          cancellingPassId={cancellingPassId}
         />
 
         <GuestPassSection
@@ -847,7 +899,9 @@ export function ActiveGuestPassesPage({ onGoToProfile, onLogout }: ActiveGuestPa
           emptyMessage="No tienes pases de invitados programados próximamente."
           statusLabel="Próximo"
           badgeClassName="bg-accent/20 text-accent-foreground hover:bg-accent/20"
-          onRetry={() => loadPasses()}
+          onRetry={() => void loadPasses()}
+          onCancel={handleCancelPass}
+          cancellingPassId={cancellingPassId}
         />
 
         <GuestPassSection
@@ -861,7 +915,7 @@ export function ActiveGuestPassesPage({ onGoToProfile, onLogout }: ActiveGuestPa
           statusLabel=""
           badgeClassName=""
           isHistory={true}
-          onRetry={() => loadPasses()}
+          onRetry={() => void loadPasses()}
         />
       </section>
     </div>
