@@ -989,7 +989,7 @@ class UserObjectNotificationsView(AuthenticatedView):
                     {
                         "id": f"object-stock-blocked-{reservation.id}",
                         "rental_id": reservation.id,
-                        "title": f"Posible demora en tu reserva de {reservation.object.name}",
+                        "title": f"Posible retraso en tu reserva de {reservation.object.name}",
                         "message": (
                             f"Tu tramo de las {start_local.strftime('%H:%M')} está afectado: "
                             "todo el stock sigue pendiente de devolución."
