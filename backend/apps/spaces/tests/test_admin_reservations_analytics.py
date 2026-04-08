@@ -181,13 +181,13 @@ class AdminReservationsAnalyticsTests(FastTenantTestCase):
             user=self.user_a,
             obj=self.object_a,
             start_at=self.current_start + timedelta(hours=10),
-            status="ACTIVE",
+            status=ObjectRental.Status.ACTIVE,
         )
         self._create_object_rental(
             user=self.user_b,
             obj=self.object_b,
             start_at=self.current_start + timedelta(hours=12),
-            status="CANCELLED",
+            status=ObjectRental.Status.CANCELLED,
         )
 
         # Periodo anterior (4 reservas / 1 cancelada)
@@ -207,13 +207,13 @@ class AdminReservationsAnalyticsTests(FastTenantTestCase):
             user=self.user_a,
             obj=self.object_a,
             start_at=self.previous_start + timedelta(hours=10),
-            status="ACTIVE",
+            status=ObjectRental.Status.ACTIVE,
         )
         self._create_object_rental(
             user=self.user_b,
             obj=self.object_a,
             start_at=self.previous_start + timedelta(hours=11),
-            status="ACTIVE",
+            status=ObjectRental.Status.ACTIVE,
         )
 
     def test_admin_gets_reservations_analytics_with_compare(self):

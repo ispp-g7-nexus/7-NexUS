@@ -52,7 +52,7 @@ def _validate_object_name(raw_name) -> tuple[str, str | None]:
 def _serialize_object(obj):
     now = timezone.now()
     current_reserved_stock = obj.rentals.filter(
-        status='ACTIVE',
+        status=ObjectRental.Status.ACTIVE,
         start_date__lt=now,
         end_date__gt=now,
     ).count()
@@ -113,7 +113,7 @@ def _serialize_object_reservation(rental: ObjectRental) -> dict[str, Any]:
 
 def _count_active_rentals_in_interval(*, obj: Object, interval_start: datetime, interval_end: datetime) -> int:
     return obj.rentals.filter(
-        status="ACTIVE",
+        status=ObjectRental.Status.ACTIVE,
         start_date__lt=interval_end,
         end_date__gt=interval_start,
     ).count()
@@ -372,7 +372,7 @@ class ObjectAvailabilityView(AuthenticatedView):
         reservations = list(
             ObjectRental.objects.filter(
                 object=obj,
-                status="ACTIVE",
+                status=ObjectRental.Status.ACTIVE,
                 start_date__lt=day_end,
                 end_date__gt=day_start,
             )
@@ -452,7 +452,7 @@ class ObjectReserveView(AuthenticatedView):
 
                 already_reserved_by_user = ObjectRental.objects.filter(
                     object=obj,
-                    status='ACTIVE',
+                    status=ObjectRental.Status.ACTIVE,
                     user=request.user,
                     start_date=start,
                     end_date=end,
@@ -467,7 +467,7 @@ class ObjectReserveView(AuthenticatedView):
 
                 active_rentals_in_slot = ObjectRental.objects.filter(
                     object=obj,
-                    status='ACTIVE',
+                    status=ObjectRental.Status.ACTIVE,
                     start_date__lt=end,
                     end_date__gt=start,
                 ).count()
@@ -507,15 +507,18 @@ class ObjectCancelView(AuthenticatedView):
             rental_id = body.get("rental_id")
             if rental_id:
                 updated = ObjectRental.objects.filter(
-                    id=rental_id, object=obj, user=request.user, status__in=["ACTIVE"]
-                ).update(status="CANCELLED")
+                    id=rental_id,
+                    object=obj,
+                    user=request.user,
+                    status__in=[ObjectRental.Status.ACTIVE],
+                ).update(status=ObjectRental.Status.CANCELLED)
             else:
                 updated = ObjectRental.objects.filter(
                     object=obj,
                     user=request.user,
-                    status="ACTIVE",
+                    status=ObjectRental.Status.ACTIVE,
                     end_date__gt=timezone.now(),
-                ).update(status="CANCELLED")
+                ).update(status=ObjectRental.Status.CANCELLED)
 
             if updated:
                 return JsonResponse({"detail": "Reserva cancelada."}, status=200)
@@ -563,9 +566,9 @@ class ObjectRentalsView(AuthenticatedView):
                 },
             }
 
-            if r.status == "CANCELLED":
+            if r.status == ObjectRental.Status.CANCELLED:
                 cancelled.append(rental_data)
-            elif r.status == "COMPLETED" or r.end_date <= now:
+            elif r.status == ObjectRental.Status.COMPLETED or r.end_date <= now:
                 completed.append(rental_data)
             else:  # ACTIVE
                 active.append(rental_data)
@@ -594,7 +597,7 @@ class UserReservationsView(AuthenticatedView):
             ObjectRental.objects.filter(
                 user=request.user,
                 object__residence=request.residence,
-                status="ACTIVE",
+                status=ObjectRental.Status.ACTIVE,
                 end_date__gt=now,
             )
             .select_related("object")
@@ -639,7 +642,7 @@ class AdminObjectNotificationsView(AuthenticatedView):
         rentals = (
             ObjectRental.objects.filter(
                 object__residence=residence,
-                status="ACTIVE",
+                status=ObjectRental.Status.ACTIVE,
                 end_date__gt=now,
             )
             .exclude(user=request.user)

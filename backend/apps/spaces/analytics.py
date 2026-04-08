@@ -280,7 +280,9 @@ def _accumulate_object_metrics(*, metrics: AggregatedMetrics, queryset, residenc
         .annotate(
             total_reservations=Count("id"),
             # No existe cancelled_at en este modelo; cancelación se infiere por status.
-            cancelled_reservations=Count("id", filter=Q(status="CANCELLED")),
+            cancelled_reservations=Count(
+                "id", filter=Q(status=ObjectRental.Status.CANCELLED)
+            ),
         )
         .order_by()
     )
@@ -314,7 +316,9 @@ def _accumulate_object_metrics(*, metrics: AggregatedMetrics, queryset, residenc
         queryset.values("user_id", "user__first_name", "user__last_name", "user__email")
         .annotate(
             total_reservations=Count("id"),
-            cancelled_reservations=Count("id", filter=Q(status="CANCELLED")),
+            cancelled_reservations=Count(
+                "id", filter=Q(status=ObjectRental.Status.CANCELLED)
+            ),
         )
         .order_by()
     )

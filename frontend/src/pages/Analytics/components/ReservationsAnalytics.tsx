@@ -192,6 +192,7 @@ export function ReservationsAnalytics() {
   }, [filters.from, filters.to]);
 
   const loadAnalytics = useCallback(async (nextFilters: ReservationsAnalyticsFilters) => {
+    const currentId = ++requestIdRef.current;
     const invalidRange =
       nextFilters.from !== "" && nextFilters.to !== "" && nextFilters.from > nextFilters.to;
     if (invalidRange) {
@@ -201,7 +202,6 @@ export function ReservationsAnalytics() {
       return;
     }
 
-    const currentId = ++requestIdRef.current;
     setLoading(true);
     setError(null);
 
@@ -465,24 +465,36 @@ export function ReservationsAnalytics() {
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-3 md:grid-cols-6">
           <div className="space-y-1">
-            <p className="text-xs font-medium text-gray-600">Desde</p>
+            <label htmlFor="reservations-analytics-from" className="text-xs font-medium text-gray-600">
+              Desde
+            </label>
             <Input
+              id="reservations-analytics-from"
               type="date"
               value={filters.from}
               onChange={(event) => setFilters((prev) => ({ ...prev, from: event.target.value }))}
             />
           </div>
           <div className="space-y-1">
-            <p className="text-xs font-medium text-gray-600">Hasta</p>
+            <label htmlFor="reservations-analytics-to" className="text-xs font-medium text-gray-600">
+              Hasta
+            </label>
             <Input
+              id="reservations-analytics-to"
               type="date"
               value={filters.to}
               onChange={(event) => setFilters((prev) => ({ ...prev, to: event.target.value }))}
             />
           </div>
           <div className="space-y-1">
-            <p className="text-xs font-medium text-gray-600">Tipo de recurso</p>
+            <label
+              htmlFor="reservations-analytics-resource-type"
+              className="text-xs font-medium text-gray-600"
+            >
+              Tipo de recurso
+            </label>
             <NativeSelect
+              id="reservations-analytics-resource-type"
               value={filters.resource_type}
               onChange={(event) =>
                 setFilters((prev) => ({
@@ -498,8 +510,11 @@ export function ReservationsAnalytics() {
             </NativeSelect>
           </div>
           <div className="space-y-1">
-            <p className="text-xs font-medium text-gray-600">Zona</p>
+            <label htmlFor="reservations-analytics-zone" className="text-xs font-medium text-gray-600">
+              Zona
+            </label>
             <NativeSelect
+              id="reservations-analytics-zone"
               value={filters.zone_id}
               onChange={(event) => setFilters((prev) => ({ ...prev, zone_id: event.target.value }))}
             >
@@ -512,8 +527,11 @@ export function ReservationsAnalytics() {
             </NativeSelect>
           </div>
           <div className="space-y-1">
-            <p className="text-xs font-medium text-gray-600">Comparar</p>
+            <label htmlFor="reservations-analytics-compare" className="text-xs font-medium text-gray-600">
+              Comparar
+            </label>
             <NativeSelect
+              id="reservations-analytics-compare"
               value={filters.compare}
               onChange={(event) =>
                 setFilters((prev) => ({
