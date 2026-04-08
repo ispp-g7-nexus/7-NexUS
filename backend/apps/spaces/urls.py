@@ -7,6 +7,7 @@ from .views import (
     SpaceReservationCreateView,
     # Admin
     AdminSpaceListCreateView,
+    AdminReservationsAnalyticsView,
     AdminSpaceDetailView,
     AdminSpaceReservationsView,
     AdminSpaceNotificationsView,
@@ -55,5 +56,10 @@ urlpatterns = [
         "admin/spaces/notifications/",
         AdminSpaceNotificationsView.as_view(),
         name="admin-space-notifications",
+    ),
+    path(
+        "admin/analytics/reservations/",
+        AdminReservationsAnalyticsView.as_view(),
+        name="admin-reservations-analytics",
     ),
 ]
