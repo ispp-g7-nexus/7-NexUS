@@ -5,42 +5,7 @@ import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { ObjectRental } from "../services/objects";
-
-const ADMIN_CANCELLATION_REASON_MAX_LENGTH = 200;
-const REASON_PREVIEW_CHARS = 140;
-
-function normalizeReasonText(value: string): string {
-  const normalizedLines = value
-    .replace(/\r\n/g, "\n")
-    .split("\n")
-    .map((line) => line.trimEnd());
-
-  const compactLines: string[] = [];
-  let previousWasBlank = false;
-
-  for (const line of normalizedLines) {
-    const isBlank = line.trim().length === 0;
-    if (isBlank) {
-      if (!previousWasBlank) {
-        compactLines.push("");
-      }
-      previousWasBlank = true;
-      continue;
-    }
-
-    compactLines.push(line);
-    previousWasBlank = false;
-  }
-
-  return compactLines.join("\n").trim();
-}
-
-function buildReasonPreview(value: string, maxChars: number): string {
-  if (value.length <= maxChars) {
-    return value;
-  }
-  return `${value.slice(0, maxChars).trimEnd()}...`;
-}
+import { normalizeReasonText, buildReasonPreview, REASON_PREVIEW_CHARS, ADMIN_CANCELLATION_REASON_MAX_LENGTH, formatDateTime } from "../utils/rentalFormattingUtils";
 
 function getRentalStatusLabel(rental: ObjectRental): string {
   const overdueInProgress = rental.status === "IN_PROGRESS" && new Date(rental.end_date).getTime() <= Date.now();
@@ -66,18 +31,6 @@ interface RentalHistoryViewProps {
   onCancelRental?: (rental: ObjectRental, reason: string) => Promise<void>;
   completingRentalIds?: number[];
   cancellingRentalIds?: number[];
-}
-
-function formatDate(date: string): string {
-  const d = new Date(date);
-  const formatter = new Intl.DateTimeFormat("es-ES", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  return formatter.format(d);
 }
 
 function RentalCard({
@@ -209,10 +162,10 @@ function RentalCard({
               </div>
               <div className="mt-2 space-y-1 text-sm text-gray-600 min-w-0">
                 <p>
-                  <span className="font-medium">Inicio:</span> {formatDate(rental.start_date)}
+                  <span className="font-medium">Inicio:</span> {formatDateTime(rental.start_date)}
                 </p>
                 <p>
-                  <span className="font-medium">Fin:</span> {formatDate(rental.end_date)}
+                  <span className="font-medium">Fin:</span> {formatDateTime(rental.end_date)}
                 </p>
               </div>
 
@@ -267,7 +220,7 @@ function RentalCard({
                   )}
                   {rental.admin_cancelled_at && (
                     <p>
-                      <span className="font-medium">Fecha de cancelación:</span> {formatDate(rental.admin_cancelled_at)}
+                      <span className="font-medium">Fecha de cancelación:</span> {formatDateTime(rental.admin_cancelled_at)}
                     </p>
                   )}
                 </div>
@@ -312,8 +265,8 @@ function RentalCard({
             <CardHeader>
               <CardTitle>Cancelar Reserva</CardTitle>
               <CardDescription>
-                Cancelar la reserva de {userName} del {formatDate(rental.start_date)} al{" "}
-                {formatDate(rental.end_date)}
+                Cancelar la reserva de {userName} del {formatDateTime(rental.start_date)} al{" "}
+                {formatDateTime(rental.end_date)}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">

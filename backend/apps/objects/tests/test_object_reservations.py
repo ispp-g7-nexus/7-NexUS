@@ -37,21 +37,21 @@ class ObjectReservationApiTests(FastTenantTestCase):
         self.user = user_model.objects.create_user(
             username="student",
             email="student@example.com",
-            password="demo1234",
+            password="demo1234", #NOSONAR
             first_name="Student",
             last_name="Demo",
         )
         self.other_user = user_model.objects.create_user(
             username="other",
             email="other@example.com",
-            password="demo1234",
+            password="demo1234", #NOSONAR
             first_name="Other",
             last_name="Demo",
         )
         self.admin_user = user_model.objects.create_user(
             username="admin",
             email="admin@example.com",
-            password="demo1234",
+            password="demo1234", #NOSONAR
             first_name="Admin",
             last_name="Demo",
         )

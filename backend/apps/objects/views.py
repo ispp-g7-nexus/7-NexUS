@@ -652,13 +652,13 @@ class ObjectCancelView(AuthenticatedView):
             rental_id = body.get("rental_id")
             if rental_id:
                 updated = ObjectRental.objects.filter(
-                    id=rental_id, object=obj, user=request.user, status__in=ACTIVE_RENTAL_STATUSES
+                    id=rental_id, object=obj, user=request.user, status="ACTIVE"
                 ).update(status="CANCELLED")
             else:
                 updated = ObjectRental.objects.filter(
                     object=obj,
                     user=request.user,
-                    status__in=ACTIVE_RENTAL_STATUSES,
+                    status="ACTIVE",
                     end_date__gt=timezone.now(),
                 ).update(status="CANCELLED")
 
