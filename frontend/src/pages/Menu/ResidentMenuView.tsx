@@ -1,5 +1,5 @@
-import { Clock, Flame, Leaf, LogOut, User, Loader2, Send, MessageSquare } from "lucide-react";
-import { useState, useEffect, JSX } from "react";
+import { Clock, Flame, Leaf, LogOut, User, Loader2, Send, MessageSquare, ChevronLeft } from "lucide-react";
+import { useState, useEffect, JSX, useCallback } from "react";
 import { MenuWeek, MenuDay, Meal } from "../../types/menu.types";
 import { NotificationBell } from "../../components/announcement/NotificationBell";
 import { Button } from "../../components/ui/button";
@@ -137,28 +137,93 @@ const DayMenuCard = ({ day }: { day: MenuDay }) => {
 
 export function ResidentMenuView({ onGoToProfile, onLogout }: ResidentMenuViewProps) {
   const [menuWeek, setMenuWeek] = useState<MenuWeek | null>(null);
+  const [allWeeks, setAllWeeks] = useState<MenuWeek[]>([]);
+  const [selectedWeekId, setSelectedWeekId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [requestText, setRequestText] = useState("");
 
+  const loadWeeks = useCallback(async () => {
+    try {
+      const weeks = await menuService.listWeeks();
+      const sortedWeeks = [...weeks].sort((a, b) =>
+        new Date(a.weekStart).getTime() - new Date(b.weekStart).getTime()
+      );
+      setAllWeeks(sortedWeeks);
+      return sortedWeeks;
+    } catch {
+      return [];
+    }
+  }, []);
+
+  const loadWeekDetail = useCallback(async (weekId: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const week = await menuService.getWeek(weekId);
+      setMenuWeek(week);
+      setSelectedWeekId(weekId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al cargar el menú');
+      setMenuWeek(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const handleNavigateWeek = async (direction: 'prev' | 'next') => {
+    if (!selectedWeekId || allWeeks.length === 0) return;
+
+    const currentIndex = allWeeks.findIndex(w => w.id === selectedWeekId);
+    if (currentIndex === -1) return;
+
+    const newIndex = direction === 'prev' ? currentIndex - 1 : currentIndex + 1;
+    if (newIndex < 0 || newIndex >= allWeeks.length) return;
+
+    const targetWeek = allWeeks[newIndex];
+    if (targetWeek.id) {
+      await loadWeekDetail(targetWeek.id);
+    }
+  };
+
   useEffect(() => {
-    const loadMenu = async () => {
+    const init = async () => {
+      setLoading(true);
+
       try {
-        setLoading(true);
-        const week = await menuService.getCurrentWeek();
-        setMenuWeek(week);
+        const currentWeek = await menuService.getCurrentWeek();
+        setMenuWeek(currentWeek);
+        setSelectedWeekId(currentWeek.id || null);
         setError(null);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Error al cargar el menú');
-        setMenuWeek(null);
+      } catch {
+        try {
+          const weeks = await menuService.listWeeks();
+          const sortedWeeks = [...weeks].sort((a, b) =>
+            new Date(a.weekStart).getTime() - new Date(b.weekStart).getTime()
+          );
+          setAllWeeks(sortedWeeks);
+          if (sortedWeeks.length > 0) {
+            const first = sortedWeeks[0];
+            if (first.id) {
+              const firstWeek = await menuService.getWeek(first.id);
+              setMenuWeek(firstWeek);
+              setSelectedWeekId(first.id || null);
+            }
+          } else {
+            setMenuWeek(null);
+          }
+        } catch {
+          setMenuWeek(null);
+        }
       } finally {
         setLoading(false);
       }
+      await loadWeeks();
     };
-
-    loadMenu();
-  }, []);
+    init();
+  }, [loadWeeks]);
 
   const handleSendRequest = async () => {
     if (requestText.trim()) {
@@ -210,6 +275,10 @@ export function ResidentMenuView({ onGoToProfile, onLogout }: ResidentMenuViewPr
     );
   }
 
+  const currentIndex = allWeeks.findIndex(w => w.id === selectedWeekId);
+  const canGoPrev = currentIndex > 0;
+  const canGoNext = currentIndex < allWeeks.length - 1;
+
   return (
     <div className="flex flex-col w-full bg-[#F6F7F9]">
       {/* Header */}
@@ -235,9 +304,34 @@ export function ResidentMenuView({ onGoToProfile, onLogout }: ResidentMenuViewPr
           ) : null}
         </div>
       </header>
-      
+
       <div className="min-h-screen bg-[#F6F7F9] pt-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+          {/* Week Navigation */}
+          <div className="flex items-center justify-center gap-6 mb-8">
+            <button
+              onClick={() => handleNavigateWeek('prev')}
+              disabled={!canGoPrev}
+              className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              aria-label="Semana anterior"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <span className="text-lg font-semibold text-gray-900 whitespace-nowrap min-w-[140px] text-center">
+              {new Date(menuWeek.weekStart + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+              {' - '}
+              {new Date(menuWeek.weekEnd + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+            </span>
+            <button
+              onClick={() => handleNavigateWeek('next')}
+              disabled={!canGoNext}
+              className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              aria-label="Próxima semana"
+            >
+              <ChevronLeft className="w-5 h-5 rotate-180" />
+            </button>
+          </div>
 
         {/* Menu Days Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -296,14 +390,14 @@ export function ResidentMenuView({ onGoToProfile, onLogout }: ResidentMenuViewPr
               onChange={(e) => setRequestText(e.target.value)}
             />
             <div className="flex gap-3">
-              <button 
-                onClick={() => setIsModalOpen(false)} 
+              <button
+                onClick={() => setIsModalOpen(false)}
                 className="flex-1 rounded-xl border border-gray-300 py-2 text-sm font-medium hover:bg-gray-50 transition-colors"
               >
                 Cancelar
               </button>
-              <button 
-                onClick={handleSendRequest} 
+              <button
+                onClick={handleSendRequest}
                 className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-xl flex items-center justify-center gap-2 font-bold"
               >
                 <Send size={16} /> Enviar
