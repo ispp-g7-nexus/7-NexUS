@@ -27,6 +27,7 @@ import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import QRCode from "react-qr-code";
 
 export type StudentTab = "home" | "incidences" | "reservations" | "community" | "events" | "matches" | "announcements" | "menu" | "packages" | "visitors";
 
@@ -351,7 +352,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                 announcementService.getAnnouncements(),
                 announcementService.getUnviewedCount(),
                 fetchWithAuth(`${API_URL_INCIDENCES}notifications/`),
-                fetchWithAuth(API_URL),
+                fetchWithAuth(`${API_URL}events/`),
                 packagesService.getPendingCount(),
                 objectsService.getPendingRemindersCount(),
             ]);

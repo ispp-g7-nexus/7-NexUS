@@ -164,6 +164,27 @@ export function StudentView({ onLogout }: StudentViewProps) {
                 return;
             }
 
+            // Handle object rental reminder (real-time push)
+            if (evt.event === "object_rental_reminder" && evt.payload) {
+                const reminderEmail = typeof evt.payload.user_email === "string"
+                    ? evt.payload.user_email.trim().toLowerCase()
+                    : "";
+                if (reminderEmail === normalizedCurrentUserEmail) {
+                    const objectName = evt.payload.object_name || "un objeto";
+                    const minutesRemaining = evt.payload.minutes_remaining ?? "";
+                    toast.warning("⏰ Recordatorio de devolución", {
+                        description: `Tu préstamo de "${objectName}" finaliza en ${minutesRemaining} minutos. Recuerda devolverlo a tiempo.`,
+                        duration: 10000,
+                    });
+                }
+                return;
+            }
+
+            // Handle object reservation created/cancelled (refresh admin notifications)
+            if (evt.event === "object_reservation_created" || evt.event === "object_reservation_cancelled") {
+                return;
+            }
+
             const isViewingGroupChats = activeTab === "community" && isCommunityChatActive && communityChatSubTab === "grupos";
             if (handleGroupLifecycleRealtimeEvent(evt, isViewingGroupChats)) {
                 return;
@@ -256,9 +277,6 @@ export function StudentView({ onLogout }: StudentViewProps) {
         }
 
         if (activeTab === "reservations") {
-            import("../services/objects").then((m) => {
-                m.objectsService.markRemindersAsViewed().catch(() => {});
-            });
         }
 
         if (activeTab !== "announcements") {
@@ -313,7 +331,13 @@ export function StudentView({ onLogout }: StudentViewProps) {
                 tabContent = <StudentIncidences onGoToProfile={handleGoToProfile} onLogout={onLogout} />;
                 break;
             case "reservations":
-                tabContent = <StudentReservations onGoToProfile={handleGoToProfile} onLogout={onLogout} />;
+                tabContent = (
+                    <StudentReservations
+                        onGoToProfile={handleGoToProfile}
+                        onLogout={onLogout}
+                        onNavigate={(tab) => setActiveTab(tab as any)}
+                    />
+                );
                 break;
             case "community":
                 tabContent = (
