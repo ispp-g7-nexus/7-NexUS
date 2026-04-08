@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import { Plus, Bell, MapPin, User, Wrench, MessageSquare, Loader2, Clock, Pencil, Trash2, LogOut } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Plus, Bell, MapPin, User, Wrench, MessageSquare, Loader2, Clock, Pencil, Trash2, LogOut, X } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent } from "../../../components/ui/card";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "../../../components/ui/dialog";
@@ -21,16 +21,53 @@ interface StudentIncidencesProps {
   onLogout?: () => void;
 }
 
+type IncidenceNotification = {
+  id: string;
+  kind?: string;
+  incidence_id?: number;
+  title: string;
+  message: string;
+  created_at: string;
+};
+
+const INCIDENCE_NOTIFICATIONS_DISMISSED_KEY = "incidences-notifications-dismissed-ids";
+const HOME_INCIDENCES_SEEN_AT_KEY = "home-incidences-seen-at";
+const LIVE_REFRESH_MS = 3000;
+
+const getDismissedNotificationIds = (): string[] => {
+  if (typeof window === "undefined") return [];
+  const raw = window.localStorage.getItem(INCIDENCE_NOTIFICATIONS_DISMISSED_KEY);
+  if (!raw) return [];
+
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveDismissedNotificationIds = (ids: string[]) => {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(INCIDENCE_NOTIFICATIONS_DISMISSED_KEY, JSON.stringify(ids));
+};
+
+const saveHomeIncidencesSeenAt = (timestamp?: string) => {
+  if (typeof window === "undefined" || !timestamp) return;
+  window.localStorage.setItem(HOME_INCIDENCES_SEEN_AT_KEY, timestamp);
+};
+
 export default function StudentIncidences({ onGoToProfile, onLogout }: StudentIncidencesProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [incidences, setIncidences] = useState<BaseIncidence[]>([]);
   const [selectedDetails, setSelectedDetails] = useState<BaseIncidence | null>(null);
   const [isNotesOpen, setIsNotesOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<IncidenceNotification[]>([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [loading, setLoading] = useState(true);
+  const dismissedNotificationIdsRef = useRef<string[]>(getDismissedNotificationIds());
 
   const [incidenceToDelete, setIncidenceToDelete] = useState<BaseIncidence | null>(null);
   const [incidenceToEdit, setIncidenceToEdit] = useState<BaseIncidence | null>(null);
@@ -41,38 +78,54 @@ export default function StudentIncidences({ onGoToProfile, onLogout }: StudentIn
   const [filterPriority, setFilterPriority] = useState('all');
   const [showOnlyMine, setShowOnlyMine] = useState(false);
 
+  const appendDismissedNotificationIds = useCallback((ids: string[]) => {
+    if (ids.length === 0) return;
+
+    const next = Array.from(new Set([...dismissedNotificationIdsRef.current, ...ids]));
+    dismissedNotificationIdsRef.current = next;
+    saveDismissedNotificationIds(next);
+  }, []);
+
   const loadNotifications = useCallback(async (markAsRead = false, silent = false) => {
     try {
       if (!silent) setNotificationsLoading(true);
       const res = await fetchWithAuth(`${API_URL_INCIDENCES}notifications/`);
       if (!res.ok) return;
       const data = await res.json();
-      const all = Array.isArray(data.results) ? data.results : [];
+      const all = Array.isArray(data.results) ? (data.results as IncidenceNotification[]) : [];
+      if (all.length > 0) {
+        saveHomeIncidencesSeenAt(all[0].created_at);
+      }
+      const latestNotifications = all.filter((n) => !dismissedNotificationIdsRef.current.includes(n.id));
       const lastReadAt = getLastReadNotificationsAt();
 
-      if (markAsRead && all.length > 0) {
-        saveLastReadNotificationsAt(all[0].created_at);
+      if (markAsRead && latestNotifications.length > 0) {
+        saveLastReadNotificationsAt(latestNotifications[0].created_at);
         setUnreadNotifications(0);
       } else {
-        const count = all.filter((n: any) => Date.parse(n.created_at) > lastReadAt).length;
+        const count = latestNotifications.filter((n) => Date.parse(n.created_at) > lastReadAt).length;
         setUnreadNotifications(count);
       }
-      setNotifications(all);
+      setNotifications(latestNotifications);
     } catch (e) { console.error(e); } finally { if (!silent) setNotificationsLoading(false); }
   }, []);
 
-  const loadIncidences = useCallback(async () => {
+  const loadIncidences = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const res = await fetchWithAuth(API_URL_INCIDENCES);
       if (res.ok) setIncidences(await res.json());
-    } catch (e) { console.error(e); } finally { setLoading(false); }
+    } catch (e) { console.error(e); } finally { if (!silent) setLoading(false); }
   }, []);
 
   useEffect(() => {
     loadIncidences(); loadNotifications();
-    const interval = setInterval(() => loadNotifications(false, true), 15000);
-    return () => clearInterval(interval);
+    const notificationsInterval = setInterval(() => loadNotifications(false, true), LIVE_REFRESH_MS);
+    const incidencesInterval = setInterval(() => loadIncidences(true), LIVE_REFRESH_MS);
+    return () => {
+      clearInterval(notificationsInterval);
+      clearInterval(incidencesInterval);
+    };
   }, [loadIncidences, loadNotifications]);
 
   const handleDelete = async () => {
@@ -106,26 +159,48 @@ export default function StudentIncidences({ onGoToProfile, onLogout }: StudentIn
         <div className="flex items-center gap-2">
           <Popover open={isNotificationsOpen} onOpenChange={(open) => { setIsNotificationsOpen(open); if (open) loadNotifications(true); }}>
             <PopoverTrigger asChild>
-              <Button type="button" size="icon" variant="ghost" className={UI_CLASSES.topIconButton} aria-label="Notificaciones">
+              <Button type="button" size="icon" variant="ghost" className={`${UI_CLASSES.topIconButton} hover:scale-100`} aria-label="Notificaciones">
                 <Bell className="w-5 h-5" />
                 {unreadNotifications > 0 && <span className={UI_CLASSES.bellBadge}>{unreadNotifications}</span>}
               </Button>
             </PopoverTrigger>
-            <PopoverContent align="end" className="w-80 p-0 rounded-[28px] overflow-hidden border-none shadow-2xl">
-              <div className="bg-white p-4 border-b flex items-center justify-between">
-                <p className="text-xs font-bold uppercase tracking-[#0.2em] text-[#1B4D1C]">Notificaciones</p>
-                {notificationsLoading && <Loader2 className="w-3 h-3 animate-spin text-[#82D14C]" />}
-              </div>
-              <div className="max-h-80 overflow-y-auto p-2 bg-white">
-                {notifications.length > 0 ? notifications.map((n) => (
-                  <div key={n.id} className="p-3 mb-1 rounded-2xl bg-slate-50 border border-slate-100">
-                    <div className="flex justify-between items-start mb-1 text-left">
-                      <p className="text-xs font-bold text-slate-800">{n.title}</p>
-                      <span className="text-[9px] text-slate-400">{formatNotificationTime(n.created_at)}</span>
-                    </div>
-                    <p className="text-xs text-slate-600 mt-1 text-left">{n.message}</p>
+            <PopoverContent align="end" sideOffset={10} avoidCollisions={false} className="w-[min(26rem,calc(100vw-2rem))] p-0">
+              <div className="max-h-[70vh] overflow-y-auto rounded-md bg-white p-4">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Bell className="h-5 w-5 text-primary" />
+                    <h3 className="font-semibold text-gray-900">Notificaciones</h3>
                   </div>
-                )) : <p className="text-center py-6 text-xs text-slate-400">Sin notificaciones</p>}
+                  {notificationsLoading && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+                </div>
+
+                <div className="space-y-3">
+                  {notifications.length > 0 ? notifications.map((n) => (
+                    <div key={n.id} className="relative rounded-xl border border-red-200 bg-red-50 p-3">
+                      <button
+                        type="button"
+                        aria-label="Descartar notificación"
+                        className="absolute right-2 top-2 h-8 w-8 rounded-lg text-slate-400 transition-all hover:bg-red-50 hover:text-red-600"
+                        onClick={() => {
+                          appendDismissedNotificationIds([n.id]);
+                          setNotifications((prev) => {
+                            const next = prev.filter((item) => item.id !== n.id);
+                            const lastReadAt = getLastReadNotificationsAt();
+                            setUnreadNotifications(next.filter((item) => Date.parse(item.created_at) > lastReadAt).length);
+                            return next;
+                          });
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                      <div className="mb-1 flex items-start justify-between gap-2 pr-9 text-left">
+                        <p className="text-sm font-semibold text-gray-900">{n.title}</p>
+                        <span className="text-[11px] text-gray-400">{formatNotificationTime(n.created_at)}</span>
+                      </div>
+                      <p className="text-xs text-gray-600 text-left">{n.message}</p>
+                    </div>
+                  )) : <p className="py-4 text-sm text-gray-500 text-center">Sin notificaciones</p>}
+                </div>
               </div>
             </PopoverContent>
           </Popover>
@@ -269,7 +344,7 @@ export default function StudentIncidences({ onGoToProfile, onLogout }: StudentIn
                 <section className="pt-2">
                   <p className="text-[10px] font-bold uppercase text-[#3A7A1C] tracking-widest mb-4 text-left">Gestión y Actualizaciones</p>
                   <div className="relative ml-2 space-y-6 border-l-2 border-slate-100 pl-8">
-                    {selectedDetails.updates?.map((u: any) => (
+                    {selectedDetails.updates?.map((u) => (
                       <div key={u.id} className="relative">
                         <div className="absolute -left-[41px] top-1.5 h-4 w-4 rounded-full border-4 border-white bg-slate-200" />
                         <div className="bg-[#eef8ee] p-4 rounded-[22px] text-left">
