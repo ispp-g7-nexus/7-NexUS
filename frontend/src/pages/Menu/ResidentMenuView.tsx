@@ -141,7 +141,6 @@ export function ResidentMenuView({ onGoToProfile, onLogout }: ResidentMenuViewPr
   const [selectedWeekId, setSelectedWeekId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [requestText, setRequestText] = useState("");
 
