@@ -165,18 +165,18 @@ function RentalCard({
 
   return (
     <>
-      <div className={`rounded-lg border border-gray-200 ${config.bg} p-4`}>
+      <div className={`rounded-lg border border-gray-200 ${config.bg} p-4 min-w-0 overflow-hidden`}>
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-3 flex-1">
             <Icon className={`${config.color} mt-1 h-5 w-5 flex-shrink-0`} />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <h4 className="font-semibold text-gray-900">{userName}</h4>
+                <h4 className="font-semibold text-gray-900 break-all">{userName}</h4>
                 <span className={`text-xs font-medium px-2 py-1 rounded ${config.badge} whitespace-nowrap`}>
                   {config.label}
                 </span>
               </div>
-              <div className="mt-2 space-y-1 text-sm text-gray-600">
+              <div className="mt-2 space-y-1 text-sm text-gray-600 min-w-0">
                 <p>
                   <span className="font-medium">Inicio:</span> {formatDate(rental.start_date)}
                 </p>
@@ -202,11 +202,7 @@ function RentalCard({
                     <p className="font-medium text-red-700">
                       Retraso: {rental.overdue_human ?? `${rental.overdue_minutes ?? 0} min`}
                     </p>
-                  ) : (
-                    <p className="text-gray-600">
-                      Duración: {rental.elapsed_human ?? `${rental.elapsed_minutes ?? 0} min`}
-                    </p>
-                  )}
+                  ) : null}
                 </div>
               )}
 
@@ -217,8 +213,8 @@ function RentalCard({
                     {rental.admin_cancelled_by.first_name} {rental.admin_cancelled_by.last_name}
                   </p>
                   {normalizedCancelReason && (
-                    <div>
-                      <p className="whitespace-pre-wrap break-words">
+                    <div className="min-w-0">
+                      <p className="whitespace-pre-wrap break-all">
                         <span className="font-medium">Motivo:</span>{" "}
                         {previewCancelReason}
                       </p>
@@ -352,7 +348,7 @@ function RentalCard({
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-sm text-gray-700 whitespace-pre-wrap break-words max-h-72 overflow-y-auto leading-relaxed">
+              <p className="text-sm text-gray-700 whitespace-pre-wrap break-all max-h-72 overflow-y-auto leading-relaxed">
                 {normalizedCancelReason}
               </p>
               <div className="flex justify-end">
