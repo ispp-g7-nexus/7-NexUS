@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AdminView } from '../components/AdminView';
 import { StudentView } from '../components/StudentView';
+import { identifyUser, resetUser } from '../services/analytics';
 import { authService, resolvePortalRoleFromRoles, type PortalRole } from '../services/auth';
 
 export function DashboardPage() {
@@ -32,6 +33,13 @@ export function DashboardPage() {
                     : (username ?? '');
                 setAdminUser({ name, email: email ?? '' });
 
+                identifyUser({
+                    id: session.user.id,
+                    email: session.user.email,
+                    name,
+                    role: nextRole,
+                });
+
                 localStorage.setItem('userRole', nextRole);
                 setRole(nextRole);
             } catch {
@@ -61,6 +69,7 @@ export function DashboardPage() {
 
     const handleLogout = () => {
         localStorage.removeItem('userRole');
+        resetUser();
         authService.logout().catch(() => null);
         navigate('/');
     };

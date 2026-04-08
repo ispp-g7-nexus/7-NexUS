@@ -27,6 +27,7 @@ import { AdminPackages } from "../pages/Packages/AdminPackages";
 
 import { StatCard } from "./statCard";
 import { AdminBrandingPage } from "../pages/Branding/AdminBrandingPage";
+import { trackFeature } from "../services/analytics";
 import { brandingService, type ResidenceBranding } from "../services/branding";
 import { Button } from "./ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
@@ -220,6 +221,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
 
     const goToTab = (tab: AdminTab) => {
         setActiveTab(tab);
+        trackFeature(tab, { portal: 'admin' });
         navigate(tab === "dashboard" ? "/dashboard" : `/dashboard/${tab}`);
     };
 

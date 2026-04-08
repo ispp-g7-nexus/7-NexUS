@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { trackEvent } from "../../../services/analytics";
 import { fetchWithAuth, API_URL } from "../../../utils/api";
 import { listCommonSpaces, isApiError, type CommonSpace } from "../../../services/reservations";
 import { EventForm } from "./components/EventForm";
@@ -128,6 +129,7 @@ export function Events() {
             }
 
             if (response.ok) {
+                trackEvent('event_joined', { event_id: eventId });
                 toast.success("¡Te has apuntado al evento!");
                 fetchEvents();
             } else {
@@ -152,6 +154,7 @@ export function Events() {
             }
 
             if (response.ok) {
+                trackEvent('event_left', { event_id: eventId });
                 toast.success("Te has desapuntado del evento.");
                 fetchEvents();
             } else {
@@ -192,6 +195,7 @@ export function Events() {
             }
 
             if (response.ok) {
+                trackEvent(isEditingEvent ? 'event_updated' : 'event_created');
                 toast.success(isEditingEvent ? "Evento guardado con éxito." : "Evento creado con éxito.");
                 setIsCreateEventOpen(false);
                 setIsEditingEvent(false);
@@ -224,6 +228,7 @@ export function Events() {
                         }
 
                         if (response.ok || response.status === 204) {
+                            trackEvent('event_deleted', { event_id: eventId });
                             toast.success("Evento eliminado con éxito.");
                             fetchEvents();
                             setSelectedEvent(null);
