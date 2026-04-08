@@ -112,6 +112,8 @@ export function StudentChats({
     hasPrivateNews = false,
     onSubTabActiveChange,
     onUnreadStatusChange,
+    focusGroupId = null,
+    onFocusGroupHandled,
 }: {
     readonly enableRealtimeStream?: boolean;
     readonly realtimeTick?: number;
@@ -120,6 +122,8 @@ export function StudentChats({
     readonly hasPrivateNews?: boolean;
     readonly onSubTabActiveChange?: (tab: ChatSubTab) => void;
     readonly onUnreadStatusChange?: (status: { hasGroupUnread: boolean; hasPrivateUnread: boolean }) => void;
+    readonly focusGroupId?: number | null;
+    readonly onFocusGroupHandled?: () => void;
 }) {
     const [subTab, setSubTab] = useState<ChatSubTab>("grupos");
 
@@ -156,6 +160,7 @@ export function StudentChats({
     const lastProcessedExternalRealtimeTickRef = useRef(0);
     const processedGroupMessageEventKeysRef = useRef<Set<string>>(new Set());
     const processedPrivateMessageEventKeysRef = useRef<Set<string>>(new Set());
+    const lastHandledFocusGroupIdRef = useRef<number | null>(null);
 
     // ── Estado nueva conversación ──
     const [showNewConv, setShowNewConv] = useState(false);
@@ -362,6 +367,26 @@ export function StudentChats({
             setLoadingGroupMsgs(false);
         }
     };
+
+    useEffect(() => {
+        if (!focusGroupId || focusGroupId <= 0) {
+            return;
+        }
+
+        if (lastHandledFocusGroupIdRef.current === focusGroupId) {
+            return;
+        }
+
+        const target = groups.find((group) => group.id === focusGroupId);
+        if (!target) {
+            return;
+        }
+
+        setSubTab("grupos");
+        openGroup(target).catch(() => { });
+        lastHandledFocusGroupIdRef.current = focusGroupId;
+        onFocusGroupHandled?.();
+    }, [focusGroupId, groups, onFocusGroupHandled]);
 
     const loadSelectedGroupMessages = useCallback(async (groupId: number) => {
         try {

@@ -13,6 +13,7 @@ export interface AdminSpace {
   id: number;
   name: string;
   description: string;
+  img?: string | null;
   capacity: number;
   is_active: boolean;
   open_time: string;
@@ -36,6 +37,7 @@ export interface AdminSpaceReservation {
 export interface CreateSpacePayload {
   name: string;
   description?: string;
+  img?: string | null;
   capacity: number;
   open_time: string;
   close_time: string;

@@ -1,20 +1,27 @@
 import json
 from datetime import datetime
-from django.http import JsonResponse
-from django.views import View
-from django.utils.decorators import method_decorator
-from .models import Event, EventParticipation
-from django.shortcuts import get_object_or_404
+
+from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.utils import IntegrityError
-from django.contrib.auth import get_user_model
-from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
 from django.test import RequestFactory
-from apps.common.utils.jwt_auth import resolve_user_from_request
-from django.utils.dateparse import parse_datetime
 from django.utils import timezone
+from django.utils.decorators import method_decorator
+from django.views import View
+from django.views.decorators.csrf import csrf_exempt
+
+from apps.chats.models import ChatGroup, ChatGroupMember
+from apps.chats.realtime import publish_chat_event
+from apps.chats.serializers import ChatGroupSerializer
+from apps.common.utils.jwt_auth import resolve_user_from_request
+from apps.membership.models import Membership
 from apps.spaces.models import CommonSpace, SpaceReservation
 from apps.spaces.views import SpaceReservationCreateView
+
+from .models import Event, EventParticipation
+from .permissions import is_events_admin
 
 
 def _normalize_event_type(raw_event_type) -> str | None:
@@ -24,20 +31,19 @@ def _normalize_event_type(raw_event_type) -> str | None:
     return event_type
 
 
-def _parse_and_validate_times(start_time_str: str, end_time_str: str, *, validate_future: bool):
-    if not start_time_str or not end_time_str:
-        return None, None, JsonResponse(
-            {"detail": "Se requiere fecha de inicio y fin."},
-            status=400,
-        )
-
-    start_time = parse_datetime(start_time_str)
-    end_time = parse_datetime(end_time_str)
-
-    if not start_time or not end_time:
-        return None, None, JsonResponse(
-            {"detail": "Formato de fecha/hora inválido."},
-            status=400,
+def _parse_and_validate_times(start_time_str, end_time_str, validate_future=False):
+    """
+    Parse and validate event times.
+    Returns (start_time, end_time, error_response) or (start_time, end_time, None) if valid.
+    """
+    try:
+        start_time = datetime.fromisoformat(str(start_time_str).replace("Z", "+00:00"))
+        end_time = datetime.fromisoformat(str(end_time_str).replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return (
+            None,
+            None,
+            JsonResponse({"detail": "Formato de fecha inválido."}, status=400),
         )
 
     if timezone.is_naive(start_time):
@@ -45,24 +51,116 @@ def _parse_and_validate_times(start_time_str: str, end_time_str: str, *, validat
     if timezone.is_naive(end_time):
         end_time = timezone.make_aware(end_time, timezone.get_current_timezone())
 
-    if validate_future and start_time < timezone.now():
-        return None, None, JsonResponse(
-            {"detail": "La fecha de inicio no puede ser en el pasado."},
-            status=400,
+    if start_time >= end_time:
+        return (
+            None,
+            None,
+            JsonResponse(
+                {"detail": "La hora de inicio debe ser anterior a la de fin."},
+                status=400,
+            ),
         )
 
-    if end_time <= start_time:
-        return None, None, JsonResponse(
-            {"detail": "La fecha de fin debe ser posterior a la de inicio."},
-            status=400,
+    if validate_future and start_time <= timezone.now():
+        return (
+            None,
+            None,
+            JsonResponse({"detail": "El evento debe ser en el futuro."}, status=400),
         )
 
     return start_time, end_time, None
 
 
-def _serialize_event(event: Event, current_user):
+def _create_event_chat_group(
+    event: Event, host_user
+) -> tuple[ChatGroup | None, str | None]:
+    """
+    Create a chat group for an event and add the host as admin.
+    Returns (chat_group, error_message)
+    """
+    try:
+        chat_name = f"Evento: {event.title} ({event.start_time.strftime('%d/%m/%Y')})"
+
+        chat_group = ChatGroup.objects.create(
+            residence=event.residence,
+            name=chat_name,
+            description=f"Chat del evento {event.title}",
+            label=ChatGroup.LabelChoices.GENERAL,
+            created_by=host_user,
+        )
+
+        host_membership = Membership.objects.filter(
+            user=host_user,
+            residence=event.residence,
+            is_active=True,
+        ).first()
+
+        if host_membership:
+            ChatGroupMember.objects.create(
+                group=chat_group,
+                membership=host_membership,
+                is_admin=True,
+            )
+
+        return chat_group, None
+    except IntegrityError:
+        return None, "Este evento ya tiene un chat asociado o el nombre del chat está duplicado."
+    except Exception:
+        return None, "No se pudo crear el grupo de chat para este evento."
+
+
+def _publish_group_created_for_event(request, chat_group: ChatGroup) -> None:
+    residence = getattr(request, "residence", None)
+    if not residence:
+        return
+
+    payload = {
+        "group": ChatGroupSerializer(chat_group, context={"request": request}).data,
+    }
+    publish_chat_event(residence.id, "group_created", payload)
+
+
+def _get_user_interests(user) -> set:
+    if not hasattr(user, "student_profile"):
+        return set()
+    profile = user.student_profile
+    interests = profile.interests or []
+    custom_interests = profile.custom_interests or []
+    
+    user_tastes = set()
+    for taste in list(interests) + list(custom_interests):
+        if taste and isinstance(taste, str):
+            user_tastes.add(taste.strip().lower())
+    return user_tastes
+
+
+def _calculate_recommendation_score(event_tags: str, user_interests: set) -> int:
+    if not event_tags or not user_interests:
+        return 0
+    
+    tags = [tag.strip().lower() for tag in event_tags.split(",") if tag.strip()]
+    score = sum(1 for tag in tags if tag in user_interests)
+    return score
+
+
+def _serialize_event(event: Event, current_user, residence, recommendation_score=0, is_recommended=False):
     is_joined = event.participations.filter(user=current_user).exists()
-    can_edit = event.host == current_user or getattr(current_user, "is_staff", False)
+    can_edit = event.host == current_user or is_events_admin(current_user, residence)
+
+    is_chat_member = False
+    if event.chat_group_id and current_user.is_authenticated:
+        user_membership = Membership.objects.filter(
+            user=current_user,
+            residence=event.residence,
+            is_active=True,
+        ).first()
+        if user_membership:
+            is_chat_member = ChatGroupMember.objects.filter(
+                group=event.chat_group,
+                membership=user_membership,
+                can_interact=True,
+            ).exists()
+
     return {
         "id": event.id,
         "title": event.title,
@@ -93,6 +191,15 @@ def _serialize_event(event: Event, current_user):
             "first_name": event.host.first_name,
             "last_name": event.host.last_name,
         },
+        "chat_group": {
+            "id": event.chat_group.id,
+            "name": event.chat_group.name,
+        }
+        if event.chat_group
+        else None,
+        "is_chat_member": is_chat_member,
+        "recommendation_score": recommendation_score,
+        "is_recommended": is_recommended,
     }
 
 
@@ -122,17 +229,23 @@ def _create_reservation_through_spaces_module(
     if response.status_code != 201:
         try:
             data = json.loads(response.content.decode("utf-8"))
-            detail = data.get("detail") or "No se pudo crear la reserva del evento interno."
+            detail = (
+                data.get("detail") or "No se pudo crear la reserva del evento interno."
+            )
         except Exception:
             detail = "No se pudo crear la reserva del evento interno."
         return None, JsonResponse({"detail": detail}, status=response.status_code)
 
     data = json.loads(response.content.decode("utf-8"))
     reservation_id = data.get("id")
-    reservation = SpaceReservation.objects.select_related("space").filter(
-        id=reservation_id,
-        residence=residence,
-    ).first()
+    reservation = (
+        SpaceReservation.objects.select_related("space")
+        .filter(
+            id=reservation_id,
+            residence=residence,
+        )
+        .first()
+    )
 
     if not reservation:
         return None, JsonResponse(
@@ -142,7 +255,14 @@ def _create_reservation_through_spaces_module(
     return reservation, None
 
 
-def _space_has_active_overlap(*, residence, space_id: int, start_time: datetime, end_time: datetime, exclude_reservation_id: int | None = None) -> bool:
+def _space_has_active_overlap(
+    *,
+    residence,
+    space_id: int,
+    start_time: datetime,
+    end_time: datetime,
+    exclude_reservation_id: int | None = None,
+) -> bool:
     overlaps = SpaceReservation.objects.filter(
         residence=residence,
         space_id=space_id,
@@ -163,7 +283,9 @@ def _parse_max_participants(raw_value):
         parsed = int(raw_value)
     except (TypeError, ValueError):
         return None, JsonResponse(
-            {"detail": "El límite de participantes debe ser un número entero positivo."},
+            {
+                "detail": "El límite de participantes debe ser un número entero positivo."
+            },
             status=400,
         )
 
@@ -197,7 +319,8 @@ def _normalize_internal_event_limit(raw_value, space_capacity: int):
 
     return parsed_limit, None
 
-@method_decorator(csrf_exempt, name='dispatch')
+
+@method_decorator(csrf_exempt, name="dispatch")
 class AuthenticatedView(View):
     def dispatch(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
@@ -205,180 +328,391 @@ class AuthenticatedView(View):
             if user_data:
                 User = get_user_model()
                 try:
-                    request.user = User.objects.get(id=user_data['id'])
+                    request.user = User.objects.get(id=user_data["id"])
                 except User.DoesNotExist:
                     return JsonResponse({"detail": "User not found."}, status=401)
             else:
-                return JsonResponse({"detail": "Authentication credentials were not provided."}, status=401)
+                return JsonResponse(
+                    {"detail": "Authentication credentials were not provided."},
+                    status=401,
+                )
         return super().dispatch(request, *args, **kwargs)
+
 
 class EventListView(AuthenticatedView):
     def get(self, request):
-        if not hasattr(request, 'residence') or not request.residence:
+        if not hasattr(request, "residence") or not request.residence:
             return JsonResponse({"detail": "No residence context."}, status=400)
-            
-        events = Event.objects.filter(residence=request.residence).select_related('host', 'space')
-        data = [_serialize_event(event, request.user) for event in events]
+
+        events = list(Event.objects.filter(residence=request.residence).select_related(
+            "host", "space"
+        ))
+
+        user_interests = _get_user_interests(request.user)
+        only_recommended = request.GET.get("recommended", "false").lower() == "true"
+
+        event_tuples = []
+        for event in events:
+            score = _calculate_recommendation_score(event.tags, user_interests)
+            is_recommended = score > 0
+            if only_recommended and not is_recommended:
+                continue
+            event_tuples.append((score, event.start_time, event, is_recommended))
+
+        # Order by recommendation score descending, then start_time descending
+        event_tuples.sort(key=lambda x: (x[0], x[1]), reverse=True)
+
+        data = [
+            _serialize_event(
+                event=tup[2],
+                current_user=request.user,
+                residence=request.residence,
+                recommendation_score=tup[0],
+                is_recommended=tup[3]
+            ) for tup in event_tuples
+        ]
         return JsonResponse(data, safe=False)
 
     def post(self, request):
-        if not hasattr(request, 'residence') or not request.residence:
+        if not hasattr(request, "residence") or not request.residence:
             return JsonResponse({"detail": "No residence context."}, status=400)
-            
+
         try:
             body = json.loads(request.body)
-            
-            event_type = _normalize_event_type(body.get('event_type'))
+
+            event_type = _normalize_event_type(body.get("event_type"))
             if not event_type:
                 return JsonResponse({"detail": "Tipo de evento inválido."}, status=400)
 
             start_time, end_time, time_error = _parse_and_validate_times(
-                body.get('start_time'),
-                body.get('end_time'),
+                body.get("start_time"),
+                body.get("end_time"),
                 validate_future=True,
             )
             if time_error:
                 return time_error
 
-            # Validar superposición de horarios solo para asistencia
             overlapping_participating = EventParticipation.objects.filter(
                 user=request.user,
                 event__start_time__lt=end_time,
-                event__end_time__gt=start_time
+                event__end_time__gt=start_time,
             ).exists()
-            
-            if overlapping_participating:
-                return JsonResponse({"detail": "Ya asistes a otro evento en ese horario."}, status=400)
 
-            location = str(body.get('location') or '').strip()
-            space_id = body.get('space_id')
+            if overlapping_participating:
+                return JsonResponse(
+                    {"detail": "Ya asistes a otro evento en ese horario."}, status=400
+                )
+
+            # Validar que no haya otro evento con el mismo título para la misma fecha
+            event_title = str(body.get("title") or "").strip()
+            if event_title:
+                event_date = start_time.date()
+                if Event.objects.filter(
+                    residence=request.residence,
+                    title__iexact=event_title,
+                    start_time__date=event_date,
+                ).exists():
+                    return JsonResponse(
+                        {
+                            "detail": f"Ya existe un evento con el título '{event_title}' para la fecha seleccionada."
+                        },
+                        status=400,
+                    )
+
+            location = str(body.get("location") or "").strip()
+            space_id = body.get("space_id")
+
+            target_space = None
+            normalized_max_participants = None
 
             if event_type == Event.Type.INTERNAL:
                 if not space_id:
-                    return JsonResponse({"detail": "Debes seleccionar un espacio común para eventos internos."}, status=400)
+                    return JsonResponse(
+                        {
+                            "detail": "Debes seleccionar un espacio común para eventos internos."
+                        },
+                        status=400,
+                    )
                 if location:
-                    return JsonResponse({"detail": "Los eventos internos no deben incluir ubicación externa."}, status=400)
+                    return JsonResponse(
+                        {
+                            "detail": "Los eventos internos no deben incluir ubicación externa."
+                        },
+                        status=400,
+                    )
+                target_space = get_object_or_404(
+                    CommonSpace,
+                    id=int(space_id),
+                    residence=request.residence,
+                    is_active=True,
+                )
+                normalized_max_participants, limit_error = (
+                    _normalize_internal_event_limit(
+                        body.get("max_participants"), target_space.capacity
+                    )
+                )
+                if limit_error:
+                    return limit_error
+
+                if _space_has_active_overlap(
+                    residence=request.residence,
+                    space_id=target_space.id,
+                    start_time=start_time,
+                    end_time=end_time,
+                ):
+                    return JsonResponse(
+                        {
+                            "detail": "El espacio común ya está reservado en esa franja horaria."
+                        },
+                        status=400,
+                    )
             else:
                 if not location:
-                    return JsonResponse({"detail": "Debes indicar una ubicación para eventos externos."}, status=400)
+                    return JsonResponse(
+                        {
+                            "detail": "Debes indicar una ubicación para eventos externos."
+                        },
+                        status=400,
+                    )
                 if space_id:
-                    return JsonResponse({"detail": "Los eventos externos no pueden asociar un espacio común."}, status=400)
-
-            normalized_max_participants = None
+                    return JsonResponse(
+                        {
+                            "detail": "Los eventos externos no pueden asociar un espacio común."
+                        },
+                        status=400,
+                    )
+                normalized_max_participants, limit_error = _parse_max_participants(
+                    body.get("max_participants")
+                )
+                if limit_error:
+                    return limit_error
 
             with transaction.atomic():
                 reservation = None
-                space = None
 
                 if event_type == Event.Type.INTERNAL:
-                    space = get_object_or_404(
-                        CommonSpace,
-                        id=int(space_id),
-                        residence=request.residence,
-                        is_active=True,
-                    )
-                    normalized_max_participants, limit_error = _normalize_internal_event_limit(
-                        body.get('max_participants'),
-                        space.capacity,
-                    )
-                    if limit_error:
-                        return limit_error
-
-                    if _space_has_active_overlap(
-                        residence=request.residence,
-                        space_id=space.id,
-                        start_time=start_time,
-                        end_time=end_time,
-                    ):
-                        return JsonResponse(
-                            {"detail": "El espacio común ya está reservado en esa franja horaria."},
-                            status=400,
+                    reservation, reservation_error = (
+                        _create_reservation_through_spaces_module(
+                            request=request,
+                            residence=request.residence,
+                            space_id=target_space.id,
+                            start_time=start_time,
+                            end_time=end_time,
                         )
-
-                    reservation, reservation_error = _create_reservation_through_spaces_module(
-                        request=request,
-                        residence=request.residence,
-                        space_id=space.id,
-                        start_time=start_time,
-                        end_time=end_time,
                     )
                     if reservation_error:
                         transaction.set_rollback(True)
                         return reservation_error
-                    space = reservation.space
-                else:
-                    normalized_max_participants, limit_error = _parse_max_participants(
-                        body.get('max_participants')
-                    )
-                    if limit_error:
-                        return limit_error
 
                 event = Event.objects.create(
-                    title=body.get('title'),
-                    description=body.get('description'),
+                    title=body.get("title"),
+                    description=body.get("description"),
                     start_time=start_time,
                     end_time=end_time,
                     event_type=event_type,
-                    location=location if event_type == Event.Type.EXTERNAL else '',
-                    space=space,
+                    location=location if event_type == Event.Type.EXTERNAL else "",
+                    space=target_space,
                     reservation=reservation,
-                    image_url=body.get('image_url'),
-                    tags=body.get('tags'),
+                    image_url=body.get("image_url"),
+                    tags=body.get("tags"),
                     max_participants=normalized_max_participants,
                     residence=request.residence,
-                    host=request.user
+                    host=request.user,
                 )
+
+                chat_group, chat_error = _create_event_chat_group(event, request.user)
+                if chat_error:
+                    transaction.set_rollback(True)
+                    return JsonResponse(
+                        {
+                            "detail": f"Evento creado pero no se pudo crear el chat: {chat_error}"
+                        },
+                        status=400,
+                    )
+
+                if chat_group:
+                    event.chat_group = chat_group
+                    event.save(update_fields=["chat_group"])
+                    _publish_group_created_for_event(request, chat_group)
+
                 EventParticipation.objects.create(event=event, user=request.user)
-            return JsonResponse({'id': event.id, 'detail': 'Event created successfully'}, status=201)
+
+            return JsonResponse(
+                {"id": event.id, "detail": "Event created successfully"}, status=201
+            )
         except Exception as e:
             return JsonResponse({"detail": str(e)}, status=400)
+
 
 class EventDetailView(AuthenticatedView):
     def get(self, request, event_id):
         event = get_object_or_404(
-            Event.objects.select_related('host', 'space'),
+            Event.objects.select_related("host", "space"),
             id=event_id,
             residence=request.residence,
         )
-        return JsonResponse(_serialize_event(event, request.user))
-        
+        user_interests = _get_user_interests(request.user)
+        score = _calculate_recommendation_score(event.tags, user_interests)
+        return JsonResponse(_serialize_event(event, request.user, request.residence, recommendation_score=score, is_recommended=score > 0))
+
     def put(self, request, event_id):
         event = get_object_or_404(Event, id=event_id, residence=request.residence)
-        can_edit = event.host == request.user or getattr(request.user, 'is_staff', False)
+        can_edit = event.host == request.user or is_events_admin(
+            request.user, request.residence
+        )
         if not can_edit:
             return JsonResponse({"detail": "Unauthorized"}, status=403)
-            
+
         try:
             body = json.loads(request.body)
 
-            event_type = _normalize_event_type(body.get('event_type', event.event_type))
+            event_type = _normalize_event_type(body.get("event_type", event.event_type))
             if not event_type:
                 return JsonResponse({"detail": "Tipo de evento inválido."}, status=400)
 
             start_time, end_time, time_error = _parse_and_validate_times(
-                body.get('start_time'),
-                body.get('end_time'),
+                body.get("start_time"),
+                body.get("end_time"),
                 validate_future=False,
             )
             if time_error:
                 return time_error
-                
-            # Validar superposición de horarios solo si las fechas cambiaron
-            if start_time != event.start_time or end_time != event.end_time:
-                # Validar superposición de horarios solo para asistencia
-                overlapping_participating = EventParticipation.objects.exclude(event=event).filter(
-                    user=request.user,
-                    event__start_time__lt=end_time,
-                    event__end_time__gt=start_time
-                ).exists()
-                
-                if overlapping_participating:
-                    return JsonResponse({"detail": "Ya asistes a otro evento en ese horario."}, status=400)
 
-            location = str(body.get('location', event.location) or '').strip()
-            requested_space_id = body.get('space_id')
-            normalized_max_participants = event.max_participants
-            max_participants_provided = 'max_participants' in body
+            if start_time != event.start_time or end_time != event.end_time:
+                overlapping_participating = (
+                    EventParticipation.objects.exclude(event=event)
+                    .filter(
+                        user=request.user,
+                        event__start_time__lt=end_time,
+                        event__end_time__gt=start_time,
+                    )
+                    .exists()
+                )
+
+                if overlapping_participating:
+                    return JsonResponse(
+                        {"detail": "Ya asistes a otro evento en ese horario."},
+                        status=400,
+                    )
+
+            # Validar que no haya otro evento con el mismo título para la misma fecha
+            raw_title = body.get("title", event.title)
+            event_title = str(raw_title or "").strip()
+            if event_title:
+                event_date = start_time.date()
+                if (
+                    Event.objects.filter(
+                        residence=request.residence,
+                        title__iexact=event_title,
+                        start_time__date=event_date,
+                    )
+                    .exclude(id=event_id)
+                    .exists()
+                ):
+                    return JsonResponse(
+                        {
+                            "detail": f"Ya existe otro evento con el título '{event_title}' para la fecha seleccionada."
+                        },
+                        status=400,
+                    )
+
+            location = str(body.get("location", event.location) or "").strip()
+            requested_space_id = body.get("space_id")
+            max_participants_provided = "max_participants" in body
+
+            target_space = None
+
+            if event_type == Event.Type.INTERNAL:
+                if requested_space_id is None:
+                    requested_space_id = event.space_id
+                if not requested_space_id:
+                    return JsonResponse(
+                        {
+                            "detail": "Debes seleccionar un espacio común para eventos internos."
+                        },
+                        status=400,
+                    )
+                if location:
+                    return JsonResponse(
+                        {
+                            "detail": "Los eventos internos no deben incluir ubicación externa."
+                        },
+                        status=400,
+                    )
+
+                target_space = get_object_or_404(
+                    CommonSpace,
+                    id=int(requested_space_id),
+                    residence=request.residence,
+                    is_active=True,
+                )
+                normalized_max_participants, limit_error = (
+                    _normalize_internal_event_limit(
+                        body.get("max_participants", event.max_participants),
+                        target_space.capacity,
+                    )
+                )
+                if limit_error:
+                    return limit_error
+            else:
+                if not location:
+                    return JsonResponse(
+                        {
+                            "detail": "Debes indicar una ubicación para eventos externos."
+                        },
+                        status=400,
+                    )
+                if requested_space_id:
+                    return JsonResponse(
+                        {
+                            "detail": "Los eventos externos no pueden asociar un espacio común."
+                        },
+                        status=400,
+                    )
+                normalized_max_participants, limit_error = _parse_max_participants(
+                    body.get("max_participants", event.max_participants)
+                )
+                if limit_error:
+                    return limit_error
+
+            if (
+                max_participants_provided
+                and normalized_max_participants is not None
+                and normalized_max_participants < event.participants_count
+            ):
+                return JsonResponse(
+                    {
+                        "detail": (
+                            "El límite de participantes no puede ser inferior al número "
+                            f"actual de asistentes ({event.participants_count})."
+                        )
+                    },
+                    status=400,
+                )
+
+            needs_new_reservation = False
+            if event_type == Event.Type.INTERNAL:
+                needs_new_reservation = (
+                    event.event_type != Event.Type.INTERNAL
+                    or not event.reservation_id
+                    or int(requested_space_id) != (event.space_id or 0)
+                    or start_time != event.start_time
+                    or end_time != event.end_time
+                )
+                if needs_new_reservation:
+                    if _space_has_active_overlap(
+                        residence=request.residence,
+                        space_id=target_space.id,
+                        start_time=start_time,
+                        end_time=end_time,
+                        exclude_reservation_id=event.reservation_id,
+                    ):
+                        return JsonResponse(
+                            {
+                                "detail": "El espacio común ya está reservado en esa franja horaria."
+                            },
+                            status=400,
+                        )
 
             with transaction.atomic():
                 previous_reservation = event.reservation
@@ -387,106 +721,41 @@ class EventDetailView(AuthenticatedView):
                 new_location = event.location
 
                 if event_type == Event.Type.INTERNAL:
-                    if requested_space_id is None:
-                        requested_space_id = event.space_id
-                    if not requested_space_id:
-                        return JsonResponse({"detail": "Debes seleccionar un espacio común para eventos internos."}, status=400)
-                    if location:
-                        return JsonResponse({"detail": "Los eventos internos no deben incluir ubicación externa."}, status=400)
-
-                    target_space = get_object_or_404(
-                        CommonSpace,
-                        id=int(requested_space_id),
-                        residence=request.residence,
-                        is_active=True,
-                    )
-                    normalized_max_participants, limit_error = _normalize_internal_event_limit(
-                        body.get('max_participants', event.max_participants),
-                        target_space.capacity,
-                    )
-                    if limit_error:
-                        return limit_error
-
-                    needs_new_reservation = (
-                        event.event_type != Event.Type.INTERNAL
-                        or not event.reservation_id
-                        or int(requested_space_id) != (event.space_id or 0)
-                        or start_time != event.start_time
-                        or end_time != event.end_time
-                    )
-
                     if needs_new_reservation and event.reservation_id:
                         event.reservation.status = SpaceReservation.Status.CANCELLED
-                        event.reservation.save(update_fields=['status', 'updated_at'])
+                        event.reservation.save(update_fields=["status", "updated_at"])
 
                     if needs_new_reservation:
-                        if _space_has_active_overlap(
-                            residence=request.residence,
-                            space_id=target_space.id,
-                            start_time=start_time,
-                            end_time=end_time,
-                            exclude_reservation_id=event.reservation_id,
-                        ):
-                            transaction.set_rollback(True)
-                            return JsonResponse(
-                                {"detail": "El espacio común ya está reservado en esa franja horaria."},
-                                status=400,
+                        new_reservation, reservation_error = (
+                            _create_reservation_through_spaces_module(
+                                request=request,
+                                residence=request.residence,
+                                space_id=target_space.id,
+                                start_time=start_time,
+                                end_time=end_time,
                             )
-
-                        new_reservation, reservation_error = _create_reservation_through_spaces_module(
-                            request=request,
-                            residence=request.residence,
-                            space_id=target_space.id,
-                            start_time=start_time,
-                            end_time=end_time,
                         )
                         if reservation_error:
                             transaction.set_rollback(True)
                             return reservation_error
                         new_space = new_reservation.space
-                    elif not event.reservation_id:
-                        return JsonResponse({"detail": "El evento interno debe tener una reserva asociada."}, status=400)
 
-                    new_location = ''
+                    new_location = ""
                 else:
-                    if not location:
-                        return JsonResponse({"detail": "Debes indicar una ubicación para eventos externos."}, status=400)
-                    if requested_space_id:
-                        return JsonResponse({"detail": "Los eventos externos no pueden asociar un espacio común."}, status=400)
-                    normalized_max_participants, limit_error = _parse_max_participants(
-                        body.get('max_participants', event.max_participants)
-                    )
-                    if limit_error:
-                        return limit_error
                     new_space = None
                     new_reservation = None
                     new_location = location
 
-                if (
-                    max_participants_provided
-                    and normalized_max_participants is not None
-                    and normalized_max_participants < event.participants_count
-                ):
-                    return JsonResponse(
-                        {
-                            "detail": (
-                                "El límite de participantes no puede ser inferior al número "
-                                f"actual de asistentes ({event.participants_count})."
-                            )
-                        },
-                        status=400,
-                    )
-
-                event.title = body.get('title', event.title)
-                event.description = body.get('description', event.description)
+                event.title = body.get("title", event.title)
+                event.description = body.get("description", event.description)
                 event.start_time = start_time
                 event.end_time = end_time
                 event.event_type = event_type
                 event.location = new_location
                 event.space = new_space
                 event.reservation = new_reservation
-                event.image_url = body.get('image_url', event.image_url)
-                event.tags = body.get('tags', event.tags)
+                event.image_url = body.get("image_url", event.image_url)
+                event.tags = body.get("tags", event.tags)
                 event.max_participants = normalized_max_participants
                 event.save()
 
@@ -497,72 +766,185 @@ class EventDetailView(AuthenticatedView):
                 if should_remove_old_reservation:
                     previous_reservation.delete()
 
-            return JsonResponse({'id': event.id, 'detail': 'Event updated successfully'}, status=200)
+            return JsonResponse(
+                {"id": event.id, "detail": "Event updated successfully"}, status=200
+            )
         except Exception as e:
             return JsonResponse({"detail": str(e)}, status=400)
 
     def delete(self, request, event_id):
         event = get_object_or_404(Event, id=event_id, residence=request.residence)
-        # Check permissions
-        can_edit = event.host == request.user or getattr(request.user, 'is_staff', False)
+
+        can_edit = event.host == request.user or is_events_admin(
+            request.user, request.residence
+        )
         if not can_edit:
             return JsonResponse({"detail": "Unauthorized"}, status=403)
 
         reservation = event.reservation
+        chat_group = event.chat_group
+        residence = getattr(request, "residence", None)
         with transaction.atomic():
+            if chat_group:
+                group_id = chat_group.id
+                ChatGroupMember.objects.filter(group=chat_group).delete()
+                chat_group.delete()
+                if residence:
+                    publish_chat_event(
+                        residence.id,
+                        "group_deleted",
+                        {"group_id": group_id},
+                    )
             event.delete()
             if reservation:
                 reservation.delete()
 
         return JsonResponse({"detail": "Event deleted"}, status=200)
 
+
 class EventJoinView(AuthenticatedView):
     def post(self, request, event_id):
-        if getattr(request.user, 'is_staff', False):
-            return JsonResponse({"detail": "Los administradores no pueden inscribirse en eventos."}, status=403)
-            
+        if is_events_admin(request.user, request.residence):
+            return JsonResponse(
+                {"detail": "Los administradores no pueden inscribirse en eventos."},
+                status=403,
+            )
+
         event = get_object_or_404(Event, id=event_id, residence=request.residence)
-        
+
         if not event.can_join():
-            return JsonResponse({"detail": "El evento ha alcanzado el límite de participantes."}, status=400)
+            return JsonResponse(
+                {"detail": "El evento ha alcanzado el límite de participantes."},
+                status=400,
+            )
 
         # Validar superposición
-        overlapping_participating = EventParticipation.objects.exclude(event=event).filter(
-            user=request.user,
-            event__start_time__lt=event.end_time,
-            event__end_time__gt=event.start_time
-        ).exists()
+        overlapping_participating = (
+            EventParticipation.objects.exclude(event=event)
+            .filter(
+                user=request.user,
+                event__start_time__lt=event.end_time,
+                event__end_time__gt=event.start_time,
+            )
+            .exists()
+        )
 
         if overlapping_participating:
-            return JsonResponse({"detail": "Este evento coincide en horario con otro al que ya asistes."}, status=400)
+            return JsonResponse(
+                {
+                    "detail": "Este evento coincide en horario con otro al que ya asistes."
+                },
+                status=400,
+            )
 
         try:
-            EventParticipation.objects.create(event=event, user=request.user)
-            return JsonResponse({"detail": "Te has inscrito correctamente en el evento."}, status=201)
+            with transaction.atomic():
+                EventParticipation.objects.create(event=event, user=request.user)
+
+            return JsonResponse(
+                {"detail": "Te has inscrito correctamente en el evento."}, status=201
+            )
         except IntegrityError:
-            return JsonResponse({"detail": "Ya estás inscrito en este evento."}, status=400)
+            return JsonResponse(
+                {"detail": "Ya estás inscrito en este evento."}, status=400
+            )
+
+
+class EventJoinChatView(AuthenticatedView):
+    def post(self, request, event_id):
+        event = get_object_or_404(Event, id=event_id, residence=request.residence)
+
+        if not event.chat_group_id:
+            return JsonResponse(
+                {"detail": "Este evento no tiene chat asociado."}, status=400
+            )
+
+        is_participant = EventParticipation.objects.filter(
+            event=event, user=request.user
+        ).exists()
+        if not is_participant:
+            return JsonResponse(
+                {"detail": "Debes estar apuntado al evento para unirte al chat."},
+                status=403,
+            )
+
+        user_membership = Membership.objects.filter(
+            user=request.user,
+            residence=event.residence,
+            is_active=True,
+        ).first()
+        if not user_membership:
+            return JsonResponse(
+                {"detail": "No tienes membresía activa en la residencia."}, status=403
+            )
+
+        member, created = ChatGroupMember.objects.get_or_create(
+            group=event.chat_group,
+            membership=user_membership,
+            defaults={"is_admin": False, "can_interact": True},
+        )
+
+        if not created and member.can_interact:
+            return JsonResponse(
+                {"detail": "Ya perteneces al chat del evento."}, status=200
+            )
+
+        if not created and not member.can_interact:
+            member.can_interact = True
+            member.interaction_disabled_at = None
+            member.save(update_fields=["can_interact", "interaction_disabled_at"])
+
+        return JsonResponse({"detail": "Te has unido al chat del evento."}, status=201)
+
 
 class EventLeaveView(AuthenticatedView):
     def post(self, request, event_id):
         event = get_object_or_404(Event, id=event_id, residence=request.residence)
-        deleted, _ = EventParticipation.objects.filter(event=event, user=request.user).delete()
-        
-        if deleted:
-            return JsonResponse({"detail": "Has abandonado el evento."}, status=200)
-        return JsonResponse({"detail": "No estás inscrito en este evento."}, status=400)
+
+        try:
+            with transaction.atomic():
+                deleted, _ = EventParticipation.objects.filter(
+                    event=event, user=request.user
+                ).delete()
+
+                if deleted and event.chat_group_id:
+                    user_membership = Membership.objects.filter(
+                        user=request.user,
+                        residence=event.residence,
+                        is_active=True,
+                    ).first()
+
+                    if user_membership:
+                        ChatGroupMember.objects.filter(
+                            group=event.chat_group,
+                            membership=user_membership,
+                        ).delete()
+
+                if deleted:
+                    return JsonResponse(
+                        {"detail": "Has abandonado el evento."}, status=200
+                    )
+                return JsonResponse(
+                    {"detail": "No estás inscrito en este evento."}, status=400
+                )
+        except Exception as e:
+            return JsonResponse({"detail": str(e)}, status=400)
+
 
 class EventParticipantsView(AuthenticatedView):
     def get(self, request, event_id):
         event = get_object_or_404(Event, id=event_id, residence=request.residence)
-        participations = event.participations.select_related('user').all()
+        participations = event.participations.select_related("user").all()
         data = []
         for p in participations:
-            data.append({
-                'joined_at': p.joined_at.isoformat(),
-                'user': {
-                    'id': p.user.id,
-                    'first_name': p.user.first_name,
-                    'last_name': p.user.last_name,
+            data.append(
+                {
+                    "joined_at": p.joined_at.isoformat(),
+                    "user": {
+                        "id": p.user.id,
+                        "first_name": p.user.first_name,
+                        "last_name": p.user.last_name,
+                    },
                 }
-            })
+            )
         return JsonResponse(data, safe=False)

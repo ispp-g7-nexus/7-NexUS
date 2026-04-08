@@ -5,13 +5,17 @@ export function UpcomingEvents({
     loading,
     handleJoinEvent,
     handleLeaveEvent,
-    handleOpenDetails
+    handleOpenDetails,
+    handleJoinEventChat,
+    handleNavigateToChat,
 }: {
     events: any[];
     loading: boolean;
     handleJoinEvent: (id: number) => Promise<void>;
     handleLeaveEvent: (id: number) => Promise<void>;
     handleOpenDetails: (event: any) => void;
+    handleJoinEventChat: (id: number) => Promise<void>;
+    handleNavigateToChat?: (groupId?: number) => void;
 }) {
     if (loading) return <p className="text-center text-gray-500 py-10">Cargando eventos...</p>;
     if (events.length === 0) {
@@ -36,10 +40,16 @@ export function UpcomingEvents({
                     image={event.image_url || "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&q=80&w=400"}
                     tags={event.tags}
                     isJoined={event.is_joined}
+                    isRecommended={event.is_recommended}
                     canJoin={event.can_join}
+                    chatGroup={event.chat_group}
+                    isChatMember={event.is_chat_member}
+                    host={event.host}
                     isPast={false}
                     onJoin={handleJoinEvent}
                     onLeave={handleLeaveEvent}
+                    onJoinChat={handleJoinEventChat}
+                    onOpenChat={handleNavigateToChat}
                     onClick={() => handleOpenDetails(event)}
                 />
             ))}
