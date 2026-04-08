@@ -1,4 +1,4 @@
-import { AlertCircle, BedDouble, Bell, BookOpen, Briefcase, Calendar, Home, LayoutDashboard, LogOut, Menu, MessageSquare, Package, Palette, Shield, User, UserCheck, Users, Utensils, X } from "lucide-react";
+import { AlertCircle, AreaChart, BedDouble, Bell, BookOpen, Briefcase, Calendar, Home, LayoutDashboard, LogOut, Menu, MessageSquare, Package, Palette, Shield, User, UserCheck, Users, Utensils } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { chatsService, type ChatRealtimeEvent } from "../services/chats";
@@ -26,6 +26,7 @@ import { AdminReservations } from "./AdminReservations";
 import { AdminPackages } from "../pages/Packages/AdminPackages";
 
 import { StatCard } from "./statCard";
+import { AdminAnalytics } from "../pages/Analytics/AdminAnalytics";
 import { AdminBrandingPage } from "../pages/Branding/AdminBrandingPage";
 import { brandingService, type ResidenceBranding } from "../services/branding";
 import { Button } from "./ui/button";
@@ -419,6 +420,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
         { id: "announcements", label: "Avisos", icon: <Bell className="w-5 h-5" />, permission: "announcements" },
         { id: "visitors", label: "Visitantes", icon: <UserCheck className="w-5 h-5" />, permission: "guests" },
         { id: "chats", label: "Chats", icon: <MessageSquare className="w-5 h-5" />, permission: "chats" },
+        { id: "analytics", label: "Analíticas", icon: <AreaChart className="w-5 h-5" />, permission: "analytics" },
     ];
 
 
@@ -443,6 +445,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
         { id: 'packages', label: 'Paquetería', value: 'Ver', icon: Package, theme: 'orange' as const, onClick: () => goToTab('packages') },
         { id: 'kitchen', label: 'Menú Comedor', value: 'Ver', icon: Utensils, theme: 'blue' as const, onClick: () => goToTab('kitchen') },
         { id: 'reservations', label: 'Recursos & Reservas', value: 'Ver', icon: BookOpen, theme: 'green' as const, onClick: () => goToTab('reservations') },
+        { id: 'analytics', label: 'Analíticas', value: 'Ver', icon: AreaChart, theme: 'green' as const, onClick: () => goToTab('analytics') },
     ];
 
     const metricsData = rawMetricsData.filter(metric => {
@@ -575,6 +578,13 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
                 );
             case "kitchen":
                 return <AdminMenuView />;
+
+            case "analytics":
+                return (
+                    <div className="p-4">
+                        <AdminAnalytics />
+                    </div>
+                );
 
             default:
                 return (

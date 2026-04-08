@@ -58,6 +58,17 @@ export function SpaceAvailabilityCard({
             {hasSlots ? "Con disponibilidad" : "Sin huecos"}
           </span>
         </div>
+
+        {space.img && (
+          <div className="relative w-full h-40 mt-2 rounded-xl overflow-hidden border border-border/50 bg-muted">
+            <img 
+              src={space.img} 
+              alt={space.name} 
+              className="w-full h-full object-cover"
+              loading="lazy"
+            />
+          </div>
+        )}
       </CardHeader>
       
       <CardContent className="space-y-4">
