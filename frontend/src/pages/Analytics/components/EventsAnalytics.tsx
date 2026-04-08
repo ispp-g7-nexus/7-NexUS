@@ -70,13 +70,23 @@ function addDays(base: Date, days: number): Date {
 
 function formatShortDate(iso: string | null): string {
   if (!iso) return "—";
-  const parsed = new Date(iso);
-  if (Number.isNaN(parsed.getTime())) return "—";
-  return parsed.toLocaleDateString("es-ES", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+
+  // Preserve the literal calendar date returned by backend (no browser timezone shift).
+  const datePart = iso.split("T")[0] ?? "";
+  const parts = datePart.split("-");
+  if (parts.length !== 3) return "—";
+
+  const [year, month, day] = parts;
+  if (
+    year.length !== 4 ||
+    month.length !== 2 ||
+    day.length !== 2 ||
+    !/^\d+$/.test(`${year}${month}${day}`)
+  ) {
+    return "—";
+  }
+
+  return `${day}/${month}/${year}`;
 }
 
 function formatDelta(value: number | null): string {
@@ -127,11 +137,16 @@ function formatEventTypeLabel(value: EventsAnalyticsEventType): string {
 function downloadCsv(filename: string, header: string[], rows: Array<Array<string | number | null>>) {
   const escapeCell = (value: string | number | null): string => {
     if (value === null || value === undefined) return "";
-    const asString = String(value);
-    if (asString.includes(",") || asString.includes('"') || asString.includes("\n")) {
-      return `"${asString.replace(/"/g, '""')}"`;
+    const rawString = String(value);
+    const safeString =
+      typeof value === "string" && /^[\t\r\n ]*[=+\-@]/.test(rawString)
+        ? `'${rawString}`
+        : rawString;
+
+    if (safeString.includes(",") || safeString.includes('"') || safeString.includes("\n")) {
+      return `"${safeString.replace(/"/g, '""')}"`;
     }
-    return asString;
+    return safeString;
   };
 
   const lines = [
