@@ -29,11 +29,15 @@ export interface CreateGuestPassPayload {
 export interface GuestPassPolicy {
   max_duration_hours: number;
   max_concurrent_passes: number;
+  visit_start_time?: string | null;
+  visit_end_time?: string | null;
 }
 
 export interface UpdateGuestPassPolicyPayload {
   max_duration_hours?: number;
   max_concurrent_passes?: number;
+  visit_start_time?: string | null;
+  visit_end_time?: string | null;
 }
 
 export class GuestPassApiError extends Error {
@@ -65,6 +69,8 @@ function parseFieldErrors(payload: unknown): Record<string, string> {
     "comment",
     "max_duration_hours",
     "max_concurrent_passes",
+    "visit_start_time",
+    "visit_end_time",
   ];
   const errors: Record<string, string> = {};
 

@@ -159,6 +159,51 @@ def create_guest_pass_for_resident(
             }
         )
 
+    valid_from_time = timezone.localtime(valid_from).time().replace(tzinfo=None)
+    valid_until_time = timezone.localtime(valid_until).time().replace(tzinfo=None)
+
+    if policy.visit_start_time is not None:
+        if valid_from_time < policy.visit_start_time:
+            raise ValidationError(
+                {
+                    "valid_from": (
+                        "La fecha de inicio no puede ser anterior a la hora de "
+                        f"inicio de visitas ({policy.visit_start_time.strftime('%H:%M')})."
+                    )
+                }
+            )
+
+        if valid_until_time < policy.visit_start_time:
+            raise ValidationError(
+                {
+                    "valid_until": (
+                        "La fecha de fin no puede ser anterior a la hora de "
+                        f"inicio de visitas ({policy.visit_start_time.strftime('%H:%M')})."
+                    )
+                }
+            )
+
+    if policy.visit_end_time is not None:
+        if valid_from_time >= policy.visit_end_time:
+            raise ValidationError(
+                {
+                    "valid_from": (
+                        "La fecha de inicio debe ser anterior a la hora límite de "
+                        f"salida ({policy.visit_end_time.strftime('%H:%M')})."
+                    )
+                }
+            )
+
+        if valid_until_time >= policy.visit_end_time:
+            raise ValidationError(
+                {
+                    "valid_until": (
+                        "La fecha de fin debe ser anterior a la hora límite de "
+                        f"salida ({policy.visit_end_time.strftime('%H:%M')})."
+                    )
+                }
+            )
+
     with transaction.atomic():
         GuestPassPolicy.objects.select_for_update().filter(id=policy.id).exists()
         Membership.objects.select_for_update().filter(id=membership.id).exists()
