@@ -100,7 +100,12 @@ class ResidentGuestPassCancelView(ResidentGuestPassBaseView):
     def post(self, request, pass_id: int):
         membership, residence = self.get_membership(request)
         guest_pass = cancel_guest_pass_for_resident(pass_id, membership, residence)
-        return Response(GuestPassReadSerializer(guest_pass).data)
+        return Response(
+            {
+                "detail": "Pase cancelado correctamente.",
+                "guest_pass": GuestPassReadSerializer(guest_pass).data,
+            }
+        )
 
 
 class ResidentGuestPassPolicyView(ResidentGuestPassBaseView):
