@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { AlertCircle, Calendar, Home, MessageSquare, User } from "lucide-react";
 import { toast } from "sonner";
@@ -18,12 +18,13 @@ import { StudentReservations } from "./StudentReservations";
 import { chatsService, type ChatRealtimeEvent } from "../services/chats";
 import { authService } from "../services/auth";
 import { ActiveGuestPassesPage } from "../pages/Visitors/ActiveGuestPasses";
+import type { ResidenceBranding } from "../services/branding";
 
 interface StudentViewProps {
     onLogout: () => void;
 }
 
-const HOME_INCIDENCES_SEEN_AT_KEY = "home-incidences-seen-at";
+const HOME_ANNOUNCEMENTS_SEEN_AT_KEY = "home-announcements-seen-at";
 
 function buildResidentUnreadGroupsStorageKey(email: string): string | null {
     const normalized = email.trim().toLowerCase();
@@ -44,6 +45,7 @@ function persistResidentUnreadGroupIncrement(email: string, groupId: number): vo
         parsed[String(groupId)] = nextValue;
         globalThis.localStorage.setItem(storageKey, JSON.stringify(parsed));
     } catch {
+        //
     }
 }
 
@@ -75,13 +77,12 @@ export function StudentView({ onLogout }: StudentViewProps) {
     const [hasGroupChatNews, setHasGroupChatNews] = useState(false);
     const [hasPrivateChatNews, setHasPrivateChatNews] = useState(false);
     const previousUnreadCount = useRef<number | null>(null);
-    const markAsViewedTimeoutRef = useRef<number | null>(null);
     const processedGroupMessageEventKeysRef = useRef<Set<string>>(new Set());
 
     const hasAnyChatNews = hasGroupChatNews || hasPrivateChatNews;
 
-    const isGroupLifecycleEvent = (evt: ChatRealtimeEvent): boolean =>
-        evt.event === "group_created" || evt.event === "group_updated" || evt.event === "group_deleted";
+    const isGroupLifecycleEvent = useCallback((evt: ChatRealtimeEvent): boolean =>
+        evt.event === "group_created" || evt.event === "group_updated" || evt.event === "group_deleted", []);
 
     const isIncomingMessageEvent = (evt: ChatRealtimeEvent): boolean =>
         evt.event === "group_message_created" || evt.event === "private_message_created";
@@ -112,7 +113,7 @@ export function StudentView({ onLogout }: StudentViewProps) {
     const getSenderEmailFromEvent = (evt: ChatRealtimeEvent): string =>
         typeof evt.payload?.sender_email === "string" ? evt.payload.sender_email.trim().toLowerCase() : "";
 
-    const handleGroupLifecycleRealtimeEvent = (
+    const handleGroupLifecycleRealtimeEvent = useCallback((
         evt: ChatRealtimeEvent,
         isViewingGroupChats: boolean,
     ): boolean => {
@@ -127,7 +128,7 @@ export function StudentView({ onLogout }: StudentViewProps) {
         }
 
         return true;
-    };
+    }, [isGroupLifecycleEvent]);
 
     useEffect(() => {
         let mounted = true;
@@ -160,7 +161,7 @@ export function StudentView({ onLogout }: StudentViewProps) {
 
         const source = chatsService.subscribeToEvents((evt) => {
             if (evt.event === "branding_updated" && evt.payload) {
-                import("../hooks/useTenantBranding").then((m) => m.applyGlobalBranding(evt.payload as any));
+                import("../hooks/useTenantBranding").then((m) => m.applyGlobalBranding(evt.payload as unknown as ResidenceBranding));
                 return;
             }
 
@@ -212,7 +213,7 @@ export function StudentView({ onLogout }: StudentViewProps) {
         return () => {
             source.close();
         };
-    }, [activeTab, communityChatSubTab, currentUserEmail, isCommunityChatActive]);
+    }, [activeTab, communityChatSubTab, currentUserEmail, handleGroupLifecycleRealtimeEvent, isCommunityChatActive]);
 
     useEffect(() => {
         if (activeTab !== "community") {
@@ -222,15 +223,24 @@ export function StudentView({ onLogout }: StudentViewProps) {
     }, [activeTab]);
 
     useEffect(() => {
+        if (activeTab === "announcements") {
+            globalThis.localStorage.setItem(HOME_ANNOUNCEMENTS_SEEN_AT_KEY, new Date().toISOString());
+        }
+
         const loadUnreadCount = async () => {
             try {
                 const data = await announcementService.getUnviewedCount();
                 const nextCount = data.count;
 
+                if (activeTab === "announcements") {
+                    previousUnreadCount.current = nextCount;
+                    setUnreadAnnouncements(nextCount);
+                    return;
+                }
+
                 if (
                     previousUnreadCount.current !== null
                     && nextCount > previousUnreadCount.current
-                    && activeTab !== "announcements"
                 ) {
                     toast.info("Tienes un nuevo aviso disponible", {
                         description: "Revisa la pestaña Avisos para verlo.",
@@ -246,44 +256,12 @@ export function StudentView({ onLogout }: StudentViewProps) {
 
         loadUnreadCount();
 
-        const intervalId = globalThis.setInterval(loadUnreadCount, 15000);
-        return () => globalThis.clearInterval(intervalId);
-    }, [activeTab]);
-
-    useEffect(() => {
-        if (activeTab === "incidences") {
-            globalThis.localStorage.setItem(HOME_INCIDENCES_SEEN_AT_KEY, new Date().toISOString());
-        }
-
-        if (activeTab !== "announcements") {
-            if (markAsViewedTimeoutRef.current) {
-                globalThis.clearTimeout(markAsViewedTimeoutRef.current);
-                markAsViewedTimeoutRef.current = null;
-            }
+        if (activeTab === "announcements") {
             return;
         }
 
-        const markAsViewed = async () => {
-            try {
-                await announcementService.markAsViewed();
-                previousUnreadCount.current = 0;
-                setUnreadAnnouncements(0);
-            } catch {
-                // Ignorado: no bloquea la navegación
-            }
-        };
-
-        markAsViewedTimeoutRef.current = globalThis.setTimeout(() => {
-            markAsViewed();
-            markAsViewedTimeoutRef.current = null;
-        }, 5000);
-
-        return () => {
-            if (markAsViewedTimeoutRef.current) {
-                globalThis.clearTimeout(markAsViewedTimeoutRef.current);
-                markAsViewedTimeoutRef.current = null;
-            }
-        };
+        const intervalId = globalThis.setInterval(loadUnreadCount, 3000);
+        return () => globalThis.clearInterval(intervalId);
     }, [activeTab]);
 
     const handleNavigation = (tab: StudentTab) => {
@@ -334,7 +312,16 @@ export function StudentView({ onLogout }: StudentViewProps) {
                 tabContent = <MyMatchesPage />;
                 break;
             case "announcements":
-                tabContent = <StudentAnnouncements onGoToProfile={handleGoToProfile} onLogout={onLogout} />;
+                tabContent = (
+                    <StudentAnnouncements
+                        onGoToProfile={handleGoToProfile}
+                        onLogout={onLogout}
+                        onAnnouncementsLoaded={() => {
+                            globalThis.localStorage.setItem(HOME_ANNOUNCEMENTS_SEEN_AT_KEY, new Date().toISOString());
+                            setUnreadAnnouncements(0);
+                        }}
+                    />
+                );
                 break;
             case "packages":
                 tabContent = <PackagesPage onGoToProfile={handleGoToProfile} onLogout={onLogout} />;
