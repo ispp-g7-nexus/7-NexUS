@@ -15,10 +15,12 @@ from .serializers import (
     GuestPassPolicyReadSerializer,
     GuestPassPolicyUpdateSerializer,
     GuestPassReadSerializer,
+    VisitorAnalyticsResponseSerializer,
 )
 from .services import (
     cancel_guest_pass_for_resident,
     create_guest_pass_for_resident,
+    get_admin_visitors_analytics,
     get_active_guest_passes_queryset,
     get_guest_pass_history_queryset,
     get_or_create_guest_pass_policy,
@@ -191,3 +193,19 @@ class AdminGuestPassPolicyView(AdminGuestPassBaseView):
             GuestPassPolicyReadSerializer(policy).data,
             status=status.HTTP_200_OK,
         )
+
+
+class AdminVisitorsAnalyticsView(AdminGuestPassBaseView):
+    def get(self, request):
+        residence = self._get_residence(request)
+
+        payload = get_admin_visitors_analytics(
+            residence=residence,
+            from_value=request.query_params.get("from"),
+            to_value=request.query_params.get("to"),
+            granularity_value=request.query_params.get("granularity"),
+            compare_value=request.query_params.get("compare"),
+        )
+        serializer = VisitorAnalyticsResponseSerializer(data=payload)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.validated_data, status=status.HTTP_200_OK)

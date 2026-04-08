@@ -1,10 +1,14 @@
 import secrets
 import string
 from collections.abc import Iterable
-from datetime import timedelta
+from datetime import datetime, time, timedelta
+from zoneinfo import ZoneInfo
 
+from django.db.models import Count
+from django.db.models.functions import ExtractHour
 from django.db import transaction
 from django.utils import timezone
+from django.utils.dateparse import parse_date, parse_datetime
 from rest_framework.exceptions import NotFound, ValidationError
 
 from apps.membership.models import Membership
@@ -16,6 +20,9 @@ DEFAULT_MAX_GUEST_PASS_DURATION_HOURS = 24
 PASS_CODE_ALPHABET = string.ascii_uppercase + string.digits
 PASS_CODE_RANDOM_SIZE = 8
 MAX_GUEST_PASS_CODE_ATTEMPTS = 10
+VISITOR_ANALYTICS_DEFAULT_WINDOW_DAYS = 30
+VISITOR_ANALYTICS_SUPPORTED_GRANULARITIES = {"hour"}
+VISITOR_ANALYTICS_SUPPORTED_COMPARE = {"none", "previous_period"}
 
 
 def get_resident_membership_for_user(user, residence) -> Membership | None:
@@ -302,3 +309,345 @@ def get_guest_pass_history_queryset(membership: Membership, residence):
         .select_related("resident__user", "resident__bedroom")
         .order_by("-valid_until", "-created_at")
     )
+
+
+def _resolve_residence_timezone(residence) -> ZoneInfo:
+    timezone_name = getattr(residence, "timezone", "") or "Europe/Madrid"
+    try:
+        return ZoneInfo(timezone_name)
+    except Exception:
+        return ZoneInfo("Europe/Madrid")
+
+
+def _parse_analytics_boundary(raw_value, *, field_name: str, is_end: bool, residence_tz):
+    if raw_value in (None, ""):
+        return None
+
+    value = str(raw_value).strip()
+    parsed_dt = parse_datetime(value)
+    if parsed_dt is not None:
+        if timezone.is_naive(parsed_dt):
+            return timezone.make_aware(parsed_dt, residence_tz)
+        return parsed_dt.astimezone(residence_tz)
+
+    parsed_date = parse_date(value)
+    if parsed_date is not None:
+        boundary = time.max if is_end else time.min
+        return timezone.make_aware(datetime.combine(parsed_date, boundary), residence_tz)
+
+    raise ValidationError({field_name: "Formato inválido. Usa ISO datetime o YYYY-MM-DD."})
+
+
+def _normalize_analytics_filters(*, from_value, to_value, granularity_value, compare_value, residence):
+    residence_tz = _resolve_residence_timezone(residence)
+
+    period_end = _parse_analytics_boundary(
+        to_value,
+        field_name="to",
+        is_end=True,
+        residence_tz=residence_tz,
+    )
+    period_start = _parse_analytics_boundary(
+        from_value,
+        field_name="from",
+        is_end=False,
+        residence_tz=residence_tz,
+    )
+
+    now = timezone.now().astimezone(residence_tz)
+    if period_end is None:
+        period_end = now
+    if period_start is None:
+        period_start = period_end - timedelta(days=VISITOR_ANALYTICS_DEFAULT_WINDOW_DAYS)
+
+    if period_start > period_end:
+        raise ValidationError(
+            {"detail": "El parámetro 'from' debe ser anterior o igual a 'to'."}
+        )
+
+    granularity = str(granularity_value or "hour").strip().lower()
+    if granularity not in VISITOR_ANALYTICS_SUPPORTED_GRANULARITIES:
+        raise ValidationError(
+            {"granularity": "Granularidad no soportada. Usa 'hour'."}
+        )
+
+    compare = str(compare_value or "none").strip().lower()
+    if compare not in VISITOR_ANALYTICS_SUPPORTED_COMPARE:
+        raise ValidationError(
+            {"compare": "Comparación no soportada. Usa 'none' o 'previous_period'."}
+        )
+
+    compare_period = None
+    if compare == "previous_period":
+        period_duration = period_end - period_start
+        if period_duration <= timedelta(0):
+            period_duration = timedelta(microseconds=1)
+        compare_end = period_start - timedelta(microseconds=1)
+        compare_period = {
+            "start": compare_end - period_duration,
+            "end": compare_end,
+        }
+
+    return {
+        "period_start": period_start,
+        "period_end": period_end,
+        "granularity": granularity,
+        "compare": compare,
+        "compare_period": compare_period,
+        "residence_tz": residence_tz,
+    }
+
+
+def _calculate_delta_pct(*, current_value: int, previous_value: int) -> float | None:
+    if previous_value == 0:
+        return None
+    return round(((current_value - previous_value) / previous_value) * 100, 2)
+
+
+def _build_host_name(row: dict) -> str:
+    first_name = (row.get("resident__user__first_name") or "").strip()
+    last_name = (row.get("resident__user__last_name") or "").strip()
+    full_name = f"{first_name} {last_name}".strip()
+    if full_name:
+        return full_name
+    email = (row.get("resident__user__email") or "").strip()
+    if email:
+        return email
+    host_id = row.get("resident_id")
+    return f"Residente #{host_id}" if host_id else "Residente"
+
+
+def _get_visitor_analytics_queryset(*, residence, period_start, period_end):
+    # Se usa valid_from como referencia temporal porque representa el inicio real
+    # previsto de la visita (mejor indicador de afluencia que created_at).
+    invalid_statuses = [
+        GuestPass.Status.CANCELLED,
+        GuestPass.Status.REVOKED,
+        GuestPass.Status.REJECTED,
+    ]
+    return GuestPass.objects.filter(
+        residence=residence,
+        valid_from__gte=period_start,
+        valid_from__lte=period_end,
+    ).exclude(status__in=invalid_statuses)
+
+
+def _build_hosts_payload(*, queryset, total_visits: int, previous_host_counts: dict[int, int], compare: str):
+    host_rows = list(
+        queryset.values(
+            "resident_id",
+            "resident__user__first_name",
+            "resident__user__last_name",
+            "resident__user__email",
+        )
+        .annotate(visitors_count=Count("id"))
+        .order_by("-visitors_count", "resident_id")
+    )
+
+    payload = []
+    for row in host_rows:
+        host_id = row["resident_id"]
+        visitors_count = int(row["visitors_count"])
+        compare_value = (
+            int(previous_host_counts.get(host_id, 0))
+            if compare == "previous_period"
+            else None
+        )
+        delta = (
+            visitors_count - compare_value
+            if compare_value is not None
+            else None
+        )
+        delta_pct = (
+            _calculate_delta_pct(current_value=visitors_count, previous_value=compare_value)
+            if compare_value is not None
+            else None
+        )
+
+        payload.append(
+            {
+                "host_id": host_id,
+                "host_name": _build_host_name(row),
+                "visitors_count": visitors_count,
+                "pct_of_total": round((visitors_count / total_visits) * 100, 2)
+                if total_visits > 0
+                else 0.0,
+                "compare_value": compare_value,
+                "delta": delta,
+                "delta_pct": delta_pct,
+            }
+        )
+
+    return payload
+
+
+def _build_hour_counts_map(*, queryset, residence_tz) -> dict[int, int]:
+    hour_rows = list(
+        queryset.annotate(
+            local_hour=ExtractHour("valid_from", tzinfo=residence_tz)
+        )
+        .values("local_hour")
+        .annotate(visits_count=Count("id"))
+        .order_by("local_hour")
+    )
+    return {
+        int(row["local_hour"]): int(row["visits_count"])
+        for row in hour_rows
+        if row["local_hour"] is not None
+    }
+
+
+def _build_peak_hours_payload(
+    *,
+    current_hour_counts: dict[int, int],
+    previous_hour_counts: dict[int, int],
+    compare: str,
+):
+
+    payload = []
+    for hour in range(24):
+        current_value = int(current_hour_counts.get(hour, 0))
+        compare_value = (
+            int(previous_hour_counts.get(hour, 0))
+            if compare == "previous_period"
+            else None
+        )
+        delta = (
+            current_value - compare_value
+            if compare_value is not None
+            else None
+        )
+        delta_pct = (
+            _calculate_delta_pct(current_value=current_value, previous_value=compare_value)
+            if compare_value is not None
+            else None
+        )
+        payload.append(
+            {
+                "hour": hour,
+                "label": f"{hour:02d}:00",
+                "visits_count": current_value,
+                "compare_value": compare_value,
+                "delta": delta,
+                "delta_pct": delta_pct,
+            }
+        )
+
+    return payload
+
+
+def get_admin_visitors_analytics(
+    *,
+    residence,
+    from_value=None,
+    to_value=None,
+    granularity_value=None,
+    compare_value=None,
+):
+    filters = _normalize_analytics_filters(
+        from_value=from_value,
+        to_value=to_value,
+        granularity_value=granularity_value,
+        compare_value=compare_value,
+        residence=residence,
+    )
+
+    current_queryset = _get_visitor_analytics_queryset(
+        residence=residence,
+        period_start=filters["period_start"],
+        period_end=filters["period_end"],
+    )
+
+    previous_queryset = None
+    previous_host_counts: dict[int, int] = {}
+    previous_hour_counts: dict[int, int] = {}
+
+    if filters["compare"] == "previous_period":
+        compare_period = filters["compare_period"] or {}
+        previous_queryset = _get_visitor_analytics_queryset(
+            residence=residence,
+            period_start=compare_period.get("start"),
+            period_end=compare_period.get("end"),
+        )
+        previous_host_counts = {
+            int(row["resident_id"]): int(row["visitors_count"])
+            for row in previous_queryset.values("resident_id").annotate(visitors_count=Count("id"))
+        }
+        previous_hour_counts = _build_hour_counts_map(
+            queryset=previous_queryset,
+            residence_tz=filters["residence_tz"],
+        )
+
+    total_visits = current_queryset.count()
+    current_hour_counts = _build_hour_counts_map(
+        queryset=current_queryset,
+        residence_tz=filters["residence_tz"],
+    )
+    visitors_by_host = _build_hosts_payload(
+        queryset=current_queryset,
+        total_visits=total_visits,
+        previous_host_counts=previous_host_counts,
+        compare=filters["compare"],
+    )
+    peak_hours = _build_peak_hours_payload(
+        current_hour_counts=current_hour_counts,
+        previous_hour_counts=previous_hour_counts,
+        compare=filters["compare"],
+    )
+
+    total_hosts = len(visitors_by_host)
+    previous_total_visits = previous_queryset.count() if previous_queryset is not None else None
+    previous_total_hosts = len(previous_host_counts) if previous_queryset is not None else None
+
+    summary = {
+        "total_visits": total_visits,
+        "total_hosts": total_hosts,
+        "compare_value_total_visits": previous_total_visits,
+        "compare_value_total_hosts": previous_total_hosts,
+        "delta_total_visits": (
+            total_visits - previous_total_visits if previous_total_visits is not None else None
+        ),
+        "delta_total_hosts": (
+            total_hosts - previous_total_hosts if previous_total_hosts is not None else None
+        ),
+        "delta_pct_total_visits": (
+            _calculate_delta_pct(
+                current_value=total_visits,
+                previous_value=previous_total_visits,
+            )
+            if previous_total_visits is not None
+            else None
+        ),
+        "delta_pct_total_hosts": (
+            _calculate_delta_pct(
+                current_value=total_hosts,
+                previous_value=previous_total_hosts,
+            )
+            if previous_total_hosts is not None
+            else None
+        ),
+    }
+
+    meta = {
+        "from_value": filters["period_start"].isoformat(),
+        "to_value": filters["period_end"].isoformat(),
+        "granularity": filters["granularity"],
+        "compare": filters["compare"],
+        "compare_from": (
+            filters["compare_period"]["start"].isoformat()
+            if filters["compare_period"] is not None
+            else None
+        ),
+        "compare_to": (
+            filters["compare_period"]["end"].isoformat()
+            if filters["compare_period"] is not None
+            else None
+        ),
+    }
+
+    return {
+        "summary": summary,
+        "visitors_by_host": visitors_by_host,
+        "peak_hours": peak_hours,
+        "meta": meta,
+    }
