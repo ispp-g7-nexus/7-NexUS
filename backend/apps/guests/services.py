@@ -5,7 +5,7 @@ from datetime import timedelta
 
 from django.db import transaction
 from django.utils import timezone
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import NotFound, ValidationError
 
 from apps.membership.models import Membership
 
@@ -214,14 +214,27 @@ def cancel_guest_pass_for_resident(pass_id: int, membership: Membership, residen
             id=pass_id, resident=membership, residence=residence
         )
     except GuestPass.DoesNotExist:
-        raise ValidationError({"detail": "Pase no encontrado."}) from None
+        raise NotFound("Pase no encontrado.") from None
 
-    if guest_pass.status != GuestPass.Status.ACTIVE:
-        raise ValidationError({"detail": "Solo se pueden cancelar pases activos."})
+    if guest_pass.cancelled_at is not None or guest_pass.status == GuestPass.Status.CANCELLED:
+        raise ValidationError({"detail": "El pase ya está cancelado."})
+
+    if guest_pass.revoked_at is not None or guest_pass.status == GuestPass.Status.REVOKED:
+        raise ValidationError({"detail": "El pase está revocado y no puede cancelarse."})
+
+    now = timezone.now()
+    is_cancellable = (
+        guest_pass.status == GuestPass.Status.ACTIVE
+        and guest_pass.valid_until >= now
+        and guest_pass.cancelled_at is None
+        and guest_pass.revoked_at is None
+    )
+    if not is_cancellable:
+        raise ValidationError({"detail": "Solo puedes cancelar pases activos o próximos."})
 
     guest_pass.status = GuestPass.Status.CANCELLED
-    guest_pass.cancelled_at = timezone.now()
-    guest_pass.save(update_fields=["status", "cancelled_at"])
+    guest_pass.cancelled_at = now
+    guest_pass.save(update_fields=["status", "cancelled_at", "updated_at"])
     return guest_pass
 
 
@@ -231,8 +244,8 @@ def revoke_guest_pass_admin(pass_id: int, residence) -> GuestPass:
     except GuestPass.DoesNotExist:
         raise ValidationError({"detail": "Pase no encontrado."}) from None
 
-    if guest_pass.status == GuestPass.Status.REVOKED:
-        raise ValidationError({"detail": "El pase ya está revocado."}) from None
+    if guest_pass.status != GuestPass.Status.ACTIVE:
+        raise ValidationError({"detail": "Solo se pueden revocar pases activos."}) from None
 
     guest_pass.status = GuestPass.Status.REVOKED
     guest_pass.revoked_at = timezone.now()

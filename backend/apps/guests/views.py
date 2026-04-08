@@ -1,13 +1,14 @@
+from django.utils import timezone
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import NotFound, ValidationError
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from django.utils import timezone
 
-from apps.membership.permissions import IsResidenceAdmin, IsResident
+from apps.membership.permissions import IsResident
 
 from .models import GuestPass
+from .permissions import IsGuestAdmin
 from .serializers import (
     GuestPassAdminReadSerializer,
     GuestPassCreateSerializer,
@@ -19,10 +20,10 @@ from .services import (
     cancel_guest_pass_for_resident,
     create_guest_pass_for_resident,
     get_active_guest_passes_queryset,
+    get_guest_pass_history_queryset,
     get_or_create_guest_pass_policy,
     get_resident_membership_for_user,
     get_upcoming_guest_passes_queryset,
-    get_guest_pass_history_queryset,
     revoke_guest_pass_admin,
 )
 
@@ -99,7 +100,12 @@ class ResidentGuestPassCancelView(ResidentGuestPassBaseView):
     def post(self, request, pass_id: int):
         membership, residence = self.get_membership(request)
         guest_pass = cancel_guest_pass_for_resident(pass_id, membership, residence)
-        return Response(GuestPassReadSerializer(guest_pass).data)
+        return Response(
+            {
+                "detail": "Pase cancelado correctamente.",
+                "guest_pass": GuestPassReadSerializer(guest_pass).data,
+            }
+        )
 
 
 class ResidentGuestPassPolicyView(ResidentGuestPassBaseView):
@@ -115,7 +121,7 @@ class ResidentGuestPassPolicyView(ResidentGuestPassBaseView):
 
 
 class AdminGuestPassBaseView(APIView):
-    permission_classes = [IsAuthenticated, IsResidenceAdmin]
+    permission_classes = [IsAuthenticated, IsGuestAdmin]
 
     def _get_residence(self, request):
         residence = getattr(request, "residence", None)
@@ -134,10 +140,8 @@ class AdminGuestPassListView(AdminGuestPassBaseView):
     def get(self, request):
         residence = self._get_residence(request)
 
-        queryset = (
-            residence.guest_passes
-            .select_related("resident__user")
-            .order_by("-created_at")
+        queryset = residence.guest_passes.select_related("resident__user").order_by(
+            "-created_at"
         )
         status_filter = request.query_params.get("status")
         if status_filter:

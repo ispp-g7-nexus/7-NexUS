@@ -28,11 +28,20 @@ export interface ObjectRental {
   id: number;
   start_date: string;
   end_date: string;
+  status: 'ACTIVE' | 'CANCELLED' | 'COMPLETED';
+  created_at?: string;
+  updated_at?: string;
   user: {
     id: number;
     first_name: string;
     last_name: string;
   };
+}
+
+export interface RentalsByStatus {
+  active: ObjectRental[];
+  cancelled: ObjectRental[];
+  completed: ObjectRental[];
 }
 
 export interface ObjectItem {
@@ -41,16 +50,28 @@ export interface ObjectItem {
   description: string;
   location: string;
   availability: boolean;
+  stock_total: number;
+  current_reserved_stock: number;
+  current_available_stock: number;
   image_url?: string;
   tags: string;
+  labels: ObjectLabelItem[];
   rentals_count: number;
   can_rent: boolean;
+}
+
+export interface ObjectLabelItem {
+  id: number;
+  name: string;
+  created_at: string;
 }
 
 export interface CreateObjectRequest {
   name: string;
   description?: string;
   location?: string;
+  stock_total?: number;
+  label_ids?: number[];
   image_url?: string;
   tags?: string;
 }
@@ -67,6 +88,33 @@ export interface CancelReservationRequest {
 export interface UserObjectReservation {
   rental: ObjectRental;
   object: ObjectItem;
+}
+
+export interface ObjectAvailabilitySlot {
+  start_time: string;
+  end_time: string;
+  status: "available" | "occupied" | "past";
+  available_stock: number;
+}
+
+export interface ObjectAvailabilityReservation {
+  id: number;
+  start_date: string;
+  end_date: string;
+  user: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    email: string;
+  };
+}
+
+export interface ObjectAvailability {
+  date: string;
+  reservation_interval_minutes: number;
+  object: ObjectItem;
+  reservations: ObjectAvailabilityReservation[];
+  available_slots: ObjectAvailabilitySlot[];
 }
 
 export const objectsService = {
@@ -97,6 +145,63 @@ export const objectsService = {
       throw await buildApiError(response, 'Error al obtener detalles del objeto');
     }
     
+    return response.json();
+  },
+
+  // Labels management
+  listLabels: async (): Promise<ObjectLabelItem[]> => {
+    const response = await fetch(`${OBJECTS_URL}/labels/`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (!response.ok) {
+      throw await buildApiError(response, 'Error al obtener etiquetas de objetos');
+    }
+
+    return response.json();
+  },
+
+  createLabel: async (name: string): Promise<ObjectLabelItem> => {
+    const response = await fetch(`${OBJECTS_URL}/labels/`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name })
+    });
+
+    if (!response.ok) {
+      throw await buildApiError(response, 'Error al crear etiqueta de objeto');
+    }
+
+    return response.json();
+  },
+
+  deleteLabel: async (labelId: number): Promise<void> => {
+    const response = await fetch(`${OBJECTS_URL}/labels/${labelId}/`, {
+      method: 'DELETE',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (!response.ok) {
+      throw await buildApiError(response, 'Error al eliminar etiqueta de objeto');
+    }
+  },
+
+  // Get object availability for a date
+  getObjectAvailability: async (objectId: number, date: string): Promise<ObjectAvailability> => {
+    const response = await fetch(`${OBJECTS_URL}/${objectId}/availability/?date=${encodeURIComponent(date)}`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (!response.ok) {
+      throw await buildApiError(response, 'Error al obtener disponibilidad del objeto');
+    }
+
     return response.json();
   },
 
@@ -162,7 +267,7 @@ export const objectsService = {
   },
 
   // Get object rentals
-  getObjectRentals: async (objectId: number): Promise<ObjectRental[]> => {
+  getObjectRentals: async (objectId: number): Promise<RentalsByStatus> => {
     const response = await fetch(`${OBJECTS_URL}/${objectId}/rentals/`, {
       method: 'GET',
       credentials: 'include',
