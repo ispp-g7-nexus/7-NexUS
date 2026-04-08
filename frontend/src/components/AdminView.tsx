@@ -1,4 +1,4 @@
-import { AlertCircle, AreaChart, BedDouble, Bell, BookOpen, Briefcase, Calendar, Home, LayoutDashboard, LogOut, Menu, MessageSquare, Package, Palette, Shield, User, UserCheck, Users, Utensils } from "lucide-react";
+import { AlertCircle, AreaChart, BedDouble, Bell, BookOpen, Briefcase, Calendar, Home, LayoutDashboard, LogOut, Menu, MessageSquare, Package, Palette, Shield, User, UserCheck, Users, Utensils, X } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { chatsService, type ChatRealtimeEvent } from "../services/chats";
