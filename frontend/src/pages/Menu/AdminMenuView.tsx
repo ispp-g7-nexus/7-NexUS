@@ -143,7 +143,7 @@ interface EditMealModalProps {
   dayId?: string;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (meal: Meal, dayId: string, photoFile: File | null) => void;
+  onSave: (meal: Meal, dayId: string, photoFile: File | null, imageToDelete?: boolean) => void;
   isSaving?: boolean;
 }
 
@@ -153,11 +153,15 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
   );
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [imageToDelete, setImageToDelete] = useState(false);
   useEffect(() => {
     if (isOpen) {
       setFormData(
         meal || { allergens: [], name: '', type: 'lunch', description: '', isGlutenFree: false, isVegetarian: false, isVegan: false }
       );
+      setImageToDelete(false);
+      setPhotoFile(null);
+      setPreviewUrl(null);
     }
   }, [isOpen, meal]);
 
@@ -180,6 +184,12 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
 
   const handleChange = (field: keyof Meal, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleRemovePhoto = () => {
+    setPhotoFile(null);
+    setPreviewUrl(null);
+    setImageToDelete(true);
   };
 
   return (
@@ -259,14 +269,21 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
             />
             <div className="flex flex-col gap-4 py-4">
               <label htmlFor="meal-image-input" className="text-sm font-medium">Imagen del plato</label>
-              
-              {(previewUrl || meal?.image) && (
+
+              {(previewUrl || (meal?.image && !imageToDelete)) && (
                 <div className="relative w-full h-40 border rounded-md overflow-hidden bg-gray-100">
                   <img
                     src={previewUrl || meal?.image}
                     alt="Previsualización"
                     className="w-full h-full object-cover"
                   />
+                  <button
+                    type="button"
+                    onClick={handleRemovePhoto}
+                    className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
               )}
 
@@ -279,7 +296,8 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
                   if (file) {
                     setPhotoFile(file);
                     const url = URL.createObjectURL(file);
-                    setPreviewUrl(url); 
+                    setPreviewUrl(url);
+                    setImageToDelete(false);
                   }
                 }}
                 className="cursor-pointer"
@@ -336,7 +354,7 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
           <button
             onClick={() => {
               if (dayId) {
-                onSave(formData, dayId, photoFile);
+                onSave(formData, dayId, photoFile, imageToDelete);
               }
             }}
             disabled={isSaving || !formData.name.trim()}
@@ -448,7 +466,7 @@ const DayMenuCardAdmin = ({ day, onAddMeal, onEditMeal, onDeleteMeal }: DayMenuC
         </div>
         <button
           onClick={() => onAddMeal(day.date, day.id || '')}
-          className="flex items-center gap-2 px-3 py-2 bg-white text-primary rounded-lg hover:bg-primary/10 transition-colors font-medium"
+          className="flex items-center gap-2 px-3 py-2 bg-white text-primary rounded-lg hover:bg-gray-100 hover:shadow-lg scale-100 hover:scale-105 transition-all font-medium"
           title="Agregar comida"
         >
           <Plus className="w-4 h-4" />
@@ -624,7 +642,7 @@ export function AdminMenuView() {
     );
   };
 
-  const handleSaveMeal = async (meal: Meal, dayId: string, photo: File | null) => {
+  const handleSaveMeal = async (meal: Meal, dayId: string, photo: File | null, shouldDeleteImage?: boolean) => {
   setIsSaving(true);
   try {
     const formData = new FormData();
@@ -635,6 +653,10 @@ export function AdminMenuView() {
     formData.append('isGlutenFree', String(meal.isGlutenFree));
     formData.append('isVegetarian', String(meal.isVegetarian));
     formData.append('isVegan', String(meal.isVegan));
+
+    if (shouldDeleteImage) {
+      formData.append('removeImage', 'true');
+    }
 
     if (photo) {
       formData.append('image', photo);
@@ -647,9 +669,9 @@ export function AdminMenuView() {
     }
 
     setIsEditModalOpen(false);
-    
+
     showToast(meal.id ? 'Comida actualizada' : 'Comida agregada', 'success');
-    
+
     if (selectedWeekId) {
       await loadWeekDetail(selectedWeekId);
     }
@@ -808,71 +830,87 @@ export function AdminMenuView() {
 
   const currentIndex = allWeeks.findIndex(w => w.id === selectedWeekId);
   const canGoPrev = currentIndex < allWeeks.length - 1;
+  const canGoNext = currentIndex > 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div className="flex flex-col gap-3">
-            <h1 className="text-4xl font-serif text-gray-900 mb-1">
-              Gestión del Menú
-            </h1>
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="flex items-center gap-3 bg-white p-2 px-4 rounded-2xl shadow-sm border border-gray-100">
+        <div className="mb-8 flex flex-col gap-6">
+          <h1 className="text-4xl font-serif text-gray-900 text-center">
+            Gestión del Menú
+          </h1>
+
+          <div className="flex items-center justify-center gap-6">
+            {/* Week Navigation */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => handleNavigateWeek('prev')}
+                disabled={!canGoPrev}
+                className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <span className="text-lg font-semibold text-gray-900 whitespace-nowrap min-w-[120px] text-center">
+                {new Date(menuWeek.weekStart + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                {' - '}
+                {new Date(menuWeek.weekEnd + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+              </span>
+              <button
+                onClick={() => handleNavigateWeek('next')}
+                disabled={!canGoNext}
+                className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="w-5 h-5 rotate-180" />
+              </button>
+            </div>
+
+            {/* Status Badge */}
+            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ${
+              menuWeek.isPublished
+                ? 'bg-green-100 text-green-700'
+                : 'bg-orange-100 text-orange-700'
+            }`}>
+              <div className={`w-2 h-2 rounded-full ${menuWeek.isPublished ? 'bg-green-500' : 'bg-orange-500'}`} />
+              {menuWeek.isPublished ? 'Publicado' : 'Borrador'}
+            </div>
+
+            {/* Right Controls */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-full">
+                <span className="text-sm text-gray-600">Público</span>
                 <button
-                  onClick={() => handleNavigateWeek('prev')}
-                  disabled={!canGoPrev}
-                  className="p-1.5 rounded-full hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  onClick={handleTogglePublish}
+                  disabled={isSaving}
+                  className={`w-8 h-5 rounded-full transition-colors ${
+                    menuWeek.isPublished ? 'bg-green-500' : 'bg-gray-300'
+                  }`}
                 >
-                  <ChevronLeft className="w-5 h-5 text-gray-700" />
-                </button>
-                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight whitespace-nowrap">
-                  {new Date(menuWeek.weekStart + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
-                  {' - '}
-                  {new Date(menuWeek.weekEnd + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
-                </h2>
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    onClick={handleTogglePublish}
-                    disabled={isSaving}
-                    className={`px-5 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-colors ${
-                      menuWeek.isPublished
-                        ? 'bg-orange-100 text-orange-700 hover:bg-orange-200 border border-orange-200'
-                        : 'bg-green-600 text-white hover:bg-green-700'
+                  <div
+                    className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                      menuWeek.isPublished ? 'translate-x-3.5' : 'translate-x-0.5'
                     }`}
-                  >
-                    {menuWeek.isPublished ? 'Ocultar menú' : 'Publicar menú'}
-                  </button>
-                  <button
-                    onClick={handleDeleteWeek}
-                    disabled={isSaving}
-                    className="px-5 py-2.5 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors font-medium flex items-center gap-2"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    Eliminar semana
-                  </button>
-                  <button
-                    onClick={() => setIsNewWeekModalOpen(true)}
-                    className="px-5 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium flex items-center gap-2"
-                  >
-                    <Plus className="w-5 h-5" />
-                    Nueva Semana
-                  </button>
-                </div>
+                  />
+                </button>
               </div>
 
-              {/* Status indicator inline */}
-              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border bg-white ${menuWeek.isPublished ? 'border-green-200 text-green-700 shadow-[0_0_10px_rgba(34,197,94,0.1)]' : 'border-orange-200 text-orange-700'}`}>
-                <div className={`w-2.5 h-2.5 rounded-full ${menuWeek.isPublished ? 'bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]' : 'bg-orange-500'}`} />
-                <span className="text-sm font-medium">{menuWeek.isPublished ? 'Publicado' : 'Borrador'}</span>
-              </div>
+              <button
+                onClick={handleDeleteWeek}
+                disabled={isSaving}
+                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
+
+              <button
+                onClick={() => setIsNewWeekModalOpen(true)}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Nueva Semana
+              </button>
             </div>
           </div>
-          <button className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium flex items-center gap-2">
-            <Plus className="w-5 h-5" />
-            Nueva Semana
-          </button>
         </div>
 
         {/* Menu Days Grid */}

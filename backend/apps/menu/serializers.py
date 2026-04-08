@@ -143,6 +143,7 @@ class MenuWeekCreateSerializer(serializers.ModelSerializer):
 
 
 class MealCreateSerializer(serializers.ModelSerializer):
+    removeImage = serializers.BooleanField(required=False, write_only=True)
 
     class Meta:
         model = Meal
@@ -154,6 +155,7 @@ class MealCreateSerializer(serializers.ModelSerializer):
             'is_vegetarian',
             'is_vegan',
             'image',
+            'removeImage',
         ]
 
     def to_internal_value(self, data):
@@ -162,6 +164,8 @@ class MealCreateSerializer(serializers.ModelSerializer):
         else:
             converted = dict(data)
 
+        # Store removeImage flag before processing
+        remove_image = converted.get('removeImage')
 
         if 'image' in data:
             converted['image'] = data['image']
@@ -176,7 +180,26 @@ class MealCreateSerializer(serializers.ModelSerializer):
                 val = converted.pop(frontend_key)
                 converted[backend_field] = val in ['true', True, 'True']
 
-        return super().to_internal_value(converted)
+        # Remove the removeImage flag from converted before calling parent
+        converted.pop('removeImage', None)
+        result = super().to_internal_value(converted)
+
+        # Re-add the removeImage flag to the result
+        if remove_image:
+            result['removeImage'] = True
+
+        return result
+
+    def save(self, **kwargs):
+        remove_image = self.validated_data.pop('removeImage', False)
+        instance = super().save(**kwargs)
+
+        if remove_image and instance.image:
+            instance.image.delete(save=False)
+            instance.image = None
+            instance.save()
+
+        return instance
 
 class SpecialMenuRequestSerializer(serializers.ModelSerializer):
     resident_name = serializers.ReadOnlyField(source='resident.fullname')
