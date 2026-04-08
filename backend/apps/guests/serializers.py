@@ -221,3 +221,49 @@ class GuestPassPolicyUpdateSerializer(serializers.Serializer):
                     }
                 )
         return attrs
+
+
+class VisitorAnalyticsSummarySerializer(serializers.Serializer):
+    total_visits = serializers.IntegerField(min_value=0)
+    total_hosts = serializers.IntegerField(min_value=0)
+    compare_value_total_visits = serializers.IntegerField(min_value=0, allow_null=True)
+    compare_value_total_hosts = serializers.IntegerField(min_value=0, allow_null=True)
+    delta_total_visits = serializers.IntegerField(allow_null=True)
+    delta_total_hosts = serializers.IntegerField(allow_null=True)
+    delta_pct_total_visits = serializers.FloatField(allow_null=True)
+    delta_pct_total_hosts = serializers.FloatField(allow_null=True)
+
+
+class VisitorAnalyticsByHostSerializer(serializers.Serializer):
+    host_id = serializers.IntegerField()
+    host_name = serializers.CharField()
+    visitors_count = serializers.IntegerField(min_value=0)
+    pct_of_total = serializers.FloatField(min_value=0)
+    compare_value = serializers.IntegerField(min_value=0, allow_null=True)
+    delta = serializers.IntegerField(allow_null=True)
+    delta_pct = serializers.FloatField(allow_null=True)
+
+
+class VisitorAnalyticsPeakHourSerializer(serializers.Serializer):
+    hour = serializers.IntegerField(min_value=0, max_value=23)
+    label = serializers.CharField()
+    visits_count = serializers.IntegerField(min_value=0)
+    compare_value = serializers.IntegerField(min_value=0, allow_null=True)
+    delta = serializers.IntegerField(allow_null=True)
+    delta_pct = serializers.FloatField(allow_null=True)
+
+
+class VisitorAnalyticsMetaSerializer(serializers.Serializer):
+    from_value = serializers.DateTimeField()
+    to_value = serializers.DateTimeField()
+    granularity = serializers.CharField()
+    compare = serializers.CharField()
+    compare_from = serializers.DateTimeField(allow_null=True)
+    compare_to = serializers.DateTimeField(allow_null=True)
+
+
+class VisitorAnalyticsResponseSerializer(serializers.Serializer):
+    summary = VisitorAnalyticsSummarySerializer()
+    visitors_by_host = VisitorAnalyticsByHostSerializer(many=True)
+    peak_hours = VisitorAnalyticsPeakHourSerializer(many=True)
+    meta = VisitorAnalyticsMetaSerializer()

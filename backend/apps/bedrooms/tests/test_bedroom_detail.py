@@ -11,8 +11,12 @@ class BedroomDetailViewTests(FastTenantTestCase):
     """[NX-S2.03] Ver detalle de habitación  +  [NX-S1.15] Ocupación en tiempo real"""
 
     @classmethod
+    def get_test_schema_name(cls):
+        return "fast_test_bedrooms"
+
+    @classmethod
     def get_test_tenant_domain(cls):
-        return "bedroom-detail.test.local"
+        return "bedroom-audit.test.local"
 
     @classmethod
     def setup_tenant(cls, tenant):

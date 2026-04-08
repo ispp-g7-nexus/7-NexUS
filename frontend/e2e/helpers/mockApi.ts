@@ -24,6 +24,23 @@ export const MOCK_BEDROOM = {
   residentes: [{ id: 10, full_name: 'Ana García', email: 'ana@test.com' }],
 }
 
+export const MOCK_AUDIT_LOG = [
+  {
+    id: 1,
+    action: 'CREATED',
+    changes: {},
+    timestamp: '2026-03-01T09:00:00Z',
+    performed_by: 'Carlos Admin',
+  },
+  {
+    id: 2,
+    action: 'UPDATED',
+    changes: { edificio: { before: 'A', after: 'B' } },
+    timestamp: '2026-04-01T10:00:00Z',
+    performed_by: 'Carlos Admin',
+  },
+]
+
 export const MOCK_PASSES = [
   {
     id: 1,
@@ -59,6 +76,7 @@ function json(data: unknown) {
 export async function mockAdminApi(page: Page, overrides: {
   bedrooms?: unknown[]
   guestPasses?: unknown[]
+  auditLog?: unknown[]
 } = {}) {
   const bedrooms = overrides.bedrooms ?? [MOCK_BEDROOM]
   const guestPasses = overrides.guestPasses ?? []
@@ -71,7 +89,14 @@ export async function mockAdminApi(page: Page, overrides: {
     } else if (path === '/api/residences/branding/') {
       await route.fulfill(json({ logo_url: null, primary_color: '#4A8F5D', secondary_color: '#0F4C81', accent_color: '#2E7D32', custom_css: '', favicon_url: '' }))
     } else if (path.startsWith('/api/bedrooms/')) {
-      await route.fulfill(path === '/api/bedrooms/' ? json(bedrooms) : json([]))
+      if (path === '/api/bedrooms/') {
+        await route.fulfill(json(bedrooms))
+      } else if (path.endsWith('/audit/')) {
+        const auditLog = overrides.auditLog ?? []
+        await route.fulfill(json(auditLog))
+      } else {
+        await route.fulfill(json([]))
+      }
     } else if (path === '/api/admin/guest-passes/') {
       await route.fulfill(json(guestPasses))
     } else if (path === '/api/admin/guest-passes/policy/') {

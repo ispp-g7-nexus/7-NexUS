@@ -3,6 +3,24 @@ from django.db import models
 from apps.residences.models import Residence
 
 
+class BedroomAuditLog(models.Model):
+    class Action(models.TextChoices):
+        CREATED = "CREATED", "Creada"
+        UPDATED = "UPDATED", "Actualizada"
+        RESIDENT_ASSIGNED = "RESIDENT_ASSIGNED", "Residente asignado"
+        RESIDENT_REMOVED = "RESIDENT_REMOVED", "Residente eliminado"
+
+    bedroom = models.ForeignKey("Bedroom", on_delete=models.CASCADE, related_name="audit_logs")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    action = models.CharField(max_length=20, choices=Action.choices)
+    changes = models.JSONField(default=dict, blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-timestamp"]
+        indexes = [models.Index(fields=["bedroom", "-timestamp"], name="bedroomauditlog_bedroom_ts_idx")]
+
+
 class Bedroom(models.Model):
 	class Tipo(models.TextChoices):
 		INDIVIDUAL = "Individual", "Individual"
