@@ -7,6 +7,7 @@ import {
   ObjectItem,
   ObjectAvailability,
   UserObjectReservation,
+  UserObjectNotification,
 } from "../../services/objects.ts";
 import { ObjectsList } from "./components/ObjectsList";
 import { ReservationModal } from "./components/ReservationModal";
@@ -37,13 +38,16 @@ export function Objects({ onReservationSuccess }: ObjectsProps) {
   const [searchTerm, setSearchTerm] = useState("");
   
   const [reservations, setReservations] = useState<UserObjectReservation[]>([]);
+  const [objectNotifications, setObjectNotifications] = useState<UserObjectNotification[]>([]);
   const [reservationsLoading, setReservationsLoading] = useState(true);
   const [reservationsError, setReservationsError] = useState<string | null>(null);
   const [cancellingRentalId, setCancellingRentalId] = useState<number | null>(null);
+  const [dismissingRentalId, setDismissingRentalId] = useState<number | null>(null);
 
   useEffect(() => {
     void fetchObjects();
     void fetchReservations();
+    void fetchObjectNotifications();
   }, []);
 
   useEffect(() => {
@@ -98,6 +102,15 @@ export function Objects({ onReservationSuccess }: ObjectsProps) {
     }
   };
 
+  const fetchObjectNotifications = async () => {
+    try {
+      const data = await objectsService.getUserObjectNotifications();
+      setObjectNotifications(data);
+    } catch {
+      setObjectNotifications([]);
+    }
+  };
+
 
 
   const handleReserveObject = (object: ObjectItem) => {
@@ -110,6 +123,7 @@ export function Objects({ onReservationSuccess }: ObjectsProps) {
     setSelectedObject(null);
     void fetchObjects();
     void fetchReservations();
+    void fetchObjectNotifications();
     if (objects.length > 0) {
       void fetchAvailability(objects, selectedDate);
     }
@@ -124,6 +138,7 @@ export function Objects({ onReservationSuccess }: ObjectsProps) {
       await objectsService.cancelReservation(objectId, { rental_id: rentalId });
       toast.success("Reserva cancelada correctamente.");
       await fetchReservations();
+      await fetchObjectNotifications();
       await fetchObjects();
       await fetchAvailability(objects, selectedDate);
     } catch (err) {
@@ -132,6 +147,21 @@ export function Objects({ onReservationSuccess }: ObjectsProps) {
       console.error('Error canceling reservation:', err);
     } finally {
       setCancellingRentalId(null);
+    }
+  };
+
+  const handleDismissReservation = async (rentalId: number) => {
+    setDismissingRentalId(rentalId);
+    try {
+      await objectsService.dismissUserReservation(rentalId);
+      toast.success("Reserva descartada.");
+      await fetchReservations();
+      await fetchObjectNotifications();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Error al descartar reserva";
+      toast.error(errorMessage);
+    } finally {
+      setDismissingRentalId(null);
     }
   };
 
@@ -177,7 +207,7 @@ export function Objects({ onReservationSuccess }: ObjectsProps) {
 
       {/* Grid Layout: Objects List + My Reservations */}
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-        <div className="space-y-4">
+        <div className="space-y-4 min-w-0">
           <h3 className="text-lg font-semibold">Objetos disponibles</h3>
           <ObjectsList
             objects={filteredObjects}
@@ -191,13 +221,28 @@ export function Objects({ onReservationSuccess }: ObjectsProps) {
           />
         </div>
 
-        <div>
+        <div className="min-w-0">
+          {objectNotifications.length > 0 && (
+            <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3">
+              <p className="text-sm font-semibold text-amber-800">Avisos de devolucion</p>
+              <ul className="mt-2 space-y-1 text-sm text-amber-900">
+                {objectNotifications.map((notification) => (
+                  <li key={notification.id} className="rounded bg-white/70 px-2 py-1">
+                    <p className="font-medium">{notification.title}</p>
+                    <p>{notification.message}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <MyReservations
             reservations={reservations}
             loading={reservationsLoading}
             error={reservationsError}
             cancellingRentalId={cancellingRentalId}
+            dismissingRentalId={dismissingRentalId}
             onCancel={handleCancelReservation}
+            onDismiss={handleDismissReservation}
             onRetry={fetchReservations}
           />
         </div>

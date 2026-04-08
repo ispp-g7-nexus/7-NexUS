@@ -1,10 +1,46 @@
 import { useState } from "react";
-import { AlertCircle, CheckCircle, XCircle, Calendar, Search } from "lucide-react";
+import { AlertCircle, CheckCircle, XCircle, Calendar, Eye, Search } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { ObjectRental } from "../services/objects";
+
+const ADMIN_CANCELLATION_REASON_MAX_LENGTH = 200;
+const REASON_PREVIEW_CHARS = 140;
+
+function normalizeReasonText(value: string): string {
+  const normalizedLines = value
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.trimEnd());
+
+  const compactLines: string[] = [];
+  let previousWasBlank = false;
+
+  for (const line of normalizedLines) {
+    const isBlank = line.trim().length === 0;
+    if (isBlank) {
+      if (!previousWasBlank) {
+        compactLines.push("");
+      }
+      previousWasBlank = true;
+      continue;
+    }
+
+    compactLines.push(line);
+    previousWasBlank = false;
+  }
+
+  return compactLines.join("\n").trim();
+}
+
+function buildReasonPreview(value: string, maxChars: number): string {
+  if (value.length <= maxChars) {
+    return value;
+  }
+  return `${value.slice(0, maxChars).trimEnd()}...`;
+}
 
 interface RentalsByStatus {
   active: ObjectRental[];
@@ -17,7 +53,9 @@ interface RentalHistoryViewProps {
   rentalsByStatus: RentalsByStatus;
   loading: boolean;
   onMarkReturned?: (rental: ObjectRental) => Promise<void>;
+  onCancelRental?: (rental: ObjectRental, reason: string) => Promise<void>;
   completingRentalIds?: number[];
+  cancellingRentalIds?: number[];
 }
 
 function formatDate(date: string): string {
@@ -36,13 +74,46 @@ function RentalCard({
   rental,
   status,
   onMarkReturned,
+  onCancelRental,
   isCompleting,
+  isCancelling,
 }: {
   rental: ObjectRental;
   status: "ACTIVE" | "IN_PROGRESS" | "CANCELLED" | "COMPLETED";
   onMarkReturned?: (rental: ObjectRental) => Promise<void>;
+  onCancelRental?: (rental: ObjectRental, reason: string) => Promise<void>;
   isCompleting?: boolean;
+  isCancelling?: boolean;
 }) {
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showReasonDetailModal, setShowReasonDetailModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelError, setCancelError] = useState("");
+  const normalizedCancelReason = rental.admin_cancelled_reason
+    ? normalizeReasonText(rental.admin_cancelled_reason)
+    : "";
+  const previewCancelReason = normalizedCancelReason
+    ? buildReasonPreview(normalizedCancelReason, REASON_PREVIEW_CHARS)
+    : "";
+
+  const handleCancelSubmit = async () => {
+    if (!cancelReason.trim()) {
+      setCancelError("El motivo es requerido");
+      return;
+    }
+    if (cancelReason.length > ADMIN_CANCELLATION_REASON_MAX_LENGTH) {
+      setCancelError(`El motivo no puede exceder ${ADMIN_CANCELLATION_REASON_MAX_LENGTH} caracteres`);
+      return;
+    }
+    try {
+      setCancelError("");
+      await onCancelRental?.(rental, cancelReason);
+      setShowCancelModal(false);
+      setCancelReason("");
+    } catch (error) {
+      setCancelError(error instanceof Error ? error.message : "Error desconocido");
+    }
+  };
   const getStatusConfig = (status: string) => {
     switch (status) {
       case "ACTIVE":
@@ -93,63 +164,207 @@ function RentalCard({
   const userName = `${rental.user.first_name || ""} ${rental.user.last_name || ""}`.trim() || "Usuario";
 
   return (
-    <div className={`rounded-lg border border-gray-200 ${config.bg} p-4`}>
-      <div className="flex items-start justify-between">
-        <div className="flex items-start gap-3 flex-1">
-          <Icon className={`${config.color} mt-1 h-5 w-5 flex-shrink-0`} />
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h4 className="font-semibold text-gray-900">{userName}</h4>
-              <span className={`text-xs font-medium px-2 py-1 rounded ${config.badge} whitespace-nowrap`}>
-                {config.label}
-              </span>
-            </div>
-            <div className="mt-2 space-y-1 text-sm text-gray-600">
-              <p>
-                <span className="font-medium">Inicio:</span> {formatDate(rental.start_date)}
-              </p>
-              <p>
-                <span className="font-medium">Fin:</span> {formatDate(rental.end_date)}
-              </p>
-              {rental.updated_at && status === "CANCELLED" && (
+    <>
+      <div className={`rounded-lg border border-gray-200 ${config.bg} p-4`}>
+        <div className="flex items-start justify-between">
+          <div className="flex items-start gap-3 flex-1">
+            <Icon className={`${config.color} mt-1 h-5 w-5 flex-shrink-0`} />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h4 className="font-semibold text-gray-900">{userName}</h4>
+                <span className={`text-xs font-medium px-2 py-1 rounded ${config.badge} whitespace-nowrap`}>
+                  {config.label}
+                </span>
+              </div>
+              <div className="mt-2 space-y-1 text-sm text-gray-600">
                 <p>
-                  <span className="font-medium">Cancelada:</span> {formatDate(rental.updated_at)}
+                  <span className="font-medium">Inicio:</span> {formatDate(rental.start_date)}
                 </p>
-              )}
-            </div>
-            {status === "IN_PROGRESS" && (
-              <div className="mt-2 space-y-1 text-sm">
-                {rental.is_overdue ? (
-                  <p className="font-medium text-amber-700">
-                    Retraso: {rental.overdue_human ?? `${rental.overdue_minutes ?? 0} min`}
-                  </p>
-                ) : (
+                <p>
+                  <span className="font-medium">Fin:</span> {formatDate(rental.end_date)}
+                </p>
+              </div>
+
+              {status === "IN_PROGRESS" && (
+                <div className="mt-2 space-y-1 text-sm">
                   <p className="text-gray-600">
                     Tiempo restante: {rental.remaining_human ?? `${rental.remaining_minutes ?? 0} min`}
                   </p>
-                )}
-                {rental.elapsed_human && (
-                  <p className="text-gray-600">En uso desde hace: {rental.elapsed_human}</p>
-                )}
-              </div>
-            )}
-            {status === "IN_PROGRESS" && onMarkReturned && (
-              <div className="mt-3">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => void onMarkReturned(rental)}
-                  disabled={isCompleting}
-                >
-                  {isCompleting ? "Marcando..." : "Marcar como devuelto"}
-                </Button>
-              </div>
-            )}
+                  {rental.elapsed_human && (
+                    <p className="text-gray-600">En uso desde hace: {rental.elapsed_human}</p>
+                  )}
+                </div>
+              )}
+
+              {status === "COMPLETED" && (
+                <div className="mt-2 space-y-1 text-sm">
+                  {rental.is_overdue ? (
+                    <p className="font-medium text-red-700">
+                      Retraso: {rental.overdue_human ?? `${rental.overdue_minutes ?? 0} min`}
+                    </p>
+                  ) : (
+                    <p className="text-gray-600">
+                      Duración: {rental.elapsed_human ?? `${rental.elapsed_minutes ?? 0} min`}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {status === "CANCELLED" && rental.admin_cancelled_by && (
+                <div className="mt-2 space-y-1 text-sm text-red-700">
+                  <p>
+                    <span className="font-medium">Cancelada por:</span>{" "}
+                    {rental.admin_cancelled_by.first_name} {rental.admin_cancelled_by.last_name}
+                  </p>
+                  {normalizedCancelReason && (
+                    <div>
+                      <p className="whitespace-pre-wrap break-words">
+                        <span className="font-medium">Motivo:</span>{" "}
+                        {previewCancelReason}
+                      </p>
+                      {normalizedCancelReason.length > REASON_PREVIEW_CHARS && (
+                        <div className="mt-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2 border-red-300 bg-white/80 text-red-700 hover:bg-white"
+                            onClick={() => setShowReasonDetailModal(true)}
+                          >
+                            <Eye className="mr-1 h-3 w-3" />
+                            Ver detalle
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {rental.admin_cancelled_at && (
+                    <p>
+                      <span className="font-medium">Fecha de cancelación:</span> {formatDate(rental.admin_cancelled_at)}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {status === "COMPLETED" && rental.status === "IN_PROGRESS" && onMarkReturned && (
+                <div className="mt-3">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => void onMarkReturned(rental)}
+                    disabled={isCompleting}
+                  >
+                    {isCompleting ? "Marcando..." : "Marcar como devuelto"}
+                  </Button>
+                </div>
+              )}
+
+              {status === "ACTIVE" && onCancelRental && (
+                <div className="mt-3">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="text-red-600 hover:text-red-700 border-red-300 hover:bg-red-50"
+                    onClick={() => setShowCancelModal(true)}
+                    disabled={isCancelling}
+                  >
+                    {isCancelling ? "Cancelando..." : "Cancelar reserva"}
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+
+      {showCancelModal && onCancelRental && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle>Cancelar Reserva</CardTitle>
+              <CardDescription>
+                Cancelar la reserva de {userName} del {formatDate(rental.start_date)} al{" "}
+                {formatDate(rental.end_date)}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">
+                  Motivo de cancelación *
+                </label>
+                <textarea
+                  value={cancelReason}
+                  onChange={(e) => {
+                    setCancelReason(e.target.value);
+                    setCancelError("");
+                  }}
+                  placeholder="Describe el motivo de la cancelación..."
+                  className="w-full h-24 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 whitespace-pre-wrap break-words"
+                  maxLength={ADMIN_CANCELLATION_REASON_MAX_LENGTH}
+                />
+                <p className="text-xs text-gray-500">
+                  {cancelReason.length}/{ADMIN_CANCELLATION_REASON_MAX_LENGTH} caracteres
+                </p>
+              </div>
+
+              {cancelError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+                  {cancelError}
+                </div>
+              )}
+
+              <div className="flex gap-3 justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowCancelModal(false);
+                    setCancelReason("");
+                    setCancelError("");
+                  }}
+                  disabled={isCancelling}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  className="bg-red-600 hover:bg-red-700"
+                  onClick={handleCancelSubmit}
+                  disabled={isCancelling || !cancelReason.trim()}
+                >
+                  {isCancelling ? "Cancelando..." : "Confirmar Cancelación"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {showReasonDetailModal && normalizedCancelReason && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <Card className="w-full max-w-lg">
+            <CardHeader>
+              <CardTitle>Detalle del motivo</CardTitle>
+              <CardDescription>
+                Motivo completo de la cancelación administrativa.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-gray-700 whitespace-pre-wrap break-words max-h-72 overflow-y-auto leading-relaxed">
+                {normalizedCancelReason}
+              </p>
+              <div className="flex justify-end">
+                <Button type="button" variant="outline" onClick={() => setShowReasonDetailModal(false)}>
+                  Cerrar
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -161,7 +376,9 @@ function RentalSection({
   icon: Icon,
   empty,
   onMarkReturned,
+  onCancelRental,
   completingRentalIds,
+  cancellingRentalIds,
 }: {
   title: string;
   description: string;
@@ -170,7 +387,9 @@ function RentalSection({
   icon: React.ReactNode;
   empty: string;
   onMarkReturned?: (rental: ObjectRental) => Promise<void>;
+  onCancelRental?: (rental: ObjectRental, reason: string) => Promise<void>;
   completingRentalIds?: number[];
+  cancellingRentalIds?: number[];
 }) {
   return (
     <div className="space-y-3">
@@ -191,7 +410,9 @@ function RentalSection({
               rental={rental}
               status={status}
               onMarkReturned={onMarkReturned}
+              onCancelRental={onCancelRental}
               isCompleting={Boolean(completingRentalIds?.includes(rental.id))}
+              isCancelling={Boolean(cancellingRentalIds?.includes(rental.id))}
             />
           ))}
         </div>
@@ -230,7 +451,9 @@ export function RentalHistoryView({
   rentalsByStatus,
   loading,
   onMarkReturned,
+  onCancelRental,
   completingRentalIds = [],
+  cancellingRentalIds = [],
 }: RentalHistoryViewProps) {
   const [searchUserName, setSearchUserName] = useState("");
   const [searchDate, setSearchDate] = useState("");
@@ -363,6 +586,8 @@ export function RentalHistoryView({
                 status="ACTIVE"
                 icon={<Calendar className="h-5 w-5 text-blue-600" />}
                 empty="No hay reservas programadas que coincidan con la búsqueda"
+                onCancelRental={onCancelRental}
+                cancellingRentalIds={cancellingRentalIds}
               />
             </TabsContent>
 
@@ -374,6 +599,8 @@ export function RentalHistoryView({
                 status="COMPLETED"
                 icon={<CheckCircle className="h-5 w-5 text-emerald-600" />}
                 empty="No hay reservas completadas que coincidan con la búsqueda"
+                onMarkReturned={onMarkReturned}
+                completingRentalIds={completingRentalIds}
               />
             </TabsContent>
 

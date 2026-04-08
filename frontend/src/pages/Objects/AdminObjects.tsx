@@ -122,6 +122,7 @@ export function AdminObjects() {
   });
   const [loadingRentals, setLoadingRentals] = useState(false);
   const [completingRentalIds, setCompletingRentalIds] = useState<number[]>([]);
+  const [cancellingRentalIds, setCancellingRentalIds] = useState<number[]>([]);
   const getErrorMessage = (err: unknown, fallback: string) =>
     err instanceof Error && err.message ? err.message : fallback;
 
@@ -344,6 +345,23 @@ export function AdminObjects() {
     }
   };
 
+  const handleCancelRental = async (rentalId: number, reason: string) => {
+    if (!selectedObject || cancellingRentalIds.includes(rentalId)) {
+      return;
+    }
+
+    setCancellingRentalIds((prev) => [...prev, rentalId]);
+    try {
+      await objectsService.cancelAdminRental(selectedObject.id, rentalId, reason);
+      toast.success("Préstamo cancelado correctamente");
+      await Promise.all([loadRentals(selectedObject.id), loadObjects({ silent: true })]);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Error al cancelar préstamo"));
+    } finally {
+      setCancellingRentalIds((prev) => prev.filter((id) => id !== rentalId));
+    }
+  };
+
   return (
     <section className="mx-auto flex w-full max-w-5xl flex-col gap-6">
       <header className="rounded-xl border border-border/80 bg-white p-4 shadow-sm sm:p-6">
@@ -543,7 +561,11 @@ export function AdminObjects() {
               onMarkReturned={async (rental) => {
                 await handleMarkRentalReturned(rental.id);
               }}
+              onCancelRental={async (rental, reason) => {
+                await handleCancelRental(rental.id, reason);
+              }}
               completingRentalIds={completingRentalIds}
+              cancellingRentalIds={cancellingRentalIds}
             />
           </div>
         </SheetContent>
