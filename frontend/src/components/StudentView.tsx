@@ -256,7 +256,11 @@ export function StudentView({ onLogout }: StudentViewProps) {
 
         loadUnreadCount();
 
-        const intervalId = globalThis.setInterval(loadUnreadCount, activeTab === "announcements" ? 3000 : 15000);
+        if (activeTab === "announcements") {
+            return;
+        }
+
+        const intervalId = globalThis.setInterval(loadUnreadCount, 3000);
         return () => globalThis.clearInterval(intervalId);
     }, [activeTab]);
 
@@ -308,7 +312,16 @@ export function StudentView({ onLogout }: StudentViewProps) {
                 tabContent = <MyMatchesPage />;
                 break;
             case "announcements":
-                tabContent = <StudentAnnouncements onGoToProfile={handleGoToProfile} onLogout={onLogout} onAnnouncementsLoaded={() => setUnreadAnnouncements(0)} />;
+                tabContent = (
+                    <StudentAnnouncements
+                        onGoToProfile={handleGoToProfile}
+                        onLogout={onLogout}
+                        onAnnouncementsLoaded={() => {
+                            globalThis.localStorage.setItem(HOME_ANNOUNCEMENTS_SEEN_AT_KEY, new Date().toISOString());
+                            setUnreadAnnouncements(0);
+                        }}
+                    />
+                );
                 break;
             case "packages":
                 tabContent = <PackagesPage onGoToProfile={handleGoToProfile} onLogout={onLogout} />;

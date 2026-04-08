@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { LogOut, User } from "lucide-react";
 import { AnnouncementCard } from "../../components/announcement/AnnouncementCard";
 import { AnnouncementFilters } from "../../components/announcement/AnnouncementFilters";
@@ -20,17 +20,7 @@ export function StudentAnnouncements({ onGoToProfile, onLogout, onAnnouncementsL
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadAnnouncements(true);
-
-    const intervalId = globalThis.setInterval(() => {
-      loadAnnouncements(false);
-    }, 3000);
-
-    return () => globalThis.clearInterval(intervalId);
-  }, [selectedCategory]);
-
-  const loadAnnouncements = async (isInitialLoad = false) => {
+  const loadAnnouncements = useCallback(async (isInitialLoad = false) => {
     if (isInitialLoad) {
       setLoading(true);
     }
@@ -39,7 +29,11 @@ export function StudentAnnouncements({ onGoToProfile, onLogout, onAnnouncementsL
     try {
       const data = await announcementService.getAnnouncementsByCategory(selectedCategory);
       setAnnouncements(data);
-      await announcementService.markAsViewed();
+
+      const visibleIds = data.map((announcement) => announcement.id);
+      if (visibleIds.length > 0) {
+        await announcementService.markAsViewed(visibleIds);
+      }
       onAnnouncementsLoaded?.();
     } catch (err) {
       setError("Error al cargar los avisos");
@@ -49,7 +43,17 @@ export function StudentAnnouncements({ onGoToProfile, onLogout, onAnnouncementsL
         setLoading(false);
       }
     }
-  };
+  }, [onAnnouncementsLoaded, selectedCategory]);
+
+  useEffect(() => {
+    loadAnnouncements(true);
+
+    const intervalId = globalThis.setInterval(() => {
+      loadAnnouncements(false);
+    }, 3000);
+
+    return () => globalThis.clearInterval(intervalId);
+  }, [loadAnnouncements]);
 
 
   return (
