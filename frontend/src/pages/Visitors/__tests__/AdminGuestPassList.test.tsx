@@ -80,7 +80,7 @@ describe('AdminGuestPassListPage — [NX-S2.39 / NX-S2.40]', () => {
 
     await user.type(screen.getByPlaceholderText(/Buscar/), 'xyz-inexistente')
 
-    expect(screen.getByText('No hay pases que coincidan.')).toBeInTheDocument()
+    expect(screen.getByText('No se han encontrado pases que coincidan.')).toBeInTheDocument()
   })
 
   it('abre el diálogo de detalle al hacer clic en un pase', async () => {
@@ -88,9 +88,7 @@ describe('AdminGuestPassListPage — [NX-S2.39 / NX-S2.40]', () => {
     render(<AdminGuestPassListPage />)
     await waitFor(() => screen.getByText('Juan Pérez'))
 
-    // Clic en la tarjeta (role="button")
-    const passCard = screen.getByRole('button', { name: /Juan Pérez/i })
-    await user.click(passCard)
+    await user.click(screen.getByText('Juan Pérez'))
 
     // El diálogo muestra los datos del detalle
     await waitFor(() => {
@@ -104,8 +102,7 @@ describe('AdminGuestPassListPage — [NX-S2.39 / NX-S2.40]', () => {
     render(<AdminGuestPassListPage />)
     await waitFor(() => screen.getByText('Juan Pérez'))
 
-    const passCard = screen.getByRole('button', { name: /Juan Pérez/i })
-    await user.click(passCard)
+    await user.click(screen.getByText('Juan Pérez'))
 
     await waitFor(() => {
       const dialog = screen.getByRole('dialog')
@@ -113,11 +110,16 @@ describe('AdminGuestPassListPage — [NX-S2.39 / NX-S2.40]', () => {
     })
   })
 
-  it('muestra el comentario del pase cuando existe', async () => {
+  it('muestra el comentario del pase en el diálogo de detalle cuando existe', async () => {
+    const user = userEvent.setup()
     render(<AdminGuestPassListPage />)
+    await waitFor(() => screen.getByText('Juan Pérez'))
+
+    await user.click(screen.getByText('Juan Pérez'))
+
     await waitFor(() => {
-      // El comentario se muestra en la tarjeta de la lista
-      expect(screen.getByText('"Visita familiar"')).toBeInTheDocument()
+      const dialog = screen.getByRole('dialog')
+      expect(within(dialog).getByText('"Visita familiar"')).toBeInTheDocument()
     })
   })
 })
