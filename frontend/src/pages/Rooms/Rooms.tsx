@@ -526,13 +526,7 @@ export function Rooms() {
 
       <ResidentProfileDialog
         open={isResidentProfileOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            closeResidentProfile();
-            return;
-          }
-          setIsResidentProfileOpen(true);
-        }}
+        onOpenChange={(open) => { if (!open) closeResidentProfile(); }}
         resident={selectedResident}
         profile={selectedResidentProfile}
         loading={isResidentProfileLoading}

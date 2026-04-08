@@ -125,19 +125,12 @@ export function ResidentProfileDialog({
           
           {/* SCROLL AREA */}
           <div
-            className="max-h-[90vh] overflow-y-auto"
+            className="max-h-[90vh] overflow-y-auto [&::-webkit-scrollbar]:hidden"
             style={{
               scrollbarWidth: "none",
               msOverflowStyle: "none",
             }}
           >
-            <style>
-              {`
-                div::-webkit-scrollbar {
-                  display: none;
-                }
-              `}
-            </style>
 
             <div className="overflow-hidden rounded-xl">
                 <div className="bg-gradient-to-r from-primary/95 via-primary/85 to-primary/70 px-6 py-6 text-primary-foreground">
