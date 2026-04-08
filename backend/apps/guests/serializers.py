@@ -44,6 +44,8 @@ class GuestPassCreateSerializer(serializers.Serializer):
         valid_until = attrs["valid_until"]
         now = timezone.now()
         max_duration_hours = self.context.get("max_duration_hours", 24)
+        visit_start_time = self.context.get("visit_start_time")
+        visit_end_time = self.context.get("visit_end_time")
         max_duration = timedelta(hours=max_duration_hours)
 
         if valid_from < now:
@@ -77,6 +79,51 @@ class GuestPassCreateSerializer(serializers.Serializer):
                     )
                 }
             )
+
+        valid_from_time = timezone.localtime(valid_from).time().replace(tzinfo=None)
+        valid_until_time = timezone.localtime(valid_until).time().replace(tzinfo=None)
+
+        if visit_start_time is not None:
+            if valid_from_time < visit_start_time:
+                raise serializers.ValidationError(
+                    {
+                        "valid_from": (
+                            "La fecha de inicio no puede ser anterior a la hora de "
+                            f"inicio de visitas ({visit_start_time.strftime('%H:%M')})."
+                        )
+                    }
+                )
+
+            if valid_until_time < visit_start_time:
+                raise serializers.ValidationError(
+                    {
+                        "valid_until": (
+                            "La fecha de fin no puede ser anterior a la hora de "
+                            f"inicio de visitas ({visit_start_time.strftime('%H:%M')})."
+                        )
+                    }
+                )
+
+        if visit_end_time is not None:
+            if valid_from_time >= visit_end_time:
+                raise serializers.ValidationError(
+                    {
+                        "valid_from": (
+                            "La fecha de inicio debe ser anterior a la hora límite de "
+                            f"salida ({visit_end_time.strftime('%H:%M')})."
+                        )
+                    }
+                )
+
+            if valid_until_time >= visit_end_time:
+                raise serializers.ValidationError(
+                    {
+                        "valid_until": (
+                            "La fecha de fin debe ser anterior a la hora límite de "
+                            f"salida ({visit_end_time.strftime('%H:%M')})."
+                        )
+                    }
+                )
 
         return attrs
 
@@ -135,18 +182,44 @@ class GuestPassPolicyReadSerializer(serializers.ModelSerializer):
         fields = [
             "max_duration_hours",
             "max_concurrent_passes",
+            "visit_start_time",
+            "visit_end_time",
         ]
 
 
 class GuestPassPolicyUpdateSerializer(serializers.Serializer):
     max_duration_hours = serializers.IntegerField(min_value=1, max_value=168, required=False)
     max_concurrent_passes = serializers.IntegerField(min_value=1, max_value=20, required=False)
+    visit_start_time = serializers.TimeField(required=False, allow_null=True)
+    visit_end_time = serializers.TimeField(required=False, allow_null=True)
 
     def validate(self, attrs):
         if not attrs:
             raise serializers.ValidationError(
                 {"detail": "Debes enviar al menos un campo para actualizar."}
             )
+
+        current_policy = self.context.get("current_policy")
+        if current_policy is not None:
+            effective_visit_start_time = attrs.get(
+                "visit_start_time", current_policy.visit_start_time
+            )
+            effective_visit_end_time = attrs.get(
+                "visit_end_time", current_policy.visit_end_time
+            )
+
+            if (
+                effective_visit_start_time is not None
+                and effective_visit_end_time is not None
+                and effective_visit_start_time >= effective_visit_end_time
+            ):
+                raise serializers.ValidationError(
+                    {
+                        "visit_start_time": (
+                            "La hora de inicio de visitas debe ser anterior a la hora límite de salida."
+                        )
+                    }
+                )
         return attrs
 
 
