@@ -143,7 +143,7 @@ interface EditMealModalProps {
   dayId?: string;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (meal: Meal, dayId: string, photoFile: File | null) => void;
+  onSave: (meal: Meal, dayId: string, photoFile: File | null, imageToDelete?: boolean) => void;
   isSaving?: boolean;
 }
 
@@ -153,11 +153,15 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
   );
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [imageToDelete, setImageToDelete] = useState(false);
   useEffect(() => {
     if (isOpen) {
       setFormData(
         meal || { allergens: [], name: '', type: 'lunch', description: '', isGlutenFree: false, isVegetarian: false, isVegan: false }
       );
+      setImageToDelete(false);
+      setPhotoFile(null);
+      setPreviewUrl(null);
     }
   }, [isOpen, meal]);
 
@@ -180,6 +184,12 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
 
   const handleChange = (field: keyof Meal, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleRemovePhoto = () => {
+    setPhotoFile(null);
+    setPreviewUrl(null);
+    setImageToDelete(true);
   };
 
   return (
@@ -259,14 +269,21 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
             />
             <div className="flex flex-col gap-4 py-4">
               <label htmlFor="meal-image-input" className="text-sm font-medium">Imagen del plato</label>
-              
-              {(previewUrl || meal?.image) && (
+
+              {(previewUrl || (meal?.image && !imageToDelete)) && (
                 <div className="relative w-full h-40 border rounded-md overflow-hidden bg-gray-100">
                   <img
                     src={previewUrl || meal?.image}
                     alt="Previsualización"
                     className="w-full h-full object-cover"
                   />
+                  <button
+                    type="button"
+                    onClick={handleRemovePhoto}
+                    className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
               )}
 
@@ -279,7 +296,8 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
                   if (file) {
                     setPhotoFile(file);
                     const url = URL.createObjectURL(file);
-                    setPreviewUrl(url); 
+                    setPreviewUrl(url);
+                    setImageToDelete(false);
                   }
                 }}
                 className="cursor-pointer"
@@ -336,7 +354,7 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
           <button
             onClick={() => {
               if (dayId) {
-                onSave(formData, dayId, photoFile);
+                onSave(formData, dayId, photoFile, imageToDelete);
               }
             }}
             disabled={isSaving || !formData.name.trim()}
@@ -624,7 +642,7 @@ export function AdminMenuView() {
     );
   };
 
-  const handleSaveMeal = async (meal: Meal, dayId: string, photo: File | null) => {
+  const handleSaveMeal = async (meal: Meal, dayId: string, photo: File | null, shouldDeleteImage?: boolean) => {
   setIsSaving(true);
   try {
     const formData = new FormData();
@@ -635,6 +653,10 @@ export function AdminMenuView() {
     formData.append('isGlutenFree', String(meal.isGlutenFree));
     formData.append('isVegetarian', String(meal.isVegetarian));
     formData.append('isVegan', String(meal.isVegan));
+
+    if (shouldDeleteImage) {
+      formData.append('removeImage', 'true');
+    }
 
     if (photo) {
       formData.append('image', photo);
@@ -647,9 +669,9 @@ export function AdminMenuView() {
     }
 
     setIsEditModalOpen(false);
-    
+
     showToast(meal.id ? 'Comida actualizada' : 'Comida agregada', 'success');
-    
+
     if (selectedWeekId) {
       await loadWeekDetail(selectedWeekId);
     }
