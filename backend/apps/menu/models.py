@@ -178,10 +178,11 @@ class SpecialMenuRequest(models.Model):
         ('approved', 'Aprobado'),
         ('rejected', 'Rechazado'),
     ]
-    resident = models.ForeignKey(
-        'residents.Resident', 
+    user = models.ForeignKey(
+        'auth.User',
         on_delete=models.CASCADE,
-        related_name='special_menu_requests'
+        related_name='special_menu_requests',
+        default=2
     )
     date = models.DateField("Fecha solicitada")
     description = models.TextField("Motivo/Descripción")
@@ -198,4 +199,4 @@ class SpecialMenuRequest(models.Model):
         ordering = ['-date']
 
     def __str__(self):
-        return f"Petición de {self.resident} para el {self.date}"
+        return f"Petición de {self.user} para el {self.date}"
