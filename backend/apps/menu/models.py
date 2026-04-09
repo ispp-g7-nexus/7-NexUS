@@ -178,6 +178,13 @@ class SpecialMenuRequest(models.Model):
         ('approved', 'Aprobado'),
         ('rejected', 'Rechazado'),
     ]
+    residence = models.ForeignKey(
+        Client,
+        on_delete=models.CASCADE,
+        related_name='special_menu_requests',
+        verbose_name="Residencia"
+    )
+
     user = models.ForeignKey(
         'auth.User',
         on_delete=models.CASCADE,
