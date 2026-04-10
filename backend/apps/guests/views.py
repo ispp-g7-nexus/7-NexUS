@@ -77,7 +77,11 @@ class ResidentGuestPassCreateView(ResidentGuestPassBaseView):
 
         serializer = GuestPassCreateSerializer(
             data=request.data,
-            context={"max_duration_hours": policy.max_duration_hours},
+            context={
+                "max_duration_hours": policy.max_duration_hours,
+                "visit_start_time": policy.visit_start_time,
+                "visit_end_time": policy.visit_end_time,
+            },
         )
         serializer.is_valid(raise_exception=True)
 
@@ -181,7 +185,11 @@ class AdminGuestPassPolicyView(AdminGuestPassBaseView):
 
     def patch(self, request):
         policy = get_or_create_guest_pass_policy(self._get_residence(request))
-        serializer = GuestPassPolicyUpdateSerializer(data=request.data, partial=True)
+        serializer = GuestPassPolicyUpdateSerializer(
+            data=request.data,
+            partial=True,
+            context={"current_policy": policy},
+        )
         serializer.is_valid(raise_exception=True)
 
         for field, value in serializer.validated_data.items():
