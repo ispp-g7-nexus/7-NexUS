@@ -819,10 +819,13 @@ class GuestPassesApiTests(TenantTestCase):
         response = self.admin_client.post(self._reject_url(guest_pass.id))
 
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], GuestPass.Status.REJECTED)
         guest_pass.refresh_from_db()
         self.assertEqual(guest_pass.status, GuestPass.Status.REJECTED)
+        self.assertIsNone(guest_pass.cancelled_at)
+        self.assertIsNone(guest_pass.revoked_at)
 
-    def test_admin_can_reject_cancelled_pass(self):
+    def test_admin_cannot_reject_cancelled_pass(self):
         now = timezone.now()
         guest_pass = self._create_pass(
             resident=self.resident_membership,
@@ -835,11 +838,12 @@ class GuestPassesApiTests(TenantTestCase):
 
         response = self.admin_client.post(self._reject_url(guest_pass.id))
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("detail", response.json())
         guest_pass.refresh_from_db()
-        self.assertEqual(guest_pass.status, GuestPass.Status.REJECTED)
+        self.assertEqual(guest_pass.status, GuestPass.Status.CANCELLED)
 
-    def test_admin_can_reject_used_pass(self):
+    def test_admin_cannot_reject_used_pass(self):
         now = timezone.now()
         guest_pass = self._create_pass(
             resident=self.resident_membership,
@@ -851,9 +855,10 @@ class GuestPassesApiTests(TenantTestCase):
 
         response = self.admin_client.post(self._reject_url(guest_pass.id))
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("detail", response.json())
         guest_pass.refresh_from_db()
-        self.assertEqual(guest_pass.status, GuestPass.Status.REJECTED)
+        self.assertEqual(guest_pass.status, GuestPass.Status.USED)
 
     def test_admin_can_reject_inactive_pass(self):
         now = timezone.now()

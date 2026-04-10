@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AdminGuestPassListPage } from '../AdminGuestPassList'
 
 vi.mock('../../../services/guestPasses', () => ({
+  rejectAdminGuestPass: vi.fn().mockResolvedValue({}),
+  unrejectAdminGuestPass: vi.fn().mockResolvedValue({}),
   listAdminGuestPasses: vi.fn().mockResolvedValue([
     {
       id: 1,

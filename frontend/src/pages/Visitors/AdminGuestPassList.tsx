@@ -57,10 +57,10 @@ function formatDateTime(iso: string): string {
 interface GuestPassDetailDialogProps {
   readonly pass: AdminGuestPass | null;
   readonly onClose: () => void;
-  readonly onRevoke: (pass: AdminGuestPass) => void;
+  readonly onRefresh: () => void;
 }
 
-function GuestPassDetailDialog({ pass, onClose, onRevoke }: GuestPassDetailDialogProps) {
+function GuestPassDetailDialog({ pass, onClose, onRefresh }: GuestPassDetailDialogProps) {
   const [revoking, setRevoking] = useState(false);
   const [unrevoking, setUnrevoking] = useState(false);
 
@@ -68,9 +68,9 @@ function GuestPassDetailDialog({ pass, onClose, onRevoke }: GuestPassDetailDialo
     if (!pass) return;
     setRevoking(true);
     try {
-      const updated = await rejectAdminGuestPass(pass.id);
+      await rejectAdminGuestPass(pass.id);
       toast.success("Pase rechazado correctamente.");
-      onRevoke(updated);
+      onRefresh();
       onClose();
     } catch (err) {
       toast.error(err instanceof GuestPassApiError ? err.message : "Error al rechazar el pase.");
@@ -83,9 +83,9 @@ function GuestPassDetailDialog({ pass, onClose, onRevoke }: GuestPassDetailDialo
     if (!pass) return;
     setUnrevoking(true);
     try {
-      const updated = await unrejectAdminGuestPass(pass.id);
+      await unrejectAdminGuestPass(pass.id);
       toast.success("Rechazo deshecho correctamente.");
-      onRevoke(updated);
+      onRefresh();
       onClose();
     } catch (err) {
       toast.error(err instanceof GuestPassApiError ? err.message : "Error al deshacer el rechazo.");
@@ -146,7 +146,7 @@ function GuestPassDetailDialog({ pass, onClose, onRevoke }: GuestPassDetailDialo
                   </div>
                 </div>
               )}
-              {pass.status !== "REJECTED" && (
+              {(pass.status === "ACTIVE" || pass.status === "INACTIVE") && (
                 <Button
                   variant="outline"
                   className="w-full mt-2 border-orange-300 text-orange-700 hover:bg-orange-50 hover:text-orange-800"
@@ -285,7 +285,7 @@ export function AdminGuestPassListPage() {
       ) : processedPasses.length === 0 ? (
         <Card className="border-dashed shadow-none bg-gray-50/50">
           <CardContent className="py-12 text-center">
-            <p className="text-gray-500 font-medium">No se han encontrado pases que coincidan.</p>
+            <p className="text-gray-500 font-medium">No hay pases que coincidan.</p>
           </CardContent>
         </Card>
       ) : (
@@ -341,7 +341,7 @@ export function AdminGuestPassListPage() {
       <GuestPassDetailDialog
         pass={selectedPass}
         onClose={() => setSelectedPass(null)}
-        onRevoke={(updated) => setPasses((prev: AdminGuestPass[]) => prev.map((p: AdminGuestPass) => p.id === updated.id ? updated : p))}
+        onRefresh={() => fetchPasses(statusFilter)}
       />
     </div>
   );
