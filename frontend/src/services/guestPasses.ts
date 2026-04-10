@@ -2,6 +2,7 @@ import { fetchWithAuth } from "../utils/api";
 
 const GUEST_PASSES_API_BASE = "/api/guest-passes";
 const ADMIN_GUEST_PASSES_API_BASE = "/api/admin/guest-passes";
+const ADMIN_VISITORS_ANALYTICS_API_BASE = "/api/admin/analytics/visitors/";
 
 export interface GuestPass {
   id: number;
@@ -29,11 +30,71 @@ export interface CreateGuestPassPayload {
 export interface GuestPassPolicy {
   max_duration_hours: number;
   max_concurrent_passes: number;
+  visit_start_time?: string | null;
+  visit_end_time?: string | null;
 }
 
 export interface UpdateGuestPassPolicyPayload {
   max_duration_hours?: number;
   max_concurrent_passes?: number;
+  visit_start_time?: string | null;
+  visit_end_time?: string | null;
+}
+
+export type VisitorsAnalyticsGranularity = "hour";
+export type VisitorsAnalyticsCompare = "none" | "previous_period";
+
+export interface VisitorsByHostAnalyticsItem {
+  host_id: number;
+  host_name: string;
+  visitors_count: number;
+  pct_of_total: number;
+  compare_value: number | null;
+  delta: number | null;
+  delta_pct: number | null;
+}
+
+export interface PeakHourAnalyticsItem {
+  hour: number;
+  label: string;
+  visits_count: number;
+  compare_value: number | null;
+  delta: number | null;
+  delta_pct: number | null;
+}
+
+export interface VisitorsAnalyticsSummary {
+  total_visits: number;
+  total_hosts: number;
+  compare_value_total_visits: number | null;
+  compare_value_total_hosts: number | null;
+  delta_total_visits: number | null;
+  delta_total_hosts: number | null;
+  delta_pct_total_visits: number | null;
+  delta_pct_total_hosts: number | null;
+}
+
+export interface VisitorsAnalyticsMeta {
+  from_value: string;
+  to_value: string;
+  granularity: VisitorsAnalyticsGranularity;
+  compare: VisitorsAnalyticsCompare;
+  compare_from: string | null;
+  compare_to: string | null;
+}
+
+export interface VisitorsAnalyticsResponse {
+  summary: VisitorsAnalyticsSummary;
+  visitors_by_host: VisitorsByHostAnalyticsItem[];
+  peak_hours: PeakHourAnalyticsItem[];
+  meta: VisitorsAnalyticsMeta;
+}
+
+export interface VisitorsAnalyticsParams {
+  from?: string;
+  to?: string;
+  granularity?: VisitorsAnalyticsGranularity;
+  compare?: VisitorsAnalyticsCompare;
 }
 
 export class GuestPassApiError extends Error {
@@ -65,6 +126,12 @@ function parseFieldErrors(payload: unknown): Record<string, string> {
     "comment",
     "max_duration_hours",
     "max_concurrent_passes",
+    "from",
+    "to",
+    "granularity",
+    "compare",
+    "visit_start_time",
+    "visit_end_time",
   ];
   const errors: Record<string, string> = {};
 
@@ -145,6 +212,28 @@ export async function listMyUpcomingGuestPasses(): Promise<GuestPass[]> {
   return (await response.json()) as GuestPass[];
 }
 
+export async function cancelMyGuestPass(guestPassId: number): Promise<GuestPass> {
+  const response = await fetchWithAuth(`${GUEST_PASSES_API_BASE}/me/${guestPassId}/cancel/`, {
+    method: "POST",
+  });
+  if (!response.ok) {
+    throw await parseError(response, {
+      fallbackMessage: "No se pudo cancelar el pase de invitado.",
+      forbiddenMessage: "No tienes permisos para cancelar este pase de invitado.",
+    });
+  }
+
+  const payload = (await response.json()) as { guest_pass?: GuestPass };
+  if (!payload.guest_pass) {
+    throw new GuestPassApiError(
+      "La respuesta de cancelación del pase no es válida.",
+      response.status
+    );
+  }
+
+  return payload.guest_pass;
+}
+
 export async function listMyGuestPassHistory(): Promise<GuestPass[]> {
   const response = await fetchWithAuth(`${GUEST_PASSES_API_BASE}/me/history/`);
   if (!response.ok) {
@@ -220,4 +309,28 @@ export async function updateAdminGuestPassPolicy(
     });
   }
   return (await response.json()) as GuestPassPolicy;
+}
+
+export async function getAdminVisitorsAnalytics(
+  params: VisitorsAnalyticsParams = {}
+): Promise<VisitorsAnalyticsResponse> {
+  const query = new URLSearchParams();
+  if (params.from) query.set("from", params.from);
+  if (params.to) query.set("to", params.to);
+  if (params.granularity) query.set("granularity", params.granularity);
+  if (params.compare) query.set("compare", params.compare);
+
+  const url = query.toString()
+    ? `${ADMIN_VISITORS_ANALYTICS_API_BASE}?${query.toString()}`
+    : ADMIN_VISITORS_ANALYTICS_API_BASE;
+  const response = await fetchWithAuth(url);
+
+  if (!response.ok) {
+    throw await parseError(response, {
+      fallbackMessage: "No se pudieron cargar las analíticas de visitantes.",
+      forbiddenMessage: "No tienes permisos para consultar analíticas de visitantes.",
+    });
+  }
+
+  return (await response.json()) as VisitorsAnalyticsResponse;
 }

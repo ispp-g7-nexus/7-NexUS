@@ -11,6 +11,7 @@ import { Select1, SelectContent, SelectItem, SelectTrigger, SelectValue } from "
 import { Textarea } from "../../components/ui/textarea";
 import { NotificationBell } from "../../components/announcement/NotificationBell";
 import {
+  cancelMyGuestPass,
   createMyGuestPass,
   GuestPassApiError,
   type GuestPass,
@@ -77,12 +78,50 @@ function buildTimeSlotValues(slotMinutes: number): string[] {
 
 const TIME_SLOT_VALUES = buildTimeSlotValues(TIME_SLOT_INTERVAL_MINUTES);
 
-function getAvailableTimeSlots(selectedDate: string, minDateTimeExclusive: Date): string[] {
+function toMinutesFromClock(clockValue: string): number | null {
+  const normalized = clockValue.trim().slice(0, 5);
+  const [hourPart, minutePart] = normalized.split(":");
+  const hours = Number(hourPart);
+  const minutes = Number(minutePart);
+
+  if (!Number.isInteger(hours) || !Number.isInteger(minutes)) {
+    return null;
+  }
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+    return null;
+  }
+
+  return hours * 60 + minutes;
+}
+
+function getAvailableTimeSlots(
+  selectedDate: string,
+  minDateTimeExclusive: Date,
+  visitStartTime?: string | null,
+  visitEndTime?: string | null
+): string[] {
   if (!selectedDate) {
     return [];
   }
 
+  const visitStartMinutes = visitStartTime ? toMinutesFromClock(visitStartTime) : null;
+  const visitEndMinutes = visitEndTime ? toMinutesFromClock(visitEndTime) : null;
+
   return TIME_SLOT_VALUES.filter((timeValue) => {
+    if (visitStartMinutes !== null) {
+      const candidateMinutes = toMinutesFromClock(timeValue);
+      if (candidateMinutes === null || candidateMinutes < visitStartMinutes) {
+        return false;
+      }
+    }
+
+    if (visitEndMinutes !== null) {
+      const candidateMinutes = toMinutesFromClock(timeValue);
+      if (candidateMinutes === null || candidateMinutes >= visitEndMinutes) {
+        return false;
+      }
+    }
+
     const candidateDate = parseDateTimeLocal(combineDateAndTimeLocal(selectedDate, timeValue));
     if (!candidateDate) {
       return false;
@@ -126,11 +165,15 @@ function parseDateTimeLocal(value: string): Date | null {
 
 function validateForm(
   state: GuestPassFormState,
-  maxDurationHours: number
+  maxDurationHours: number,
+  visitStartTime?: string | null,
+  visitEndTime?: string | null
 ): GuestPassFormErrors {
   const errors: GuestPassFormErrors = {};
   const maxDurationMs = maxDurationHours * 60 * 60 * 1000;
   const now = new Date();
+  const visitStartClock = (visitStartTime ?? "").slice(0, 5);
+  const visitEndClock = (visitEndTime ?? "").slice(0, 5);
 
   if (!state.guest_first_name.trim()) {
     errors.guest_first_name = "El nombre del invitado es obligatorio.";
@@ -170,6 +213,39 @@ function validateForm(
       errors.valid_until = "La fecha/hora de fin debe ser posterior a la de inicio.";
     } else if (end.getTime() - start.getTime() > maxDurationMs) {
       errors.valid_until = `La duración máxima del pase es de ${maxDurationHours} horas.`;
+    }
+
+    const startClock = `${String(start.getHours()).padStart(2, "0")}:${String(
+      start.getMinutes()
+    ).padStart(2, "0")}`;
+    const endClock = `${String(end.getHours()).padStart(2, "0")}:${String(
+      end.getMinutes()
+    ).padStart(2, "0")}`;
+
+    if (visitStartClock) {
+      if (startClock < visitStartClock) {
+        errors.valid_from =
+          "La fecha/hora de inicio no puede ser anterior a la hora de inicio de visitas " +
+          `(${visitStartClock}).`;
+      }
+      if (endClock < visitStartClock) {
+        errors.valid_until =
+          "La fecha/hora de fin no puede ser anterior a la hora de inicio de visitas " +
+          `(${visitStartClock}).`;
+      }
+    }
+
+    if (visitEndClock) {
+      if (startClock >= visitEndClock) {
+        errors.valid_from =
+          "La fecha de inicio debe ser anterior a la hora límite de salida " +
+          `(${visitEndClock}).`;
+      }
+      if (endClock >= visitEndClock) {
+        errors.valid_until =
+          "La fecha de fin debe ser anterior a la hora límite de salida " +
+          `(${visitEndClock}).`;
+      }
     }
   }
 
@@ -236,10 +312,14 @@ function GuestPassCard({
   pass,
   statusLabel,
   badgeClassName,
+  onCancel,
+  isCancelling = false,
 }: {
   readonly pass: GuestPass;
   readonly statusLabel: string;
   readonly badgeClassName: string;
+  readonly onCancel?: (pass: GuestPass) => void;
+  readonly isCancelling?: boolean;
 }) {
   return (
     <article className="rounded-xl border border-border/80 bg-white p-4 shadow-sm">
@@ -266,6 +346,14 @@ function GuestPassCard({
           </span>
         </div>
       </div>
+
+      {onCancel ? (
+        <div className="mt-4 flex justify-end">
+          <Button type="button" variant="destructive" onClick={() => onCancel(pass)} disabled={isCancelling}>
+            {isCancelling ? "Cancelando..." : "Cancelar pase"}
+          </Button>
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -279,6 +367,8 @@ interface PassesListProps {
   readonly badgeClassName: string;
   readonly isHistory?: boolean;
   readonly onRetry?: () => void;
+  readonly onCancel?: (pass: GuestPass) => void;
+  readonly cancellingPassId?: number | null;
 }
 
 function PassesList({
@@ -290,6 +380,8 @@ function PassesList({
   badgeClassName,
   isHistory = false,
   onRetry,
+  onCancel,
+  cancellingPassId = null,
 }: PassesListProps) {
   if (loading) {
     return <LoadingState />;
@@ -306,14 +398,17 @@ function PassesList({
   return (
     <div className="space-y-4">
       {passes.map((pass) => {
-        const finalStatusLabel = isHistory ? getHistoryStatusConfig(pass.status).label : statusLabel;
-        const finalBadgeClass = isHistory ? getHistoryStatusConfig(pass.status).badgeClass : badgeClassName;
+        const historyStatus = pass.status ?? "";
+        const finalStatusLabel = isHistory ? getHistoryStatusConfig(historyStatus).label : statusLabel;
+        const finalBadgeClass = isHistory ? getHistoryStatusConfig(historyStatus).badgeClass : badgeClassName;
         return (
           <GuestPassCard
             key={pass.id}
             pass={pass}
             statusLabel={finalStatusLabel}
             badgeClassName={finalBadgeClass}
+            onCancel={isHistory ? undefined : onCancel}
+            isCancelling={cancellingPassId === pass.id}
           />
         );
       })}
@@ -334,6 +429,8 @@ interface GuestPassSectionProps {
   readonly isHistory?: boolean;
   readonly onRetry: () => void;
   readonly onRefresh?: () => void;
+  readonly onCancel?: (pass: GuestPass) => void;
+  readonly cancellingPassId?: number | null;
 }
 
 interface TimeSelectProps {
@@ -413,6 +510,8 @@ function GuestPassSection({
   isHistory = false,
   onRetry,
   onRefresh,
+  onCancel,
+  cancellingPassId,
 }: GuestPassSectionProps) {
   return (
     <section className="space-y-4">
@@ -440,6 +539,8 @@ function GuestPassSection({
         badgeClassName={badgeClassName}
         isHistory={isHistory}
         onRetry={onRetry}
+        onCancel={onCancel}
+        cancellingPassId={cancellingPassId}
       />
     </section>
   );
@@ -462,17 +563,29 @@ function CreateGuestPassForm({
 }) {
   const maxDuration = policy?.max_duration_hours ?? DEFAULT_MAX_DURATION_HOURS;
   const maxConcurrent = policy?.max_concurrent_passes ?? DEFAULT_MAX_CONCURRENT_PASSES;
+  const visitStartTime = policy?.visit_start_time?.slice(0, 5);
+  const visitEndTime = policy?.visit_end_time?.slice(0, 5);
   const now = new Date();
   const todayDate = toDateInputValue(now);
 
   const { datePart: startDate, timePart: startTime } = splitDateTimeLocal(form.valid_from);
   const { datePart: endDate, timePart: endTime } = splitDateTimeLocal(form.valid_until);
 
-  const startTimeOptions = getAvailableTimeSlots(startDate, now);
+  const startTimeOptions = getAvailableTimeSlots(
+    startDate,
+    now,
+    policy?.visit_start_time,
+    policy?.visit_end_time
+  );
   const parsedStart = parseDateTimeLocal(form.valid_from);
   const minEndDateTime =
     parsedStart && parsedStart.getTime() > now.getTime() ? parsedStart : now;
-  const endTimeOptions = getAvailableTimeSlots(endDate, minEndDateTime);
+  const endTimeOptions = getAvailableTimeSlots(
+    endDate,
+    minEndDateTime,
+    policy?.visit_start_time,
+    policy?.visit_end_time
+  );
   const minEndDate = startDate || todayDate;
 
   return (
@@ -488,6 +601,18 @@ function CreateGuestPassForm({
         <p className="text-xs text-gray-500">
           Configuración actual: duración máxima <strong>{maxDuration}h</strong> y máximo{" "}
           <strong>{maxConcurrent}</strong> pases concurrentes.
+          {visitStartTime ? (
+            <>
+              {" "}
+              Hora de inicio: <strong>{visitStartTime}</strong>.
+            </>
+          ) : null}
+          {visitEndTime ? (
+            <>
+              {" "}
+              Hora límite de salida: <strong>{visitEndTime}</strong>.
+            </>
+          ) : null}
         </p>
       </CardHeader>
       <CardContent>
@@ -535,7 +660,12 @@ function CreateGuestPassForm({
                   min={todayDate}
                   onChange={(event) => {
                     const nextDate = event.target.value;
-                    const availableTimes = getAvailableTimeSlots(nextDate, new Date());
+                    const availableTimes = getAvailableTimeSlots(
+                      nextDate,
+                      new Date(),
+                      policy?.visit_start_time,
+                      policy?.visit_end_time
+                    );
                     const nextTime = availableTimes.includes(startTime)
                       ? startTime
                       : (availableTimes[0] ?? "");
@@ -583,7 +713,12 @@ function CreateGuestPassForm({
                       latestStart && latestStart.getTime() > latestNow.getTime()
                         ? latestStart
                         : latestNow;
-                    const availableTimes = getAvailableTimeSlots(nextDate, minDateTime);
+                    const availableTimes = getAvailableTimeSlots(
+                      nextDate,
+                      minDateTime,
+                      policy?.visit_start_time,
+                      policy?.visit_end_time
+                    );
                     const nextTime = availableTimes.includes(endTime)
                       ? endTime
                       : (availableTimes[0] ?? "");
@@ -661,6 +796,8 @@ async function loadGuestPassPolicy(setPolicy: (p: GuestPassPolicy) => void): Pro
     setPolicy({
       max_duration_hours: DEFAULT_MAX_DURATION_HOURS,
       max_concurrent_passes: DEFAULT_MAX_CONCURRENT_PASSES,
+      visit_start_time: null,
+      visit_end_time: null,
     });
   }
 }
@@ -696,7 +833,12 @@ async function submitGuestPass({
   loadPasses,
 }: SubmitGuestPassOptions): Promise<void> {
   const maxDurationHours = policy?.max_duration_hours ?? DEFAULT_MAX_DURATION_HOURS;
-  const validationErrors = validateForm(form, maxDurationHours);
+  const validationErrors = validateForm(
+    form,
+    maxDurationHours,
+    policy?.visit_start_time,
+    policy?.visit_end_time
+  );
   if (Object.keys(validationErrors).length > 0) {
     setFormErrors(validationErrors);
     toast.error("Revisa los campos del formulario.");
@@ -741,6 +883,7 @@ export function ActiveGuestPassesPage({ onGoToProfile, onLogout }: ActiveGuestPa
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [cancellingPassId, setCancellingPassId] = useState<number | null>(null);
   const [form, setForm] = useState<GuestPassFormState>(() => buildInitialFormState());
   const [formErrors, setFormErrors] = useState<GuestPassFormErrors>({});
 
@@ -779,6 +922,30 @@ export function ActiveGuestPassesPage({ onGoToProfile, onLogout }: ActiveGuestPa
   const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
     await submitGuestPass({ form, policy, setFormErrors, setIsSubmitting, setForm, loadPasses });
+  };
+
+  const handleCancelPass = async (pass: GuestPass) => {
+    const confirmed = window.confirm(
+      `¿Quieres cancelar el pase ${pass.pass_code} de ${pass.full_name}?`
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setCancellingPassId(pass.id);
+    try {
+      await cancelMyGuestPass(pass.id);
+      toast.success("Pase cancelado correctamente.");
+      await loadPasses();
+    } catch (unknownError) {
+      const message =
+        unknownError instanceof Error
+          ? unknownError.message
+          : "No se pudo cancelar el pase de invitado.";
+      toast.error(message);
+    } finally {
+      setCancellingPassId(null);
+    }
   };
 
   return (
@@ -834,8 +1001,10 @@ export function ActiveGuestPassesPage({ onGoToProfile, onLogout }: ActiveGuestPa
           emptyMessage="No tienes pases de invitados activos en este momento."
           statusLabel="Activo"
           badgeClassName="bg-primary/10 text-primary hover:bg-primary/10"
-          onRetry={() => loadPasses()}
-          onRefresh={() => loadPasses()}
+          onRetry={() => void loadPasses()}
+          onRefresh={() => void loadPasses()}
+          onCancel={handleCancelPass}
+          cancellingPassId={cancellingPassId}
         />
 
         <GuestPassSection
@@ -847,7 +1016,9 @@ export function ActiveGuestPassesPage({ onGoToProfile, onLogout }: ActiveGuestPa
           emptyMessage="No tienes pases de invitados programados próximamente."
           statusLabel="Próximo"
           badgeClassName="bg-accent/20 text-accent-foreground hover:bg-accent/20"
-          onRetry={() => loadPasses()}
+          onRetry={() => void loadPasses()}
+          onCancel={handleCancelPass}
+          cancellingPassId={cancellingPassId}
         />
 
         <GuestPassSection
@@ -861,7 +1032,7 @@ export function ActiveGuestPassesPage({ onGoToProfile, onLogout }: ActiveGuestPa
           statusLabel=""
           badgeClassName=""
           isHistory={true}
-          onRetry={() => loadPasses()}
+          onRetry={() => void loadPasses()}
         />
       </section>
     </div>

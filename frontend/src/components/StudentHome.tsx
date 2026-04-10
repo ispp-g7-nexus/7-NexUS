@@ -12,6 +12,7 @@ import {
     User,
     Users,
     Utensils,
+    X,
     Wifi
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -37,7 +38,10 @@ interface StudentHomeProps {
 }
 
 const HOME_NOTIFICATIONS_SEEN_IDS_KEY = "home-notifications-seen-ids";
+const HOME_NOTIFICATIONS_DISMISSED_IDS_KEY = "home-notifications-dismissed-ids";
 const HOME_INCIDENCES_DISMISSED_IDS_KEY = "home-incidences-dismissed-ids";
+const HOME_INCIDENCES_SEEN_AT_KEY = "home-incidences-seen-at";
+const HOME_ANNOUNCEMENTS_SEEN_AT_KEY = "home-announcements-seen-at";
 const NOTIFICATIONS_POLL = 15000;
 const NOTIFICATIONS_LIMIT = 12;
 
@@ -94,6 +98,14 @@ const getInitialSeenIds = (): string[] => {
     return parseSeenIds(globalThis.localStorage.getItem(HOME_NOTIFICATIONS_SEEN_IDS_KEY));
 };
 
+const getInitialDismissedNotificationIds = (): string[] => {
+    if (typeof window === "undefined") {
+        return [];
+    }
+
+    return parseSeenIds(globalThis.localStorage.getItem(HOME_NOTIFICATIONS_DISMISSED_IDS_KEY));
+};
+
 const getInitialDismissedIncidenceIds = (): string[] => {
     if (typeof window === "undefined") {
         return [];
@@ -106,6 +118,34 @@ const saveStoredIds = (key: string, ids: string[]) => {
     if (typeof window !== "undefined") {
         globalThis.localStorage.setItem(key, JSON.stringify(ids));
     }
+};
+
+const getAnnouncementsSeenAtMs = (): number => {
+    if (typeof window === "undefined") {
+        return 0;
+    }
+
+    const raw = globalThis.localStorage.getItem(HOME_ANNOUNCEMENTS_SEEN_AT_KEY);
+    if (!raw) {
+        return 0;
+    }
+
+    const parsedMs = Date.parse(raw);
+    return Number.isFinite(parsedMs) ? parsedMs : 0;
+};
+
+const getIncidencesSeenAtMs = (): number => {
+    if (typeof window === "undefined") {
+        return 0;
+    }
+
+    const raw = globalThis.localStorage.getItem(HOME_INCIDENCES_SEEN_AT_KEY);
+    if (!raw) {
+        return 0;
+    }
+
+    const parsedMs = Date.parse(raw);
+    return Number.isFinite(parsedMs) ? parsedMs : 0;
 };
 
 type HomeNotification = {
@@ -174,15 +214,15 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
     const [isNotificationsLoading, setIsNotificationsLoading] = useState(false);
     const [seenNotificationIds, setSeenNotificationIds] = useState<string[]>(getInitialSeenIds);
     const [dismissedIncidenceIds, setDismissedIncidenceIds] = useState<string[]>(getInitialDismissedIncidenceIds);
-    const [unviewedAnnouncements, setUnviewedAnnouncements] = useState(0);
     const [pendingPackages, setPendingPackages] = useState<number>(0);
     const [currentUserId, setCurrentUserId] = useState<number | null>(null);
     const [isSessionUserResolved, setIsSessionUserResolved] = useState(false);
     const notificationsRequestIdRef = useRef(0);
+    const dismissedNotificationIdsRef = useRef<string[]>(getInitialDismissedNotificationIds());
 
     const wifiPassword = "NexUS2026@Residence";
     const unreadCount = notifications.filter((notification) => !seenNotificationIds.includes(notification.id)).length;
-    const hasUnreadNotifications = unreadCount > 0 || unviewedAnnouncements > 0;
+    const hasUnreadNotifications = unreadCount > 0;
 
     // --- CARGA DE DATOS REALES ---
     useEffect(() => {
@@ -242,6 +282,12 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
         });
     };
 
+    const appendDismissedNotificationIds = (notificationIds: string[]) => {
+        const nextIds = Array.from(new Set([...dismissedNotificationIdsRef.current, ...notificationIds]));
+        dismissedNotificationIdsRef.current = nextIds;
+        saveStoredIds(HOME_NOTIFICATIONS_DISMISSED_IDS_KEY, nextIds);
+    };
+
     const appendDismissedIncidenceIds = (notificationIds: string[]) => {
         setDismissedIncidenceIds((previousIds) => {
             const nextIds = Array.from(new Set([...previousIds, ...notificationIds]));
@@ -251,6 +297,8 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
     };
 
     const buildAnnouncementItems = useCallback((announcements: AnnouncementItem[]): HomeNotification[] => {
+        const announcementsSeenAtMs = getAnnouncementsSeenAtMs();
+
         return announcements
             .filter((announcement) => !announcement.has_passed)
             .map((announcement) => {
@@ -264,12 +312,16 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                     source: "announcements" as const,
                     createdAt,
                 };
-            });
+            })
+            .filter((announcement) => Date.parse(announcement.createdAt) > announcementsSeenAtMs);
     }, []);
 
     const buildIncidenceItems = useCallback((incidenceItems: IncidenceNotificationItem[]): HomeNotification[] => {
+        const incidencesSeenAtMs = getIncidencesSeenAtMs();
+
         return incidenceItems
             .filter((item) => !dismissedIncidenceIds.includes(item.id))
+            .filter((item) => Date.parse(item.created_at) > incidencesSeenAtMs)
             .map((item) => ({
                 id: item.id,
                 title: `[Incidencias] ${item.title || "Nueva incidencia"}`,
@@ -343,14 +395,12 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
             // 2. Ejecución paralela de peticiones
             const [
                 announcementsRes, 
-                unviewedRes, 
                 incidencesRes, 
                 eventsRes, 
                 packagesRes,
                 objectRemindersRes
             ] = await Promise.allSettled([
                 announcementService.getAnnouncements(),
-                announcementService.getUnviewedCount(),
                 fetchWithAuth(`${API_URL_INCIDENCES}notifications/`),
                 fetchWithAuth(`${API_URL}events/`),
                 packagesService.getPendingCount(),
@@ -378,13 +428,10 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                 mergedNotifications.push(...buildEventItems(Array.isArray(eventsData) ? eventsData : []));
             }
 
-            // 5. Actualización de contadores
-            if (unviewedRes.status === "fulfilled") {
-                setUnviewedAnnouncements(unviewedRes.value.count);
-            }
+            const visibleNotifications = mergedNotifications.filter((notification) => !dismissedNotificationIdsRef.current.includes(notification.id));
 
-            // 6. Ordenación y Límite
-            const sorted = mergedNotifications
+            // 5. Ordenación y Límite
+            const sorted = visibleNotifications
                 .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
                 .slice(0, NOTIFICATIONS_LIMIT);
 
@@ -438,6 +485,17 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
         }
     };
 
+    const handleDismissNotification = (notification: HomeNotification) => {
+        appendSeenNotificationIds([notification.id]);
+        appendDismissedNotificationIds([notification.id]);
+
+        if (notification.source === "incidences") {
+            appendDismissedIncidenceIds([notification.id]);
+        }
+
+        setNotifications((previous) => previous.filter((item) => item.id !== notification.id));
+    };
+
     const handleCopyPassword = () => {
         const textarea = document.createElement('textarea');
         textarea.value = wifiPassword;
@@ -488,7 +546,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                         <Popover open={isNotificationsOpen} onOpenChange={handleNotificationsOpenChange}>
                             <PopoverTrigger asChild>
                                 <Button size="icon" variant="ghost" className="text-primary-foreground hover:bg-primary-foreground/20 hover:scale-110 rounded-full transition-all relative">
-                                    <Bell className="w-6 h-6" />
+                                    <Bell className="w-5 h-5" />
                                     {hasUnreadNotifications && (
                                         <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-destructive rounded-full border-2 border-primary" />
                                     )}
@@ -515,6 +573,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                                                     description={notification.description}
                                                     time={notification.time}
                                                     type={notification.type}
+                                                    onDismiss={() => handleDismissNotification(notification)}
                                                     onOpenSource={() => {
                                                         if (notification.source === "incidences") {
                                                             const incidenceIds = notifications
@@ -638,6 +697,7 @@ interface NotificationCardProps {
     description: string;
     time: string;
     type: NotificationType;
+    onDismiss: () => void;
     onOpenSource: () => void;
 }
 
@@ -649,7 +709,7 @@ interface QuickActionProps {
     onClick: () => void;
 }
 
-function NotificationCard({ icon, title, description, time, type, onOpenSource }: NotificationCardProps) {
+function NotificationCard({ icon, title, description, time, type, onDismiss, onOpenSource }: NotificationCardProps) {
     const bgColors: Record<NotificationType, string> = {
         urgent: "bg-orange-50 border-orange-200",
         admin: "bg-blue-50 border-blue-200",
@@ -660,22 +720,34 @@ function NotificationCard({ icon, title, description, time, type, onOpenSource }
     };
 
     return (
-        <button
-            className={`w-full p-4 rounded-xl border ${bgColors[type] || bgColors.info} transition-colors hover:shadow-sm text-left`}
-            onClick={onOpenSource}
-            type="button"
-        >
-            <div className="flex gap-3">
-                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm">
-                    {icon}
+        <div className={`relative w-full rounded-xl border ${bgColors[type] || bgColors.info} transition-colors hover:shadow-sm`}>
+            <button
+                className="w-full p-4 pr-12 text-left"
+                onClick={onOpenSource}
+                type="button"
+            >
+                <div className="flex gap-3">
+                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm">
+                        {icon}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <h4 className="font-bold text-gray-900 text-sm mb-1">{title}</h4>
+                        <p className="text-xs text-gray-600 mb-2">{description}</p>
+                        <p className="text-xs text-gray-400">{time}</p>
+                    </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-gray-900 text-sm mb-1">{title}</h4>
-                    <p className="text-xs text-gray-600 mb-2">{description}</p>
-                    <p className="text-xs text-gray-400">{time}</p>
-                </div>
-            </div>
-        </button>
+            </button>
+            <Button
+                aria-label={`Descartar notificación ${title}`}
+                className="absolute right-2 top-2 w-9 h-9 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                onClick={onDismiss}
+                size="icon"
+                type="button"
+                variant="ghost"
+            >
+                <X className="h-5 w-5" />
+            </Button>
+        </div>
     );
 }
 
