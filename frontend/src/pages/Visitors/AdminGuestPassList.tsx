@@ -1,4 +1,4 @@
-import { UserCheck, RefreshCw, Search, Calendar, User, Hash, Clock, MessageSquare } from "lucide-react";
+import { UserCheck, RefreshCw, Search, Calendar, User, Hash, Clock, MessageSquare, Ban, Undo2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -7,7 +7,7 @@ import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { Input } from "../../components/ui/input";
-import { type AdminGuestPass, GuestPassApiError, listAdminGuestPasses } from "../../services/guestPasses";
+import { type AdminGuestPass, GuestPassApiError, listAdminGuestPasses, rejectAdminGuestPass, unrejectAdminGuestPass } from "../../services/guestPasses";
 
 const STATUS_OPTIONS = [
   { value: "", label: "Todos los estados" },
@@ -57,9 +57,43 @@ function formatDateTime(iso: string): string {
 interface GuestPassDetailDialogProps {
   readonly pass: AdminGuestPass | null;
   readonly onClose: () => void;
+  readonly onRevoke: (pass: AdminGuestPass) => void;
 }
 
-function GuestPassDetailDialog({ pass, onClose }: GuestPassDetailDialogProps) {
+function GuestPassDetailDialog({ pass, onClose, onRevoke }: GuestPassDetailDialogProps) {
+  const [revoking, setRevoking] = useState(false);
+  const [unrevoking, setUnrevoking] = useState(false);
+
+  async function handleRevoke() {
+    if (!pass) return;
+    setRevoking(true);
+    try {
+      const updated = await rejectAdminGuestPass(pass.id);
+      toast.success("Pase rechazado correctamente.");
+      onRevoke(updated);
+      onClose();
+    } catch (err) {
+      toast.error(err instanceof GuestPassApiError ? err.message : "Error al rechazar el pase.");
+    } finally {
+      setRevoking(false);
+    }
+  }
+
+  async function handleUnrevoke() {
+    if (!pass) return;
+    setUnrevoking(true);
+    try {
+      const updated = await unrejectAdminGuestPass(pass.id);
+      toast.success("Rechazo deshecho correctamente.");
+      onRevoke(updated);
+      onClose();
+    } catch (err) {
+      toast.error(err instanceof GuestPassApiError ? err.message : "Error al deshacer el rechazo.");
+    } finally {
+      setUnrevoking(false);
+    }
+  }
+
   return (
     <Dialog open={pass !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="max-w-md">
@@ -111,6 +145,28 @@ function GuestPassDetailDialog({ pass, onClose }: GuestPassDetailDialogProps) {
                     <p className="text-sm italic text-gray-700">"{pass.comment}"</p>
                   </div>
                 </div>
+              )}
+              {pass.status !== "REJECTED" && (
+                <Button
+                  variant="outline"
+                  className="w-full mt-2 border-orange-300 text-orange-700 hover:bg-orange-50 hover:text-orange-800"
+                  onClick={handleRevoke}
+                  disabled={revoking}
+                >
+                  <Ban className="w-4 h-4 mr-2" />
+                  {revoking ? "Rechazando..." : "Rechazar pase"}
+                </Button>
+              )}
+              {pass.status === "REJECTED" && (
+                <Button
+                  variant="outline"
+                  className="w-full mt-2"
+                  onClick={handleUnrevoke}
+                  disabled={unrevoking}
+                >
+                  <Undo2 className="w-4 h-4 mr-2" />
+                  {unrevoking ? "Deshaciendo..." : "Deshacer rechazo"}
+                </Button>
               )}
             </div>
           </>
@@ -282,7 +338,11 @@ export function AdminGuestPassListPage() {
         </div>
       )}
 
-      <GuestPassDetailDialog pass={selectedPass} onClose={() => setSelectedPass(null)} />
+      <GuestPassDetailDialog
+        pass={selectedPass}
+        onClose={() => setSelectedPass(null)}
+        onRevoke={(updated) => setPasses((prev: AdminGuestPass[]) => prev.map((p: AdminGuestPass) => p.id === updated.id ? updated : p))}
+      />
     </div>
   );
 }

@@ -3,7 +3,8 @@ from django.urls import path
 from .views import (
     AdminGuestPassListView,
     AdminGuestPassPolicyView,
-    AdminGuestPassRevokeView,
+    AdminGuestPassRejectView,
+    AdminGuestPassUnrejectView,
     AdminVisitorsAnalyticsView,
     ResidentActiveGuestPassListView,
     ResidentGuestPassCancelView,
@@ -46,9 +47,14 @@ urlpatterns = [
         name="guest-pass-me-policy",
     ),
     path(
-        "admin/guest-passes/<int:pass_id>/revoke/",
-        AdminGuestPassRevokeView.as_view(),
-        name="admin-guest-pass-revoke",
+        "admin/guest-passes/<int:pass_id>/reject/",
+        AdminGuestPassRejectView.as_view(),
+        name="admin-guest-pass-reject",
+    ),
+    path(
+        "admin/guest-passes/<int:pass_id>/unreject/",
+        AdminGuestPassUnrejectView.as_view(),
+        name="admin-guest-pass-unreject",
     ),
     path(
         "admin/guest-passes/",
