@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Search } from "lucide-react";
 import { toast } from "sonner";
 import { InteractiveDatePicker } from "../../components/ui/InteractiveDatePicker";
@@ -7,7 +7,6 @@ import {
   ObjectItem,
   ObjectAvailability,
   UserObjectReservation,
-  UserObjectNotification,
 } from "../../services/objects.ts";
 import { ObjectsList } from "./components/ObjectsList";
 import { ReservationModal } from "./components/ReservationModal";
@@ -36,14 +35,13 @@ export function Objects({ onReservationSuccess }: ObjectsProps) {
   const [selectedObject, setSelectedObject] = useState<ObjectItem | null>(null);
   const [isReservationModalOpen, setIsReservationModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const shownObjectNotificationIdsRef = useRef<Set<string>>(new Set());
   
   const [reservations, setReservations] = useState<UserObjectReservation[]>([]);
-  const [objectNotifications, setObjectNotifications] = useState<UserObjectNotification[]>([]);
   const [reservationsLoading, setReservationsLoading] = useState(true);
   const [reservationsError, setReservationsError] = useState<string | null>(null);
   const [cancellingRentalId, setCancellingRentalId] = useState<number | null>(null);
   const [dismissingRentalId, setDismissingRentalId] = useState<number | null>(null);
-  const [markingReturnedRentalId, setMarkingReturnedRentalId] = useState<number | null>(null);
 
   useEffect(() => {
     void fetchObjects();
@@ -106,9 +104,20 @@ export function Objects({ onReservationSuccess }: ObjectsProps) {
   const fetchObjectNotifications = async () => {
     try {
       const data = await objectsService.getUserObjectNotifications();
-      setObjectNotifications(data);
+      const unseenNotifications = data.filter(
+        (notification) => !shownObjectNotificationIdsRef.current.has(notification.id),
+      );
+
+      unseenNotifications.forEach((notification) => {
+        shownObjectNotificationIdsRef.current.add(notification.id);
+        toast.warning(notification.title, {
+          description: notification.message,
+          id: `object-delay-${notification.id}`,
+          duration: 5000,
+        });
+      });
     } catch {
-      setObjectNotifications([]);
+      // Keep page usable even if notifications endpoint fails.
     }
   };
 
@@ -166,23 +175,6 @@ export function Objects({ onReservationSuccess }: ObjectsProps) {
     }
   };
 
-  const handleMarkObjectReturned = async (objectId: number, rentalId: number) => {
-    setMarkingReturnedRentalId(rentalId);
-    try {
-      await objectsService.completeObjectRental(objectId, rentalId);
-      toast.success("Objeto marcado como devuelto.");
-      await fetchReservations();
-      await fetchObjectNotifications();
-      await fetchObjects();
-      await fetchAvailability(objects, selectedDate);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Error al marcar como devuelto";
-      toast.error(errorMessage);
-      console.error('Error marking rental as returned:', err);
-    } finally {
-      setMarkingReturnedRentalId(null);
-    }
-  };
 
   const filteredObjects = objects.filter(object =>
     object.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -241,29 +233,14 @@ export function Objects({ onReservationSuccess }: ObjectsProps) {
         </div>
 
         <div className="min-w-0">
-          {objectNotifications.length > 0 && (
-            <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3">
-              <p className="text-sm font-semibold text-amber-800">Avisos de devolucion</p>
-              <ul className="mt-2 space-y-1 text-sm text-amber-900">
-                {objectNotifications.map((notification) => (
-                  <li key={notification.id} className="rounded bg-white/70 px-2 py-1">
-                    <p className="font-medium">{notification.title}</p>
-                    <p>{notification.message}</p>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
           <MyReservations
             reservations={reservations}
             loading={reservationsLoading}
             error={reservationsError}
             cancellingRentalId={cancellingRentalId}
             dismissingRentalId={dismissingRentalId}
-            markingReturnedRentalId={markingReturnedRentalId}
             onCancel={handleCancelReservation}
             onDismiss={handleDismissReservation}
-            onMarkReturned={handleMarkObjectReturned}
             onRetry={fetchReservations}
           />
         </div>
