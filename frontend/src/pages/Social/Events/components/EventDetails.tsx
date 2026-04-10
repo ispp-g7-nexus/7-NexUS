@@ -66,14 +66,16 @@ export function EventDetails({
                 <div className="dialog-footer" style={{ padding: '0 24px 24px 24px', margin: 0, flexDirection: 'column', gap: '8px' }}>
                     {selectedEvent.can_edit && (
                         <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-                            <button
-                                type="button"
-                                className="btn-secondary"
-                                style={{ flex: 1 }}
-                                onClick={() => onEditEvent(selectedEvent)}
-                            >
-                                Editar
-                            </button>
+                            {!isPastEvent && (
+                                <button
+                                    type="button"
+                                    className="btn-secondary"
+                                    style={{ flex: 1 }}
+                                    onClick={() => onEditEvent(selectedEvent)}
+                                >
+                                    Editar
+                                </button>
+                            )}
                             <button
                                 type="button"
                                 className="btn-secondary"
