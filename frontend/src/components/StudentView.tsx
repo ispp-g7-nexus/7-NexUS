@@ -331,7 +331,7 @@ export function StudentView({ onLogout }: StudentViewProps) {
                 }
 
                 const sharedNotifications: VisitUrgentSharedNotification[] = expiringPasses.map((pass) => ({
-                    id: `visit-expiring-${pass.validUntilIso}`,
+                    id: `visit-expiring-${pass.passId}-${pass.validUntilIso}`,
                     title: "Pase de invitado por caducar",
                     message: `Quedan ${pass.minutesRemaining} min · Pase ${pass.passCode}`,
                     created_at: new Date().toISOString(),
