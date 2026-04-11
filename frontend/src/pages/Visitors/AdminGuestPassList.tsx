@@ -229,7 +229,7 @@ export function AdminGuestPassListPage() {
       ) : processedPasses.length === 0 ? (
         <Card className="border-dashed shadow-none bg-gray-50/50">
           <CardContent className="py-12 text-center">
-            <p className="text-gray-500 font-medium">No se han encontrado pases que coincidan.</p>
+            <p className="text-gray-500 font-medium">No se han encontrado pases que coincidan</p>
           </CardContent>
         </Card>
       ) : (
