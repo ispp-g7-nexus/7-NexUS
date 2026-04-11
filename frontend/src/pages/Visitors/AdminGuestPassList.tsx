@@ -238,7 +238,16 @@ export function AdminGuestPassListPage() {
             <Card
               key={pass.id}
               className="hover:shadow-md transition-all cursor-pointer hover:border-purple-300 group border-gray-200"
+              role="button"
+              tabIndex={0}
+              aria-label={pass.full_name}
               onClick={() => setSelectedPass(pass)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  setSelectedPass(pass);
+                }
+              }}
             >
               <CardContent className="p-5 flex flex-col h-full">
                 <div className="flex items-start justify-between gap-2 mb-3">

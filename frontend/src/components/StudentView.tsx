@@ -33,7 +33,7 @@ const HOME_ANNOUNCEMENTS_SEEN_AT_KEY = "home-announcements-seen-at";
 const VISIT_URGENT_WARNING_WINDOW_MS = 10 * 60 * 1000;
 const VISIT_URGENT_CHECK_INTERVAL_MS = 30 * 1000;
 const VISIT_STATE_CHANGED_EVENT = "visit-state-changed";
-const VISIT_URGENT_NOTIFICATION_KEY = "visit-urgent-shared-notifications";
+const VISIT_URGENT_NOTIFICATION_KEY_BASE = "visit-urgent-shared-notifications";
 const VISIT_URGENT_NOTIFICATION_EVENT = "visit-urgent-notification-changed";
 
 type VisitUrgentSharedNotification = {
@@ -85,6 +85,12 @@ function buildGroupMessageEventKey(evt: ChatRealtimeEvent): string | null {
     return `${groupId}:fallback:${senderEmail || "unknown"}:${ts}`;
 }
 
+function buildVisitUrgentNotificationStorageKey(email: string): string | null {
+    const normalized = email.trim().toLowerCase();
+    if (!normalized) return null;
+    return `${VISIT_URGENT_NOTIFICATION_KEY_BASE}:${normalized}`;
+}
+
 export function StudentView({ onLogout }: StudentViewProps) {
     const [activeTab, setActiveTab] = useState<StudentTab>("home");
     const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
@@ -100,22 +106,23 @@ export function StudentView({ onLogout }: StudentViewProps) {
     const processedGroupMessageEventKeysRef = useRef<Set<string>>(new Set());
     const notifiedExpiringPassesRef = useRef<Set<string>>(new Set());
     const urgentVisitCheckSequenceRef = useRef(0);
+    const visitUrgentStorageKey = buildVisitUrgentNotificationStorageKey(currentUserEmail);
 
     const hasAnyChatNews = hasGroupChatNews || hasPrivateChatNews;
 
     const syncVisitUrgentSharedNotifications = useCallback((payload: VisitUrgentSharedNotification[]) => {
-        if (typeof window === "undefined") {
+        if (typeof window === "undefined" || !visitUrgentStorageKey) {
             return;
         }
 
         if (!payload.length) {
-            globalThis.localStorage.removeItem(VISIT_URGENT_NOTIFICATION_KEY);
+            globalThis.localStorage.removeItem(visitUrgentStorageKey);
             globalThis.dispatchEvent(new Event(VISIT_URGENT_NOTIFICATION_EVENT));
             return;
         }
 
         try {
-            const raw = globalThis.localStorage.getItem(VISIT_URGENT_NOTIFICATION_KEY);
+            const raw = globalThis.localStorage.getItem(visitUrgentStorageKey);
             const createdAtById = new Map<string, string>();
             if (raw) {
                 const parsed = JSON.parse(raw) as VisitUrgentSharedNotification | VisitUrgentSharedNotification[];
@@ -135,9 +142,9 @@ export function StudentView({ onLogout }: StudentViewProps) {
             // If existing payload is invalid, overwrite it below.
         }
 
-        globalThis.localStorage.setItem(VISIT_URGENT_NOTIFICATION_KEY, JSON.stringify(payload));
+        globalThis.localStorage.setItem(visitUrgentStorageKey, JSON.stringify(payload));
         globalThis.dispatchEvent(new Event(VISIT_URGENT_NOTIFICATION_EVENT));
-    }, []);
+    }, [visitUrgentStorageKey]);
 
     const isGroupLifecycleEvent = useCallback((evt: ChatRealtimeEvent): boolean =>
         evt.event === "group_created" || evt.event === "group_updated" || evt.event === "group_deleted", []);
@@ -281,16 +288,31 @@ export function StudentView({ onLogout }: StudentViewProps) {
     }, [activeTab]);
 
     useEffect(() => {
+        if (!visitUrgentStorageKey) {
+            return;
+        }
+
         let cancelled = false;
 
         const runUrgentVisitChecks = async () => {
             const currentSequence = ++urgentVisitCheckSequenceRef.current;
             try {
-                const [activePasses, upcomingPasses, policy] = await Promise.all([
-                    listMyActiveGuestPasses(),
-                    listMyUpcomingGuestPasses(),
-                    getMyGuestPassPolicy(),
-                ]);
+                let activePasses: Awaited<ReturnType<typeof listMyActiveGuestPasses>> = [];
+                let upcomingPasses: Awaited<ReturnType<typeof listMyUpcomingGuestPasses>> = [];
+
+                try {
+                    [activePasses, upcomingPasses] = await Promise.all([
+                        listMyActiveGuestPasses(),
+                        listMyUpcomingGuestPasses(),
+                    ]);
+                } catch {
+                    if (!cancelled && currentSequence === urgentVisitCheckSequenceRef.current) {
+                        setVisitLimitBanner(null);
+                    }
+                    syncVisitUrgentSharedNotifications([]);
+                    return;
+                }
+
                 if (cancelled || currentSequence !== urgentVisitCheckSequenceRef.current) return;
 
                 const nowMs = Date.now();
@@ -338,34 +360,42 @@ export function StudentView({ onLogout }: StudentViewProps) {
                     expires_at: pass.validUntilIso,
                     source: "visitors",
                 }));
-                syncVisitUrgentSharedNotifications(sharedNotifications);
 
-                const visitEndTime = policy.visit_end_time;
-                if (!visitEndTime) {
-                    if (currentSequence === urgentVisitCheckSequenceRef.current) {
-                        setVisitLimitBanner(null);
+                const hasActiveNow = activePasses.some((pass) => {
+                    const status = (pass.status || "").trim().toUpperCase();
+                    if (status && status !== "ACTIVE") {
+                        return false;
                     }
-                    return;
-                }
 
-                const startOfToday = new Date();
-                startOfToday.setHours(0, 0, 0, 0);
-                const startOfTomorrow = new Date(startOfToday);
-                startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
-
-                const hasVisitForToday = allRelevantPasses.some((pass) => {
                     const validFromMs = new Date(pass.valid_from).getTime();
                     const validUntilMs = new Date(pass.valid_until).getTime();
                     if (Number.isNaN(validFromMs) || Number.isNaN(validUntilMs)) {
                         return false;
                     }
-                    return validFromMs < startOfTomorrow.getTime() && validUntilMs > startOfToday.getTime();
+                    return validFromMs <= nowMs && nowMs < validUntilMs;
                 });
 
-                if (!hasVisitForToday) {
+                if (!hasActiveNow) {
                     if (currentSequence === urgentVisitCheckSequenceRef.current) {
                         setVisitLimitBanner(null);
                     }
+                    syncVisitUrgentSharedNotifications(sharedNotifications);
+                    return;
+                }
+
+                let policy: Awaited<ReturnType<typeof getMyGuestPassPolicy>> | null = null;
+                try {
+                    policy = await getMyGuestPassPolicy();
+                } catch {
+                    policy = null;
+                }
+
+                const visitEndTime = policy?.visit_end_time;
+                if (!visitEndTime) {
+                    if (currentSequence === urgentVisitCheckSequenceRef.current) {
+                        setVisitLimitBanner(null);
+                    }
+                    syncVisitUrgentSharedNotifications(sharedNotifications);
                     return;
                 }
 
@@ -376,6 +406,7 @@ export function StudentView({ onLogout }: StudentViewProps) {
                     if (currentSequence === urgentVisitCheckSequenceRef.current) {
                         setVisitLimitBanner(null);
                     }
+                    syncVisitUrgentSharedNotifications(sharedNotifications);
                     return;
                 }
 
@@ -386,6 +417,7 @@ export function StudentView({ onLogout }: StudentViewProps) {
                     if (currentSequence === urgentVisitCheckSequenceRef.current) {
                         setVisitLimitBanner(null);
                     }
+                    syncVisitUrgentSharedNotifications(sharedNotifications);
                     return;
                 }
 
@@ -394,6 +426,7 @@ export function StudentView({ onLogout }: StudentViewProps) {
                     if (currentSequence === urgentVisitCheckSequenceRef.current) {
                         setVisitLimitBanner(null);
                     }
+                    syncVisitUrgentSharedNotifications(sharedNotifications);
                     return;
                 }
 
@@ -402,7 +435,9 @@ export function StudentView({ onLogout }: StudentViewProps) {
                 if (currentSequence !== urgentVisitCheckSequenceRef.current || cancelled) {
                     return;
                 }
+
                 setVisitLimitBanner({ minutesRemaining, visitEndLabel });
+                syncVisitUrgentSharedNotifications(sharedNotifications);
             } catch {
                 if (!cancelled && currentSequence === urgentVisitCheckSequenceRef.current) {
                     setVisitLimitBanner(null);
@@ -425,7 +460,7 @@ export function StudentView({ onLogout }: StudentViewProps) {
             globalThis.clearInterval(intervalId);
             globalThis.removeEventListener(VISIT_STATE_CHANGED_EVENT, handleVisitStateChanged);
         };
-    }, [syncVisitUrgentSharedNotifications]);
+    }, [syncVisitUrgentSharedNotifications, visitUrgentStorageKey]);
 
     useEffect(() => {
         if (activeTab === "announcements") {

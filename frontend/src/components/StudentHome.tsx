@@ -41,7 +41,7 @@ const HOME_NOTIFICATIONS_DISMISSED_IDS_KEY = "home-notifications-dismissed-ids";
 const HOME_INCIDENCES_DISMISSED_IDS_KEY = "home-incidences-dismissed-ids";
 const HOME_INCIDENCES_SEEN_AT_KEY = "home-incidences-seen-at";
 const HOME_ANNOUNCEMENTS_SEEN_AT_KEY = "home-announcements-seen-at";
-const VISIT_URGENT_NOTIFICATION_KEY = "visit-urgent-shared-notifications";
+const VISIT_URGENT_NOTIFICATION_KEY_BASE = "visit-urgent-shared-notifications";
 const NOTIFICATIONS_POLL = 15000;
 const NOTIFICATIONS_LIMIT = 12;
 
@@ -157,12 +157,20 @@ const getIncidencesSeenAtMs = (): number => {
     return Number.isFinite(parsedMs) ? parsedMs : 0;
 };
 
-const getActiveVisitUrgentNotifications = (): VisitUrgentSharedNotification[] => {
-    if (typeof window === "undefined") {
+const buildVisitUrgentNotificationStorageKey = (email: string): string | null => {
+    const normalized = email.trim().toLowerCase();
+    if (!normalized) {
+        return null;
+    }
+    return `${VISIT_URGENT_NOTIFICATION_KEY_BASE}:${normalized}`;
+};
+
+const getActiveVisitUrgentNotifications = (storageKey: string | null): VisitUrgentSharedNotification[] => {
+    if (typeof window === "undefined" || !storageKey) {
         return [];
     }
 
-    const raw = globalThis.localStorage.getItem(VISIT_URGENT_NOTIFICATION_KEY);
+    const raw = globalThis.localStorage.getItem(storageKey);
     if (!raw) {
         return [];
     }
@@ -179,15 +187,15 @@ const getActiveVisitUrgentNotifications = (): VisitUrgentSharedNotification[] =>
 
         if (active.length !== items.length) {
             if (active.length === 0) {
-                globalThis.localStorage.removeItem(VISIT_URGENT_NOTIFICATION_KEY);
+                globalThis.localStorage.removeItem(storageKey);
             } else {
-                globalThis.localStorage.setItem(VISIT_URGENT_NOTIFICATION_KEY, JSON.stringify(active));
+                globalThis.localStorage.setItem(storageKey, JSON.stringify(active));
             }
         }
 
         return active.sort((a, b) => Date.parse(a.expires_at) - Date.parse(b.expires_at));
     } catch {
-        globalThis.localStorage.removeItem(VISIT_URGENT_NOTIFICATION_KEY);
+        globalThis.localStorage.removeItem(storageKey);
         return [];
     }
 };
@@ -260,6 +268,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
     const [dismissedIncidenceIds, setDismissedIncidenceIds] = useState<string[]>(getInitialDismissedIncidenceIds);
     const [pendingPackages, setPendingPackages] = useState<number>(0);
     const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+    const [currentUserEmail, setCurrentUserEmail] = useState("");
     const [isSessionUserResolved, setIsSessionUserResolved] = useState(false);
     const notificationsRequestIdRef = useRef(0);
     const dismissedNotificationIdsRef = useRef<string[]>(getInitialDismissedNotificationIds());
@@ -274,6 +283,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
             try {
                 const session = await authService.me();
                 setCurrentUserId(parseUserId(session.user?.id));
+                setCurrentUserEmail((session.user?.email || "").trim().toLowerCase());
                 if (session.user) {
                     // Usar el nombre real si está disponible
                     const firstName = session.user.first_name?.trim() || '';
@@ -309,6 +319,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
             } catch (error) {
                 console.error("Error cargando perfil del estudiante", error);
                 setCurrentUserId(null);
+                setCurrentUserEmail("");
                 setUserData(prev => ({ ...prev, name: "Estudiante", room: "Error de conexión" }));
             } finally {
                 setIsSessionUserResolved(true);
@@ -417,7 +428,8 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
     }, []);
 
     const buildVisitUrgentItems = useCallback((): HomeNotification[] => {
-        const items = getActiveVisitUrgentNotifications();
+        const storageKey = buildVisitUrgentNotificationStorageKey(currentUserEmail);
+        const items = getActiveVisitUrgentNotifications(storageKey);
         return items.map((item) => ({
             id: item.id,
             title: item.title,
@@ -427,7 +439,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
             source: "visitors" as const,
             createdAt: item.created_at,
         }));
-    }, []);
+    }, [currentUserEmail]);
 
     const loadHomeNotifications = useCallback(async (silent = false) => {
         const requestId = ++notificationsRequestIdRef.current;

@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { cn } from "../ui/utils";
 import { toast } from "sonner";
 import announcementService from "../../services/announcement.service";
+import { authService } from "../../services/auth";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 
 interface NotificationBellProps {
@@ -11,7 +12,7 @@ interface NotificationBellProps {
   mode?: "notifications" | "announcements";
 }
 
-const VISIT_URGENT_NOTIFICATION_KEY = "visit-urgent-shared-notifications";
+const VISIT_URGENT_NOTIFICATION_KEY_BASE = "visit-urgent-shared-notifications";
 const VISIT_URGENT_NOTIFICATION_EVENT = "visit-urgent-notification-changed";
 
 type VisitUrgentSharedNotification = {
@@ -23,12 +24,20 @@ type VisitUrgentSharedNotification = {
   source: "visitors";
 };
 
-function getActiveVisitUrgentNotifications(): VisitUrgentSharedNotification[] {
-  if (typeof window === "undefined") {
+function buildVisitUrgentNotificationStorageKey(email: string): string | null {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+  return `${VISIT_URGENT_NOTIFICATION_KEY_BASE}:${normalized}`;
+}
+
+function getActiveVisitUrgentNotifications(storageKey: string | null): VisitUrgentSharedNotification[] {
+  if (typeof window === "undefined" || !storageKey) {
     return [];
   }
 
-  const raw = globalThis.localStorage.getItem(VISIT_URGENT_NOTIFICATION_KEY);
+  const raw = globalThis.localStorage.getItem(storageKey);
   if (!raw) {
     return [];
   }
@@ -45,15 +54,15 @@ function getActiveVisitUrgentNotifications(): VisitUrgentSharedNotification[] {
 
     if (active.length !== items.length) {
       if (active.length === 0) {
-        globalThis.localStorage.removeItem(VISIT_URGENT_NOTIFICATION_KEY);
+        globalThis.localStorage.removeItem(storageKey);
       } else {
-        globalThis.localStorage.setItem(VISIT_URGENT_NOTIFICATION_KEY, JSON.stringify(active));
+        globalThis.localStorage.setItem(storageKey, JSON.stringify(active));
       }
     }
 
     return active.sort((a, b) => Date.parse(a.expires_at) - Date.parse(b.expires_at));
   } catch {
-    globalThis.localStorage.removeItem(VISIT_URGENT_NOTIFICATION_KEY);
+    globalThis.localStorage.removeItem(storageKey);
     return [];
   }
 }
@@ -61,8 +70,10 @@ function getActiveVisitUrgentNotifications(): VisitUrgentSharedNotification[] {
 export function NotificationBell({ onMarkAsRead, className, mode = "notifications" }: NotificationBellProps) {
   const [unviewedCount, setUnviewedCount] = useState(0);
   const [visitUrgentNotifications, setVisitUrgentNotifications] = useState<VisitUrgentSharedNotification[]>([]);
+  const [currentUserEmail, setCurrentUserEmail] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const visitUrgentStorageKey = buildVisitUrgentNotificationStorageKey(currentUserEmail);
   const totalNotifications = unviewedCount + visitUrgentNotifications.length;
   const hasNotifications = totalNotifications > 0;
   const isAnnouncementsMode = mode === "announcements";
@@ -75,9 +86,9 @@ export function NotificationBell({ onMarkAsRead, className, mode = "notification
   const refreshBellState = useCallback(async (): Promise<number> => {
     const data = await announcementService.getUnviewedCount();
     setUnviewedCount(data.count);
-    setVisitUrgentNotifications(getActiveVisitUrgentNotifications());
+    setVisitUrgentNotifications(getActiveVisitUrgentNotifications(visitUrgentStorageKey));
     return data.count;
-  }, []);
+  }, [visitUrgentStorageKey]);
 
   const loadUnviewedCount = useCallback(async () => {
     try {
@@ -88,10 +99,20 @@ export function NotificationBell({ onMarkAsRead, className, mode = "notification
   }, [refreshBellState]);
 
   useEffect(() => {
+    authService.me()
+      .then((session) => {
+        setCurrentUserEmail((session.user?.email || "").trim().toLowerCase());
+      })
+      .catch(() => {
+        setCurrentUserEmail("");
+      });
+  }, []);
+
+  useEffect(() => {
     void loadUnviewedCount();
 
     const refreshVisitUrgentNotifications = () => {
-      setVisitUrgentNotifications(getActiveVisitUrgentNotifications());
+      setVisitUrgentNotifications(getActiveVisitUrgentNotifications(visitUrgentStorageKey));
     };
 
     refreshVisitUrgentNotifications();
@@ -102,7 +123,7 @@ export function NotificationBell({ onMarkAsRead, className, mode = "notification
       globalThis.removeEventListener(VISIT_URGENT_NOTIFICATION_EVENT, refreshVisitUrgentNotifications);
       globalThis.clearInterval(intervalId);
     };
-  }, [loadUnviewedCount]);
+  }, [loadUnviewedCount, visitUrgentStorageKey]);
 
   const handleBellClick = async () => {
     setLoading(true);

@@ -5,6 +5,7 @@ import { Card, CardContent } from "../../../components/ui/card";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "../../../components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../components/ui/popover";
 import { fetchWithAuth, API_URL_INCIDENCES } from "../../../utils/api";
+import { authService } from "../../../services/auth";
 import { IncidenceForm } from "./IncidenceForm";
 import { IncidenceService } from "../../../services/incidences";
 
@@ -32,7 +33,7 @@ type IncidenceNotification = {
 
 const INCIDENCE_NOTIFICATIONS_DISMISSED_KEY = "incidences-notifications-dismissed-ids";
 const HOME_INCIDENCES_SEEN_AT_KEY = "home-incidences-seen-at";
-const VISIT_URGENT_NOTIFICATION_KEY = "visit-urgent-shared-notifications";
+const VISIT_URGENT_NOTIFICATION_KEY_BASE = "visit-urgent-shared-notifications";
 const LIVE_REFRESH_MS = 3000;
 
 type VisitUrgentSharedNotification = {
@@ -67,6 +68,14 @@ const saveHomeIncidencesSeenAt = (timestamp?: string) => {
   window.localStorage.setItem(HOME_INCIDENCES_SEEN_AT_KEY, timestamp);
 };
 
+const buildVisitUrgentNotificationStorageKey = (email: string): string | null => {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+  return `${VISIT_URGENT_NOTIFICATION_KEY_BASE}:${normalized}`;
+};
+
 const mergeAndSortNotifications = (
   baseItems: IncidenceNotification[],
   urgentItems: IncidenceNotification[],
@@ -84,10 +93,10 @@ const mergeAndSortNotifications = (
     });
 };
 
-const getActiveVisitUrgentNotifications = (): IncidenceNotification[] => {
-  if (typeof window === "undefined") return [];
+const getActiveVisitUrgentNotifications = (storageKey: string | null): IncidenceNotification[] => {
+  if (typeof window === "undefined" || !storageKey) return [];
 
-  const raw = window.localStorage.getItem(VISIT_URGENT_NOTIFICATION_KEY);
+  const raw = window.localStorage.getItem(storageKey);
   if (!raw) return [];
 
   try {
@@ -102,9 +111,9 @@ const getActiveVisitUrgentNotifications = (): IncidenceNotification[] => {
 
     if (active.length !== items.length) {
       if (active.length === 0) {
-        window.localStorage.removeItem(VISIT_URGENT_NOTIFICATION_KEY);
+        window.localStorage.removeItem(storageKey);
       } else {
-        window.localStorage.setItem(VISIT_URGENT_NOTIFICATION_KEY, JSON.stringify(active));
+        window.localStorage.setItem(storageKey, JSON.stringify(active));
       }
     }
 
@@ -118,7 +127,7 @@ const getActiveVisitUrgentNotifications = (): IncidenceNotification[] => {
         created_at: item.created_at,
       }));
   } catch {
-    window.localStorage.removeItem(VISIT_URGENT_NOTIFICATION_KEY);
+    window.localStorage.removeItem(storageKey);
     return [];
   }
 };
@@ -133,7 +142,9 @@ export default function StudentIncidences({ onGoToProfile, onLogout }: StudentIn
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [currentUserEmail, setCurrentUserEmail] = useState("");
   const dismissedNotificationIdsRef = useRef<string[]>(getDismissedNotificationIds());
+  const visitUrgentStorageKey = buildVisitUrgentNotificationStorageKey(currentUserEmail);
 
   const [incidenceToDelete, setIncidenceToDelete] = useState<BaseIncidence | null>(null);
   const [incidenceToEdit, setIncidenceToEdit] = useState<BaseIncidence | null>(null);
@@ -152,6 +163,16 @@ export default function StudentIncidences({ onGoToProfile, onLogout }: StudentIn
     saveDismissedNotificationIds(next);
   }, []);
 
+  useEffect(() => {
+    authService.me()
+      .then((session) => {
+        setCurrentUserEmail((session.user?.email || "").trim().toLowerCase());
+      })
+      .catch(() => {
+        setCurrentUserEmail("");
+      });
+  }, []);
+
   const loadNotifications = useCallback(async (markAsRead = false, silent = false) => {
     try {
       if (!silent) setNotificationsLoading(true);
@@ -160,7 +181,7 @@ export default function StudentIncidences({ onGoToProfile, onLogout }: StudentIn
 
       const data = await res.json();
       const baseItems = Array.isArray(data.results) ? (data.results as IncidenceNotification[]) : [];
-      const visitWarnings = getActiveVisitUrgentNotifications();
+      const visitWarnings = getActiveVisitUrgentNotifications(visitUrgentStorageKey);
 
       if (markAsRead && baseItems.length > 0) {
         saveHomeIncidencesSeenAt(baseItems[0].created_at);
@@ -187,7 +208,7 @@ export default function StudentIncidences({ onGoToProfile, onLogout }: StudentIn
     } finally {
       if (!silent) setNotificationsLoading(false);
     }
-  }, []);
+  }, [visitUrgentStorageKey]);
 
   const loadIncidences = useCallback(async (silent = false) => {
     try {
