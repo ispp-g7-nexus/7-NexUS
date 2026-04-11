@@ -283,22 +283,8 @@ export function StudentView({ onLogout }: StudentViewProps) {
 
     useEffect(() => {
         if (activeTab === "incidences") {
-            globalThis.localStorage.setItem(HOME_INCIDENCES_SEEN_AT_KEY, new Date().toISOString());
+            globalThis.localStorage.setItem("home-incidences-seen-at", new Date().toISOString());
         }
-
-        if (activeTab === "reservations") {
-        }
-
-        if (activeTab !== "announcements") {
-            if (markAsViewedTimeoutRef.current) {
-                globalThis.clearTimeout(markAsViewedTimeoutRef.current);
-                markAsViewedTimeoutRef.current = null;
-            }
-            return;
-        }
-
-        const intervalId = globalThis.setInterval(loadUnreadCount, 3000);
-        return () => globalThis.clearInterval(intervalId);
     }, [activeTab]);
 
     const handleNavigation = (tab: StudentTab) => {
