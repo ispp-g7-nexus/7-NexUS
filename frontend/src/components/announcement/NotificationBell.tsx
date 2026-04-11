@@ -33,7 +33,7 @@ function buildVisitUrgentNotificationStorageKey(email: string): string | null {
 }
 
 function getActiveVisitUrgentNotifications(storageKey: string | null): VisitUrgentSharedNotification[] {
-  if (typeof window === "undefined" || !storageKey) {
+  if (typeof globalThis.window === "undefined" || !storageKey) {
     return [];
   }
 
@@ -109,7 +109,9 @@ export function NotificationBell({ onMarkAsRead, className, mode = "notification
   }, []);
 
   useEffect(() => {
-    void loadUnviewedCount();
+    loadUnviewedCount().catch((error) => {
+      console.error("Error loading unviewed count:", error);
+    });
 
     const refreshVisitUrgentNotifications = () => {
       setVisitUrgentNotifications(getActiveVisitUrgentNotifications(visitUrgentStorageKey));

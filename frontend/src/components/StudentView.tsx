@@ -45,6 +45,115 @@ type VisitUrgentSharedNotification = {
     source: "visitors";
 };
 
+type GuestPassItem = Awaited<ReturnType<typeof listMyActiveGuestPasses>>[number];
+
+type ExpiringPassWarning = {
+    passCode: string;
+    validUntilIso: string;
+    minutesRemaining: number;
+    passId: number;
+};
+
+type VisitLimitBannerState = {
+    minutesRemaining: number;
+    visitEndLabel: string;
+};
+
+function getExpiringPassWarnings(passes: GuestPassItem[], nowMs: number): ExpiringPassWarning[] {
+    return passes
+        .map((pass) => {
+            const validUntilMs = new Date(pass.valid_until).getTime();
+            if (Number.isNaN(validUntilMs) || validUntilMs <= nowMs) {
+                return null;
+            }
+
+            const timeRemainingMs = validUntilMs - nowMs;
+            if (timeRemainingMs > VISIT_URGENT_WARNING_WINDOW_MS) {
+                return null;
+            }
+
+            return {
+                passCode: pass.pass_code,
+                validUntilIso: pass.valid_until,
+                minutesRemaining: Math.max(1, Math.ceil(timeRemainingMs / 60000)),
+                passId: pass.id,
+            };
+        })
+        .filter((item): item is ExpiringPassWarning => Boolean(item))
+        .sort((a, b) => Date.parse(a.validUntilIso) - Date.parse(b.validUntilIso));
+}
+
+function isPassActiveNow(pass: GuestPassItem, nowMs: number): boolean {
+    const status = (pass.status || "").trim().toUpperCase();
+    if (status && status !== "ACTIVE") {
+        return false;
+    }
+
+    const validFromMs = new Date(pass.valid_from).getTime();
+    const validUntilMs = new Date(pass.valid_until).getTime();
+    if (Number.isNaN(validFromMs) || Number.isNaN(validUntilMs)) {
+        return false;
+    }
+
+    return validFromMs <= nowMs && nowMs < validUntilMs;
+}
+
+function buildVisitUrgentSharedNotifications(expiringPasses: ExpiringPassWarning[]): VisitUrgentSharedNotification[] {
+    return expiringPasses.map((pass) => ({
+        id: `visit-expiring-${pass.passId}-${pass.validUntilIso}`,
+        title: "Pase de invitado por caducar",
+        message: `Quedan ${pass.minutesRemaining} min · Pase ${pass.passCode}`,
+        created_at: new Date().toISOString(),
+        expires_at: pass.validUntilIso,
+        source: "visitors",
+    }));
+}
+
+function getVisitLimitBannerState(visitEndTime: string, nowMs: number): VisitLimitBannerState | null {
+    const [hoursPart, minutesPart] = visitEndTime.slice(0, 5).split(":");
+    const visitEndHour = Number(hoursPart);
+    const visitEndMinute = Number(minutesPart);
+    if (!Number.isInteger(visitEndHour) || !Number.isInteger(visitEndMinute)) {
+        return null;
+    }
+
+    const todayVisitEnd = new Date();
+    todayVisitEnd.setHours(visitEndHour, visitEndMinute, 0, 0);
+    const visitEndMs = todayVisitEnd.getTime();
+    if (visitEndMs <= nowMs) {
+        return null;
+    }
+
+    const remainingMs = visitEndMs - nowMs;
+    if (remainingMs > VISIT_URGENT_WARNING_WINDOW_MS) {
+        return null;
+    }
+
+    return {
+        minutesRemaining: Math.max(1, Math.ceil(remainingMs / 60000)),
+        visitEndLabel: visitEndTime.slice(0, 5),
+    };
+}
+
+function shouldApplyCurrentVisitCheck(
+    cancelled: boolean,
+    currentSequence: number,
+    sequenceRef: React.MutableRefObject<number>,
+): boolean {
+    return !cancelled && currentSequence === sequenceRef.current;
+}
+
+function clearVisitLimitBannerIfCurrent(
+    setVisitLimitBanner: (value: VisitLimitBannerState | null) => void,
+    cancelled: boolean,
+    currentSequence: number,
+    sequenceRef: React.MutableRefObject<number>,
+): void {
+    if (shouldApplyCurrentVisitCheck(cancelled, currentSequence, sequenceRef)) {
+        setVisitLimitBanner(null);
+    }
+}
+
 function buildResidentUnreadGroupsStorageKey(email: string): string | null {
     const normalized = email.trim().toLowerCase();
     if (!normalized) return null;
@@ -101,7 +210,7 @@ export function StudentView({ onLogout }: StudentViewProps) {
     const [communityChatSubTab, setCommunityChatSubTab] = useState<"grupos" | "privados" | null>(null);
     const [hasGroupChatNews, setHasGroupChatNews] = useState(false);
     const [hasPrivateChatNews, setHasPrivateChatNews] = useState(false);
-    const [visitLimitBanner, setVisitLimitBanner] = useState<{ minutesRemaining: number; visitEndLabel: string } | null>(null);
+    const [visitLimitBanner, setVisitLimitBanner] = useState<VisitLimitBannerState | null>(null);
     const previousUnreadCount = useRef<number | null>(null);
     const processedGroupMessageEventKeysRef = useRef<Set<string>>(new Set());
     const notifiedExpiringPassesRef = useRef<Set<string>>(new Set());
@@ -306,9 +415,7 @@ export function StudentView({ onLogout }: StudentViewProps) {
                         listMyUpcomingGuestPasses(),
                     ]);
                 } catch {
-                    if (!cancelled && currentSequence === urgentVisitCheckSequenceRef.current) {
-                        setVisitLimitBanner(null);
-                    }
+                    clearVisitLimitBannerIfCurrent(setVisitLimitBanner, cancelled, currentSequence, urgentVisitCheckSequenceRef);
                     syncVisitUrgentSharedNotifications([]);
                     return;
                 }
@@ -317,28 +424,7 @@ export function StudentView({ onLogout }: StudentViewProps) {
 
                 const nowMs = Date.now();
                 const allRelevantPasses = [...activePasses, ...upcomingPasses];
-
-                const expiringPasses = allRelevantPasses
-                    .map((pass) => {
-                        const validUntilMs = new Date(pass.valid_until).getTime();
-                        if (Number.isNaN(validUntilMs) || validUntilMs <= nowMs) {
-                            return null;
-                        }
-
-                        const timeRemainingMs = validUntilMs - nowMs;
-                        if (timeRemainingMs > VISIT_URGENT_WARNING_WINDOW_MS) {
-                            return null;
-                        }
-
-                        return {
-                            passCode: pass.pass_code,
-                            validUntilIso: pass.valid_until,
-                            minutesRemaining: Math.max(1, Math.ceil(timeRemainingMs / 60000)),
-                            passId: pass.id,
-                        };
-                    })
-                    .filter((item): item is { passCode: string; validUntilIso: string; minutesRemaining: number; passId: number } => Boolean(item))
-                    .sort((a, b) => Date.parse(a.validUntilIso) - Date.parse(b.validUntilIso));
+                const expiringPasses = getExpiringPassWarnings(allRelevantPasses, nowMs);
 
                 for (const pass of expiringPasses) {
                     const passWarningKey = `${pass.passId}-${pass.validUntilIso}`;
@@ -352,33 +438,11 @@ export function StudentView({ onLogout }: StudentViewProps) {
                     });
                 }
 
-                const sharedNotifications: VisitUrgentSharedNotification[] = expiringPasses.map((pass) => ({
-                    id: `visit-expiring-${pass.passId}-${pass.validUntilIso}`,
-                    title: "Pase de invitado por caducar",
-                    message: `Quedan ${pass.minutesRemaining} min · Pase ${pass.passCode}`,
-                    created_at: new Date().toISOString(),
-                    expires_at: pass.validUntilIso,
-                    source: "visitors",
-                }));
-
-                const hasActiveNow = activePasses.some((pass) => {
-                    const status = (pass.status || "").trim().toUpperCase();
-                    if (status && status !== "ACTIVE") {
-                        return false;
-                    }
-
-                    const validFromMs = new Date(pass.valid_from).getTime();
-                    const validUntilMs = new Date(pass.valid_until).getTime();
-                    if (Number.isNaN(validFromMs) || Number.isNaN(validUntilMs)) {
-                        return false;
-                    }
-                    return validFromMs <= nowMs && nowMs < validUntilMs;
-                });
+                const sharedNotifications = buildVisitUrgentSharedNotifications(expiringPasses);
+                const hasActiveNow = activePasses.some((pass) => isPassActiveNow(pass, nowMs));
 
                 if (!hasActiveNow) {
-                    if (currentSequence === urgentVisitCheckSequenceRef.current) {
-                        setVisitLimitBanner(null);
-                    }
+                    clearVisitLimitBannerIfCurrent(setVisitLimitBanner, cancelled, currentSequence, urgentVisitCheckSequenceRef);
                     syncVisitUrgentSharedNotifications(sharedNotifications);
                     return;
                 }
@@ -392,56 +456,26 @@ export function StudentView({ onLogout }: StudentViewProps) {
 
                 const visitEndTime = policy?.visit_end_time;
                 if (!visitEndTime) {
-                    if (currentSequence === urgentVisitCheckSequenceRef.current) {
-                        setVisitLimitBanner(null);
-                    }
+                    clearVisitLimitBannerIfCurrent(setVisitLimitBanner, cancelled, currentSequence, urgentVisitCheckSequenceRef);
                     syncVisitUrgentSharedNotifications(sharedNotifications);
                     return;
                 }
 
-                const [hoursPart, minutesPart] = visitEndTime.slice(0, 5).split(":");
-                const visitEndHour = Number(hoursPart);
-                const visitEndMinute = Number(minutesPart);
-                if (!Number.isInteger(visitEndHour) || !Number.isInteger(visitEndMinute)) {
-                    if (currentSequence === urgentVisitCheckSequenceRef.current) {
-                        setVisitLimitBanner(null);
-                    }
+                const nextBannerState = getVisitLimitBannerState(visitEndTime, nowMs);
+                if (!nextBannerState) {
+                    clearVisitLimitBannerIfCurrent(setVisitLimitBanner, cancelled, currentSequence, urgentVisitCheckSequenceRef);
                     syncVisitUrgentSharedNotifications(sharedNotifications);
                     return;
                 }
 
-                const todayVisitEnd = new Date();
-                todayVisitEnd.setHours(visitEndHour, visitEndMinute, 0, 0);
-                const visitEndMs = todayVisitEnd.getTime();
-                if (visitEndMs <= nowMs) {
-                    if (currentSequence === urgentVisitCheckSequenceRef.current) {
-                        setVisitLimitBanner(null);
-                    }
-                    syncVisitUrgentSharedNotifications(sharedNotifications);
+                if (!shouldApplyCurrentVisitCheck(cancelled, currentSequence, urgentVisitCheckSequenceRef)) {
                     return;
                 }
 
-                const remainingMs = visitEndMs - nowMs;
-                if (remainingMs > VISIT_URGENT_WARNING_WINDOW_MS) {
-                    if (currentSequence === urgentVisitCheckSequenceRef.current) {
-                        setVisitLimitBanner(null);
-                    }
-                    syncVisitUrgentSharedNotifications(sharedNotifications);
-                    return;
-                }
-
-                const minutesRemaining = Math.max(1, Math.ceil(remainingMs / 60000));
-                const visitEndLabel = visitEndTime.slice(0, 5);
-                if (currentSequence !== urgentVisitCheckSequenceRef.current || cancelled) {
-                    return;
-                }
-
-                setVisitLimitBanner({ minutesRemaining, visitEndLabel });
+                setVisitLimitBanner(nextBannerState);
                 syncVisitUrgentSharedNotifications(sharedNotifications);
             } catch {
-                if (!cancelled && currentSequence === urgentVisitCheckSequenceRef.current) {
-                    setVisitLimitBanner(null);
-                }
+                clearVisitLimitBannerIfCurrent(setVisitLimitBanner, cancelled, currentSequence, urgentVisitCheckSequenceRef);
                 syncVisitUrgentSharedNotifications([]);
             }
         };

@@ -166,7 +166,7 @@ const buildVisitUrgentNotificationStorageKey = (email: string): string | null =>
 };
 
 const getActiveVisitUrgentNotifications = (storageKey: string | null): VisitUrgentSharedNotification[] => {
-    if (typeof window === "undefined" || !storageKey) {
+    if (typeof globalThis.window === "undefined" || !storageKey) {
         return [];
     }
 
@@ -487,16 +487,16 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
             ));
 
             // 5. Ordenación y Límite
-            const sorted = visibleNotifications
-                .sort((a, b) => {
-                    const aPinned = a.source === "visitors" ? 1 : 0;
-                    const bPinned = b.source === "visitors" ? 1 : 0;
-                    if (aPinned !== bPinned) {
-                        return bPinned - aPinned;
-                    }
-                    return Date.parse(b.createdAt) - Date.parse(a.createdAt);
-                })
-                .slice(0, NOTIFICATIONS_LIMIT);
+            const sortedNotifications = [...visibleNotifications].sort((a, b) => {
+                const aPinned = a.source === "visitors" ? 1 : 0;
+                const bPinned = b.source === "visitors" ? 1 : 0;
+                if (aPinned !== bPinned) {
+                    return bPinned - aPinned;
+                }
+                return Date.parse(b.createdAt) - Date.parse(a.createdAt);
+            });
+
+            const sorted = sortedNotifications.slice(0, NOTIFICATIONS_LIMIT);
 
             setNotifications(sorted);
 
@@ -779,7 +779,7 @@ interface QuickActionProps {
     onClick: () => void;
 }
 
-function NotificationCard({ icon, title, description, time, type, onDismiss, onOpenSource, dismissible = true }: NotificationCardProps) {
+function NotificationCard({ icon, title, description, time, type, onDismiss, onOpenSource, dismissible = true }: Readonly<NotificationCardProps>) {
     const bgColors: Record<NotificationType, string> = {
         urgent: "border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50 shadow-[0_6px_18px_rgba(245,158,11,0.18)]",
         admin: "bg-blue-50 border-blue-200",
