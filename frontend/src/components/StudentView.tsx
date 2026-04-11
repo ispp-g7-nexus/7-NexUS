@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { AlertCircle, Calendar, Home, MessageSquare, User } from "lucide-react";
+import { AlertCircle, AlertTriangle, Calendar, Home, MessageSquare, User } from "lucide-react";
 import { toast } from "sonner";
 
 // Importamos la página de inicio y el tipo de las pestañas
@@ -19,12 +19,31 @@ import { chatsService, type ChatRealtimeEvent } from "../services/chats";
 import { authService } from "../services/auth";
 import { ActiveGuestPassesPage } from "../pages/Visitors/ActiveGuestPasses";
 import type { ResidenceBranding } from "../services/branding";
+import {
+    getMyGuestPassPolicy,
+    listMyActiveGuestPasses,
+    listMyUpcomingGuestPasses,
+} from "../services/guestPasses";
 
 interface StudentViewProps {
     onLogout: () => void;
 }
 
 const HOME_ANNOUNCEMENTS_SEEN_AT_KEY = "home-announcements-seen-at";
+const VISIT_URGENT_WARNING_WINDOW_MS = 10 * 60 * 1000;
+const VISIT_URGENT_CHECK_INTERVAL_MS = 30 * 1000;
+const VISIT_STATE_CHANGED_EVENT = "visit-state-changed";
+const VISIT_URGENT_NOTIFICATION_KEY = "visit-urgent-shared-notifications";
+const VISIT_URGENT_NOTIFICATION_EVENT = "visit-urgent-notification-changed";
+
+type VisitUrgentSharedNotification = {
+    id: string;
+    title: string;
+    message: string;
+    created_at: string;
+    expires_at: string;
+    source: "visitors";
+};
 
 function buildResidentUnreadGroupsStorageKey(email: string): string | null {
     const normalized = email.trim().toLowerCase();
@@ -76,10 +95,49 @@ export function StudentView({ onLogout }: StudentViewProps) {
     const [communityChatSubTab, setCommunityChatSubTab] = useState<"grupos" | "privados" | null>(null);
     const [hasGroupChatNews, setHasGroupChatNews] = useState(false);
     const [hasPrivateChatNews, setHasPrivateChatNews] = useState(false);
+    const [visitLimitBanner, setVisitLimitBanner] = useState<{ minutesRemaining: number; visitEndLabel: string } | null>(null);
     const previousUnreadCount = useRef<number | null>(null);
     const processedGroupMessageEventKeysRef = useRef<Set<string>>(new Set());
+    const notifiedExpiringPassesRef = useRef<Set<string>>(new Set());
+    const urgentVisitCheckSequenceRef = useRef(0);
 
     const hasAnyChatNews = hasGroupChatNews || hasPrivateChatNews;
+
+    const syncVisitUrgentSharedNotifications = useCallback((payload: VisitUrgentSharedNotification[]) => {
+        if (typeof window === "undefined") {
+            return;
+        }
+
+        if (!payload.length) {
+            globalThis.localStorage.removeItem(VISIT_URGENT_NOTIFICATION_KEY);
+            globalThis.dispatchEvent(new Event(VISIT_URGENT_NOTIFICATION_EVENT));
+            return;
+        }
+
+        try {
+            const raw = globalThis.localStorage.getItem(VISIT_URGENT_NOTIFICATION_KEY);
+            const createdAtById = new Map<string, string>();
+            if (raw) {
+                const parsed = JSON.parse(raw) as VisitUrgentSharedNotification | VisitUrgentSharedNotification[];
+                const currentItems = Array.isArray(parsed) ? parsed : [parsed];
+                for (const item of currentItems) {
+                    if (item?.id && item?.created_at) {
+                        createdAtById.set(item.id, item.created_at);
+                    }
+                }
+            }
+
+            payload = payload.map((item) => ({
+                ...item,
+                created_at: createdAtById.get(item.id) || item.created_at,
+            }));
+        } catch {
+            // If existing payload is invalid, overwrite it below.
+        }
+
+        globalThis.localStorage.setItem(VISIT_URGENT_NOTIFICATION_KEY, JSON.stringify(payload));
+        globalThis.dispatchEvent(new Event(VISIT_URGENT_NOTIFICATION_EVENT));
+    }, []);
 
     const isGroupLifecycleEvent = useCallback((evt: ChatRealtimeEvent): boolean =>
         evt.event === "group_created" || evt.event === "group_updated" || evt.event === "group_deleted", []);
@@ -223,6 +281,153 @@ export function StudentView({ onLogout }: StudentViewProps) {
     }, [activeTab]);
 
     useEffect(() => {
+        let cancelled = false;
+
+        const runUrgentVisitChecks = async () => {
+            const currentSequence = ++urgentVisitCheckSequenceRef.current;
+            try {
+                const [activePasses, upcomingPasses, policy] = await Promise.all([
+                    listMyActiveGuestPasses(),
+                    listMyUpcomingGuestPasses(),
+                    getMyGuestPassPolicy(),
+                ]);
+                if (cancelled || currentSequence !== urgentVisitCheckSequenceRef.current) return;
+
+                const nowMs = Date.now();
+                const allRelevantPasses = [...activePasses, ...upcomingPasses];
+
+                const expiringPasses = allRelevantPasses
+                    .map((pass) => {
+                        const validUntilMs = new Date(pass.valid_until).getTime();
+                        if (Number.isNaN(validUntilMs) || validUntilMs <= nowMs) {
+                            return null;
+                        }
+
+                        const timeRemainingMs = validUntilMs - nowMs;
+                        if (timeRemainingMs > VISIT_URGENT_WARNING_WINDOW_MS) {
+                            return null;
+                        }
+
+                        return {
+                            passCode: pass.pass_code,
+                            validUntilIso: pass.valid_until,
+                            minutesRemaining: Math.max(1, Math.ceil(timeRemainingMs / 60000)),
+                            passId: pass.id,
+                        };
+                    })
+                    .filter((item): item is { passCode: string; validUntilIso: string; minutesRemaining: number; passId: number } => Boolean(item))
+                    .sort((a, b) => Date.parse(a.validUntilIso) - Date.parse(b.validUntilIso));
+
+                for (const pass of expiringPasses) {
+                    const passWarningKey = `${pass.passId}-${pass.validUntilIso}`;
+                    if (notifiedExpiringPassesRef.current.has(passWarningKey)) {
+                        continue;
+                    }
+
+                    notifiedExpiringPassesRef.current.add(passWarningKey);
+                    toast.warning("Tu pase está a punto de caducar", {
+                        description: `Quedan ${pass.minutesRemaining} min para que caduque el pase ${pass.passCode}.`,
+                    });
+                }
+
+                const sharedNotifications: VisitUrgentSharedNotification[] = expiringPasses.map((pass) => ({
+                    id: `visit-expiring-${pass.validUntilIso}`,
+                    title: "Pase de invitado por caducar",
+                    message: `Quedan ${pass.minutesRemaining} min · Pase ${pass.passCode}`,
+                    created_at: new Date().toISOString(),
+                    expires_at: pass.validUntilIso,
+                    source: "visitors",
+                }));
+                syncVisitUrgentSharedNotifications(sharedNotifications);
+
+                const visitEndTime = policy.visit_end_time;
+                if (!visitEndTime) {
+                    if (currentSequence === urgentVisitCheckSequenceRef.current) {
+                        setVisitLimitBanner(null);
+                    }
+                    return;
+                }
+
+                const startOfToday = new Date();
+                startOfToday.setHours(0, 0, 0, 0);
+                const startOfTomorrow = new Date(startOfToday);
+                startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
+
+                const hasVisitForToday = allRelevantPasses.some((pass) => {
+                    const validFromMs = new Date(pass.valid_from).getTime();
+                    const validUntilMs = new Date(pass.valid_until).getTime();
+                    if (Number.isNaN(validFromMs) || Number.isNaN(validUntilMs)) {
+                        return false;
+                    }
+                    return validFromMs < startOfTomorrow.getTime() && validUntilMs > startOfToday.getTime();
+                });
+
+                if (!hasVisitForToday) {
+                    if (currentSequence === urgentVisitCheckSequenceRef.current) {
+                        setVisitLimitBanner(null);
+                    }
+                    return;
+                }
+
+                const [hoursPart, minutesPart] = visitEndTime.slice(0, 5).split(":");
+                const visitEndHour = Number(hoursPart);
+                const visitEndMinute = Number(minutesPart);
+                if (!Number.isInteger(visitEndHour) || !Number.isInteger(visitEndMinute)) {
+                    if (currentSequence === urgentVisitCheckSequenceRef.current) {
+                        setVisitLimitBanner(null);
+                    }
+                    return;
+                }
+
+                const todayVisitEnd = new Date();
+                todayVisitEnd.setHours(visitEndHour, visitEndMinute, 0, 0);
+                const visitEndMs = todayVisitEnd.getTime();
+                if (visitEndMs <= nowMs) {
+                    if (currentSequence === urgentVisitCheckSequenceRef.current) {
+                        setVisitLimitBanner(null);
+                    }
+                    return;
+                }
+
+                const remainingMs = visitEndMs - nowMs;
+                if (remainingMs > VISIT_URGENT_WARNING_WINDOW_MS) {
+                    if (currentSequence === urgentVisitCheckSequenceRef.current) {
+                        setVisitLimitBanner(null);
+                    }
+                    return;
+                }
+
+                const minutesRemaining = Math.max(1, Math.ceil(remainingMs / 60000));
+                const visitEndLabel = visitEndTime.slice(0, 5);
+                if (currentSequence !== urgentVisitCheckSequenceRef.current || cancelled) {
+                    return;
+                }
+                setVisitLimitBanner({ minutesRemaining, visitEndLabel });
+            } catch {
+                if (!cancelled && currentSequence === urgentVisitCheckSequenceRef.current) {
+                    setVisitLimitBanner(null);
+                }
+                syncVisitUrgentSharedNotifications([]);
+            }
+        };
+
+        void runUrgentVisitChecks();
+        const handleVisitStateChanged = () => {
+            void runUrgentVisitChecks();
+        };
+        globalThis.addEventListener(VISIT_STATE_CHANGED_EVENT, handleVisitStateChanged);
+        const intervalId = globalThis.setInterval(() => {
+            void runUrgentVisitChecks();
+        }, VISIT_URGENT_CHECK_INTERVAL_MS);
+
+        return () => {
+            cancelled = true;
+            globalThis.clearInterval(intervalId);
+            globalThis.removeEventListener(VISIT_STATE_CHANGED_EVENT, handleVisitStateChanged);
+        };
+    }, [syncVisitUrgentSharedNotifications]);
+
+    useEffect(() => {
         if (activeTab === "announcements") {
             globalThis.localStorage.setItem(HOME_ANNOUNCEMENTS_SEEN_AT_KEY, new Date().toISOString());
         }
@@ -346,6 +551,20 @@ export function StudentView({ onLogout }: StudentViewProps) {
 
     return (
         <div className="min-h-screen w-full bg-background relative pb-20">
+            {visitLimitBanner ? (
+                <div className="pointer-events-none fixed left-1/2 top-2 z-50 w-[calc(100%-1rem)] max-w-lg -translate-x-1/2 rounded-lg border border-amber-300 bg-amber-100/95 px-3 py-2 text-amber-900 shadow-lg sm:top-3 sm:px-4 sm:py-2.5">
+                    <div className="flex items-start gap-2 sm:gap-3">
+                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 sm:h-5 sm:w-5" />
+                        <div className="min-w-0">
+                            <p className="text-xs font-semibold leading-tight sm:text-sm">AVISO URGENTE DE VISITAS</p>
+                            <p className="text-xs leading-tight sm:text-sm">
+                                Quedan <strong>{visitLimitBanner.minutesRemaining} min</strong> ({visitLimitBanner.visitEndLabel}). Las visitas deben salir cuanto antes.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
+
             <div className="w-full">
                 {renderContent()}
             </div>

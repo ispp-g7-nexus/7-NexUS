@@ -32,7 +32,17 @@ type IncidenceNotification = {
 
 const INCIDENCE_NOTIFICATIONS_DISMISSED_KEY = "incidences-notifications-dismissed-ids";
 const HOME_INCIDENCES_SEEN_AT_KEY = "home-incidences-seen-at";
+const VISIT_URGENT_NOTIFICATION_KEY = "visit-urgent-shared-notifications";
 const LIVE_REFRESH_MS = 3000;
+
+type VisitUrgentSharedNotification = {
+  id: string;
+  title: string;
+  message: string;
+  created_at: string;
+  expires_at: string;
+  source: "visitors";
+};
 
 const getDismissedNotificationIds = (): string[] => {
   if (typeof window === "undefined") return [];
@@ -55,6 +65,62 @@ const saveDismissedNotificationIds = (ids: string[]) => {
 const saveHomeIncidencesSeenAt = (timestamp?: string) => {
   if (typeof window === "undefined" || !timestamp) return;
   window.localStorage.setItem(HOME_INCIDENCES_SEEN_AT_KEY, timestamp);
+};
+
+const mergeAndSortNotifications = (
+  baseItems: IncidenceNotification[],
+  urgentItems: IncidenceNotification[],
+  dismissedIds: string[]
+): IncidenceNotification[] => {
+  return [...urgentItems, ...baseItems]
+    .filter((item) => item.kind === "visit_limit_warning" || !dismissedIds.includes(item.id))
+    .sort((a, b) => {
+      const aPinned = a.kind === "visit_limit_warning" ? 1 : 0;
+      const bPinned = b.kind === "visit_limit_warning" ? 1 : 0;
+      if (aPinned !== bPinned) {
+        return bPinned - aPinned;
+      }
+      return Date.parse(b.created_at) - Date.parse(a.created_at);
+    });
+};
+
+const getActiveVisitUrgentNotifications = (): IncidenceNotification[] => {
+  if (typeof window === "undefined") return [];
+
+  const raw = window.localStorage.getItem(VISIT_URGENT_NOTIFICATION_KEY);
+  if (!raw) return [];
+
+  try {
+    const parsed = JSON.parse(raw) as VisitUrgentSharedNotification | VisitUrgentSharedNotification[];
+    const items = Array.isArray(parsed) ? parsed : [parsed];
+    const nowMs = Date.now();
+
+    const active = items.filter((item) => {
+      const expiresAtMs = Date.parse(item.expires_at);
+      return Number.isFinite(expiresAtMs) && expiresAtMs > nowMs;
+    });
+
+    if (active.length !== items.length) {
+      if (active.length === 0) {
+        window.localStorage.removeItem(VISIT_URGENT_NOTIFICATION_KEY);
+      } else {
+        window.localStorage.setItem(VISIT_URGENT_NOTIFICATION_KEY, JSON.stringify(active));
+      }
+    }
+
+    return active
+      .sort((a, b) => Date.parse(a.expires_at) - Date.parse(b.expires_at))
+      .map((item) => ({
+        id: item.id,
+        kind: "visit_limit_warning",
+        title: item.title,
+        message: item.message,
+        created_at: item.created_at,
+      }));
+  } catch {
+    window.localStorage.removeItem(VISIT_URGENT_NOTIFICATION_KEY);
+    return [];
+  }
 };
 
 export default function StudentIncidences({ onGoToProfile, onLogout }: StudentIncidencesProps) {
@@ -91,12 +157,21 @@ export default function StudentIncidences({ onGoToProfile, onLogout }: StudentIn
       if (!silent) setNotificationsLoading(true);
       const res = await fetchWithAuth(`${API_URL_INCIDENCES}notifications/`);
       if (!res.ok) return;
+
       const data = await res.json();
-      const all = Array.isArray(data.results) ? (data.results as IncidenceNotification[]) : [];
-      if (all.length > 0) {
-        saveHomeIncidencesSeenAt(all[0].created_at);
+      const baseItems = Array.isArray(data.results) ? (data.results as IncidenceNotification[]) : [];
+      const visitWarnings = getActiveVisitUrgentNotifications();
+
+      if (markAsRead && baseItems.length > 0) {
+        saveHomeIncidencesSeenAt(baseItems[0].created_at);
       }
-      const latestNotifications = all.filter((n) => !dismissedNotificationIdsRef.current.includes(n.id));
+
+      const latestNotifications = mergeAndSortNotifications(
+        baseItems,
+        visitWarnings,
+        dismissedNotificationIdsRef.current
+      );
+
       const lastReadAt = getLastReadNotificationsAt();
 
       if (markAsRead && latestNotifications.length > 0) {
@@ -107,7 +182,11 @@ export default function StudentIncidences({ onGoToProfile, onLogout }: StudentIn
         setUnreadNotifications(count);
       }
       setNotifications(latestNotifications);
-    } catch (e) { console.error(e); } finally { if (!silent) setNotificationsLoading(false); }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      if (!silent) setNotificationsLoading(false);
+    }
   }, []);
 
   const loadIncidences = useCallback(async (silent = false) => {
@@ -175,31 +254,45 @@ export default function StudentIncidences({ onGoToProfile, onLogout }: StudentIn
                 </div>
 
                 <div className="space-y-3">
-                  {notifications.length > 0 ? notifications.map((n) => (
-                    <div key={n.id} className="relative rounded-xl border border-red-200 bg-red-50 p-3">
-                      <button
-                        type="button"
-                        aria-label="Descartar notificación"
-                        className="absolute right-2 top-2 h-8 w-8 rounded-lg text-slate-400 transition-all hover:bg-red-50 hover:text-red-600"
-                        onClick={() => {
-                          appendDismissedNotificationIds([n.id]);
-                          setNotifications((prev) => {
-                            const next = prev.filter((item) => item.id !== n.id);
-                            const lastReadAt = getLastReadNotificationsAt();
-                            setUnreadNotifications(next.filter((item) => Date.parse(item.created_at) > lastReadAt).length);
-                            return next;
-                          });
-                        }}
+                  {notifications.length > 0 ? notifications.map((n) => {
+                    const isVisitUrgent = n.kind === "visit_limit_warning";
+
+                    return (
+                      <div
+                        key={n.id}
+                        className={`relative rounded-xl border p-3 ${isVisitUrgent
+                          ? "border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50 shadow-[0_6px_18px_rgba(245,158,11,0.18)]"
+                          : "border-red-200 bg-red-50"
+                        }`}
                       >
-                        <X className="h-4 w-4" />
-                      </button>
-                      <div className="mb-1 flex items-start justify-between gap-2 pr-9 text-left">
-                        <p className="text-sm font-semibold text-gray-900">{n.title}</p>
-                        <span className="text-[11px] text-gray-400">{formatNotificationTime(n.created_at)}</span>
+                        {!isVisitUrgent ? (
+                          <button
+                            type="button"
+                            aria-label="Descartar notificación"
+                            className="absolute right-2 top-2 h-8 w-8 rounded-lg text-slate-400 transition-all hover:bg-red-50 hover:text-red-600"
+                            onClick={() => {
+                              appendDismissedNotificationIds([n.id]);
+                              setNotifications((prev) => {
+                                const next = prev.filter((item) => item.id !== n.id);
+                                const lastReadAt = getLastReadNotificationsAt();
+                                setUnreadNotifications(next.filter((item) => Date.parse(item.created_at) > lastReadAt).length);
+                                return next;
+                              });
+                            }}
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        ) : null}
+
+                        <div className="mb-0.5 flex items-start justify-between gap-2 pr-8 text-left">
+                          <p className="text-sm font-semibold text-gray-900">{n.title}</p>
+                          <span className="text-[11px] text-gray-400">{formatNotificationTime(n.created_at)}</span>
+                        </div>
+
+                        <p className="text-xs text-gray-600 text-left">{n.message}</p>
                       </div>
-                      <p className="text-xs text-gray-600 text-left">{n.message}</p>
-                    </div>
-                  )) : <p className="py-4 text-sm text-gray-500 text-center">Sin notificaciones</p>}
+                    );
+                  }) : <p className="py-4 text-sm text-gray-500 text-center">Sin notificaciones</p>}
                 </div>
               </div>
             </PopoverContent>
