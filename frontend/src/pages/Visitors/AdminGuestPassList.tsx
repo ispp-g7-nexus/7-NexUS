@@ -329,6 +329,9 @@ export function AdminGuestPassListPage() {
                       <p className="text-[10px] text-gray-400">hasta {formatDateTime(pass.valid_until).split(',')[0]}</p>
                     </div>
                   </div>
+                  {pass.comment && (
+                    <p className="text-[11px] italic text-gray-500 line-clamp-1">"{pass.comment}"</p>
+                  )}
                 </div>
 
                 <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-[10px] text-gray-400 font-medium">
