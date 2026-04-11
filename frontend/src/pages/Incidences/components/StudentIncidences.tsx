@@ -5,6 +5,7 @@ import { Card, CardContent } from "../../../components/ui/card";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "../../../components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../components/ui/popover";
 import { fetchWithAuth, API_URL_INCIDENCES } from "../../../utils/api";
+import { authService } from "../../../services/auth";
 import { IncidenceForm } from "./IncidenceForm";
 import { IncidenceService } from "../../../services/incidences";
 
@@ -32,11 +33,57 @@ type IncidenceNotification = {
 
 const INCIDENCE_NOTIFICATIONS_DISMISSED_KEY = "incidences-notifications-dismissed-ids";
 const HOME_INCIDENCES_SEEN_AT_KEY = "home-incidences-seen-at";
+const VISIT_URGENT_NOTIFICATION_KEY_BASE = "visit-urgent-shared-notifications";
 const LIVE_REFRESH_MS = 3000;
 
+type VisitUrgentSharedNotification = {
+  id: string;
+  title: string;
+  message: string;
+  created_at: string;
+  expires_at: string;
+  source: "visitors";
+};
+
+interface IncidenceNotificationCardProps {
+  readonly notification: IncidenceNotification;
+  readonly onDismiss: (notificationId: string) => void;
+}
+
+function IncidenceNotificationCard({ notification, onDismiss }: IncidenceNotificationCardProps) {
+  const isVisitUrgent = notification.kind === "visit_limit_warning";
+
+  return (
+    <div
+      className={`relative rounded-xl border p-3 ${isVisitUrgent
+        ? "border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50 shadow-[0_6px_18px_rgba(245,158,11,0.18)]"
+        : "border-red-200 bg-red-50"
+      }`}
+    >
+      {isVisitUrgent ? null : (
+        <button
+          type="button"
+          aria-label="Descartar notificación"
+          className="absolute right-2 top-2 h-8 w-8 rounded-lg text-slate-400 transition-all hover:bg-red-50 hover:text-red-600"
+          onClick={() => onDismiss(notification.id)}
+        >
+          <X className="h-4 w-4" />
+        </button>
+      )}
+
+      <div className="mb-0.5 flex items-start justify-between gap-2 pr-8 text-left">
+        <p className="text-sm font-semibold text-gray-900">{notification.title}</p>
+        <span className="text-[11px] text-gray-400">{formatNotificationTime(notification.created_at)}</span>
+      </div>
+
+      <p className="text-xs text-gray-600 text-left">{notification.message}</p>
+    </div>
+  );
+}
+
 const getDismissedNotificationIds = (): string[] => {
-  if (typeof window === "undefined") return [];
-  const raw = window.localStorage.getItem(INCIDENCE_NOTIFICATIONS_DISMISSED_KEY);
+  if (globalThis.window === undefined) return [];
+  const raw = globalThis.localStorage.getItem(INCIDENCE_NOTIFICATIONS_DISMISSED_KEY);
   if (!raw) return [];
 
   try {
@@ -48,13 +95,78 @@ const getDismissedNotificationIds = (): string[] => {
 };
 
 const saveDismissedNotificationIds = (ids: string[]) => {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(INCIDENCE_NOTIFICATIONS_DISMISSED_KEY, JSON.stringify(ids));
+  if (globalThis.window === undefined) return;
+  globalThis.localStorage.setItem(INCIDENCE_NOTIFICATIONS_DISMISSED_KEY, JSON.stringify(ids));
 };
 
 const saveHomeIncidencesSeenAt = (timestamp?: string) => {
-  if (typeof window === "undefined" || !timestamp) return;
-  window.localStorage.setItem(HOME_INCIDENCES_SEEN_AT_KEY, timestamp);
+  if (globalThis.window === undefined || !timestamp) return;
+  globalThis.localStorage.setItem(HOME_INCIDENCES_SEEN_AT_KEY, timestamp);
+};
+
+const buildVisitUrgentNotificationStorageKey = (email: string): string | null => {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+  return `${VISIT_URGENT_NOTIFICATION_KEY_BASE}:${normalized}`;
+};
+
+const mergeAndSortNotifications = (
+  baseItems: IncidenceNotification[],
+  urgentItems: IncidenceNotification[],
+  dismissedIds: string[]
+): IncidenceNotification[] => {
+  return [...urgentItems, ...baseItems]
+    .filter((item) => item.kind === "visit_limit_warning" || !dismissedIds.includes(item.id))
+    .sort((a, b) => {
+      const aPinned = a.kind === "visit_limit_warning" ? 1 : 0;
+      const bPinned = b.kind === "visit_limit_warning" ? 1 : 0;
+      if (aPinned !== bPinned) {
+        return bPinned - aPinned;
+      }
+      return Date.parse(b.created_at) - Date.parse(a.created_at);
+    });
+};
+
+const getActiveVisitUrgentNotifications = (storageKey: string | null): IncidenceNotification[] => {
+  if (globalThis.window === undefined || !storageKey) return [];
+
+  const raw = globalThis.localStorage.getItem(storageKey);
+  if (!raw) return [];
+
+  try {
+    const parsed = JSON.parse(raw) as VisitUrgentSharedNotification | VisitUrgentSharedNotification[];
+    const items = Array.isArray(parsed) ? parsed : [parsed];
+    const nowMs = Date.now();
+
+    const active = items.filter((item) => {
+      const expiresAtMs = Date.parse(item.expires_at);
+      return Number.isFinite(expiresAtMs) && expiresAtMs > nowMs;
+    });
+
+    if (active.length !== items.length) {
+      if (active.length === 0) {
+        globalThis.localStorage.removeItem(storageKey);
+      } else {
+        globalThis.localStorage.setItem(storageKey, JSON.stringify(active));
+      }
+    }
+
+    const sortedActive = [...active].sort((a, b) => Date.parse(a.expires_at) - Date.parse(b.expires_at));
+
+    return sortedActive
+      .map((item) => ({
+        id: item.id,
+        kind: "visit_limit_warning",
+        title: item.title,
+        message: item.message,
+        created_at: item.created_at,
+      }));
+  } catch {
+    globalThis.localStorage.removeItem(storageKey);
+    return [];
+  }
 };
 
 export default function StudentIncidences({ onGoToProfile, onLogout }: StudentIncidencesProps) {
@@ -67,7 +179,9 @@ export default function StudentIncidences({ onGoToProfile, onLogout }: StudentIn
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [currentUserEmail, setCurrentUserEmail] = useState("");
   const dismissedNotificationIdsRef = useRef<string[]>(getDismissedNotificationIds());
+  const visitUrgentStorageKey = buildVisitUrgentNotificationStorageKey(currentUserEmail);
 
   const [incidenceToDelete, setIncidenceToDelete] = useState<BaseIncidence | null>(null);
   const [incidenceToEdit, setIncidenceToEdit] = useState<BaseIncidence | null>(null);
@@ -86,17 +200,50 @@ export default function StudentIncidences({ onGoToProfile, onLogout }: StudentIn
     saveDismissedNotificationIds(next);
   }, []);
 
+  const recalculateUnreadNotifications = useCallback((items: IncidenceNotification[]) => {
+    const lastReadAt = getLastReadNotificationsAt();
+    setUnreadNotifications(items.filter((item) => Date.parse(item.created_at) > lastReadAt).length);
+  }, []);
+
+  const dismissNotification = useCallback((notificationId: string) => {
+    appendDismissedNotificationIds([notificationId]);
+    setNotifications((prev) => {
+      const next = prev.filter((item) => item.id !== notificationId);
+      recalculateUnreadNotifications(next);
+      return next;
+    });
+  }, [appendDismissedNotificationIds, recalculateUnreadNotifications]);
+
+  useEffect(() => {
+    authService.me()
+      .then((session) => {
+        setCurrentUserEmail((session.user?.email || "").trim().toLowerCase());
+      })
+      .catch(() => {
+        setCurrentUserEmail("");
+      });
+  }, []);
+
   const loadNotifications = useCallback(async (markAsRead = false, silent = false) => {
     try {
       if (!silent) setNotificationsLoading(true);
       const res = await fetchWithAuth(`${API_URL_INCIDENCES}notifications/`);
       if (!res.ok) return;
+
       const data = await res.json();
-      const all = Array.isArray(data.results) ? (data.results as IncidenceNotification[]) : [];
-      if (all.length > 0) {
-        saveHomeIncidencesSeenAt(all[0].created_at);
+      const baseItems = Array.isArray(data.results) ? (data.results as IncidenceNotification[]) : [];
+      const visitWarnings = getActiveVisitUrgentNotifications(visitUrgentStorageKey);
+
+      if (markAsRead && baseItems.length > 0) {
+        saveHomeIncidencesSeenAt(baseItems[0].created_at);
       }
-      const latestNotifications = all.filter((n) => !dismissedNotificationIdsRef.current.includes(n.id));
+
+      const latestNotifications = mergeAndSortNotifications(
+        baseItems,
+        visitWarnings,
+        dismissedNotificationIdsRef.current
+      );
+
       const lastReadAt = getLastReadNotificationsAt();
 
       if (markAsRead && latestNotifications.length > 0) {
@@ -107,8 +254,19 @@ export default function StudentIncidences({ onGoToProfile, onLogout }: StudentIn
         setUnreadNotifications(count);
       }
       setNotifications(latestNotifications);
-    } catch (e) { console.error(e); } finally { if (!silent) setNotificationsLoading(false); }
-  }, []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      if (!silent) setNotificationsLoading(false);
+    }
+  }, [visitUrgentStorageKey]);
+
+  const handleNotificationsOpenChange = useCallback((open: boolean) => {
+    setIsNotificationsOpen(open);
+    if (open) {
+      loadNotifications(true);
+    }
+  }, [loadNotifications]);
 
   const loadIncidences = useCallback(async (silent = false) => {
     try {
@@ -157,7 +315,7 @@ export default function StudentIncidences({ onGoToProfile, onLogout }: StudentIn
       <header className={UI_CLASSES.header}>
         <h1 className={UI_CLASSES.headerTitle}>Incidencias</h1>
         <div className="flex items-center gap-2">
-          <Popover open={isNotificationsOpen} onOpenChange={(open) => { setIsNotificationsOpen(open); if (open) loadNotifications(true); }}>
+          <Popover open={isNotificationsOpen} onOpenChange={handleNotificationsOpenChange}>
             <PopoverTrigger asChild>
               <Button type="button" size="icon" variant="ghost" className={`${UI_CLASSES.topIconButton} hover:scale-100`} aria-label="Notificaciones">
                 <Bell className="w-5 h-5" />
@@ -175,31 +333,15 @@ export default function StudentIncidences({ onGoToProfile, onLogout }: StudentIn
                 </div>
 
                 <div className="space-y-3">
-                  {notifications.length > 0 ? notifications.map((n) => (
-                    <div key={n.id} className="relative rounded-xl border border-red-200 bg-red-50 p-3">
-                      <button
-                        type="button"
-                        aria-label="Descartar notificación"
-                        className="absolute right-2 top-2 h-8 w-8 rounded-lg text-slate-400 transition-all hover:bg-red-50 hover:text-red-600"
-                        onClick={() => {
-                          appendDismissedNotificationIds([n.id]);
-                          setNotifications((prev) => {
-                            const next = prev.filter((item) => item.id !== n.id);
-                            const lastReadAt = getLastReadNotificationsAt();
-                            setUnreadNotifications(next.filter((item) => Date.parse(item.created_at) > lastReadAt).length);
-                            return next;
-                          });
-                        }}
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                      <div className="mb-1 flex items-start justify-between gap-2 pr-9 text-left">
-                        <p className="text-sm font-semibold text-gray-900">{n.title}</p>
-                        <span className="text-[11px] text-gray-400">{formatNotificationTime(n.created_at)}</span>
-                      </div>
-                      <p className="text-xs text-gray-600 text-left">{n.message}</p>
-                    </div>
-                  )) : <p className="py-4 text-sm text-gray-500 text-center">Sin notificaciones</p>}
+                  {notifications.length > 0
+                    ? notifications.map((notification) => (
+                        <IncidenceNotificationCard
+                          key={notification.id}
+                          notification={notification}
+                          onDismiss={dismissNotification}
+                        />
+                      ))
+                    : <p className="py-4 text-sm text-gray-500 text-center">Sin notificaciones</p>}
                 </div>
               </div>
             </PopoverContent>
