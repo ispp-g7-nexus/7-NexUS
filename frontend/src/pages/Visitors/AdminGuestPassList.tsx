@@ -293,8 +293,11 @@ export function AdminGuestPassListPage() {
           {processedPasses.map((pass) => (
             <Card
               key={pass.id}
+              role="button"
+              tabIndex={0}
               className="hover:shadow-md transition-all cursor-pointer hover:border-purple-300 group border-gray-200"
               onClick={() => setSelectedPass(pass)}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setSelectedPass(pass); }}
             >
               <CardContent className="p-5 flex flex-col h-full">
                 <div className="flex items-start justify-between gap-2 mb-3">

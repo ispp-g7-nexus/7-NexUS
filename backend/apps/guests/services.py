@@ -293,37 +293,39 @@ def cancel_guest_pass_for_resident(pass_id: int, membership: Membership, residen
 
 
 def reject_guest_pass_admin(pass_id: int, residence) -> GuestPass:
-    try:
-        guest_pass = GuestPass.objects.get(id=pass_id, residence=residence)
-    except GuestPass.DoesNotExist:
-        raise ValidationError({"detail": ERROR_GUEST_PASS_NOT_FOUND}) from None
+    with transaction.atomic():
+        try:
+            guest_pass = GuestPass.objects.select_for_update().get(id=pass_id, residence=residence)
+        except GuestPass.DoesNotExist:
+            raise ValidationError({"detail": ERROR_GUEST_PASS_NOT_FOUND}) from None
 
-    if guest_pass.status == GuestPass.Status.REJECTED:
-        raise ValidationError({"detail": "El pase ya está rechazado."}) from None
+        if guest_pass.status == GuestPass.Status.REJECTED:
+            raise ValidationError({"detail": "El pase ya está rechazado."}) from None
 
-    if guest_pass.status != GuestPass.Status.ACTIVE:
-        raise ValidationError({"detail": "Solo se pueden rechazar pases activos."}) from None
+        if guest_pass.status != GuestPass.Status.ACTIVE:
+            raise ValidationError({"detail": "Solo se pueden rechazar pases activos."}) from None
 
-    guest_pass.status = GuestPass.Status.REJECTED
-    guest_pass.cancelled_at = None
-    guest_pass.revoked_at = None
-    guest_pass.save(update_fields=["status", "cancelled_at", "revoked_at", "updated_at"])
+        guest_pass.status = GuestPass.Status.REJECTED
+        guest_pass.cancelled_at = None
+        guest_pass.revoked_at = None
+        guest_pass.save(update_fields=["status", "cancelled_at", "revoked_at", "updated_at"])
     return guest_pass
 
 
 def unreject_guest_pass_admin(pass_id: int, residence) -> GuestPass:
-    try:
-        guest_pass = GuestPass.objects.get(id=pass_id, residence=residence)
-    except GuestPass.DoesNotExist:
-        raise ValidationError({"detail": ERROR_GUEST_PASS_NOT_FOUND}) from None
+    with transaction.atomic():
+        try:
+            guest_pass = GuestPass.objects.select_for_update().get(id=pass_id, residence=residence)
+        except GuestPass.DoesNotExist:
+            raise ValidationError({"detail": ERROR_GUEST_PASS_NOT_FOUND}) from None
 
-    if guest_pass.status != GuestPass.Status.REJECTED:
-        raise ValidationError({"detail": "Solo se pueden restaurar pases rechazados."}) from None
+        if guest_pass.status != GuestPass.Status.REJECTED:
+            raise ValidationError({"detail": "Solo se pueden restaurar pases rechazados."}) from None
 
-    guest_pass.status = GuestPass.Status.ACTIVE
-    guest_pass.cancelled_at = None
-    guest_pass.revoked_at = None
-    guest_pass.save(update_fields=["status", "cancelled_at", "revoked_at", "updated_at"])
+        guest_pass.status = GuestPass.Status.ACTIVE
+        guest_pass.cancelled_at = None
+        guest_pass.revoked_at = None
+        guest_pass.save(update_fields=["status", "cancelled_at", "revoked_at", "updated_at"])
     return guest_pass
 
 
