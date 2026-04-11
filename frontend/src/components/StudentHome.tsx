@@ -166,7 +166,7 @@ const buildVisitUrgentNotificationStorageKey = (email: string): string | null =>
 };
 
 const getActiveVisitUrgentNotifications = (storageKey: string | null): VisitUrgentSharedNotification[] => {
-    if (typeof globalThis.window === "undefined" || !storageKey) {
+    if (globalThis.window === undefined || !storageKey) {
         return [];
     }
 

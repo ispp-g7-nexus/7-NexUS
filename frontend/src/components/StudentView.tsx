@@ -220,7 +220,7 @@ export function StudentView({ onLogout }: StudentViewProps) {
     const hasAnyChatNews = hasGroupChatNews || hasPrivateChatNews;
 
     const syncVisitUrgentSharedNotifications = useCallback((payload: VisitUrgentSharedNotification[]) => {
-        if (typeof window === "undefined" || !visitUrgentStorageKey) {
+        if (globalThis.window === undefined || !visitUrgentStorageKey) {
             return;
         }
 

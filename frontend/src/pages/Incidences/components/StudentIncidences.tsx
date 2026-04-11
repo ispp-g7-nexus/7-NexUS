@@ -82,7 +82,7 @@ function IncidenceNotificationCard({ notification, onDismiss }: IncidenceNotific
 }
 
 const getDismissedNotificationIds = (): string[] => {
-  if (typeof globalThis.window === "undefined") return [];
+  if (globalThis.window === undefined) return [];
   const raw = globalThis.localStorage.getItem(INCIDENCE_NOTIFICATIONS_DISMISSED_KEY);
   if (!raw) return [];
 
@@ -95,12 +95,12 @@ const getDismissedNotificationIds = (): string[] => {
 };
 
 const saveDismissedNotificationIds = (ids: string[]) => {
-  if (typeof globalThis.window === "undefined") return;
+  if (globalThis.window === undefined) return;
   globalThis.localStorage.setItem(INCIDENCE_NOTIFICATIONS_DISMISSED_KEY, JSON.stringify(ids));
 };
 
 const saveHomeIncidencesSeenAt = (timestamp?: string) => {
-  if (typeof globalThis.window === "undefined" || !timestamp) return;
+  if (globalThis.window === undefined || !timestamp) return;
   globalThis.localStorage.setItem(HOME_INCIDENCES_SEEN_AT_KEY, timestamp);
 };
 
@@ -130,7 +130,7 @@ const mergeAndSortNotifications = (
 };
 
 const getActiveVisitUrgentNotifications = (storageKey: string | null): IncidenceNotification[] => {
-  if (typeof globalThis.window === "undefined" || !storageKey) return [];
+  if (globalThis.window === undefined || !storageKey) return [];
 
   const raw = globalThis.localStorage.getItem(storageKey);
   if (!raw) return [];
