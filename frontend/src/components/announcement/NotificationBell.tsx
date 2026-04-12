@@ -4,6 +4,8 @@ import { cn } from "../ui/utils";
 import { toast } from "sonner";
 import announcementService from "../../services/announcement.service";
 import { authService } from "../../services/auth";
+import { objectsService } from "../../services/objects";
+import { listMyReservationReminders, type ReservationReminderNotification } from "../../services/reservations";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 
 interface NotificationBellProps {
@@ -23,6 +25,8 @@ type VisitUrgentSharedNotification = {
   expires_at: string;
   source: "visitors";
 };
+
+type ReservationReminderItem = ReservationReminderNotification;
 
 function buildVisitUrgentNotificationStorageKey(email: string): string | null {
   const normalized = email.trim().toLowerCase();
@@ -67,14 +71,31 @@ function getActiveVisitUrgentNotifications(storageKey: string | null): VisitUrge
   }
 }
 
+function formatRelativeFuture(isoDate: string) {
+  const date = new Date(isoDate);
+  const diffInMinutes = Math.floor((date.getTime() - Date.now()) / 60000);
+
+  if (diffInMinutes <= 0) return "Ahora";
+  if (diffInMinutes < 60) return `En ${diffInMinutes} min`;
+
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) return `En ${diffInHours} h`;
+
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays < 7) return `En ${diffInDays} d`;
+
+  return date.toLocaleDateString();
+}
+
 export function NotificationBell({ onMarkAsRead, className, mode = "notifications" }: NotificationBellProps) {
   const [unviewedCount, setUnviewedCount] = useState(0);
   const [visitUrgentNotifications, setVisitUrgentNotifications] = useState<VisitUrgentSharedNotification[]>([]);
+  const [reservationReminders, setReservationReminders] = useState<ReservationReminderItem[]>([]);
   const [currentUserEmail, setCurrentUserEmail] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const visitUrgentStorageKey = buildVisitUrgentNotificationStorageKey(currentUserEmail);
-  const totalNotifications = unviewedCount + visitUrgentNotifications.length;
+  const totalNotifications = unviewedCount + visitUrgentNotifications.length + reservationReminders.length;
   const hasNotifications = totalNotifications > 0;
   const isAnnouncementsMode = mode === "announcements";
 
@@ -84,19 +105,30 @@ export function NotificationBell({ onMarkAsRead, className, mode = "notification
     : "No tienes notificaciones nuevas";
 
   const refreshBellState = useCallback(async (): Promise<number> => {
-    const data = await announcementService.getUnviewedCount();
-    setUnviewedCount(data.count);
-    setVisitUrgentNotifications(getActiveVisitUrgentNotifications(visitUrgentStorageKey));
-    return data.count;
-  }, [visitUrgentStorageKey]);
+    const [announcementCountResult, spaceReminderResult, objectReminderResult] = await Promise.allSettled([
+      announcementService.getUnviewedCount(),
+      listMyReservationReminders(),
+      objectsService.getUserObjectReservationReminders(),
+    ]);
 
-  const loadUnviewedCount = useCallback(async () => {
-    try {
-      await refreshBellState();
-    } catch (error) {
-      console.error("Error loading unviewed count:", error);
+    const announcementCount = announcementCountResult.status === "fulfilled" ? announcementCountResult.value.count : 0;
+    const combinedReminders: ReservationReminderItem[] = [];
+
+    if (spaceReminderResult.status === "fulfilled") {
+      combinedReminders.push(...spaceReminderResult.value);
     }
-  }, [refreshBellState]);
+
+    if (objectReminderResult.status === "fulfilled") {
+      combinedReminders.push(...objectReminderResult.value);
+    }
+
+    combinedReminders.sort((a, b) => Date.parse(a.start_time) - Date.parse(b.start_time));
+
+    setUnviewedCount(announcementCount);
+    setReservationReminders(combinedReminders);
+    setVisitUrgentNotifications(getActiveVisitUrgentNotifications(visitUrgentStorageKey));
+    return announcementCount;
+  }, [visitUrgentStorageKey]);
 
   useEffect(() => {
     authService.me()
@@ -109,8 +141,8 @@ export function NotificationBell({ onMarkAsRead, className, mode = "notification
   }, []);
 
   useEffect(() => {
-    loadUnviewedCount().catch((error) => {
-      console.error("Error loading unviewed count:", error);
+    refreshBellState().catch((error) => {
+      console.error("Error loading bell state:", error);
     });
 
     const refreshVisitUrgentNotifications = () => {
@@ -119,13 +151,17 @@ export function NotificationBell({ onMarkAsRead, className, mode = "notification
 
     refreshVisitUrgentNotifications();
     globalThis.addEventListener(VISIT_URGENT_NOTIFICATION_EVENT, refreshVisitUrgentNotifications);
-    const intervalId = globalThis.setInterval(refreshVisitUrgentNotifications, 30000);
+    const intervalId = globalThis.setInterval(() => {
+      refreshBellState().catch((error) => {
+        console.error("Error loading bell state:", error);
+      });
+    }, 30000);
 
     return () => {
       globalThis.removeEventListener(VISIT_URGENT_NOTIFICATION_EVENT, refreshVisitUrgentNotifications);
       globalThis.clearInterval(intervalId);
     };
-  }, [loadUnviewedCount, visitUrgentStorageKey]);
+  }, [refreshBellState, visitUrgentStorageKey]);
 
   const handleBellClick = async () => {
     setLoading(true);
@@ -178,25 +214,63 @@ export function NotificationBell({ onMarkAsRead, className, mode = "notification
           </div>
 
           <div className="space-y-3">
+            {reservationReminders.map((reminder) => (
+              <div key={reminder.id} className="relative overflow-hidden rounded-xl border border-teal-300 bg-gradient-to-br from-teal-50 via-white to-cyan-50 p-2.5 shadow-[0_8px_24px_rgba(13,148,136,0.16)]">
+                <span className="absolute left-0 top-0 h-full w-1.5 bg-gradient-to-b from-teal-400 to-cyan-600" />
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <span className="mb-0.5 inline-flex rounded-full bg-teal-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-teal-700">
+                      Recordatorio
+                    </span>
+                    <p className="text-sm font-semibold leading-tight text-gray-900">{reminder.title}</p>
+                    <p className="text-xs font-semibold text-teal-700">{formatRelativeFuture(reminder.start_time)}</p>
+                  </div>
+                  <div className="rounded-full bg-teal-100 p-1 ring-1 ring-teal-200">
+                    <Bell className="h-3.5 w-3.5 text-teal-700" />
+                  </div>
+                </div>
+                <p className="mt-0.5 line-clamp-2 text-xs leading-tight text-gray-700">{reminder.message}</p>
+              </div>
+            ))}
+
             {visitUrgentNotifications.map((urgentNotification) => (
-              <div key={urgentNotification.id} className="relative rounded-xl border border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50 p-2.5 shadow-[0_6px_18px_rgba(245,158,11,0.18)]">
+              <div key={urgentNotification.id} className="relative overflow-hidden rounded-xl border border-amber-300 bg-gradient-to-br from-amber-50 via-white to-orange-50 p-2.5 shadow-[0_8px_24px_rgba(245,158,11,0.18)]">
+                <span className="absolute left-0 top-0 h-full w-1.5 bg-gradient-to-b from-amber-400 to-orange-600" />
                 <div className="mb-0.5 flex items-start justify-between gap-2 text-left">
                   <div>
-                    <p className="text-sm font-semibold text-gray-900">{urgentNotification.title}</p>
+                    <span className="mb-0.5 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                      Urgente
+                    </span>
+                    <p className="text-sm font-semibold leading-tight text-gray-900">{urgentNotification.title}</p>
                   </div>
-                  <AlertTriangle className="h-4 w-4 text-amber-700" />
+                  <div className="rounded-full bg-amber-100 p-1 ring-1 ring-amber-200">
+                    <AlertTriangle className="h-3.5 w-3.5 text-amber-700" />
+                  </div>
                 </div>
-                <p className="text-xs text-gray-700 leading-tight">{urgentNotification.message}</p>
+                <p className="line-clamp-2 text-xs leading-tight text-gray-700">{urgentNotification.message}</p>
               </div>
             ))}
 
             {unviewedCount > 0 ? (
-              <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
-                Tienes {unviewedCount} aviso{unviewedCount === 1 ? "" : "s"} sin leer.
+              <div className="relative overflow-hidden rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 via-white to-slate-50 p-2.5 shadow-[0_4px_14px_rgba(59,130,246,0.08)]">
+                <span className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-blue-400 to-blue-600" />
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <span className="mb-0.5 inline-flex rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-700">
+                      Avisos
+                    </span>
+                    <p className="text-sm font-semibold leading-tight text-gray-900">
+                      Tienes {unviewedCount} aviso{unviewedCount === 1 ? "" : "s"} sin leer.
+                    </p>
+                  </div>
+                  <div className="rounded-full bg-blue-100 p-1 ring-1 ring-blue-200">
+                    <Bell className="h-3.5 w-3.5 text-blue-700" />
+                  </div>
+                </div>
               </div>
             ) : null}
 
-            {visitUrgentNotifications.length === 0 && unviewedCount === 0 ? (
+            {visitUrgentNotifications.length === 0 && reservationReminders.length === 0 && unviewedCount === 0 ? (
               <p className="py-2 text-sm text-gray-500">{emptyDescription}</p>
             ) : null}
           </div>

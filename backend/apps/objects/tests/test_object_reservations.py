@@ -299,3 +299,37 @@ class ObjectReservationApiTests(FastTenantTestCase):
             if slot["start_time"] == start_time.isoformat()
         )
         self.assertEqual(target_slot["status"], "available")
+
+    def test_reservation_reminders_only_include_upcoming_within_one_hour(self):
+        now = timezone.now()
+        upcoming_start = now + timedelta(minutes=45)
+        upcoming_end = upcoming_start + timedelta(hours=1)
+        later_start = now + timedelta(hours=2)
+        later_end = later_start + timedelta(hours=1)
+        active_start = now - timedelta(minutes=10)
+        active_end = active_start + timedelta(hours=1)
+
+        ObjectRental.objects.create(
+            object=self.object,
+            user=self.user,
+            start_date=upcoming_start,
+            end_date=upcoming_end,
+        )
+        ObjectRental.objects.create(
+            object=self.object,
+            user=self.user,
+            start_date=later_start,
+            end_date=later_end,
+        )
+        ObjectRental.objects.create(
+            object=self.object,
+            user=self.user,
+            start_date=active_start,
+            end_date=active_end,
+        )
+
+        response = self.client.get("/api/my-reservations/reminders/")
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(len(payload), 1)
+        self.assertIn("Taladro", payload[0]["title"])

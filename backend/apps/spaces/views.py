@@ -18,6 +18,8 @@ from apps.residences.models import Residence
 from .models import CommonSpace, SpaceReservation
 from .permissions import is_reservations_admin
 
+RESERVATION_REMINDER_WINDOW = timedelta(hours=1)
+
 
 def _serialize_space(space: CommonSpace) -> dict:
     return {
@@ -54,6 +56,25 @@ def _serialize_reservation(reservation: SpaceReservation) -> dict:
         "created_at": reservation.created_at.isoformat(),
         "updated_at": reservation.updated_at.isoformat(),
     }
+
+
+def _serialize_reservation_reminder(reservation: SpaceReservation) -> dict[str, Any]:
+    start_time = timezone.localtime(reservation.start_time)
+    return {
+        "id": f"space-reservations-{reservation.id}",
+        "title": f"Tu reserva en {reservation.space.name} empieza pronto",
+        "message": f"Tu reserva comienza a las {start_time.strftime('%H:%M')}.",
+        "created_at": reservation.start_time.isoformat(),
+        "start_time": reservation.start_time.isoformat(),
+        "end_time": reservation.end_time.isoformat(),
+    }
+
+
+def _build_reservation_reminders(reservations: list[SpaceReservation]) -> list[dict[str, Any]]:
+    return sorted(
+        [_serialize_reservation_reminder(reservation) for reservation in reservations],
+        key=lambda item: item["start_time"],
+    )
 
 
 def _parse_request_datetime(value: str) -> datetime | None:
@@ -402,6 +423,31 @@ class MyReservationsView(AuthenticatedView):
 
         data = [_serialize_reservation(item) for item in reservations]
         return JsonResponse(data, safe=False)
+
+
+class MyReservationRemindersView(AuthenticatedView):
+    def get(self, request):
+        residence = _validate_residence(request)
+        if not residence:
+            return JsonResponse({"detail": "No residence context."}, status=400)
+
+        now = timezone.now()
+        reminder_deadline = now + RESERVATION_REMINDER_WINDOW
+
+        reservations = (
+            SpaceReservation.objects.filter(
+                residence=residence,
+                user=request.user,
+                status=SpaceReservation.Status.ACTIVE,
+                start_time__gt=now,
+                start_time__lte=reminder_deadline,
+                end_time__gt=now,
+            )
+            .select_related("space", "user")
+            .order_by("start_time")
+        )
+
+        return JsonResponse(_build_reservation_reminders(list(reservations)), safe=False)
 
 
 class SpaceReservationCancelView(AuthenticatedView):

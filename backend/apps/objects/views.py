@@ -28,6 +28,7 @@ from .permissions import is_reservations_admin
 
 OBJECT_NAME_PATTERN = re.compile(r"^[\w\-\.\(\), ]+$")
 OBJECT_RESERVATION_INTERVAL_MINUTES = 60
+RESERVATION_REMINDER_WINDOW = timedelta(hours=1)
 
 
 def _parse_datetime_or_none(value):
@@ -109,6 +110,25 @@ def _serialize_object_reservation(rental: ObjectRental) -> dict[str, Any]:
             "email": rental.user.email,
         },
     }
+
+
+def _serialize_object_reservation_reminder(rental: ObjectRental) -> dict[str, Any]:
+    start_date = timezone.localtime(rental.start_date)
+    return {
+        "id": f"object-rentals-{rental.id}",
+        "title": f"Tu reserva de {rental.object.name} empieza pronto",
+        "message": f"Tu reserva comienza a las {start_date.strftime('%H:%M')}.",
+        "created_at": rental.start_date.isoformat(),
+        "start_time": rental.start_date.isoformat(),
+        "end_time": rental.end_date.isoformat(),
+    }
+
+
+def _build_object_reservation_reminders(rentals: list[ObjectRental]) -> list[dict[str, Any]]:
+    return sorted(
+        [_serialize_object_reservation_reminder(rental) for rental in rentals],
+        key=lambda item: item["start_time"],
+    )
 
 
 def _count_active_rentals_in_interval(*, obj: Object, interval_start: datetime, interval_end: datetime) -> int:
@@ -620,6 +640,30 @@ class UserReservationsView(AuthenticatedView):
                 }
             )
         return JsonResponse(data, safe=False)
+
+
+class UserReservationRemindersView(AuthenticatedView):
+    def get(self, request):
+        if not hasattr(request, "residence") or not request.residence:
+            return JsonResponse({"detail": "No residence context."}, status=400)
+
+        now = timezone.now()
+        reminder_deadline = now + RESERVATION_REMINDER_WINDOW
+
+        rentals = (
+            ObjectRental.objects.filter(
+                user=request.user,
+                object__residence=request.residence,
+                status="ACTIVE",
+                start_date__gt=now,
+                start_date__lte=reminder_deadline,
+                end_date__gt=now,
+            )
+            .select_related("object")
+            .order_by("start_date")
+        )
+
+        return JsonResponse(_build_object_reservation_reminders(list(rentals)), safe=False)
 
 
 class AdminObjectNotificationsView(AuthenticatedView):
