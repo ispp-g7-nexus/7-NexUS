@@ -448,7 +448,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
             label: 'Visitantes',
             value: totalActiveGuests,
             icon: UserCheck,
-            theme: (outOfScheduleGuests > 0 ? 'red' : 'purple') as const,
+            theme: outOfScheduleGuests > 0 ? ('red' as const) : ('purple' as const),
             topBadgeText: outOfScheduleGuests > 0 ? `${outOfScheduleGuests} fuera de horario` : undefined,
             highlighted: outOfScheduleGuests > 0,
             onClick: () => goToTab('visitors')
