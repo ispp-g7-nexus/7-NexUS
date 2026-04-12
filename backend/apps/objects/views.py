@@ -25,6 +25,7 @@ from apps.common.utils.jwt_auth import resolve_user_from_request
 
 from .models import Object, ObjectRental
 from .permissions import is_reservations_admin
+from apps.chats.realtime import publish_chat_event
 
 OBJECT_NAME_PATTERN = re.compile(r"^[\w\-\.\(\), ]+$")
 OBJECT_RESERVATION_INTERVAL_MINUTES = 60
@@ -157,19 +158,11 @@ def _compute_object_available_slots(
     while current + interval <= day_end:
         slot_end = current + interval
         is_past = current < now
-        active_rentals = _count_active_rentals_in_interval(
-            obj=obj,
-            interval_start=current,
-            interval_end=slot_end,
-        )
-        available_stock = max(obj.stock_total - active_rentals, 0)
-
         slots.append(
             {
                 "start_time": current.isoformat(),
                 "end_time": slot_end.isoformat(),
-                "available_stock": available_stock,
-                "status": "past" if is_past else ("available" if available_stock > 0 else "occupied"),
+                "status": "past" if is_past else "available",
             }
         )
         current = slot_end
@@ -485,23 +478,28 @@ class ObjectReserveView(AuthenticatedView):
                         status=400,
                     )
 
-                active_rentals_in_slot = ObjectRental.objects.filter(
-                    object=obj,
-                    status='ACTIVE',
-                    start_date__lt=end,
-                    end_date__gt=start,
-                ).count()
-                if active_rentals_in_slot >= obj.stock_total:
-                    return JsonResponse(
-                        {"detail": "No hay stock disponible para ese horario."},
-                        status=400,
-                    )
-
                 rental = ObjectRental.objects.create(
                     object=obj,
                     user=request.user,
                     start_date=start,
                     end_date=end,
+                )
+            # Publish real-time event for admin notifications
+            residence_id = getattr(obj, 'residence_id', None)
+            if residence_id:
+                publish_chat_event(
+                    residence_id,
+                    "object_reservation_created",
+                    {
+                        "rental_id": rental.id,
+                        "object_id": obj.id,
+                        "object_name": obj.name,
+                        "user_id": request.user.id,
+                        "user_email": getattr(request.user, 'email', ''),
+                        "user_name": getattr(request.user, 'first_name', '') or getattr(request.user, 'email', ''),
+                        "start_date": start.isoformat(),
+                        "end_date": end.isoformat(),
+                    },
                 )
             return JsonResponse(
                 {"id": rental.id, "detail": "Reserva creada."}, status=201
@@ -538,6 +536,17 @@ class ObjectCancelView(AuthenticatedView):
                 ).update(status="CANCELLED")
 
             if updated:
+                residence_id = getattr(obj, 'residence_id', None)
+                if residence_id:
+                    publish_chat_event(
+                        residence_id,
+                        "object_reservation_cancelled",
+                        {
+                            "object_id": obj.id,
+                            "object_name": obj.name,
+                            "user_id": request.user.id,
+                        },
+                    )
                 return JsonResponse({"detail": "Reserva cancelada."}, status=200)
             return JsonResponse(
                 {"detail": "No existe reserva activa para este usuario y objeto."},
@@ -703,3 +712,46 @@ class AdminObjectNotificationsView(AuthenticatedView):
         ]
 
         return JsonResponse(data, safe=False)
+
+
+class UserPendingRemindersCountView(AuthenticatedView):
+    def get(self, request):
+        if not hasattr(request, "residence") or not request.residence:
+            return JsonResponse({"detail": "No residence context."}, status=400)
+
+        now = timezone.now()
+        window_end = now + timedelta(minutes=15)
+
+        count = ObjectRental.objects.filter(
+            user=request.user,
+            object__residence=request.residence,
+            status="ACTIVE",
+            end_date__lte=window_end,
+            end_date__gt=now,
+            reminder_viewed_at__isnull=True,
+        ).count()
+
+        return JsonResponse({"count": count})
+
+
+class UserMarkRemindersAsViewedView(AuthenticatedView):
+    def post(self, request):
+        if not hasattr(request, "residence") or not request.residence:
+            return JsonResponse({"detail": "No residence context."}, status=400)
+
+        now = timezone.now()
+        window_end = now + timedelta(minutes=15)
+
+        count = ObjectRental.objects.filter(
+            user=request.user,
+            object__residence=request.residence,
+            status="ACTIVE",
+            end_date__lte=window_end,
+            end_date__gt=now,
+            reminder_viewed_at__isnull=True,
+        ).update(reminder_viewed_at=now)
+
+        return JsonResponse({
+            "message": "Recordatorios marcados como vistos.",
+            "marked_count": count
+        })

@@ -309,5 +309,34 @@ export const objectsService = {
         }
 
         return response.json();
+  },
+
+  // Get current user's reservations reminders count
+  getPendingRemindersCount: async (): Promise<number> => {
+    const response = await fetch(`${API_URL}/my-reservations/reminders/unread-count/`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    if (!response.ok) return 0;
+    
+    const data = await response.json();
+    return data.count || 0;
+  },
+
+  // Mark pending reminders as viewed
+  markRemindersAsViewed: async (): Promise<{ message: string; marked_count: number }> => {
+    const response = await fetch(`${API_URL}/my-reservations/reminders/mark-as-viewed/`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    
+    if (!response.ok) {
+      throw await buildApiError(response, 'Error al marcar avisos como vistos');
+    }
+    
+    return response.json();
   }
 };
