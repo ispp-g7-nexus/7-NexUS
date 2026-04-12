@@ -440,6 +440,18 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
             createdAt: new Date().toISOString(),
         }];
     }, []);
+
+    const buildObjectStockAlertItems = useCallback((items: Awaited<ReturnType<typeof objectsService.getUserObjectNotifications>>): HomeNotification[] => {
+        return items.map((item) => ({
+            id: item.id,
+            title: `[Reservas] ${item.title}`,
+            description: item.message,
+            time: formatRelativeTime(item.created_at),
+            type: "warning" as const,
+            source: "reservations" as const,
+            createdAt: item.created_at,
+        }));
+    }, []);
     const buildVisitUrgentItems = useCallback((): HomeNotification[] => {
         const storageKey = buildVisitUrgentNotificationStorageKey(currentUserEmail);
         const items = getActiveVisitUrgentNotifications(storageKey);
@@ -467,13 +479,15 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                 incidencesRes, 
                 eventsRes, 
                 packagesRes,
-                objectRemindersRes
+                objectRemindersRes,
+                objectStockAlertsRes
             ] = await Promise.allSettled([
                 announcementService.getAnnouncements(),
                 fetchWithAuth(`${API_URL_INCIDENCES}notifications/`),
                 fetchWithAuth(`${API_URL}events/`),
                 packagesService.getPendingCount(),
                 objectsService.getPendingRemindersCount(),
+                objectsService.getUserObjectNotifications(),
             ]);
 
             // Evitar actualizaciones si el componente cambió de estado o hubo una petición nueva
@@ -484,6 +498,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                 ...(announcementsRes.status === "fulfilled" ? buildAnnouncementItems(announcementsRes.value) : []),
                 ...(packagesRes.status === "fulfilled" ? buildPackageItems(packagesRes.value || 0) : []),
                 ...(objectRemindersRes.status === "fulfilled" ? buildObjectReminderItems(objectRemindersRes.value || 0) : []),
+                ...(objectStockAlertsRes.status === "fulfilled" ? buildObjectStockAlertItems(objectStockAlertsRes.value || []) : []),
                 ...buildVisitUrgentItems(),
             ];
 
@@ -523,7 +538,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                 setIsNotificationsLoading(false);
             }
         }
-    }, [buildAnnouncementItems, buildIncidenceItems, buildEventItems, buildPackageItems, buildObjectReminderItems, buildVisitUrgentItems]);
+    }, [buildAnnouncementItems, buildIncidenceItems, buildEventItems, buildPackageItems, buildObjectReminderItems, buildObjectStockAlertItems, buildVisitUrgentItems]);
     useEffect(() => {
         loadHomeNotifications();
         const intervalId = globalThis.setInterval(() => loadHomeNotifications(true), NOTIFICATIONS_POLL);

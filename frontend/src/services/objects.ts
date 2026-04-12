@@ -28,18 +28,37 @@ export interface ObjectRental {
   id: number;
   start_date: string;
   end_date: string;
-  status: 'ACTIVE' | 'CANCELLED' | 'COMPLETED';
+  status: 'ACTIVE' | 'IN_PROGRESS' | 'CANCELLED' | 'COMPLETED';
   created_at?: string;
   updated_at?: string;
+  planned_duration_minutes?: number;
+  elapsed_minutes?: number;
+  elapsed_human?: string;
+  remaining_minutes?: number;
+  remaining_human?: string;
+  is_overdue?: boolean;
+  overdue_minutes?: number;
+  overdue_human?: string;
+  is_in_period?: boolean;
   user: {
     id: number;
     first_name: string;
     last_name: string;
+    email?: string;
   };
+  admin_cancelled_by?: {
+    id: number;
+    first_name: string;
+    last_name: string;
+  };
+  admin_cancelled_reason?: string;
+  admin_cancelled_at?: string;
+  user_dismissed_at?: string;
 }
 
 export interface RentalsByStatus {
   active: ObjectRental[];
+  in_progress: ObjectRental[];
   cancelled: ObjectRental[];
   completed: ObjectRental[];
 }
@@ -90,6 +109,11 @@ export interface UserObjectReservation {
   object: ObjectItem;
 }
 
+export interface CompleteRentalResponse {
+  detail: string;
+  rental: ObjectRental;
+}
+
 export interface ObjectAvailabilitySlot {
   start_time: string;
   end_time: string;
@@ -112,9 +136,28 @@ export interface ObjectAvailabilityReservation {
 export interface ObjectAvailability {
   date: string;
   reservation_interval_minutes: number;
+  reservation_gap_minutes?: number;
   object: ObjectItem;
   reservations: ObjectAvailabilityReservation[];
   available_slots: ObjectAvailabilitySlot[];
+}
+
+export interface UserObjectNotification {
+  id: string;
+  rental_id?: number;
+  title: string;
+  message: string;
+  created_at: string;
+  source: "objects";
+}
+
+export interface AdminObjectRental extends ObjectRental {
+  object: {
+    id: number;
+    name: string;
+    location?: string;
+    stock_total: number;
+  };
 }
 
 export const objectsService = {
@@ -281,6 +324,50 @@ export const objectsService = {
     return response.json();
   },
 
+  getAllObjectRentals: async (): Promise<AdminObjectRental[]> => {
+    const response = await fetch(`${API_URL}/admin/objects/rentals/`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (!response.ok) {
+      throw await buildApiError(response, 'Error al obtener el historial general de reservas');
+    }
+
+    return response.json();
+  },
+
+  completeObjectRental: async (objectId: number, rentalId: number): Promise<CompleteRentalResponse> => {
+    const response = await fetch(`${OBJECTS_URL}/${objectId}/rentals/${rentalId}/complete/`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (!response.ok) {
+      throw await buildApiError(response, 'Error al marcar el préstamo como devuelto');
+    }
+
+    return response.json();
+  },
+
+  // Admin cancel rental
+  cancelAdminRental: async (objectId: number, rentalId: number, reason: string): Promise<CompleteRentalResponse> => {
+    const response = await fetch(`${OBJECTS_URL}/${objectId}/rentals/${rentalId}/admin-cancel/`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason })
+    });
+
+    if (!response.ok) {
+      throw await buildApiError(response, 'Error al cancelar el préstamo');
+    }
+
+    return response.json();
+  },
+
   // Get current user's reservations
   getUserObjectReservations: async (): Promise<UserObjectReservation[]> => {
     const response = await fetch(`${API_URL}/my-reservations/`, {
@@ -293,6 +380,34 @@ export const objectsService = {
       throw await buildApiError(response, 'Error al obtener mis reservas');
     }
     
+    return response.json();
+  },
+
+  getUserObjectNotifications: async (): Promise<UserObjectNotification[]> => {
+    const response = await fetch(`${OBJECTS_URL}/notifications/`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (!response.ok) {
+      throw await buildApiError(response, 'Error al obtener notificaciones de objetos');
+    }
+
+    return response.json();
+  },
+
+  dismissUserReservation: async (rentalId: number): Promise<{ detail: string }> => {
+    const response = await fetch(`${API_URL}/my-reservations/${rentalId}/dismiss/`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (!response.ok) {
+      throw await buildApiError(response, 'Error al descartar reserva cancelada');
+    }
+
     return response.json();
   },
 
