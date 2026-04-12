@@ -1,4 +1,3 @@
-import * as React from "react";
 import { Popover, PopoverTrigger, PopoverContent } from "./popover";
 
 type MetricInfoProps = {

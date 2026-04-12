@@ -2,15 +2,12 @@ import React from 'react';
 import MetricInfo from './ui/MetricInfo';
 
 export interface StatCardProps {
-  /** Primary label text. Use either `label` or `title` (both supported) */
   label?: string;
   title?: string;
   value: string | number | React.ReactNode;
   valueBadge?: string;
   topBadgeText?: string;
-  /** Optional icon component (e.g. Heroicons). If not provided, a default dot is shown. */
-  icon?: React.ComponentType<{ size?: number; strokeWidth?: number }> | React.ReactElement | null;
-  /** Theme for colors. Defaults to 'blue' */
+  icon?: React.ElementType | React.ReactElement | null; 
   theme?: 'blue' | 'green' | 'red' | 'purple' | 'orange';
   onClick?: () => void;
   info?: { title?: string; description: string };
@@ -115,10 +112,8 @@ export const StatCard = ({ label, title, value, valueBadge, topBadgeText, icon: 
           {Icon ? (
             React.isValidElement(Icon) ? (
               Icon
-            ) : typeof Icon === 'function' ? (
-              <Icon size={20} strokeWidth={2} />
             ) : (
-              <span style={{ width: 12, height: 12, background: t.color, borderRadius: 6 }} />
+              React.createElement(Icon as React.ElementType, { size: 20, strokeWidth: 2 })
             )
           ) : (
             <span style={{ width: 12, height: 12, background: t.color, borderRadius: 6 }} />
