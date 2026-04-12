@@ -9,7 +9,7 @@ export interface StatCardProps {
   valueBadge?: string;
   topBadgeText?: string;
   /** Optional icon component (e.g. Heroicons). If not provided, a default dot is shown. */
-  icon?: React.ElementType | null;
+  icon?: React.ComponentType<{ size?: number; strokeWidth?: number }> | React.ReactElement | null;
   /** Theme for colors. Defaults to 'blue' */
   theme?: 'blue' | 'green' | 'red' | 'purple' | 'orange';
   onClick?: () => void;
@@ -28,23 +28,45 @@ export const StatCard = ({ label, title, value, valueBadge, topBadgeText, icon: 
   const displayLabel = label ?? title ?? '';
   const t = themeMap[theme] ?? themeMap['blue'];
   const [hovered, setHovered] = React.useState(false);
+  const [focused, setFocused] = React.useState(false);
+
+  const isInteractive = typeof onClick === 'function';
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (!onClick) return;
+    if (!isInteractive) return;
     if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
       e.preventDefault();
-      onClick();
+      onClick && onClick();
     }
   };
+  const interactiveProps: any = isInteractive
+    ? {
+        role: 'button',
+        tabIndex: 0,
+        onClick: onClick,
+        onKeyDown: handleKeyDown,
+        onMouseEnter: () => setHovered(true),
+        onMouseLeave: () => setHovered(false),
+        onFocus: () => setFocused(true),
+        onBlur: () => setFocused(false),
+      }
+    : {};
+
+  // Compute styles while only applying hover/focus transforms when interactive.
+  const baseBoxShadow = '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)';
+  const hoverBoxShadow = '0 8px 32px rgba(0,0,0,0.10)';
+  const focusRing = `0 0 0 4px ${t.borderHover}`;
+
+  let boxShadow = baseBoxShadow;
+  if (isInteractive && hovered) boxShadow = hoverBoxShadow;
+  if (isInteractive && focused) boxShadow = `${focusRing}, ${boxShadow}`;
+
+  const borderColor = isInteractive && hovered ? t.borderHover : t.border;
+  const transform = isInteractive && hovered ? 'translateY(-4px)' : 'translateY(0)';
 
   return (
     <div
-      role="button"
-      tabIndex={0}
-      onClick={onClick}
-      onKeyDown={handleKeyDown}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      {...interactiveProps}
       style={{
         width: '100%',
         textAlign: 'left',
@@ -54,18 +76,21 @@ export const StatCard = ({ label, title, value, valueBadge, topBadgeText, icon: 
         overflow: 'hidden',
         padding: '22px',
         borderRadius: '20px',
-          border: `1.5px solid ${hovered ? t.borderHover : t.border}`,
+        border: `1.5px solid ${borderColor}`,
         background: '#ffffff',
-        cursor: onClick ? 'pointer' : 'default',
-        boxShadow: hovered
-          ? '0 8px 32px rgba(0,0,0,0.10)'
-          : '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)',
-        transform: hovered ? 'translateY(-4px)' : 'translateY(0)',
+        cursor: isInteractive ? 'pointer' : 'default',
+        boxShadow,
+        transform,
         transition: 'all 0.2s ease',
       }}
     >
       {info && (
-        <div style={{ position: 'absolute', top: 10, right: 10 }}>
+        <div
+          style={{ position: 'absolute', top: 10, right: 10 }}
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
           <MetricInfo title={info.title} description={info.description} />
         </div>
       )}

@@ -15,33 +15,27 @@ def _duration_to_days(value):
         return 0
 
 
-def get_active_members_by_role(start_date=None, end_date=None, residence=None):
+def get_active_members_by_role(residence=None):
     """
     Counts active members for each role.
     """
     queryset = Membership.objects.filter(is_active=True)
     if residence is not None:
         queryset = queryset.filter(residence=residence)
-    if start_date and end_date:
-        queryset = queryset.filter(created_at__range=[start_date, end_date])
-
     return queryset.values('role__name').annotate(count=Count('id')).order_by('-count')
 
 
-def get_active_vs_inactive_members(start_date=None, end_date=None, residence=None):
+def get_active_vs_inactive_members(residence=None):
     """
     Counts active vs inactive members.
     """
     queryset = Membership.objects.all()
     if residence is not None:
         queryset = queryset.filter(residence=residence)
-    if start_date and end_date:
-        queryset = queryset.filter(created_at__range=[start_date, end_date])
-
     return queryset.values('is_active').annotate(count=Count('id'))
 
 
-def get_membership_evolution(start_date=None, end_date=None, residence=None):
+def get_membership_evolution(residence=None):
     """
     Counts new memberships over time (monthly).
     """
@@ -49,15 +43,14 @@ def get_membership_evolution(start_date=None, end_date=None, residence=None):
     base_qs = Membership.objects.all()
     if residence is not None:
         base_qs = base_qs.filter(residence=residence)
-    if start_date and end_date:
-        base_qs = base_qs.filter(created_at__range=[start_date, end_date])
 
     resident_role = Role.objects.filter(is_system_default=True, name__iexact='Student').first()
 
     # Resident series
-    residents_qs = base_qs
     if resident_role is not None:
-        residents_qs = residents_qs.filter(role=resident_role)
+        residents_qs = base_qs.filter(role=resident_role)
+    else:
+        residents_qs = base_qs.none()
     residents_agg = (
         residents_qs.annotate(month=TruncMonth('created_at'))
         .values('month')
@@ -105,7 +98,7 @@ def get_membership_evolution(start_date=None, end_date=None, residence=None):
     return result
 
 
-def get_average_stay(start_date=None, end_date=None, residence=None):
+def get_average_stay(residence=None):
     """
     Calculates the average stay for residents and staff.
     """
@@ -114,11 +107,12 @@ def get_average_stay(start_date=None, end_date=None, residence=None):
     base_queryset = Membership.objects.all()
     if residence is not None:
         base_queryset = base_queryset.filter(residence=residence)
-    if start_date and end_date:
-        base_queryset = base_queryset.filter(created_at__range=[start_date, end_date])
 
     resident_role = Role.objects.filter(is_system_default=True, name__iexact='Student').first()
-    avg_stay_residents = base_queryset.filter(role=resident_role).aggregate(avg_duration=Avg(duration_expression))
+    if resident_role is not None:
+        avg_stay_residents = base_queryset.filter(role=resident_role).aggregate(avg_duration=Avg(duration_expression))
+    else:
+        avg_stay_residents = base_queryset.none().aggregate(avg_duration=Avg(duration_expression))
 
     # Only consider staff members that have a Staff profile to avoid counting non-staff users
     avg_stay_staff = base_queryset.filter(role__is_system_default=False, user__staff_profile__isnull=False).aggregate(avg_duration=Avg(duration_expression))
@@ -132,7 +126,7 @@ def get_average_stay(start_date=None, end_date=None, residence=None):
     }
 
 
-def get_staff_capacity(start_date=None, end_date=None, residence=None):
+def get_staff_capacity(residence=None):
     """
     Counts active staff members with access to each key screen.
     """
@@ -172,7 +166,7 @@ def get_staff_capacity(start_date=None, end_date=None, residence=None):
     return capacity
 
 
-def get_staff_vacation(start_date=None, end_date=None, residence=None):
+def get_staff_vacation(residence=None):
     """
     Returns counts of staff members on vacation vs not on vacation.
     Uses the `Staff` profile `status` (value 'holidays') where present.
@@ -192,16 +186,16 @@ def get_staff_vacation(start_date=None, end_date=None, residence=None):
     return {"on_vacation": on_vacation, "not_on_vacation": not_on_vacation}
 
 
-def get_residents_without_room(start_date=None, end_date=None, residence=None):
+def get_residents_without_room(residence=None):
     """
     Counts active residents without an assigned room.
     """
     resident_role = Role.objects.filter(is_system_default=True, name__iexact='Student').first()
-    queryset = Membership.objects.filter(is_active=True, role=resident_role, bedroom__isnull=True)
+    if resident_role is not None:
+        queryset = Membership.objects.filter(is_active=True, role=resident_role, bedroom__isnull=True)
+    else:
+        queryset = Membership.objects.none()
     if residence is not None:
         queryset = queryset.filter(residence=residence)
-
-    if start_date and end_date:
-        queryset = queryset.filter(created_at__range=[start_date, end_date])
 
     return queryset.count()

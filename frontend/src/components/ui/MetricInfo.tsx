@@ -11,8 +11,9 @@ export const MetricInfo = ({ title, description }: MetricInfoProps) => {
     <Popover>
       <PopoverTrigger asChild>
         <button
+          type="button"
           aria-label={title ? `Info sobre ${title}` : "Info"}
-          className="p-1.5 rounded-full hover:bg-muted-foreground/10 focus:outline-none"
+          className="p-1.5 rounded-full hover:bg-muted-foreground/10 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:bg-muted-foreground/10"
           title={title}
         >
           <svg
