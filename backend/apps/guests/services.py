@@ -73,6 +73,35 @@ def get_or_create_guest_pass_policy(residence) -> GuestPassPolicy:
     return policy
 
 
+def is_guest_pass_out_of_schedule(
+    guest_pass: GuestPass,
+    *,
+    visit_start_time: time | None,
+    visit_end_time: time | None,
+    reference_dt: datetime | None = None,
+) -> bool:
+    """Return whether an active pass is currently outside the allowed visit window."""
+    if visit_start_time is None and visit_end_time is None:
+        return False
+
+    now = reference_dt or timezone.now()
+    is_active_now = (
+        guest_pass.status == GuestPass.Status.ACTIVE
+        and guest_pass.cancelled_at is None
+        and guest_pass.revoked_at is None
+        and guest_pass.valid_from <= now <= guest_pass.valid_until
+    )
+    if not is_active_now:
+        return False
+
+    current_time = timezone.localtime(now).time().replace(tzinfo=None)
+    if visit_start_time is not None and current_time < visit_start_time:
+        return True
+    if visit_end_time is not None and current_time >= visit_end_time:
+        return True
+    return False
+
+
 def _build_sweep_events(
     passes: Iterable[GuestPass],
     *,
