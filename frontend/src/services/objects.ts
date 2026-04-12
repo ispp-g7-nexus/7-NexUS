@@ -144,7 +144,7 @@ export interface ObjectAvailability {
 
 export interface UserObjectNotification {
   id: string;
-  rental_id: number;
+  rental_id?: number;
   title: string;
   message: string;
   created_at: string;

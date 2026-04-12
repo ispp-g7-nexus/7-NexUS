@@ -221,6 +221,18 @@ export function CentralNotificationBell({ onNavigate, currentUserId, isSessionUs
         }];
     }, []);
 
+    const buildObjectStockAlertItems = useCallback((items: Awaited<ReturnType<typeof objectsService.getUserObjectNotifications>>): HomeNotification[] => {
+        return items.map((item) => ({
+            id: item.id,
+            title: `[Reservas] ${item.title}`,
+            description: item.message,
+            time: formatRelativeTime(item.created_at),
+            type: "warning" as const,
+            source: "reservations" as const,
+            createdAt: item.created_at,
+        }));
+    }, []);
+
     const loadNotifications = useCallback(async (silent = false) => {
         const requestId = ++notificationsRequestIdRef.current;
         if (!silent) setIsNotificationsLoading(true);
@@ -232,7 +244,8 @@ export function CentralNotificationBell({ onNavigate, currentUserId, isSessionUs
                 incidencesRes, 
                 eventsRes, 
                 packagesRes,
-                objectRemindersRes
+                objectRemindersRes,
+                objectStockAlertsRes
             ] = await Promise.allSettled([
                 announcementService.getAnnouncements(),
                 announcementService.getUnviewedCount(),
@@ -240,6 +253,7 @@ export function CentralNotificationBell({ onNavigate, currentUserId, isSessionUs
                 fetchWithAuth(`${API_URL}events/`),
                 packagesService.getPendingCount(),
                 objectsService.getPendingRemindersCount(),
+                objectsService.getUserObjectNotifications(),
             ]);
 
             if (requestId !== notificationsRequestIdRef.current) return;
@@ -248,6 +262,7 @@ export function CentralNotificationBell({ onNavigate, currentUserId, isSessionUs
                 ...(announcementsRes.status === "fulfilled" ? buildAnnouncementItems(announcementsRes.value) : []),
                 ...(packagesRes.status === "fulfilled" ? buildPackageItems(packagesRes.value || 0) : []),
                 ...(objectRemindersRes.status === "fulfilled" ? buildObjectReminderItems(objectRemindersRes.value || 0) : []),
+                ...(objectStockAlertsRes.status === "fulfilled" ? buildObjectStockAlertItems(objectStockAlertsRes.value || []) : []),
             ];
 
             if (incidencesRes.status === "fulfilled" && incidencesRes.value.ok) {
@@ -277,7 +292,7 @@ export function CentralNotificationBell({ onNavigate, currentUserId, isSessionUs
                 setIsNotificationsLoading(false);
             }
         }
-    }, [buildAnnouncementItems, buildIncidenceItems, buildEventItems, buildPackageItems, buildObjectReminderItems]);
+    }, [buildAnnouncementItems, buildIncidenceItems, buildEventItems, buildPackageItems, buildObjectReminderItems, buildObjectStockAlertItems]);
 
     useEffect(() => {
         loadNotifications();
