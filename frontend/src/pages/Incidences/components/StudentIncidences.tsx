@@ -51,10 +51,14 @@ interface IncidenceNotificationCardProps {
 }
 
 function IncidenceNotificationCard({ notification, onDismiss }: IncidenceNotificationCardProps) {
+  const normalizedKind = (notification.kind || "").trim().toLowerCase();
   const isVisitUrgent = notification.kind === "visit_limit_warning";
-  const isStatusUpdate = /estado|status/i.test(`${notification.title} ${notification.message}`);
+  const hasKnownKind = normalizedKind.length > 0 && normalizedKind !== "unknown";
+  const statusUpdateKinds = new Set(["admin_update", "status_update", "incidence_update", "estado", "update"]);
+  const fallbackStatusUpdate = /estado|status/i.test(`${notification.title} ${notification.message}`);
+  const isStatusUpdate = hasKnownKind ? statusUpdateKinds.has(normalizedKind) : fallbackStatusUpdate;
   const isRedundantStatusTitle = isStatusUpdate && /cambio de estado|status update/i.test(notification.title);
-  const stateChangedMatch = notification.message.match(/Estado cambiado/i);
+  const stateChangedMatch = isStatusUpdate ? notification.message.match(/Estado cambiado/i) : null;
 
   const containerClasses = isVisitUrgent
     ? "border-amber-300 bg-gradient-to-br from-amber-50 via-white to-orange-50 shadow-[0_8px_24px_rgba(245,158,11,0.16)]"
@@ -86,7 +90,7 @@ function IncidenceNotificationCard({ notification, onDismiss }: IncidenceNotific
       ? "text-slate-500"
       : "text-red-700";
 
-  const badgeLabel = isVisitUrgent ? "Urgente" : isStatusUpdate ? "Actualizacion" : "Incidencia";
+  const badgeLabel = isVisitUrgent ? "Urgente" : isStatusUpdate ? "Actualización" : "Incidencia";
 
   const renderNotificationMessage = () => {
     if (!stateChangedMatch || stateChangedMatch.index === undefined) {
