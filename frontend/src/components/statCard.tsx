@@ -1,13 +1,19 @@
 import React from 'react';
+import MetricInfo from './ui/MetricInfo';
 
 export interface StatCardProps {
-  label: string;
+  /** Primary label text. Use either `label` or `title` (both supported) */
+  label?: string;
+  title?: string;
   value: string | number | React.ReactNode;
   valueBadge?: string;
   topBadgeText?: string;
-  icon: React.ElementType;
-  theme: 'blue' | 'green' | 'red' | 'purple' | 'orange';
+  /** Optional icon component (e.g. Heroicons). If not provided, a default dot is shown. */
+  icon?: React.ElementType | null;
+  /** Theme for colors. Defaults to 'blue' */
+  theme?: 'blue' | 'green' | 'red' | 'purple' | 'orange';
   onClick?: () => void;
+  info?: { title?: string; description: string };
 }
 
 const themeMap = {
@@ -18,13 +24,25 @@ const themeMap = {
   orange: { color: '#d97c3a', bg: '#fdf0e5', border: 'rgba(217,124,58,0.18)', borderHover: 'rgba(217,124,58,0.40)' },
 };
 
-export const StatCard = ({ label, value, valueBadge, topBadgeText, icon: Icon, theme, onClick }: StatCardProps) => {
-  const t = themeMap[theme];
+export const StatCard = ({ label, title, value, valueBadge, topBadgeText, icon: Icon, theme = 'blue', onClick, info }: StatCardProps) => {
+  const displayLabel = label ?? title ?? '';
+  const t = themeMap[theme] ?? themeMap['blue'];
   const [hovered, setHovered] = React.useState(false);
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!onClick) return;
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+      e.preventDefault();
+      onClick();
+    }
+  };
+
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={handleKeyDown}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
@@ -36,9 +54,9 @@ export const StatCard = ({ label, value, valueBadge, topBadgeText, icon: Icon, t
         overflow: 'hidden',
         padding: '22px',
         borderRadius: '20px',
-        border: `1.5px solid ${hovered ? t.borderHover : t.border}`,
+          border: `1.5px solid ${hovered ? t.borderHover : t.border}`,
         background: '#ffffff',
-        cursor: 'pointer',
+        cursor: onClick ? 'pointer' : 'default',
         boxShadow: hovered
           ? '0 8px 32px rgba(0,0,0,0.10)'
           : '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)',
@@ -46,6 +64,11 @@ export const StatCard = ({ label, value, valueBadge, topBadgeText, icon: Icon, t
         transition: 'all 0.2s ease',
       }}
     >
+      {info && (
+        <div style={{ position: 'absolute', top: 10, right: 10 }}>
+          <MetricInfo title={info.title} description={info.description} />
+        </div>
+      )}
       <span style={{
         position: 'absolute', bottom: 0, left: 0, right: 0,
         height: '3px',
@@ -55,7 +78,7 @@ export const StatCard = ({ label, value, valueBadge, topBadgeText, icon: Icon, t
         transition: 'opacity 0.2s ease',
       }} />
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
         <div style={{
           width: '40px', height: '40px',
           borderRadius: '12px',
@@ -64,7 +87,17 @@ export const StatCard = ({ label, value, valueBadge, topBadgeText, icon: Icon, t
           transform: hovered ? 'scale(1.1) rotate(-4deg)' : 'scale(1) rotate(0deg)',
           transition: 'transform 0.2s ease',
         }}>
-          <Icon size={20} strokeWidth={2} />
+          {Icon ? (
+            React.isValidElement(Icon) ? (
+              Icon
+            ) : typeof Icon === 'function' ? (
+              <Icon size={20} strokeWidth={2} />
+            ) : (
+              <span style={{ width: 12, height: 12, background: t.color, borderRadius: 6 }} />
+            )
+          ) : (
+            <span style={{ width: 12, height: 12, background: t.color, borderRadius: 6 }} />
+          )}
         </div>
         {topBadgeText && (
           <span style={{
@@ -119,8 +152,8 @@ export const StatCard = ({ label, value, valueBadge, topBadgeText, icon: Icon, t
         letterSpacing: '0.8px', marginTop: '5px',
         fontFamily: 'inherit',
       }}>
-        {label}
+        {displayLabel}
       </p>
-    </button>
+    </div>
   );
 };
