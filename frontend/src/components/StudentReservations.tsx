@@ -2,15 +2,16 @@ import { useState } from "react";
 import { LogOut, User } from "lucide-react";
 import { Objects } from "../pages/Objects/Objects";
 import { Reservations } from "../pages/Reservations/Reservations";
-import { NotificationBell } from "./announcement/NotificationBell";
+import { CentralNotificationBell } from "./CentralNotificationBell";
 import { Button } from "./ui/button";
 
 interface StudentReservationsProps {
   onGoToProfile?: () => void;
   onLogout?: () => void;
+  onNavigate?: (tab: string) => void;
 }
 
-export function StudentReservations({ onGoToProfile, onLogout }: StudentReservationsProps) {
+export function StudentReservations({ onGoToProfile, onLogout, onNavigate }: StudentReservationsProps) {
   const [activeTab, setActiveTab] = useState("objetos");
 
   const tabs = [
@@ -24,7 +25,11 @@ export function StudentReservations({ onGoToProfile, onLogout }: StudentReservat
       <header className="bg-primary p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg sticky top-0 z-20">
         <h1 className="text-primary-foreground text-2xl font-bold">Reservas</h1>
         <div className="flex items-center gap-2">
-          <NotificationBell />
+          <CentralNotificationBell 
+            onNavigate={(tab) => onNavigate?.(tab)} 
+            currentUserId={null} 
+            isSessionUserResolved={true} 
+          />
           <Button
             size="icon"
             variant="ghost"

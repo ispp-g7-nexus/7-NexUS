@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Bed, Building2, Edit2, Grid3x3, List, Plus, Search as SearchIcon, Trash2, User, Users } from "lucide-react";
+import { Bed, Building2, Edit2, Grid3x3, History, List, Plus, Search as SearchIcon, Trash2, User, Users } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import roomSvg from "../../assets/room.svg";
@@ -12,6 +12,7 @@ import {
   type Bedroom,
   type BedroomResident,
 } from "../../services/bedrooms";
+import { BedroomAuditLog } from "./BedroomAuditLog";
 
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
@@ -78,6 +79,7 @@ export function Rooms() {
   const [filter] = useState("todos");
   const [viewLayout, setViewLayout] = useState<"list" | "map">("list");
   const [selectedRoom, setSelectedRoom] = useState<Bedroom | null>(null);
+  const [showAudit, setShowAudit] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -118,6 +120,10 @@ export function Rooms() {
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
+
+  useEffect(() => {
+    setShowAudit(false);
+  }, [selectedRoom]);
 
   const fetchRooms = async () => {
     setLoading(true);
@@ -447,6 +453,19 @@ export function Rooms() {
               <div className="col-span-2 bg-gray-50 p-3 rounded-xl border border-gray-200">
                 <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-2">Residentes</p>
                 <ResidentsInlineList residents={selectedRoom.residentes} showEmail />
+              </div>
+              <div className="col-span-2 bg-gray-50 p-3 rounded-xl border border-gray-200">
+                <button
+                  type="button"
+                  className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-gray-500 font-bold w-full text-left"
+                  onClick={() => setShowAudit((v) => !v)}
+                  aria-expanded={showAudit}
+                >
+                  <History className="w-3 h-3" />
+                  Historial de auditoría
+                  <span className="ml-auto">{showAudit ? "▲" : "▼"}</span>
+                </button>
+                {showAudit && <BedroomAuditLog bedroomId={selectedRoom.id} />}
               </div>
             </div>
 

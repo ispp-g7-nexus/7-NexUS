@@ -24,6 +24,7 @@ def _serialize_space(space: CommonSpace) -> dict:
         "id": space.id,
         "name": space.name,
         "description": space.description,
+        "img": space.img,
         "capacity": space.capacity,
         "is_active": space.is_active,
         "open_time": space.open_time.strftime("%H:%M:%S"),
@@ -465,6 +466,7 @@ class AdminSpaceListCreateView(AdminRequiredMixin, AuthenticatedView):
 
         name = str(payload.get("name", "")).strip()
         description = str(payload.get("description", "")).strip()
+        img = payload.get("img", "")
         capacity = payload.get("capacity", 1)
         open_time = str(payload.get("open_time", "")).strip()
         close_time = str(payload.get("close_time", "")).strip()
@@ -521,6 +523,7 @@ class AdminSpaceListCreateView(AdminRequiredMixin, AuthenticatedView):
             residence=residence,
             name=name,
             description=description,
+            img = img,
             capacity=capacity,
             open_time=ot,
             close_time=ct,
@@ -569,6 +572,9 @@ class AdminSpaceDetailView(AdminRequiredMixin, AuthenticatedView):
 
         if "description" in payload:
             space.description = str(payload["description"]).strip()
+
+        if "img" in payload:
+            space.img = payload["img"]
 
         if "capacity" in payload:
             try:
