@@ -23,7 +23,7 @@ def send_return_reminders():
     for tenant in Client.objects.exclude(schema_name=public_schema):
         with schema_context(tenant.schema_name):
             rentals = ObjectRental.objects.filter(
-                status="ACTIVE",
+                status__in=["ACTIVE", "IN_PROGRESS"],
                 end_date__gt=now,
                 end_date__lte=window_end,
                 reminder_viewed_at__isnull=True,

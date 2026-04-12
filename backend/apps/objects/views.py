@@ -241,18 +241,30 @@ def _compute_object_available_slots(
 
     reservation_duration = timedelta(minutes=OBJECT_RESERVATION_DURATION_MINUTES)
     interval_step = timedelta(minutes=OBJECT_RESERVATION_INTERVAL_MINUTES)
+    return_buffer = timedelta(minutes=OBJECT_RESERVATION_GAP_MINUTES)
     now = timezone.now()
-    slots: list[dict[str, str]] = []
+    slots: list[dict[str, Any]] = []
 
     current = day_start
     while current + reservation_duration <= day_end:
         slot_end = current + reservation_duration
         is_past = current < now
+        
+        # Count rentals in this slot considering the return buffer
+        rentals_in_slot = sum(
+            1 for r in reservations
+            if r.start_date < slot_end and r.end_date > (current - return_buffer)
+        )
+        
+        available_stock = max(obj.stock_total - rentals_in_slot, 0)
+        status = "past" if is_past else ("occupied" if available_stock == 0 else "available")
+        
         slots.append(
             {
                 "start_time": current.isoformat(),
                 "end_time": slot_end.isoformat(),
-                "status": "past" if is_past else "available",
+                "status": status,
+                "available_stock": available_stock,
             }
         )
         current = current + interval_step
@@ -1171,7 +1183,7 @@ class UserPendingRemindersCountView(AuthenticatedView):
         count = ObjectRental.objects.filter(
             user=request.user,
             object__residence=request.residence,
-            status="ACTIVE",
+            status__in=ACTIVE_RENTAL_STATUSES,
             end_date__lte=window_end,
             end_date__gt=now,
             reminder_viewed_at__isnull=True,
@@ -1191,7 +1203,7 @@ class UserMarkRemindersAsViewedView(AuthenticatedView):
         count = ObjectRental.objects.filter(
             user=request.user,
             object__residence=request.residence,
-            status="ACTIVE",
+            status__in=ACTIVE_RENTAL_STATUSES,
             end_date__lte=window_end,
             end_date__gt=now,
             reminder_viewed_at__isnull=True,

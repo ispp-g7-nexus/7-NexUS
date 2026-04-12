@@ -281,7 +281,7 @@ export function ReservationModal({ object, isOpen, onClose, onSuccess }: Reserva
                 <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
                   Cancelar
                 </Button>
-              <Button type="submit" disabled={loading || !selectedSlot || loadingAvailability} className="bg-green-700 hover:bg-green-700/90 text-white">
+              <Button type="submit" disabled={loading || !selectedSlot || loadingAvailability || (selectedSlot?.available_stock ?? 0) === 0} className="bg-green-700 hover:bg-green-700/90 text-white">
                 {loading ? "Reservando..." : "Confirmar reserva"}
               </Button>
               </div>
