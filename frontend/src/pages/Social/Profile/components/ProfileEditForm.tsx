@@ -242,22 +242,8 @@ export function ProfileEditForm({
               </div>
             </div>
 
-            {/* Nombre y Apodo */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-sm font-medium text-gray-500">
-                  Nombre Completo *
-                </Label>
-                <Input
-                  id="name"
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  disabled
-                  className="bg-gray-50 cursor-not-allowed"
-                />
-              </div>
-              <div className="space-y-2">
+            {/* Apodo */}
+            <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <Label htmlFor="nickname" className="text-sm font-medium text-gray-500">
                     Apodo
@@ -277,19 +263,6 @@ export function ProfileEditForm({
                   maxLength={30}
                   placeholder="Carlos"
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="room" className="text-sm font-medium text-gray-500">
-                  Habitación
-                </Label>
-                <Input
-                  id="room"
-                  type="text"
-                  value={formData.room || formData.roomNumber || "Sin asignar"}
-                  disabled
-                  className="bg-gray-50 cursor-not-allowed"
-                />
-              </div>
             </div>
 
             {/* Sobre mí */}

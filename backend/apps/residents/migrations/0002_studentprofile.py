@@ -5,10 +5,58 @@ from django.conf import settings
 from django.db import migrations, models
 
 
+def _copy_student_profiles(source_model, target_model):
+    profiles_to_create = []
+
+    for profile in source_model.objects.all().iterator():
+        profiles_to_create.append(
+            target_model(
+                id=profile.id,
+                user_id=profile.user_id,
+                residence_id=profile.residence_id,
+                nickname=(profile.nickname or "")[:30],
+                bio=profile.bio,
+                birth_year=profile.birth_year,
+                birthplace=profile.birthplace,
+                room_number=profile.room_number,
+                profile_image=profile.profile_image,
+                chronotype=profile.chronotype,
+                study_level=profile.study_level,
+                noise_sensitivity=profile.noise_sensitivity,
+                temperature_preference=profile.temperature_preference,
+                order_level=profile.order_level,
+                interests=profile.interests,
+                custom_interests=profile.custom_interests,
+                lifestyle=profile.lifestyle,
+                music_genres=profile.music_genres,
+                dealbreakers=profile.dealbreakers,
+                created_at=profile.created_at,
+                updated_at=profile.updated_at,
+            )
+        )
+
+    target_model.objects.bulk_create(profiles_to_create, batch_size=500)
+
+
+def _copy_profiles_between_apps(apps, source_app_label, target_app_label):
+    source_student_profile = apps.get_model(source_app_label, 'StudentProfile')
+    target_student_profile = apps.get_model(target_app_label, 'StudentProfile')
+
+    _copy_student_profiles(source_student_profile, target_student_profile)
+
+
+def copy_old_to_new(apps, schema_editor):
+    _copy_profiles_between_apps(apps, 'residences', 'residents')
+
+
+def restore_old_from_new(apps, schema_editor):
+    _copy_profiles_between_apps(apps, 'residents', 'residences')
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('residences', '0002_delete_studentprofile'),
+        ('residences', '0001_initial'),
         ('residents', '0001_initial'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
@@ -42,5 +90,20 @@ class Migration(migrations.Migration):
             options={
                 'ordering': ['-created_at'],
             },
+        ),
+        migrations.RunPython(copy_old_to_new, reverse_code=restore_old_from_new),
+        migrations.AddConstraint(
+            model_name='studentprofile',
+            constraint=models.CheckConstraint(
+                condition=models.Q(study_level__gte=1, study_level__lte=5),
+                name='check_study_level_range',
+            ),
+        ),
+        migrations.AddConstraint(
+            model_name='studentprofile',
+            constraint=models.CheckConstraint(
+                condition=models.Q(noise_sensitivity__gte=1, noise_sensitivity__lte=5),
+                name='check_noise_sensitivity_range',
+            ),
         ),
     ]
