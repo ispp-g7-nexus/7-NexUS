@@ -15,6 +15,16 @@ UserModel = get_user_model()
 PASSWORD = "demo1234"  # NOSONAR  # noqa: S105
 
 
+def _create_admin_and_student_roles():
+    admin_role = Role.objects.create(
+        name="Admin", description="Administrador", is_system_default=True, residence=None,
+    )
+    student_role = Role.objects.create(
+        name="Student", description="Residente", is_system_default=True, residence=None,
+    )
+    return admin_role, student_role
+
+
 class IsResidenceAdminPermissionTests(FastTenantTestCase):
     @classmethod
     def get_test_tenant_domain(cls):
@@ -218,18 +228,7 @@ class ResidentUpdateViewTests(FastTenantTestCase):
             is_active=True,
         )
 
-        self.admin_role = Role.objects.create(
-            name="Admin",
-            description="Administrador",
-            is_system_default=True,
-            residence=None,
-        )
-        self.student_role = Role.objects.create(
-            name="Student",
-            description="Residente",
-            is_system_default=True,
-            residence=None,
-        )
+        self.admin_role, self.student_role = _create_admin_and_student_roles()
 
         self.bedroom = Bedroom.objects.create(
             numero="101",
@@ -357,3 +356,193 @@ class ResidentUpdateViewTests(FastTenantTestCase):
         )
         # IsResidenceAdmin devuelve False para anónimos → DRF responde 403
         self.assertEqual(response.status_code, 403)
+
+
+class ResidentAuditLogTests(FastTenantTestCase):
+    """[NX-S3.02] Auditoría de habitaciones — acciones de residentes."""
+
+    @classmethod
+    def get_test_tenant_domain(cls):
+        return "residents-audit.test.local"
+
+    @classmethod
+    def setup_tenant(cls, tenant):
+        tenant.name = "Tenant Resident Audit"
+        tenant.slug = "tenant-resident-audit"
+        tenant.is_active = True
+
+    @classmethod
+    def setup_domain(cls, domain):
+        domain.domain = cls.get_test_tenant_domain()
+        domain.is_primary = True
+
+    def setUp(self):
+        super().setUp()
+        from apps.bedrooms.models import BedroomAuditLog  # noqa: PLC0415
+        self.BedroomAuditLog = BedroomAuditLog
+
+        user_model = get_user_model()
+        self.admin_user = user_model.objects.create_user(
+            username="audit-admin-res",
+            email="audit-admin-res@test.com",
+            password=PASSWORD,
+            is_staff=True,
+        )
+        self.student_user = user_model.objects.create_user(
+            username="audit-student-res",
+            email="audit-student-res@test.com",
+            password=PASSWORD,
+            first_name="Audit",
+            last_name="Student",
+        )
+        self.residence = Residence.objects.create(
+            name="Residencia Audit Res",
+            slug="res-audit-res",
+            code="RAR-001",
+            timezone="Europe/Madrid",
+            is_active=True,
+        )
+        ResidenceDomain.objects.create(
+            residence=self.residence,
+            domain=self.get_test_tenant_domain(),
+            is_primary=True,
+            is_active=True,
+        )
+        self.admin_role, self.student_role = _create_admin_and_student_roles()
+        self.bedroom = Bedroom.objects.create(
+            numero="201",
+            capacidad_maxima=2,
+            tipo=Bedroom.Tipo.DOBLE,
+            residence=self.residence,
+            is_active=True,
+        )
+        self.other_bedroom = Bedroom.objects.create(
+            numero="202",
+            capacidad_maxima=1,
+            tipo=Bedroom.Tipo.INDIVIDUAL,
+            residence=self.residence,
+            is_active=True,
+        )
+        Membership.objects.create(
+            user=self.admin_user,
+            role=self.admin_role,
+            residence=self.residence,
+            is_active=True,
+        )
+        self.membership = Membership.objects.create(
+            user=self.student_user,
+            role=self.student_role,
+            residence=self.residence,
+            bedroom=self.bedroom,
+            is_active=True,
+        )
+        self.admin_client = TenantClient(self.tenant)
+        token, _ = build_access_token(self.admin_user, self.tenant, self.residence)
+        self.admin_client.defaults["HTTP_AUTHORIZATION"] = f"Bearer {token}"
+
+    def _url(self, pk):
+        return f"/api/residents/{pk}/"
+
+    # --- RESIDENT_ASSIGNED ---
+
+    def test_asignar_habitacion_genera_audit_assigned(self):
+        """PATCH bedroom_id distinto genera entrada RESIDENT_ASSIGNED en la nueva habitación."""
+        self.membership.bedroom = None
+        self.membership.save()
+
+        self.admin_client.patch(
+            self._url(self.membership.id),
+            {"bedroom_id": self.bedroom.id},
+            content_type="application/json",
+        )
+
+        log = self.BedroomAuditLog.objects.filter(
+            bedroom=self.bedroom, action=self.BedroomAuditLog.Action.RESIDENT_ASSIGNED
+        ).first()
+        self.assertIsNotNone(log)
+        self.assertEqual(log.changes["resident_email"], self.student_user.email)
+        self.assertEqual(log.user, self.admin_user)
+
+    def test_crear_residente_con_habitacion_genera_audit_assigned(self):
+        """POST /residents/ con bedroom_id genera entrada RESIDENT_ASSIGNED."""
+        new_bedroom = Bedroom.objects.create(
+            numero="203",
+            capacidad_maxima=1,
+            tipo=Bedroom.Tipo.INDIVIDUAL,
+            residence=self.residence,
+            is_active=True,
+        )
+        with patch("apps.residents.services.process_password_reset_request"):
+            self.admin_client.post(
+                "/api/residents/",
+                {
+                    "full_name": "Nuevo Residente",
+                    "email": "nuevo-audit@test.com",
+                    "bedroom_id": new_bedroom.id,
+                },
+                content_type="application/json",
+            )
+
+        log = self.BedroomAuditLog.objects.filter(
+            bedroom=new_bedroom, action=self.BedroomAuditLog.Action.RESIDENT_ASSIGNED
+        ).first()
+        self.assertIsNotNone(log)
+        self.assertEqual(log.changes["resident_email"], "nuevo-audit@test.com")
+        self.assertEqual(log.user, self.admin_user)
+
+    # --- RESIDENT_REMOVED ---
+
+    def test_desasignar_habitacion_genera_audit_removed(self):
+        """PATCH bedroom_id=null genera entrada RESIDENT_REMOVED en la habitación anterior."""
+        self.admin_client.patch(
+            self._url(self.membership.id),
+            {"bedroom_id": None},
+            content_type="application/json",
+        )
+
+        log = self.BedroomAuditLog.objects.filter(
+            bedroom=self.bedroom, action=self.BedroomAuditLog.Action.RESIDENT_REMOVED
+        ).first()
+        self.assertIsNotNone(log)
+        self.assertEqual(log.changes["resident_email"], self.student_user.email)
+        self.assertEqual(log.user, self.admin_user)
+
+    def test_eliminar_residente_con_habitacion_genera_audit_removed(self):
+        """DELETE /residents/{id}/ genera RESIDENT_REMOVED si tenía habitación."""
+        self.admin_client.delete(self._url(self.membership.id))
+
+        log = self.BedroomAuditLog.objects.filter(
+            bedroom=self.bedroom, action=self.BedroomAuditLog.Action.RESIDENT_REMOVED
+        ).first()
+        self.assertIsNotNone(log)
+        self.assertEqual(log.changes["resident_email"], self.student_user.email)
+        self.assertEqual(log.user, self.admin_user)
+
+    def test_eliminar_residente_sin_habitacion_no_genera_audit(self):
+        """DELETE /residents/{id}/ sin habitación asignada no genera entrada de auditoría."""
+        self.membership.bedroom = None
+        self.membership.save()
+
+        count_before = self.BedroomAuditLog.objects.count()
+        response = self.admin_client.delete(self._url(self.membership.id))
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(self.BedroomAuditLog.objects.count(), count_before)
+
+    # --- Cambio de habitación ---
+
+    def test_cambiar_habitacion_genera_removed_en_anterior_y_assigned_en_nueva(self):
+        """PATCH a una habitación diferente genera REMOVED en la anterior y ASSIGNED en la nueva."""
+        self.admin_client.patch(
+            self._url(self.membership.id),
+            {"bedroom_id": self.other_bedroom.id},
+            content_type="application/json",
+        )
+
+        removed = self.BedroomAuditLog.objects.filter(
+            bedroom=self.bedroom, action=self.BedroomAuditLog.Action.RESIDENT_REMOVED
+        ).first()
+        assigned = self.BedroomAuditLog.objects.filter(
+            bedroom=self.other_bedroom, action=self.BedroomAuditLog.Action.RESIDENT_ASSIGNED
+        ).first()
+        self.assertIsNotNone(removed)
+        self.assertIsNotNone(assigned)
