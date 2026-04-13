@@ -1,7 +1,7 @@
 import json
 import re
 from datetime import datetime, time, timedelta
-from typing import Any
+from typing import Any, Iterable
 from django.http import HttpResponse, JsonResponse
 from django.views import View
 from django.utils.decorators import method_decorator
