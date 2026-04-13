@@ -17,6 +17,7 @@ export interface GuestPass {
 export interface AdminGuestPass extends GuestPass {
   created_at: string;
   resident_name: string;
+  out_of_schedule: boolean;
 }
 
 export interface CreateGuestPassPayload {

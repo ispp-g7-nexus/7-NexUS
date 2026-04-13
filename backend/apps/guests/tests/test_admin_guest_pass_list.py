@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import time, timedelta
 
 from django.contrib.auth import get_user_model
 from django.db.utils import ProgrammingError
@@ -7,11 +7,12 @@ from django_tenants.test.cases import TenantTestCase
 from django_tenants.test.client import TenantClient
 
 from apps.common.services import build_access_token
-from apps.guests.models import GuestPass
+from apps.guests.models import GuestPass, GuestPassPolicy
 from apps.membership.models import Membership, Role
 from apps.residences.models import Residence, ResidenceDomain
 
 ADMIN_LIST_URL = "/api/admin/guest-passes/"
+ADMIN_NOTIFICATIONS_URL = "/api/admin/guest-passes/notifications/"
 
 
 class AdminGuestPassListTests(TenantTestCase):
@@ -369,4 +370,48 @@ class AdminGuestPassListTests(TenantTestCase):
     def test_unauthenticated_request_is_rejected(self):
         client = TenantClient(self.tenant)
         response = client.get(ADMIN_LIST_URL)
+        self.assertEqual(response.status_code, 403)
+
+    def test_admin_gets_notifications_for_visitors_after_end_time(self):
+        now = timezone.now()
+        self._create_pass(
+            resident=self.resident_membership,
+            pass_code="NOTIF-PASS-1",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now - timedelta(hours=1),
+            valid_until=now + timedelta(hours=2),
+        )
+        GuestPassPolicy.objects.update_or_create(
+            residence=self.residence,
+            defaults={"visit_end_time": time(0, 0)},
+        )
+
+        response = self.admin_client.get(ADMIN_NOTIFICATIONS_URL)
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(len(payload), 1)
+        self.assertEqual(payload[0]["title"], "Visitante fuera de horario")
+        self.assertNotIn("(", payload[0]["message"])
+        self.assertNotIn(")", payload[0]["message"])
+        self.assertIn("estudiante Carlos Ruiz", payload[0]["message"])
+        self.assertNotIn("Invitado Test", payload[0]["message"])
+
+    def test_admin_notifications_empty_when_end_time_not_configured(self):
+        now = timezone.now()
+        self._create_pass(
+            resident=self.resident_membership,
+            pass_code="NOTIF-PASS-2",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now - timedelta(hours=1),
+            valid_until=now + timedelta(hours=2),
+        )
+
+        response = self.admin_client.get(ADMIN_NOTIFICATIONS_URL)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), [])
+
+    def test_resident_cannot_access_admin_notifications(self):
+        response = self.resident_client.get(ADMIN_NOTIFICATIONS_URL)
         self.assertEqual(response.status_code, 403)

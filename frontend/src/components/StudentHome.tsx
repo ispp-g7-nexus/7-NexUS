@@ -15,13 +15,14 @@ import {
     X,
     Wifi
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { authService } from "../services/auth";
 import announcementService from "../services/announcement.service";
 import { packagesService } from "../services/packages";
+import { objectsService } from "../services/objects";
+import { listMyReservationReminders, type ReservationReminderNotification } from "../services/reservations";
 import { fetchWithAuth, API_URL, API_URL_INCIDENCES } from "../utils/api";
-
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -29,7 +30,9 @@ import { Card, CardContent } from "./ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 
+
 export type StudentTab = "home" | "incidences" | "reservations" | "community" | "events" | "matches" | "announcements" | "menu" | "packages" | "visitors";
+type NotificationType = "urgent" | "admin" | "event" | "info" | "success" | "warning";
 
 interface StudentHomeProps {
     onNavigate: (view: StudentTab) => void;
@@ -41,8 +44,18 @@ const HOME_NOTIFICATIONS_DISMISSED_IDS_KEY = "home-notifications-dismissed-ids";
 const HOME_INCIDENCES_DISMISSED_IDS_KEY = "home-incidences-dismissed-ids";
 const HOME_INCIDENCES_SEEN_AT_KEY = "home-incidences-seen-at";
 const HOME_ANNOUNCEMENTS_SEEN_AT_KEY = "home-announcements-seen-at";
+const VISIT_URGENT_NOTIFICATION_KEY_BASE = "visit-urgent-shared-notifications";
 const NOTIFICATIONS_POLL = 15000;
 const NOTIFICATIONS_LIMIT = 12;
+
+type VisitUrgentSharedNotification = {
+    id: string;
+    title: string;
+    message: string;
+    created_at: string;
+    expires_at: string;
+    source: "visitors";
+};
 
 const parseSeenIds = (raw: string | null): string[] => {
     if (!raw) {
@@ -147,6 +160,49 @@ const getIncidencesSeenAtMs = (): number => {
     return Number.isFinite(parsedMs) ? parsedMs : 0;
 };
 
+const buildVisitUrgentNotificationStorageKey = (email: string): string | null => {
+    const normalized = email.trim().toLowerCase();
+    if (!normalized) {
+        return null;
+    }
+    return `${VISIT_URGENT_NOTIFICATION_KEY_BASE}:${normalized}`;
+};
+
+const getActiveVisitUrgentNotifications = (storageKey: string | null): VisitUrgentSharedNotification[] => {
+    if (globalThis.window === undefined || !storageKey) {
+        return [];
+    }
+
+    const raw = globalThis.localStorage.getItem(storageKey);
+    if (!raw) {
+        return [];
+    }
+
+    try {
+        const parsed = JSON.parse(raw) as VisitUrgentSharedNotification | VisitUrgentSharedNotification[];
+        const items = Array.isArray(parsed) ? parsed : [parsed];
+        const nowMs = Date.now();
+
+        const active = items.filter((item) => {
+            const expiresAtMs = Date.parse(item.expires_at);
+            return Number.isFinite(expiresAtMs) && expiresAtMs > nowMs;
+        });
+
+        if (active.length !== items.length) {
+            if (active.length === 0) {
+                globalThis.localStorage.removeItem(storageKey);
+            } else {
+                globalThis.localStorage.setItem(storageKey, JSON.stringify(active));
+            }
+        }
+
+        return active.sort((a, b) => Date.parse(a.expires_at) - Date.parse(b.expires_at));
+    } catch {
+        globalThis.localStorage.removeItem(storageKey);
+        return [];
+    }
+};
+
 type HomeNotification = {
     id: string;
     title: string;
@@ -183,6 +239,8 @@ type EventItem = {
     host?: { id?: number };
 };
 
+type ReservationNotificationItem = ReservationReminderNotification;
+
 const parseUserId = (raw: unknown) => {
     if (typeof raw === "number" && Number.isFinite(raw)) {
         return raw;
@@ -192,6 +250,138 @@ const parseUserId = (raw: unknown) => {
         return Number.isFinite(parsed) ? parsed : null;
     }
     return null;
+};
+
+const getNotificationPriority = (notification: HomeNotification): number => {
+    if (notification.source === "visitors") {
+        return 2;
+    }
+
+    if (notification.source === "reservations") {
+        return 1;
+    }
+
+    return 0;
+};
+
+const isNotificationDismissible = (notification: HomeNotification): boolean => {
+    return notification.source !== "visitors";
+};
+
+const sourceStyles: Partial<Record<StudentTab, {
+    container: string;
+    accent: string;
+    badge: string;
+    badgeText: string;
+    iconWrap: string;
+    time: string;
+}>> = {
+    announcements: {
+        container: "border-blue-200 bg-gradient-to-br from-blue-50 via-white to-slate-50 shadow-[0_4px_14px_rgba(59,130,246,0.08)]",
+        accent: "bg-gradient-to-b from-blue-400 to-blue-600",
+        badge: "bg-blue-100 text-blue-700",
+        badgeText: "Aviso",
+        iconWrap: "bg-blue-100 ring-1 ring-blue-200",
+        time: "text-blue-700",
+    },
+    incidences: {
+        container: "border-red-200 bg-gradient-to-br from-red-50 via-white to-rose-50 shadow-[0_4px_14px_rgba(239,68,68,0.09)]",
+        accent: "bg-gradient-to-b from-red-400 to-rose-600",
+        badge: "bg-red-100 text-red-700",
+        badgeText: "Incidencia",
+        iconWrap: "bg-red-100 ring-1 ring-red-200",
+        time: "text-red-700",
+    },
+    events: {
+        container: "border-violet-200 bg-gradient-to-br from-violet-50 via-white to-fuchsia-50 shadow-[0_4px_14px_rgba(139,92,246,0.08)]",
+        accent: "bg-gradient-to-b from-violet-400 to-fuchsia-600",
+        badge: "bg-violet-100 text-violet-700",
+        badgeText: "Evento",
+        iconWrap: "bg-violet-100 ring-1 ring-violet-200",
+        time: "text-violet-700",
+    },
+    packages: {
+        container: "border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-teal-50 shadow-[0_4px_14px_rgba(16,185,129,0.08)]",
+        accent: "bg-gradient-to-b from-emerald-400 to-teal-600",
+        badge: "bg-emerald-100 text-emerald-700",
+        badgeText: "Paquete",
+        iconWrap: "bg-emerald-100 ring-1 ring-emerald-200",
+        time: "text-emerald-700",
+    },
+    reservations: {
+        container: "border-teal-300 bg-gradient-to-br from-teal-50 via-white to-cyan-50 shadow-[0_8px_24px_rgba(13,148,136,0.14)]",
+        accent: "bg-gradient-to-b from-teal-400 to-cyan-600",
+        badge: "bg-teal-100 text-teal-700",
+        badgeText: "Recordatorio",
+        iconWrap: "bg-teal-100 ring-1 ring-teal-200",
+        time: "text-teal-700",
+    },
+    visitors: {
+        container: "border-amber-300 bg-gradient-to-br from-amber-50 via-white to-orange-50 shadow-[0_8px_24px_rgba(245,158,11,0.16)]",
+        accent: "bg-gradient-to-b from-amber-400 to-orange-600",
+        badge: "bg-amber-100 text-amber-700",
+        badgeText: "Urgente",
+        iconWrap: "bg-amber-100 ring-1 ring-amber-200",
+        time: "text-amber-700",
+    },
+};
+
+const fallbackByType: Record<NotificationType, {
+    container: string;
+    accent: string;
+    badge: string;
+    badgeText: string;
+    iconWrap: string;
+    time: string;
+}> = {
+    urgent: {
+        container: "border-amber-300 bg-gradient-to-br from-amber-50 via-white to-orange-50",
+        accent: "bg-gradient-to-b from-amber-400 to-orange-600",
+        badge: "bg-amber-100 text-amber-700",
+        badgeText: "Urgente",
+        iconWrap: "bg-amber-100 ring-1 ring-amber-200",
+        time: "text-amber-700",
+    },
+    admin: {
+        container: "border-blue-200 bg-gradient-to-br from-blue-50 via-white to-slate-50",
+        accent: "bg-gradient-to-b from-blue-400 to-blue-600",
+        badge: "bg-blue-100 text-blue-700",
+        badgeText: "Admin",
+        iconWrap: "bg-blue-100 ring-1 ring-blue-200",
+        time: "text-blue-700",
+    },
+    event: {
+        container: "border-violet-200 bg-gradient-to-br from-violet-50 via-white to-fuchsia-50",
+        accent: "bg-gradient-to-b from-violet-400 to-fuchsia-600",
+        badge: "bg-violet-100 text-violet-700",
+        badgeText: "Evento",
+        iconWrap: "bg-violet-100 ring-1 ring-violet-200",
+        time: "text-violet-700",
+    },
+    info: {
+        container: "border-slate-200 bg-gradient-to-br from-slate-50 via-white to-slate-100",
+        accent: "bg-gradient-to-b from-slate-400 to-slate-600",
+        badge: "bg-slate-100 text-slate-700",
+        badgeText: "Info",
+        iconWrap: "bg-slate-100 ring-1 ring-slate-200",
+        time: "text-slate-600",
+    },
+    success: {
+        container: "border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-green-50",
+        accent: "bg-gradient-to-b from-emerald-400 to-green-600",
+        badge: "bg-emerald-100 text-emerald-700",
+        badgeText: "OK",
+        iconWrap: "bg-emerald-100 ring-1 ring-emerald-200",
+        time: "text-emerald-700",
+    },
+    warning: {
+        container: "border-rose-200 bg-gradient-to-br from-rose-50 via-white to-red-50",
+        accent: "bg-gradient-to-b from-rose-400 to-red-600",
+        badge: "bg-rose-100 text-rose-700",
+        badgeText: "Alerta",
+        iconWrap: "bg-rose-100 ring-1 ring-rose-200",
+        time: "text-rose-700",
+    },
 };
 
 export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
@@ -215,6 +405,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
     const [dismissedIncidenceIds, setDismissedIncidenceIds] = useState<string[]>(getInitialDismissedIncidenceIds);
     const [pendingPackages, setPendingPackages] = useState<number>(0);
     const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+    const [currentUserEmail, setCurrentUserEmail] = useState("");
     const [isSessionUserResolved, setIsSessionUserResolved] = useState(false);
     const notificationsRequestIdRef = useRef(0);
     const dismissedNotificationIdsRef = useRef<string[]>(getInitialDismissedNotificationIds());
@@ -229,6 +420,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
             try {
                 const session = await authService.me();
                 setCurrentUserId(parseUserId(session.user?.id));
+                setCurrentUserEmail((session.user?.email || "").trim().toLowerCase());
                 if (session.user) {
                     // Usar el nombre real si está disponible
                     const firstName = session.user.first_name?.trim() || '';
@@ -264,6 +456,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
             } catch (error) {
                 console.error("Error cargando perfil del estudiante", error);
                 setCurrentUserId(null);
+                setCurrentUserEmail("");
                 setUserData(prev => ({ ...prev, name: "Estudiante", room: "Error de conexión" }));
             } finally {
                 setIsSessionUserResolved(true);
@@ -371,6 +564,56 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
         }];
     }, []);
 
+    const buildObjectReminderItems = useCallback((count: number): HomeNotification[] => {
+        if (count <= 0) return [];
+        return [{
+            id: "objects-reminder-unread",
+            title: "[Reservas] Recordatorio de devolución",
+            description: `Tienes ${count} objeto${count === 1 ? "" : "s"} cuya reserva finalizará en breve.`,
+            time: "Ahora",
+            type: "warning" as const,
+            source: "reservations" as const,
+            createdAt: new Date().toISOString(),
+        }];
+    }, []);
+
+    const buildObjectStockAlertItems = useCallback((items: Awaited<ReturnType<typeof objectsService.getUserObjectNotifications>>): HomeNotification[] => {
+        return items.map((item) => ({
+            id: item.id,
+            title: `[Reservas] ${item.title}`,
+            description: item.message,
+            time: formatRelativeTime(item.created_at),
+            type: "warning" as const,
+            source: "reservations" as const,
+            createdAt: item.created_at,
+        }));
+    }, []);
+    const buildVisitUrgentItems = useCallback((): HomeNotification[] => {
+        const storageKey = buildVisitUrgentNotificationStorageKey(currentUserEmail);
+        const items = getActiveVisitUrgentNotifications(storageKey);
+        return items.map((item) => ({
+            id: item.id,
+            title: item.title,
+            description: item.message,
+            time: formatRelativeTime(item.created_at),
+            type: "urgent" as const,
+            source: "visitors" as const,
+            createdAt: item.created_at,
+        }));
+    }, [currentUserEmail]);
+
+    const buildReservationReminderItems = useCallback((items: ReservationNotificationItem[]): HomeNotification[] => {
+        return items.map((item) => ({
+            id: item.id,
+            title: item.title,
+            description: item.message,
+            time: formatRelativeFuture(item.start_time),
+            type: "warning" as const,
+            source: "reservations" as const,
+            createdAt: item.start_time,
+        }));
+    }, []);
+
     const loadHomeNotifications = useCallback(async (silent = false) => {
         const requestId = ++notificationsRequestIdRef.current;
         
@@ -383,12 +626,20 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                 announcementsRes, 
                 incidencesRes, 
                 eventsRes, 
-                packagesRes
+                packagesRes,
+                objectRemindersRes,
+                objectStockAlertsRes,
+                spaceReservationsRes,
+                objectReservationsRes,
             ] = await Promise.allSettled([
                 announcementService.getAnnouncements(),
                 fetchWithAuth(`${API_URL_INCIDENCES}notifications/`),
-                fetchWithAuth(API_URL),
+                fetchWithAuth(`${API_URL}events/`),
                 packagesService.getPendingCount(),
+                objectsService.getPendingRemindersCount(),
+                objectsService.getUserObjectNotifications(),
+                listMyReservationReminders(),
+                objectsService.getUserObjectReservationReminders(),
             ]);
 
             // Evitar actualizaciones si el componente cambió de estado o hubo una petición nueva
@@ -398,6 +649,11 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
             const mergedNotifications: HomeNotification[] = [
                 ...(announcementsRes.status === "fulfilled" ? buildAnnouncementItems(announcementsRes.value) : []),
                 ...(packagesRes.status === "fulfilled" ? buildPackageItems(packagesRes.value || 0) : []),
+                ...(objectRemindersRes.status === "fulfilled" ? buildObjectReminderItems(objectRemindersRes.value || 0) : []),
+                ...(objectStockAlertsRes.status === "fulfilled" ? buildObjectStockAlertItems(objectStockAlertsRes.value || []) : []),
+                ...buildVisitUrgentItems(),
+                ...(spaceReservationsRes.status === "fulfilled" ? buildReservationReminderItems(spaceReservationsRes.value) : []),
+                ...(objectReservationsRes.status === "fulfilled" ? buildReservationReminderItems(objectReservationsRes.value) : []),
             ];
 
             // 4. Procesamiento de respuestas tipo Fetch (Incidencias y Eventos)
@@ -411,12 +667,25 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                 mergedNotifications.push(...buildEventItems(Array.isArray(eventsData) ? eventsData : []));
             }
 
-            const visibleNotifications = mergedNotifications.filter((notification) => !dismissedNotificationIdsRef.current.includes(notification.id));
+            const visibleNotifications = mergedNotifications.filter((notification) => (
+                notification.source === "visitors" || !dismissedNotificationIdsRef.current.includes(notification.id)
+            ));
 
             // 5. Ordenación y Límite
-            const sorted = visibleNotifications
-                .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
-                .slice(0, NOTIFICATIONS_LIMIT);
+            const sortedNotifications = [...visibleNotifications].sort((a, b) => {
+                const priorityDiff = getNotificationPriority(b) - getNotificationPriority(a);
+                if (priorityDiff !== 0) {
+                    return priorityDiff;
+                }
+
+                if (a.source === "reservations" && b.source === "reservations") {
+                    return Date.parse(a.createdAt) - Date.parse(b.createdAt);
+                }
+
+                return Date.parse(b.createdAt) - Date.parse(a.createdAt);
+            });
+
+            const sorted = sortedNotifications.slice(0, NOTIFICATIONS_LIMIT);
 
             setNotifications(sorted);
 
@@ -427,7 +696,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                 setIsNotificationsLoading(false);
             }
         }
-    }, [buildAnnouncementItems, buildIncidenceItems, buildEventItems, buildPackageItems]);
+    }, [buildAnnouncementItems, buildIncidenceItems, buildEventItems, buildPackageItems, buildObjectReminderItems, buildObjectStockAlertItems, buildReservationReminderItems, buildVisitUrgentItems]);
     useEffect(() => {
         loadHomeNotifications();
         const intervalId = globalThis.setInterval(() => loadHomeNotifications(true), NOTIFICATIONS_POLL);
@@ -469,6 +738,10 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
     };
 
     const handleDismissNotification = (notification: HomeNotification) => {
+        if (!isNotificationDismissible(notification)) {
+            return;
+        }
+
         appendSeenNotificationIds([notification.id]);
         appendDismissedNotificationIds([notification.id]);
 
@@ -502,8 +775,10 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
     const getNotificationIcon = (source: string) => {
         switch (source) {
             case "announcements": return <Megaphone className="w-5 h-5 text-blue-600" />;
-            case "incidences": return <AlertCircle className="w-5 h-5 text-orange-600" />;
+            case "incidences": return <AlertCircle className="w-5 h-5 text-red-600" />;
             case "packages": return <Package className="w-5 h-5 text-green-600" />;
+            case "visitors": return <Users className="w-5 h-5 text-red-600" />;
+            case "reservations": return <Calendar className="w-5 h-5 text-teal-700" />;
             default: return <Calendar className="w-5 h-5 text-purple-600" />;
         }
     };
@@ -556,6 +831,8 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                                                     description={notification.description}
                                                     time={notification.time}
                                                     type={notification.type}
+                                                    source={notification.source}
+                                                    dismissible={isNotificationDismissible(notification)}
                                                     onDismiss={() => handleDismissNotification(notification)}
                                                     onOpenSource={() => {
                                                         if (notification.source === "incidences") {
@@ -670,18 +947,16 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
     );
 }
 
-import { ReactNode } from "react";
-
-type NotificationType = "urgent" | "admin" | "event" | "info" | "success" | "warning";
-
 interface NotificationCardProps {
     icon: ReactNode;
     title: string;
     description: string;
     time: string;
     type: NotificationType;
+    source: StudentTab;
     onDismiss: () => void;
     onOpenSource: () => void;
+    dismissible?: boolean;
 }
 
 interface QuickActionProps {
@@ -692,44 +967,45 @@ interface QuickActionProps {
     onClick: () => void;
 }
 
-function NotificationCard({ icon, title, description, time, type, onDismiss, onOpenSource }: NotificationCardProps) {
-    const bgColors: Record<NotificationType, string> = {
-        urgent: "bg-orange-50 border-orange-200",
-        admin: "bg-blue-50 border-blue-200",
-        event: "bg-yellow-50 border-yellow-200",
-        info: "bg-gray-50 border-gray-200",
-        success: "bg-primary/5 border-primary/20",
-        warning: "bg-red-50 border-red-200",
-    };
+function NotificationCard({ icon, title, description, time, type, source, onDismiss, onOpenSource, dismissible = true }: Readonly<NotificationCardProps>) {
+    const isReservationReminder = source === "reservations";
+    const isVisitorUrgent = source === "visitors";
+    const style = sourceStyles[source] || fallbackByType[type] || fallbackByType.info;
 
     return (
-        <div className={`relative w-full rounded-xl border ${bgColors[type] || bgColors.info} transition-colors hover:shadow-sm`}>
+        <div className={`relative w-full overflow-hidden rounded-xl border ${style.container} transition-all hover:-translate-y-0.5 hover:shadow-md`}>
+            <span className={`absolute left-0 top-0 h-full ${isReservationReminder || isVisitorUrgent ? "w-1.5" : "w-1"} ${style.accent}`} />
             <button
-                className="w-full p-4 pr-12 text-left"
+                className={`w-full py-2.5 pl-3 text-left ${dismissible ? "pr-9" : "pr-3"}`}
                 onClick={onOpenSource}
                 type="button"
             >
-                <div className="flex gap-3">
-                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm">
+                <div className="flex gap-2.5">
+                    <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full shadow-sm ${style.iconWrap}`}>
                         {icon}
                     </div>
                     <div className="flex-1 min-w-0">
-                        <h4 className="font-bold text-gray-900 text-sm mb-1">{title}</h4>
-                        <p className="text-xs text-gray-600 mb-2">{description}</p>
-                        <p className="text-xs text-gray-400">{time}</p>
+                        <span className={`mb-0.5 inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${style.badge}`}>
+                            {style.badgeText}
+                        </span>
+                        <h4 className="mb-0.5 text-sm font-bold text-gray-900 leading-tight">{title}</h4>
+                        <p className="mb-0.5 text-xs text-gray-600 leading-tight line-clamp-2">{description}</p>
+                        <p className={`text-xs ${isReservationReminder || isVisitorUrgent ? "font-semibold" : "font-medium"} ${style.time}`}>{time}</p>
                     </div>
                 </div>
             </button>
-            <Button
-                aria-label={`Descartar notificación ${title}`}
-                className="absolute right-2 top-2 w-9 h-9 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                onClick={onDismiss}
-                size="icon"
-                type="button"
-                variant="ghost"
-            >
-                <X className="h-5 w-5" />
-            </Button>
+            {dismissible ? (
+                <Button
+                    aria-label={`Descartar notificación ${title}`}
+                    className="absolute right-1.5 top-1.5 h-8 w-8 rounded-lg text-gray-500 transition-all hover:bg-red-50 hover:text-red-600"
+                    onClick={onDismiss}
+                    size="icon"
+                    type="button"
+                    variant="ghost"
+                >
+                    <X className="h-5 w-5" />
+                </Button>
+            ) : null}
         </div>
     );
 }

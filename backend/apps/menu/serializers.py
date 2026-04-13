@@ -202,9 +202,9 @@ class MealCreateSerializer(serializers.ModelSerializer):
         return instance
 
 class SpecialMenuRequestSerializer(serializers.ModelSerializer):
-    resident_name = serializers.ReadOnlyField(source='resident.fullname')
+    user_name = serializers.ReadOnlyField(source='user.get_full_name')
 
     class Meta:
         model = SpecialMenuRequest
-        fields = ['id', 'resident', 'resident_name', 'date', 'description', 'status', 'created_at']
-        read_only_fields = ['resident', 'created_at']
+        fields = ['id', 'user', 'user_name', 'date', 'description', 'status', 'created_at']
+        read_only_fields = ['user', 'created_at']

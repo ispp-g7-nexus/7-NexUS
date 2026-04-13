@@ -152,6 +152,7 @@ class AdminGuestPassUnrejectView(AdminGuestPassBaseView):
 class AdminGuestPassListView(AdminGuestPassBaseView):
     def get(self, request):
         residence = self._get_residence(request)
+        policy = get_or_create_guest_pass_policy(residence)
 
         queryset = residence.guest_passes.select_related("resident__user").order_by(
             "-created_at"
@@ -178,8 +179,65 @@ class AdminGuestPassListView(AdminGuestPassBaseView):
             else:
                 queryset = queryset.filter(status=normalized_status)
 
-        serializer = GuestPassAdminReadSerializer(queryset, many=True)
+        serializer = GuestPassAdminReadSerializer(
+            queryset,
+            many=True,
+            context={
+                "visit_start_time": policy.visit_start_time,
+                "visit_end_time": policy.visit_end_time,
+            },
+        )
         return Response(serializer.data)
+
+
+class AdminGuestPassNotificationsView(AdminGuestPassBaseView):
+    NOTIFICATION_LIMIT = 8
+
+    def get(self, request):
+        residence = self._get_residence(request)
+        policy = get_or_create_guest_pass_policy(residence)
+
+        if policy.visit_end_time is None:
+            return Response([], status=status.HTTP_200_OK)
+
+        now = timezone.now()
+        current_time = timezone.localtime(now).time().replace(tzinfo=None)
+        if current_time < policy.visit_end_time:
+            return Response([], status=status.HTTP_200_OK)
+
+        guest_passes = (
+            GuestPass.objects.filter(
+                residence=residence,
+                status=GuestPass.Status.ACTIVE,
+                cancelled_at__isnull=True,
+                revoked_at__isnull=True,
+                valid_from__lte=now,
+                valid_until__gte=now,
+            )
+            .select_related("resident__user")
+            .order_by("valid_until", "-created_at")[: self.NOTIFICATION_LIMIT]
+        )
+
+        data = []
+        for guest_pass in guest_passes:
+            resident_user = getattr(getattr(guest_pass, "resident", None), "user", None)
+            resident_name = (
+                resident_user.get_full_name() if resident_user else ""
+            ) or (resident_user.email if resident_user else "un residente")
+
+            data.append(
+                {
+                    "id": guest_pass.id,
+                    "title": "Visitante fuera de horario",
+                    "message": (
+                        f"El invitado del estudiante {resident_name} está fuera de horario."
+                    ),
+                    "created_at": guest_pass.updated_at.isoformat(),
+                    "end_time": guest_pass.valid_until.isoformat(),
+                }
+            )
+
+        return Response(data, status=status.HTTP_200_OK)
 
 
 class AdminGuestPassPolicyView(AdminGuestPassBaseView):
