@@ -366,18 +366,11 @@ export default function StudentIncidences({ onGoToProfile, onLogout }: StudentIn
   };
 
   const filteredIncidences = incidences.filter((inc) => {
-    if (showOnlyMine && !inc.is_mine) {
+    if (inc.location_type === 'habitacion' && (inc as any).is_mine === false) {
       return false;
     }
-    if (!inc.is_mine && inc.location_type === 'habitacion') {
-      return false;
-    }
-    return applyIncidenceFilters(inc, {
-      search,
-      location: filterLocation,
-      status: filterStatus,
-      priority: filterPriority
-    });
+    if (showOnlyMine && (inc as any).is_mine === false) return false;
+    return applyIncidenceFilters(inc, { search, location: filterLocation, status: filterStatus, priority: filterPriority });
   });
 
   return (
@@ -493,20 +486,35 @@ export default function StudentIncidences({ onGoToProfile, onLogout }: StudentIn
                             </div>
 
                           </div>
-                          <div className={UI_CLASSES.cardLocationRow}>
+                          <div className={COMMON_UI_CLASSES.cardLocationRow}>
                             <MapPin size={14} className="text-slate-400" />
                             <span className="text-[11px] font-semibold text-slate-500 truncate">
                               {LOCATION_LABELS[inc.location_type]}
-                              {inc.location_type === 'habitacion' && inc.room_number ? ` • Hab. ${inc.room_number}` : ''}
+                              {inc.location_type === 'habitacion' && inc.room_number_detail && (
+                                <>
+                                  {` • Hab. ${inc.room_number_detail.numero}`}
+                                  {inc.room_number_detail.planta && ` Planta ${inc.room_number_detail.planta}` }
+                                  {inc.room_number_detail.edificio && ` Edificio ${inc.room_number_detail.edificio}`}
+                                </>
+                              )}
                             </span>
-                          </div>                        </div>
-
-                        <div className="mt-4 pt-3 border-t border-slate-50">
-                          <div className="flex items-center justify-between mb-2.5">
-                            <div className="flex items-center gap-1.5 text-slate-600 truncate text-[11px] font-bold"><Wrench size={13} />{inc.assigned_staff_name || inc.assigned_external_name || 'Sin asignar'}</div>
-                            <div className="flex items-center gap-1 text-slate-400 font-bold text-[10px]"><Clock size={10} />{new Date(inc.created_at).toLocaleDateString()}</div>
                           </div>
-                          <div className="flex justify-end"><Button variant="outline" onClick={async () => { const res = await fetchWithAuth(`${API_URL_INCIDENCES}${inc.id}/`); if (res.ok) { setSelectedDetails(await res.json()); setIsNotesOpen(true); } }} className={UI_CLASSES.btnNotes}>VER DETALLES</Button></div>
+                        </div>
+                        <div className="mt-4 pt-3 border-t">
+                          <div className="flex items-center justify-between mb-2.5">
+                            <div className="flex items-center gap-1.5 text-slate-600 truncate text-[11px] font-bold">
+                              <Wrench size={13} />{inc.assigned_staff_name || inc.assigned_external_name || 'Sin asignar'}</div>
+                            <div className="flex items-center gap-1 text-slate-400 font-bold text-[10px]">
+                              <Clock size={10} />{new Date(inc.created_at).toLocaleDateString()}</div>
+                          </div>
+                          <div className="flex justify-end">
+                            <Button variant="outline" onClick={async () => {
+                              const res = await fetchWithAuth(`${API_URL_INCIDENCES}${inc.id}/`);
+                              if (res.ok) { setSelectedDetails(await res.json()); setIsNotesOpen(true); }
+                            }}
+                              className={COMMON_UI_CLASSES.btnNotes}>VER DETALLES
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </CardContent>
