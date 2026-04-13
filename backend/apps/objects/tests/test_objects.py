@@ -12,7 +12,7 @@ from apps.residences.models import Residence, ResidenceDomain
 class ObjectAvailabilityApiTests(FastTenantTestCase):
     @classmethod
     def get_test_tenant_domain(cls):
-        return "objects.test.local"
+        return "spaces.test.local"
 
     @classmethod
     def setup_tenant(cls, tenant):
@@ -28,7 +28,8 @@ class ObjectAvailabilityApiTests(FastTenantTestCase):
 
     def setUp(self):
         super().setUp()
-        self.client = TenantClient(self.tenant)
+        domain = self.get_test_tenant_domain()
+        self.client = TenantClient(self.tenant, SERVER_NAME=domain, HTTP_HOST=domain)
 
         user_model = get_user_model()
         self.user = user_model.objects.create_user(
@@ -211,7 +212,7 @@ class ObjectAvailabilityApiTests(FastTenantTestCase):
         self.assertEqual(response.status_code, 200)
         past_rental.refresh_from_db()
         future_rental.refresh_from_db()
-        self.assertEqual(past_rental.status, "ACTIVE")
+        self.assertEqual(past_rental.status, "IN_PROGRESS")
         self.assertEqual(future_rental.status, "CANCELLED")
 
         self.assertEqual(Object.objects.count(), 3)
@@ -237,3 +238,49 @@ class ObjectAvailabilityApiTests(FastTenantTestCase):
 
         self.assertEqual(response.status_code, 403)
         self.assertEqual(Object.objects.count(), 3)
+
+    def test_create_object_defaults_stock_total_to_one(self):
+        response = self.client.post(
+            "/api/objects/",
+            data={
+                "name": "Raqueta",
+                "description": "Sin stock explícito",
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        created = Object.objects.get(name="Raqueta")
+        self.assertEqual(created.stock_total, 1)
+
+    def test_create_object_rejects_non_positive_stock_total(self):
+        response = self.client.post(
+            "/api/objects/",
+            data={
+                "name": "Casco",
+                "stock_total": 0,
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("stock_total", response.json()["detail"])
+
+    def test_create_object_rejects_non_integer_stock_total(self):
+        response = self.client.post(
+            "/api/objects/",
+            data={
+                "name": "Patinete",
+                "stock_total": "abc",
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("stock_total", response.json()["detail"])
+
+    def test_delete_object_as_admin_removes_object(self):
+        response = self.client.delete(f"/api/objects/{self.object_available.id}/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Object.objects.filter(id=self.object_available.id).exists())
