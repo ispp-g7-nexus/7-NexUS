@@ -110,6 +110,16 @@ class StudentProfile(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(study_level__gte=1, study_level__lte=5),
+                name='check_study_level_range'
+            ),
+            models.CheckConstraint(
+                condition=models.Q(noise_sensitivity__gte=1, noise_sensitivity__lte=5),
+                name='check_noise_sensitivity_range'
+            )
+        ]
 
     def __str__(self) -> str:
         return f"Profile: {self.user.get_full_name() or self.user.username}"

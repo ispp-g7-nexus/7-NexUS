@@ -5,6 +5,33 @@ from django.conf import settings
 from django.db import migrations, models
 
 
+def normalize_ranges(apps, schema_editor):
+    StudentProfile = apps.get_model('residences', 'StudentProfile')
+    profiles = []
+    
+    for profile in StudentProfile.objects.all():
+        updated = False
+        if profile.study_level < 1:
+            profile.study_level = 1
+            updated = True
+        elif profile.study_level > 5:
+            profile.study_level = 5
+            updated = True
+            
+        if profile.noise_sensitivity < 1:
+            profile.noise_sensitivity = 1
+            updated = True
+        elif profile.noise_sensitivity > 5:
+            profile.noise_sensitivity = 5
+            updated = True
+            
+        if updated:
+            profiles.append(profile)
+            
+    if profiles:
+        StudentProfile.objects.bulk_update(profiles, ['study_level', 'noise_sensitivity'])
+
+
 def _copy_student_profiles(source_model, target_model):
     profiles_to_create = []
 
@@ -34,8 +61,13 @@ def _copy_student_profiles(source_model, target_model):
                 updated_at=profile.updated_at,
             )
         )
+        
+        if len(profiles_to_create) >= 500:
+            target_model.objects.bulk_create(profiles_to_create)
+            profiles_to_create = []
 
-    target_model.objects.bulk_create(profiles_to_create, batch_size=500)
+    if profiles_to_create:
+        target_model.objects.bulk_create(profiles_to_create)
 
 
 def _copy_profiles_between_apps(apps, source_app_label, target_app_label):
@@ -91,6 +123,7 @@ class Migration(migrations.Migration):
                 'ordering': ['-created_at'],
             },
         ),
+        migrations.RunPython(normalize_ranges, reverse_code=migrations.RunPython.noop),
         migrations.RunPython(copy_old_to_new, reverse_code=restore_old_from_new),
         migrations.AddConstraint(
             model_name='studentprofile',

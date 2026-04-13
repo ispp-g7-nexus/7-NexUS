@@ -171,7 +171,7 @@ export function ProfileEditForm({
         dealbreakers: formData.dealbreakers,
       };
 
-      if (formData.profileImage) {
+      if (formData.profileImage && formData.profileImage.startsWith("data:")) {
         apiPayload.profile_image = formData.profileImage;
       }
 
