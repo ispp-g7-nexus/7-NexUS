@@ -173,7 +173,7 @@ class IncidenceViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         request = self.get_serializer_context()['request']
         if serializer.validated_data.get('location_type') == 'habitacion':
-            membership = request.user.memberships.filter(
+            membership = serializer.instance.student.memberships.filter(
                 residence=getattr(request, "residence", None),
                 is_active=True,
                 role__name__iexact="Student"
