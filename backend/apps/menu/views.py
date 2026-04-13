@@ -182,27 +182,65 @@ class MealViewSet(TenantMixin, viewsets.ModelViewSet):
 
 class SpecialMenuRequestViewSet(viewsets.ModelViewSet):
     serializer_class = SpecialMenuRequestSerializer
-    def get_queryset(self):
-        user_data = resolve_user_from_request(self.request)
-        if not user_data:
-            return SpecialMenuRequest.objects.none()
-
-        try:
-            resident = Resident.objects.get(email=user_data.get('email'))
-            return SpecialMenuRequest.objects.filter(resident=resident)
-        except Resident.DoesNotExist:
-            return SpecialMenuRequest.objects.none()
     permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        user = self.request.user
+        if not user.is_authenticated:
+            return SpecialMenuRequest.objects.none()
+        return SpecialMenuRequest.objects.filter(user=user)
 
     def perform_create(self, serializer):
-        user_data = resolve_user_from_request(self.request)
-        if not user_data:
+        user = self.request.user
+        if not user.is_authenticated:
             raise PermissionDenied({"detail": "Usuario no autenticado."})
+        
+        serializer.save(user=user)
 
-        email = user_data.get('email')
+    @action(detail=False, methods=['get'])
+    def list_requests(self, request):
+        """GET /api/menu/special-requests/list_requests/ - Listar solicitudes (pending primero, luego historial)"""
+        if not request.user.is_staff:
+            raise PermissionDenied({"detail": "Solo el personal puede ver todas las peticiones."})
+        
+        # Pendientes primero, luego aprobadas/rechazadas ordenadas por fecha (más recientes primero)
+        from django.db.models import Case, When, Value, IntegerField
+        
+        requests_list = SpecialMenuRequest.objects.all().annotate(
+            status_order=Case(
+                When(status='pending', then=Value(0)),
+                When(status='approved', then=Value(1)),
+                When(status='rejected', then=Value(2)),
+                output_field=IntegerField()
+            )
+        ).order_by('status_order', '-created_at')
+        
+        serializer = self.get_serializer(requests_list, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['patch'])
+    def update_status(self, request, pk=None):
+        """PATCH /api/menu/special-requests/{id}/update_status/ - Actualizar estado"""
+        if not request.user.is_staff:
+            raise PermissionDenied({"detail": "Solo el personal puede actualizar el estado."})
+        
+        # No usar get_object() para evitar filtrado por usuario
         try:
-            resident = Resident.objects.get(email=email)
-        except Resident.DoesNotExist:
-            raise ValidationError({"detail": "No se encontró un residente asociado a este usuario."})
-
-        serializer.save(resident=resident)
+            instance = SpecialMenuRequest.objects.get(pk=pk)
+        except SpecialMenuRequest.DoesNotExist:
+            raise ValidationError({'detail': 'Solicitud no encontrada.'})
+        
+        new_status = request.data.get('status')
+        
+        if not new_status:
+            raise ValidationError({'detail': 'Se requiere el campo status.'})
+        
+        valid_statuses = ['pending', 'approved', 'rejected']
+        if new_status not in valid_statuses:
+            raise ValidationError({'detail': f'Estado inválido. Opciones: {", ".join(valid_statuses)}'})
+        
+        instance.status = new_status
+        instance.save()
+        
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
