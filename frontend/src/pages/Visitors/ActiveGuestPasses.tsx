@@ -21,6 +21,7 @@ import {
   listMyUpcomingGuestPasses,
   listMyGuestPassHistory,
 } from "../../services/guestPasses";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "../../components/ui/dialog";
 
 const DEFAULT_MAX_DURATION_HOURS = 24;
 const DEFAULT_MAX_CONCURRENT_PASSES = 3;
@@ -389,7 +390,7 @@ function PassesList({
   }
 
   if (error) {
-    return <ErrorState message={error} onRetry={onRetry || (() => {})} />;
+    return <ErrorState message={error} onRetry={onRetry || (() => { })} />;
   }
 
   if (passes.length === 0) {
@@ -620,7 +621,7 @@ function CreateGuestPassForm({
         <form onSubmit={onSubmit} className="grid gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
-              <Label htmlFor="guest-first-name">Nombre del invitado</Label>
+              <Label htmlFor="guest-first-name">Nombre del invitado *</Label>
               <Input
                 id="guest-first-name"
                 value={form.guest_first_name}
@@ -635,7 +636,7 @@ function CreateGuestPassForm({
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="guest-last-name">Apellidos del invitado</Label>
+              <Label htmlFor="guest-last-name">Apellidos del invitado *</Label>
               <Input
                 id="guest-last-name"
                 value={form.guest_last_name}
@@ -869,7 +870,7 @@ async function submitGuestPass({
     });
     setForm(buildInitialFormState());
     globalThis.dispatchEvent(new Event(VISIT_STATE_CHANGED_EVENT));
-      await loadPasses();
+    await loadPasses();
   } catch (unknownError) {
     handleCreateError(unknownError, setFormErrors);
   } finally {
@@ -888,6 +889,7 @@ export function ActiveGuestPassesPage({ onGoToProfile, onLogout }: ActiveGuestPa
   const [cancellingPassId, setCancellingPassId] = useState<number | null>(null);
   const [form, setForm] = useState<GuestPassFormState>(() => buildInitialFormState());
   const [formErrors, setFormErrors] = useState<GuestPassFormErrors>({});
+  const [passToDeactivate, setPassToDeactivate] = useState<GuestPass | null>(null);
 
   const loadPasses = useCallback(async () => {
     setLoading(true);
@@ -926,26 +928,21 @@ export function ActiveGuestPassesPage({ onGoToProfile, onLogout }: ActiveGuestPa
     await submitGuestPass({ form, policy, setFormErrors, setIsSubmitting, setForm, loadPasses });
   };
 
-  const handleCancelPass = async (pass: GuestPass) => {
-    const confirmed = window.confirm(
-      `¿Quieres cancelar el pase ${pass.pass_code} de ${pass.full_name}?`
-    );
-    if (!confirmed) {
-      return;
-    }
+  const handleCancelPass = (pass: GuestPass) => {
+    setPassToDeactivate(pass);
+  };
 
-    setCancellingPassId(pass.id);
+  const handleDelete = async () => {
+    if (!passToDeactivate) return;
+    setCancellingPassId(passToDeactivate.id); 
     try {
-      await cancelMyGuestPass(pass.id);
-      toast.success("Pase cancelado correctamente.");
+      await cancelMyGuestPass(passToDeactivate.id);
+      toast.success("Pase cancelado.");
+      setPassToDeactivate(null);
       globalThis.dispatchEvent(new Event(VISIT_STATE_CHANGED_EVENT));
       await loadPasses();
-    } catch (unknownError) {
-      const message =
-        unknownError instanceof Error
-          ? unknownError.message
-          : "No se pudo cancelar el pase de invitado.";
-      toast.error(message);
+    } catch {
+      toast.error("No se pudo cancelar.");
     } finally {
       setCancellingPassId(null);
     }
@@ -1037,6 +1034,32 @@ export function ActiveGuestPassesPage({ onGoToProfile, onLogout }: ActiveGuestPa
           isHistory={true}
           onRetry={() => void loadPasses()}
         />
+
+        {/* MODAL DESACTIVAR */}
+        <Dialog open={!!passToDeactivate} onOpenChange={() => setPassToDeactivate(null)}>
+          <DialogContent className="max-w-[400px] rounded-3xl p-6">
+            <DialogTitle className="text-center text-lg font-bold">¿Cancelar pase?</DialogTitle>
+            <DialogDescription className="text-center text-gray-500 mt-2">
+              Esta acción cancelará el pase para "{passToDeactivate?.full_name}".
+            </DialogDescription>
+            <div className="flex gap-3 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => setPassToDeactivate(null)}
+                className="flex-1 rounded-xl h-12 font-bold"
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                className="flex-1 rounded-xl h-12 font-bold"
+              >
+                Eliminar pase
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </section>
     </div>
   );
