@@ -139,3 +139,102 @@ class PermissionsAndUtilsTests(FastTenantTestCase):
         self.assertTrue(
             _is_capacity_reached(reservations=[r1, r2], interval_start=start_interval, interval_end=end_interval, capacity=1)
         )
+
+    def test_is_reservations_admin_returns_false_for_none_user(self):
+        self.assertFalse(spaces_permissions.is_reservations_admin(None, self.residence))
+
+    def test_is_spaces_admin_permission_denied_when_residence_missing(self):
+        req = SimpleNamespace()
+        req.user = self.user
+        req.method = 'GET'
+        req.residence = None
+
+        perm = spaces_permissions.IsSpacesAdmin()
+        self.assertFalse(perm.has_permission(req, None))
+
+    def test_is_spaces_admin_permission_denied_when_user_not_authenticated(self):
+        class FakeUser:
+            is_authenticated = False
+
+        req = SimpleNamespace()
+        req.user = FakeUser()
+        req.method = 'GET'
+        req.residence = self.residence
+
+        perm = spaces_permissions.IsSpacesAdmin()
+        self.assertFalse(perm.has_permission(req, None))
+
+    def test_parse_request_datetime_naive_converts_to_aware(self):
+        from datetime import datetime
+        naive_dt = datetime(2024, 4, 15, 14, 30, 0)
+        parsed = _parse_request_datetime(naive_dt.isoformat())
+        self.assertIsNotNone(parsed)
+        self.assertIsNotNone(parsed.tzinfo)
+
+    def test_is_capacity_reached_with_no_reservations_returns_false(self):
+        from datetime import datetime
+        now = timezone.now()
+        start = now + timedelta(hours=1)
+        end = start + timedelta(hours=1)
+        
+        result = _is_capacity_reached(
+            reservations=[],
+            interval_start=start,
+            interval_end=end,
+            capacity=5
+        )
+        self.assertFalse(result)
+
+    def test_is_capacity_reached_with_zero_capacity_uses_default(self):
+        space = CommonSpace.objects.create(
+            name="Sala Zero Cap",
+            capacity=0,
+            is_active=True,
+            open_time=time(0, 0),
+            close_time=time(23, 59),
+            residence=self.residence,
+        )
+        
+        now = timezone.now()
+        r1 = SpaceReservation.objects.create(
+            space=space, user=self.user, residence=self.residence,
+            start_time=now + timedelta(minutes=10), end_time=now + timedelta(minutes=70)
+        )
+        
+        start_interval = now + timedelta(minutes=20)
+        end_interval = now + timedelta(minutes=40)
+        
+        result = _is_capacity_reached(
+            reservations=[r1],
+            interval_start=start_interval,
+            interval_end=end_interval,
+            capacity=0
+        )
+        self.assertTrue(result)
+
+    def test_build_occupancy_events_with_overlapping_window(self):
+        space = CommonSpace.objects.create(
+            name="Sala Window",
+            capacity=1,
+            is_active=True,
+            open_time=time(0, 0),
+            close_time=time(23, 59),
+            residence=self.residence,
+        )
+        
+        now = timezone.now()
+        r1 = SpaceReservation.objects.create(
+            space=space, user=self.user, residence=self.residence,
+            start_time=now + timedelta(minutes=100), 
+            end_time=now + timedelta(minutes=120)
+        )
+        
+        window_start = now
+        window_end = now + timedelta(minutes=50)
+        
+        events = _build_occupancy_events(
+            reservations=[r1],
+            window_start=window_start,
+            window_end=window_end
+        )
+        self.assertEqual(len(events), 0)
