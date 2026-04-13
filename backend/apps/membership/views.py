@@ -112,10 +112,10 @@ class MembershipAnalyticsViewSet(viewsets.ViewSet):
         try:
             residence = getattr(request, 'residence', None)
             if residence is None:
-+                return Response(
-+                    {"detail": "No se pudo determinar la residencia del contexto."},
-+                    status=status.HTTP_400_BAD_REQUEST,
-+                )
+                return Response(
+                    {"detail": "No se pudo determinar la residencia del contexto."},
+                    status=status.HTTP_400_BAD_REQUEST,
+               )
             active_members_by_role = list(analytics_services.get_active_members_by_role(residence))
             active_vs_inactive = list(analytics_services.get_active_vs_inactive_members(residence))
             membership_evolution = analytics_services.get_membership_evolution(residence)
