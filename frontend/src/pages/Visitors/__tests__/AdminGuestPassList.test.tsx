@@ -1,6 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import '@testing-library/jest-dom/vitest'
 import { AdminGuestPassListPage } from '../AdminGuestPassList'
 
 vi.mock('../../../services/guestPasses', () => ({
@@ -80,7 +81,7 @@ describe('AdminGuestPassListPage — [NX-S2.39 / NX-S2.40]', () => {
 
     await user.type(screen.getByPlaceholderText(/Buscar/), 'xyz-inexistente')
 
-    expect(screen.getByText('No hay pases que coincidan.')).toBeInTheDocument()
+    expect(screen.getByText('No se han encontrado pases que coincidan')).toBeInTheDocument()
   })
 
   it('abre el diálogo de detalle al hacer clic en un pase', async () => {
@@ -114,10 +115,16 @@ describe('AdminGuestPassListPage — [NX-S2.39 / NX-S2.40]', () => {
   })
 
   it('muestra el comentario del pase cuando existe', async () => {
+    const user = userEvent.setup()
     render(<AdminGuestPassListPage />)
+    await waitFor(() => screen.getByText('Juan Pérez'))
+
+    const passCard = screen.getByRole('button', { name: /Juan Pérez/i })
+    await user.click(passCard)
+
     await waitFor(() => {
-      // El comentario se muestra en la tarjeta de la lista
-      expect(screen.getByText('"Visita familiar"')).toBeInTheDocument()
+      const dialog = screen.getByRole('dialog')
+      expect(within(dialog).getByText(/Visita familiar/i)).toBeInTheDocument()
     })
   })
 })

@@ -140,6 +140,43 @@ class UserSpaceViewsTests(FastTenantTestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(len(resp.json()), 1)
 
+    def test_reservation_reminders_only_include_upcoming_within_one_hour(self):
+        now = timezone.now()
+        upcoming_start = now + timedelta(minutes=45)
+        upcoming_end = upcoming_start + timedelta(hours=1)
+        later_start = now + timedelta(hours=2)
+        later_end = later_start + timedelta(hours=1)
+        active_start = now - timedelta(minutes=10)
+        active_end = active_start + timedelta(hours=1)
+
+        SpaceReservation.objects.create(
+            space=self.space,
+            user=self.user1,
+            residence=self.residence,
+            start_time=upcoming_start,
+            end_time=upcoming_end,
+        )
+        SpaceReservation.objects.create(
+            space=self.space,
+            user=self.user1,
+            residence=self.residence,
+            start_time=later_start,
+            end_time=later_end,
+        )
+        SpaceReservation.objects.create(
+            space=self.space,
+            user=self.user1,
+            residence=self.residence,
+            start_time=active_start,
+            end_time=active_end,
+        )
+
+        resp = self.client1.get("/api/spaces/reservations/reminders/")
+        self.assertEqual(resp.status_code, 200)
+        payload = resp.json()
+        self.assertEqual(len(payload), 1)
+        self.assertIn("Sala Común", payload[0]["title"])
+
     def test_cancel_own_reservation_success(self):
         start = timezone.now().replace(hour=12, minute=0) + timedelta(days=1)
         end = start + timedelta(hours=1)
