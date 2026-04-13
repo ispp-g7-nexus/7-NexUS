@@ -23,8 +23,8 @@ export function CommunityEvent({
     const canUserJoin = typeof canJoin === 'boolean' ? canJoin : true;
     const isHost = Number(localStorage.getItem('currentUserId')) === Number(host?.id);
     const hasChat = Boolean(chatGroup?.id);
-    const canOpenChat = !isPast && hasChat && (isHost || isChatMember);
-    const canManuallyJoinChat = !isPast && hasChat && isJoined && !isChatMember;
+    const canOpenChat = !isPast && hasChat && (isHost || isChatMember) && !isAdmin;
+    const canManuallyJoinChat = !isPast && hasChat && isJoined && !isChatMember && !isAdmin;
 
     return (
         <div

@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from apps.residences.models import StudentProfile
+from apps.residents.models import StudentProfile
 
 UserModel = get_user_model()
 

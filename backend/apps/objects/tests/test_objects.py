@@ -172,7 +172,7 @@ class ObjectAvailabilityApiTests(FastTenantTestCase):
         self.assertFalse(object_payload["can_rent"])
         self.assertTrue(object_payload["lending_enabled"])
 
-    def test_object_is_released_automatically_after_reservation_end(self):
+    def test_object_is_not_released_automatically_after_reservation_end_without_return(self):
         rental = self._create_active_rental_now(self.object_busy_now, self.other_user)
 
         response_during = self.client.get("/api/objects/")
@@ -186,7 +186,7 @@ class ObjectAvailabilityApiTests(FastTenantTestCase):
         response_after = self.client.get("/api/objects/")
         self.assertEqual(response_after.status_code, 200)
         after_payload = {item["id"]: item for item in response_after.json()}
-        self.assertTrue(after_payload[self.object_busy_now.id]["availability"])
+        self.assertFalse(after_payload[self.object_busy_now.id]["availability"])
 
     def test_cancel_without_rental_id_preserves_past_history(self):
         now = timezone.now()

@@ -119,7 +119,7 @@ export function ProfileEditForm({
   const addCustomInterest = () => {
     const trimmedInput = newInterestInput.trim();
     if (trimmedInput.length > 30) {
-      alert("El interés no puede superar los 30 caracteres.");
+      toast.error("El interés no puede superar los 30 caracteres.");
       return;
     }
     if (trimmedInput && !formData.customInterests.includes(trimmedInput)) {
@@ -155,7 +155,7 @@ export function ProfileEditForm({
     setIsSaving(true);
     try {
       // Mapeamos los datos para el backend
-      const apiPayload = {
+      const apiPayload: Record<string, any> = {
         nickname: formData.nickname,
         bio: formData.bio,
         birthplace: formData.birthplace,
@@ -171,13 +171,17 @@ export function ProfileEditForm({
         dealbreakers: formData.dealbreakers,
       };
 
+      if (formData.profileImage && /^data:image\/[a-zA-Z0-9+.-]+;base64,/.test(formData.profileImage)) {
+        apiPayload.profile_image = formData.profileImage;
+      }
+
       await saveStudentProfile(apiPayload);
 
       onSave(formData);
 
     } catch (error) {
       console.error("Failed to save profile:", error);
-      alert("Error al guardar el perfil. Por favor, inténtalo de nuevo.");
+      toast.error("Error al guardar el perfil. Por favor, inténtalo de nuevo.");
     } finally {
       setIsSaving(false);
     }
@@ -238,46 +242,27 @@ export function ProfileEditForm({
               </div>
             </div>
 
-            {/* Nombre y Apodo */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-sm font-medium text-gray-500">
-                  Nombre Completo *
-                </Label>
-                <Input
-                  id="name"
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  disabled
-                  className="bg-gray-50 cursor-not-allowed"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="nickname" className="text-sm font-medium text-gray-500">
-                  Apodo
-                </Label>
+            {/* Apodo */}
+            <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <Label htmlFor="nickname" className="text-sm font-medium text-gray-500">
+                    Apodo
+                  </Label>
+                  <span className={`text-xs ${
+                    formData.nickname.length >= 30 ? "text-red-500 font-medium" : "text-gray-400"
+                  }`}>
+                    ({formData.nickname.length}/30)
+                  </span>
+                </div>
                 <Input
                   id="nickname"
                   type="text"
                   name="nickname"
                   value={formData.nickname}
                   onChange={handleInputChange}
+                  maxLength={30}
                   placeholder="Carlos"
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="room" className="text-sm font-medium text-gray-500">
-                  Habitación
-                </Label>
-                <Input
-                  id="room"
-                  type="text"
-                  value={formData.room || formData.roomNumber || "Sin asignar"}
-                  disabled
-                  className="bg-gray-50 cursor-not-allowed"
-                />
-              </div>
             </div>
 
             {/* Sobre mí */}

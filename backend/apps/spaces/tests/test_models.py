@@ -168,3 +168,102 @@ class SpaceReservationModelTests(FastTenantTestCase):
 
         self.assertIn(self.space.name, text)
         self.assertIn(str(start.date()), text)
+
+    def test_space_reservation_str_format(self):
+        from django.utils import timezone
+        from datetime import timedelta
+
+        start = timezone.now() + timedelta(days=1)
+        end = start + timedelta(hours=1)
+
+        reservation = SpaceReservation.objects.create(
+            space=self.space,
+            user=self.user,
+            residence=self.residence,
+            start_time=start,
+            end_time=end,
+        )
+        text = str(reservation)
+        
+        self.assertIn(":", text)  
+
+    def test_space_reservation_end_must_be_after_start(self):
+        from django.utils import timezone
+        from datetime import timedelta
+        from django.db import IntegrityError
+
+        start = timezone.now() + timedelta(days=1)
+        end = start - timedelta(minutes=1)
+
+        with self.assertRaises(IntegrityError):
+            SpaceReservation.objects.create(
+                space=self.space,
+                user=self.user,
+                residence=self.residence,
+                start_time=start,
+                end_time=end,
+            )
+
+    def test_space_reservation_status_choices(self):
+        self.assertEqual(SpaceReservation.Status.ACTIVE, "active")
+        self.assertEqual(SpaceReservation.Status.CANCELLED, "cancelled")
+
+    def test_common_space_ordering_by_name(self):
+        space1 = CommonSpace.objects.create(
+            name="Zebra",
+            capacity=1,
+            is_active=True,
+            open_time=time(8, 0),
+            close_time=time(20, 0),
+            residence=self.residence,
+        )
+        space2 = CommonSpace.objects.create(
+            name="Apple",
+            capacity=1,
+            is_active=True,
+            open_time=time(8, 0),
+            close_time=time(20, 0),
+            residence=self.residence,
+        )
+        
+        spaces = list(CommonSpace.objects.filter(residence=self.residence))
+        names = [s.name for s in spaces]
+        
+        self.assertEqual(names[0], "Apple")
+        self.assertIn("Sala Reservas", names)
+        self.assertTrue(names.index("Apple") < names.index("Sala Reservas") < names.index("Zebra"))
+
+    def test_space_reservation_ordering_by_start_time(self):
+        from django.utils import timezone
+        from datetime import timedelta
+
+        now = timezone.now()
+        start1 = now + timedelta(days=2)
+        start2 = now + timedelta(days=1)
+
+        res1 = SpaceReservation.objects.create(
+            space=self.space, user=self.user, residence=self.residence,
+            start_time=start1, end_time=start1 + timedelta(hours=1)
+        )
+        res2 = SpaceReservation.objects.create(
+            space=self.space, user=self.user, residence=self.residence,
+            start_time=start2, end_time=start2 + timedelta(hours=1)
+        )
+        
+        reservations = list(SpaceReservation.objects.filter(residence=self.residence))
+        
+        self.assertTrue(reservations[0].start_time <= reservations[1].start_time)
+
+    def test_common_space_default_values(self):
+        space = CommonSpace.objects.create(
+            name="Test Defaults",
+            capacity=1,
+            open_time=time(8, 0),
+            close_time=time(20, 0),
+            residence=self.residence,
+        )
+        
+        self.assertTrue(space.is_active)
+        self.assertEqual(space.reservation_interval_minutes, 60)
+        self.assertEqual(space.description, "")
+        self.assertIsNone(space.img)

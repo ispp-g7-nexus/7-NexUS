@@ -4,7 +4,7 @@ import { MenuWeek, MenuDay, Meal } from "../../types/menu.types";
 import menuService from "../../services/menu.service";
 import { Toast } from "../../components/ui/Toast";
 import { ConfirmModal } from "../../components/ui/ConfirmModal";
-import { API_URL } from '../../services/api';
+
 
 const getMealTypeLabel = (type: Meal['type']): string => {
   switch (type) {
@@ -47,10 +47,9 @@ interface MealCardAdminProps {
   onDelete: (mealId?: string) => void;
 }
 
-function normalizeImageUrl(image: string): string {
-  if (!image) return 'https://via.placeholder.com/150?text=Sin+Imagen';
-  if (image.startsWith('http://') || image.startsWith('https://')) return image;
-  return `${API_URL}${image.startsWith('/') ? '' : '/'}${image}`;
+function getPlaceholderImage(): string {
+  // SVG placeholder local para evitar depender de conexión externa
+  return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23f0f0f0" width="200" height="200"/%3E%3Ctext x="50%" y="50%" font-size="14" fill="%23999" text-anchor="middle" dy=".3em"%3E Imagen no disponible%3C/text%3E%3C/svg%3E';
 }
   
 const MealCardAdmin = ({ meal, onEdit, onDelete }: MealCardAdminProps) => {
@@ -59,11 +58,11 @@ const MealCardAdmin = ({ meal, onEdit, onDelete }: MealCardAdminProps) => {
   {meal?.image && (
     <div className="w-full h-40 mb-3 -mt-4 -mx-4 w-[calc(100%+2rem)] border-b border-black/5 relative group">
             <img
-              src={normalizeImageUrl(meal.image)}
+              src={meal.image || getPlaceholderImage()}
               alt={meal.name}
               className="w-full h-full object-cover"
               onError={(e: SyntheticEvent<HTMLImageElement>) => {
-                e.currentTarget.src = 'https://via.placeholder.com/150?text=Error+Imagen';
+                e.currentTarget.src = getPlaceholderImage();
               }}
             />
       <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
@@ -84,7 +83,7 @@ const MealCardAdmin = ({ meal, onEdit, onDelete }: MealCardAdminProps) => {
         <div className={`flex gap-2 ml-4 shrink-0 ${meal.image ? ' z-10 relative' : ''}`}>
           <button
             onClick={() => onEdit(meal)}
-            className="p-1.5 hover:bg-blue-100 rounded-md text-blue-600 transition-colors"
+            className="p-1.5 hover:bg-green-100 rounded-md text-green-600 transition-colors"
             title="Editar comida"
           >
             <Edit2 className="w-4 h-4" />
@@ -211,7 +210,7 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
           {/* Nombre */}
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-1">
-              Nombre de la comida
+              Nombre de la comida *
             </label>
             <input
               type="text"
@@ -225,7 +224,7 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
           {/* Tipo */}
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-1">
-              Tipo de comida
+              Tipo de comida *
             </label>
             <select
               value={formData.type}
@@ -358,7 +357,7 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
               }
             }}
             disabled={isSaving || !formData.name.trim()}
-            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
             Guardar
@@ -559,7 +558,7 @@ export function AdminMenuView() {
       setLoading(true);
       
       try {
-        const requests = await menuService.getSpecialRequests();
+        const requests = await menuService.listSpecialRequests();
         setSpecialRequests(requests);
       } catch (err) {
         console.error("Error al cargar solicitudes:", err);
@@ -995,34 +994,70 @@ export function AdminMenuView() {
       <div className="mt-12 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="bg-[#1B4D1C] p-4 flex justify-between items-center">
           <h3 className="text-white font-bold">Solicitudes Especiales</h3>
-          <span className="bg-white/20 text-white text-xs px-2 py-1 rounded">{specialRequests.length}</span>
+          <span className="bg-white/20 text-white text-xs px-2 py-1 rounded">{specialRequests.filter(r => r.status === 'pending').length}</span>
         </div>
         <div className="divide-y divide-gray-100">
           {specialRequests.length === 0 ? (
-            <p className="p-8 text-center text-gray-400">No hay peticiones pendientes</p>
+            <p className="p-8 text-center text-gray-400">No hay peticiones</p>
           ) : (
-            specialRequests.map((req) => (
-              <div key={req.id} className="p-4 flex justify-between items-center">
-                <div>
-                  <p className="font-bold text-gray-800">{req.resident_name || 'Residente'}</p>
-                  <p className="text-sm text-gray-500">{req.date}: {req.description}</p>
+            <>
+              {/* Peticiones Pendientes */}
+              {specialRequests.filter(r => r.status === 'pending').map((req) => (
+                <div key={req.id} className="p-4 flex justify-between items-center bg-orange-50/50 hover:bg-orange-50 transition-colors">
+                  <div>
+                    <p className="font-bold text-gray-800">{req.user_name || 'Usuario'}</p>
+                    <p className="text-sm text-gray-500">{req.date}: {req.description}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => handleUpdateSpecialRequest(req.id, 'approved')} 
+                      className="bg-green-600 text-white px-3 py-1 rounded-lg text-sm font-bold hover:bg-green-700 transition-colors"
+                    >
+                      Aprobar
+                    </button>
+                    <button 
+                      onClick={() => handleUpdateSpecialRequest(req.id, 'rejected')} 
+                      className="border border-red-200 text-red-600 px-3 py-1 rounded-lg text-sm font-bold hover:bg-red-50 transition-colors"
+                    >
+                      Rechazar
+                    </button>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <button 
-                    onClick={() => handleUpdateSpecialRequest(req.id, 'approved')} 
-                    className="bg-green-600 text-white px-3 py-1 rounded-lg text-sm font-bold"
-                  >
-                    Aprobar
-                  </button>
-                  <button 
-                    onClick={() => handleUpdateSpecialRequest(req.id, 'rejected')} 
-                    className="border border-red-200 text-red-600 px-3 py-1 rounded-lg text-sm font-bold"
-                  >
-                    Rechazar
-                  </button>
-                </div>
-              </div>
-            ))
+              ))}
+              
+              {/* Historial (Aprobadas/Rechazadas) */}
+              {specialRequests.filter(r => r.status !== 'pending').length > 0 && (
+                <>
+                  <div className="px-4 py-3 bg-gray-50 border-t border-b border-gray-200">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Historial</p>
+                  </div>
+                  {specialRequests.filter(r => r.status !== 'pending').map((req) => (
+                    <div 
+                      key={req.id} 
+                      className={`p-4 flex justify-between items-center ${
+                        req.status === 'approved' 
+                          ? 'bg-green-50/30 hover:bg-green-50/50' 
+                          : 'bg-red-50/30 hover:bg-red-50/50'
+                      } transition-colors`}
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-gray-800">{req.user_name || 'Usuario'}</p>
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                            req.status === 'approved'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-red-100 text-red-700'
+                          }`}>
+                            {req.status === 'approved' ? 'Aprobada' : 'Rechazada'}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-500">{req.date}: {req.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+            </>
           )}
         </div>
       </div>
