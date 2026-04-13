@@ -105,9 +105,13 @@ export function DashboardPage() {
         return () => clearInterval(interval);
     }, [role]);
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
         localStorage.removeItem('userRole');
-        authService.logout().catch(() => null);
+        try {
+            await authService.logout();
+        } catch {
+            // Ignorar errores de logout
+        }
         navigate('/');
     };
 
