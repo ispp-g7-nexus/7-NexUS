@@ -45,27 +45,18 @@ export function AuthPage() {
                 
                 // Verificar si estudiante aceptó las normas de convivencia
                 if (role === 'student') {
-                    // Primero verificar si ya completó las preferencias
-                    try {
-                        const preferences = await preferencesService.getMyPreferences();
-                        if (preferences.is_completed) {
-                            // Si completó preferencias, ir al dashboard sin importar normas
-                            navigate('/dashboard');
-                            return;
-                        }
-                    } catch {
-                        // Si error, continuar con la verificación normal
-                    }
-
                     const userRulesKey = getUserRulesKey(session.user.id.toString());
-                    const skipRules = localStorage.getItem(userRulesKey) === 'true';
+                    const sessionSkip = sessionStorage.getItem(userRulesKey) === 'true';
+                    const localSkip = localStorage.getItem(userRulesKey) === 'true';
+                    const skipRules = sessionSkip || localSkip;
+                    console.log('Onboarding check:', { userRulesKey, sessionSkip, localSkip, skipRules });
                     if (!skipRules) {
                         // Mostrar el modal de normas de convivencia
                         setShowRulesModal(true);
                         return;
                     }
 
-                    // Si skipRules es true pero preferencias no completas, mostrar preferencias
+                    // Si aceptó normas, verificar si formulario de preferencias está completado
                     try {
                         const preferences = await preferencesService.getMyPreferences();
                         if (!preferences.is_completed) {
@@ -113,7 +104,7 @@ export function AuthPage() {
             // Obtener el usuario actual
             const session = await authService.me();
             const userRulesKey = getUserRulesKey(session.user.id.toString());
-            const skipRules = localStorage.getItem(userRulesKey) === 'true';
+            const skipRules = sessionStorage.getItem(userRulesKey) === 'true';
 
             if (!skipRules) {
                 setShowRulesModal(true);
@@ -162,10 +153,12 @@ export function AuthPage() {
 
     const handleRulesAccepted = async (dontShowAgain: boolean) => {
         try {
-            // Solo guardar que las normas fueron aceptadas si el usuario marcó "no mostrar de nuevo"
+            const session = await authService.me();
+            const userRulesKey = getUserRulesKey(session.user.id.toString());
+            // Siempre guardar en sessionStorage para esta sesión
+            sessionStorage.setItem(userRulesKey, 'true');
+            // Solo guardar permanentemente si marcó "no mostrar de nuevo"
             if (dontShowAgain) {
-                const session = await authService.me();
-                const userRulesKey = getUserRulesKey(session.user.id.toString());
                 localStorage.setItem(userRulesKey, 'true');
             }
         } catch (e) {

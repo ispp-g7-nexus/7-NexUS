@@ -33,25 +33,9 @@ export function DashboardPage() {
 
                 // Para estudiantes, validar que hayan completado el onboarding
                 if (nextRole === 'student') {
-                    try {
-                        const preferences = await preferencesService.getMyPreferences();
-                        if (preferences.is_completed) {
-                            // Si completó preferencias, permitir acceso aunque no haya aceptado normas permanentemente
-                            const { first_name, last_name, username, email } = session.user;
-                            const name = (first_name || last_name)
-                                ? `${first_name ?? ''} ${last_name ?? ''}`.trim()
-                                : (username ?? '');
-                            setAdminUser({ name, email: email ?? '' });
-                            localStorage.setItem('userRole', nextRole);
-                            setRole(nextRole);
-                            return;
-                        }
-                    } catch {
-                        // Si error, continuar con validación normal
-                    }
-
                     const userRulesKey = getUserRulesKey(session.user.id.toString());
-                    const skipRules = localStorage.getItem(userRulesKey) === 'true';
+                    // Verificar sessionStorage primero (aceptación temporal), luego localStorage (permanente)
+                    const skipRules = sessionStorage.getItem(userRulesKey) === 'true' || localStorage.getItem(userRulesKey) === 'true';
                     if (!skipRules) {
                         // No aceptó las normas, redirigir a AuthPage
                         navigate('/');
