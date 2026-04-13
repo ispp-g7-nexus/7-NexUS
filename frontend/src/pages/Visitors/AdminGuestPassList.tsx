@@ -189,7 +189,11 @@ export function AdminGuestPassListPage() {
         {processedPasses.map((pass) => (
           <Card
             key={pass.id}
-            className="hover:shadow-md transition-all cursor-pointer hover:border-purple-300 group border-gray-200"
+            className={`hover:shadow-md transition-all cursor-pointer group ${
+              pass.out_of_schedule
+                ? "border-red-300 bg-red-50/70 hover:border-red-400"
+                : "border-gray-200 hover:border-purple-300"
+            }`}
             role="button"
             tabIndex={0}
             aria-label={pass.full_name}
@@ -202,8 +206,20 @@ export function AdminGuestPassListPage() {
             }}
           >
             <CardContent className="p-5 flex flex-col h-full">
+              {pass.out_of_schedule && (
+                <div className="mb-3 rounded-md border border-red-200 bg-red-100 px-2 py-1 text-[11px] font-semibold text-red-700">
+                  Fuera de horario
+                </div>
+              )}
+
               <div className="flex items-start justify-between gap-2 mb-3">
-                <span className="font-bold text-gray-900 group-hover:text-purple-700 transition-colors line-clamp-1 flex-1">
+                <span
+                  className={`font-bold transition-colors line-clamp-1 flex-1 ${
+                    pass.out_of_schedule
+                      ? "text-red-900 group-hover:text-red-800"
+                      : "text-gray-900 group-hover:text-purple-700"
+                  }`}
+                >
                   {pass.full_name}
                 </span>
                 <Badge className={`${STATUS_BADGE[pass.status ?? ""]} whitespace-nowrap shrink-0`}>
