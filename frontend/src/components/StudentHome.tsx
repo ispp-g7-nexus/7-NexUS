@@ -455,6 +455,18 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
             createdAt: new Date().toISOString(),
         }];
     }, []);
+
+    const buildObjectStockAlertItems = useCallback((items: Awaited<ReturnType<typeof objectsService.getUserObjectNotifications>>): HomeNotification[] => {
+        return items.map((item) => ({
+            id: item.id,
+            title: `[Reservas] ${item.title}`,
+            description: item.message,
+            time: formatRelativeTime(item.created_at),
+            type: "warning" as const,
+            source: "reservations" as const,
+            createdAt: item.created_at,
+        }));
+    }, []);
     const buildVisitUrgentItems = useCallback((): HomeNotification[] => {
         const storageKey = buildVisitUrgentNotificationStorageKey(currentUserEmail);
         const items = getActiveVisitUrgentNotifications(storageKey);
@@ -495,6 +507,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                 eventsRes, 
                 packagesRes,
                 objectRemindersRes,
+                objectStockAlertsRes,
                 spaceReservationsRes,
                 objectReservationsRes,
             ] = await Promise.allSettled([
@@ -503,6 +516,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                 fetchWithAuth(`${API_URL}events/`),
                 packagesService.getPendingCount(),
                 objectsService.getPendingRemindersCount(),
+                objectsService.getUserObjectNotifications(),
                 listMyReservationReminders(),
                 objectsService.getUserObjectReservationReminders(),
             ]);
@@ -515,6 +529,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                 ...(announcementsRes.status === "fulfilled" ? buildAnnouncementItems(announcementsRes.value) : []),
                 ...(packagesRes.status === "fulfilled" ? buildPackageItems(packagesRes.value || 0) : []),
                 ...(objectRemindersRes.status === "fulfilled" ? buildObjectReminderItems(objectRemindersRes.value || 0) : []),
+                ...(objectStockAlertsRes.status === "fulfilled" ? buildObjectStockAlertItems(objectStockAlertsRes.value || []) : []),
                 ...buildVisitUrgentItems(),
                 ...(spaceReservationsRes.status === "fulfilled" ? buildReservationReminderItems(spaceReservationsRes.value) : []),
                 ...(objectReservationsRes.status === "fulfilled" ? buildReservationReminderItems(objectReservationsRes.value) : []),
@@ -560,7 +575,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                 setIsNotificationsLoading(false);
             }
         }
-    }, [buildAnnouncementItems, buildIncidenceItems, buildEventItems, buildPackageItems, buildObjectReminderItems, buildReservationReminderItems, buildVisitUrgentItems]);
+    }, [buildAnnouncementItems, buildIncidenceItems, buildEventItems, buildPackageItems, buildObjectReminderItems, buildObjectStockAlertItems, buildReservationReminderItems, buildVisitUrgentItems]);
     useEffect(() => {
         loadHomeNotifications();
         const intervalId = globalThis.setInterval(() => loadHomeNotifications(true), NOTIFICATIONS_POLL);

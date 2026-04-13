@@ -2,6 +2,7 @@ from django.db import models
 from django.conf import settings
 from apps.residences.models import Residence
 from django.utils import timezone
+from django.db.models import Q
 
 class Object(models.Model):
     name = models.CharField(max_length=200)
@@ -28,13 +29,16 @@ class Object(models.Model):
 
         # An object is rentable when at least one unit is free right now.
         now = timezone.now()
-        active_rentals_now = self.rentals.filter(status='ACTIVE', start_date__lt=now, end_date__gt=now).count()
+        active_rentals_now = self.rentals.filter(
+            Q(status='IN_PROGRESS') | Q(status='ACTIVE', start_date__lt=now, end_date__gt=now)
+        ).count()
         return active_rentals_now < self.stock_total
 
 
 class ObjectRental(models.Model):
     STATUS_CHOICES = (
         ('ACTIVE', 'Activa'),
+        ('IN_PROGRESS', 'En curso'),
         ('CANCELLED', 'Cancelada'),
         ('COMPLETED', 'Completada'),
     )
@@ -47,6 +51,16 @@ class ObjectRental(models.Model):
     reminder_viewed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    admin_cancelled_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='cancelled_object_rentals',
+    )
+    admin_cancelled_reason = models.TextField(blank=True)
+    admin_cancelled_at = models.DateTimeField(null=True, blank=True)
+    user_dismissed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ['-start_date']
