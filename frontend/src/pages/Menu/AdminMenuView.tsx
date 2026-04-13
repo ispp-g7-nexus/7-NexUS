@@ -1,11 +1,10 @@
-import { Clock, Edit2, Plus, Trash2, Leaf, Flame, X } from "lucide-react";
-import { useState } from "react";
-import { toast } from "sonner";
+import { Clock, Edit2, Plus, Trash2, Leaf, Flame, X, Loader2, ChevronLeft } from "lucide-react";
+import { useState, useEffect, useCallback, JSX, SyntheticEvent } from "react";
 import { MenuWeek, MenuDay, Meal } from "../../types/menu.types";
-
-interface AdminMenuViewProps {
-  menuWeek?: MenuWeek;
-}
+import menuService from "../../services/menu.service";
+import { Toast } from "../../components/ui/Toast";
+import { ConfirmModal } from "../../components/ui/ConfirmModal";
+import { API_URL } from '../../services/api';
 
 const getMealTypeLabel = (type: Meal['type']): string => {
   switch (type) {
@@ -48,12 +47,33 @@ interface MealCardAdminProps {
   onDelete: (mealId?: string) => void;
 }
 
+function normalizeImageUrl(image: string): string {
+  if (!image) return 'https://via.placeholder.com/150?text=Sin+Imagen';
+  if (image.startsWith('http://') || image.startsWith('https://')) return image;
+  return `${API_URL}${image.startsWith('/') ? '' : '/'}${image}`;
+}
+  
 const MealCardAdmin = ({ meal, onEdit, onDelete }: MealCardAdminProps) => {
   return (
-    <div className={`border rounded-lg p-4 ${getMealTypeColor(meal.type)}`}>
-      <div className="flex items-start justify-between mb-2">
-        <div className="flex items-center gap-2 flex-1">
-          {getMealTypeIcon(meal.type)}
+      <div className={`border rounded-xl p-4 overflow-hidden shadow-sm transition-all hover:shadow-md relative ${getMealTypeColor(meal.type)}`}>
+  {meal?.image && (
+    <div className="w-full h-40 mb-3 -mt-4 -mx-4 w-[calc(100%+2rem)] border-b border-black/5 relative group">
+            <img
+              src={normalizeImageUrl(meal.image)}
+              alt={meal.name}
+              className="w-full h-full object-cover"
+              onError={(e: SyntheticEvent<HTMLImageElement>) => {
+                e.currentTarget.src = 'https://via.placeholder.com/150?text=Error+Imagen';
+              }}
+            />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
+    </div>
+  )}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-3 flex-1">
+          <div className={`shrink-0 ${meal.image ? 'p-1.5 bg-white/90 backdrop-blur rounded-lg shadow-sm border border-white/50 z-10 relative' : ''}`}>
+            {getMealTypeIcon(meal.type)}
+          </div>
           <div className="flex-1">
             <p className="font-semibold text-gray-900">{meal.name}</p>
             {meal.description && (
@@ -61,7 +81,7 @@ const MealCardAdmin = ({ meal, onEdit, onDelete }: MealCardAdminProps) => {
             )}
           </div>
         </div>
-        <div className="flex gap-2 ml-4">
+        <div className={`flex gap-2 ml-4 shrink-0 ${meal.image ? ' z-10 relative' : ''}`}>
           <button
             onClick={() => onEdit(meal)}
             className="p-1.5 hover:bg-blue-100 rounded-md text-blue-600 transition-colors"
@@ -79,23 +99,24 @@ const MealCardAdmin = ({ meal, onEdit, onDelete }: MealCardAdminProps) => {
         </div>
       </div>
 
-      {(meal.allergens || meal.isVegetarian || meal.isVegan) && (
+      {(meal.isGlutenFree || meal.isVegetarian || meal.isVegan) && (
         <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-current border-opacity-20">
           {meal.isVegetarian && (
             <span className="inline-flex items-center gap-1 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
               <Leaf className="w-3 h-3" />
-              Vegetariano
+              <span className="ml-1">Vegetariano</span>
             </span>
           )}
           {meal.isVegan && (
             <span className="inline-flex items-center gap-1 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
               <Flame className="w-3 h-3" />
-              Vegano
+              <span className="ml-1">Vegano</span>
             </span>
           )}
-          {meal.allergens && meal.allergens.length > 0 && (
-            <span className="inline-flex items-center gap-1 text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">
-              ⚠️ Alérgenos: {meal.allergens.join(', ')}
+          {meal.isGlutenFree && (
+            <span className="inline-flex items-center gap-1 text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full">
+              <span className="text-xs">🌾</span>
+              <span className="ml-1">Sin Gluten</span>
             </span>
           )}
         </div>
@@ -119,15 +140,45 @@ const MEAL_TYPES: MealTypeOption[] = [
 interface EditMealModalProps {
   meal?: Meal;
   dayDate?: string;
+  dayId?: string;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (meal: Meal) => void;
+  onSave: (meal: Meal, dayId: string, photoFile: File | null, imageToDelete?: boolean) => void;
+  isSaving?: boolean;
 }
 
-const EditMealModal = ({ meal, isOpen, onClose, onSave }: EditMealModalProps) => {
+const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditMealModalProps) => {
   const [formData, setFormData] = useState<Meal>(
-    meal || { name: '', type: 'lunch', description: '', allergens: [], isVegetarian: false, isVegan: false }
+    meal || { allergens: [], name: '', type: 'lunch', description: '', isGlutenFree: false, isVegetarian: false, isVegan: false }
   );
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [imageToDelete, setImageToDelete] = useState(false);
+  useEffect(() => {
+    if (isOpen) {
+      setFormData(
+        meal || { allergens: [], name: '', type: 'lunch', description: '', isGlutenFree: false, isVegetarian: false, isVegan: false }
+      );
+      setImageToDelete(false);
+      setPhotoFile(null);
+      setPreviewUrl(null);
+    }
+  }, [isOpen, meal]);
+
+  useEffect(() => {
+    if (!photoFile) {
+      setPreviewUrl(null);
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(photoFile);
+    setPreviewUrl(objectUrl);
+
+
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [photoFile]);
 
   if (!isOpen) return null;
 
@@ -135,9 +186,15 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave }: EditMealModalProps) =>
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleRemovePhoto = () => {
+    setPhotoFile(null);
+    setPreviewUrl(null);
+    setImageToDelete(true);
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-lg max-w-md w-full mx-4">
+      <div className="bg-white rounded-xl shadow-lg max-w-md w-full mx-4 max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 className="text-xl font-semibold text-gray-900">
             {meal ? 'Editar comida' : 'Agregar comida'}
@@ -150,7 +207,7 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave }: EditMealModalProps) =>
           </button>
         </div>
 
-        <div className="p-6 space-y-4">
+        <div className="p-6 space-y-4 overflow-y-auto flex-1">
           {/* Nombre */}
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-1">
@@ -172,7 +229,7 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave }: EditMealModalProps) =>
             </label>
             <select
               value={formData.type}
-              onChange={(e) => handleChange('type', e.target.value as Meal['type'])}
+              onChange={(e) => handleChange('type', e.target.value)}
               className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {MEAL_TYPES.map(type => (
@@ -197,7 +254,8 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave }: EditMealModalProps) =>
             />
           </div>
 
-          {/* Alérgenos */}
+
+          {/* Imagen */}
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-1">
               Alérgenos (separados por comas)
@@ -209,6 +267,42 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave }: EditMealModalProps) =>
               placeholder="Ej: Gluten, Maní, Leche"
               className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+            <div className="flex flex-col gap-4 py-4">
+              <label htmlFor="meal-image-input" className="text-sm font-medium">Imagen del plato</label>
+
+              {(previewUrl || (meal?.image && !imageToDelete)) && (
+                <div className="relative w-full h-40 border rounded-md overflow-hidden bg-gray-100">
+                  <img
+                    src={previewUrl || meal?.image}
+                    alt="Previsualización"
+                    className="w-full h-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleRemovePhoto}
+                    className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              <input
+                id="meal-image-input"
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setPhotoFile(file);
+                    const url = URL.createObjectURL(file);
+                    setPreviewUrl(url);
+                    setImageToDelete(false);
+                  }
+                }}
+                className="cursor-pointer"
+              />
+            </div>
           </div>
 
           {/* Opciones dietéticas */}
@@ -235,6 +329,15 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave }: EditMealModalProps) =>
                 />
                 <span className="text-sm text-gray-500">Vegano</span>
               </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={formData.isGlutenFree || false}
+                  onChange={(e) => handleChange('isGlutenFree', e.target.checked)}
+                  className="w-4 h-4 rounded"
+                />
+                <span className="text-sm text-gray-700">Sin Gluten</span>
+              </label>
             </div>
           </div>
         </div>
@@ -243,18 +346,93 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave }: EditMealModalProps) =>
         <div className="flex gap-3 p-6 border-t border-gray-200">
           <button
             onClick={onClose}
+            disabled={isSaving}
             className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-gray-500 font-medium hover:bg-gray-50 transition-colors"
           >
             Cancelar
           </button>
           <button
             onClick={() => {
-              onSave(formData);
-              onClose();
+              if (dayId) {
+                onSave(formData, dayId, photoFile, imageToDelete);
+              }
             }}
-            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+            disabled={isSaving || !formData.name.trim()}
+            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
           >
+            {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
             Guardar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+interface NewWeekModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (weekStart: string, weekEnd: string) => void;
+  isSaving?: boolean;
+}
+
+const NewWeekModal = ({ isOpen, onClose, onSave, isSaving }: NewWeekModalProps) => {
+  const [selectedDate, setSelectedDate] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      const today = new Date();
+      setSelectedDate(today.toISOString().split('T')[0]);
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70] animate-in fade-in duration-200">
+      <div className="bg-white rounded-xl shadow-lg max-w-sm w-full mx-4 animate-in zoom-in-95 duration-200">
+        <div className="flex items-center justify-between p-6 border-b border-gray-100">
+          <h2 className="text-xl font-semibold text-gray-900">
+            Crear nueva semana
+          </h2>
+          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-md transition-colors">
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-4">
+          <p className="text-sm text-gray-500 leading-relaxed">
+            Selecciona <strong>cualquier día de la semana</strong> que desees crear. El sistema construirá automáticamente la semana empezando desde el lunes.
+          </p>
+          <div>
+            <label htmlFor="new-week-date" className="block text-sm font-medium text-gray-700 mb-2">
+              Semana a crear (Día de referencia)
+            </label>
+            <input
+              id="new-week-date"
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-3 p-6 border-t border-gray-100 bg-gray-50/50 rounded-b-xl">
+          <button
+            onClick={onClose}
+            disabled={isSaving}
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-white transition-colors disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={() => onSave(selectedDate, selectedDate)}
+            disabled={isSaving || !selectedDate}
+            className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+            Crear semana
           </button>
         </div>
       </div>
@@ -264,13 +442,13 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave }: EditMealModalProps) =>
 
 interface DayMenuCardAdminProps {
   day: MenuDay;
-  onAddMeal: (dayDate: string) => void;
-  onEditMeal: (meal: Meal) => void;
+  onAddMeal: (dayDate: string, dayId: string) => void;
+  onEditMeal: (meal: Meal, dayId: string) => void;
   onDeleteMeal: (mealId?: string) => void;
 }
 
 const DayMenuCardAdmin = ({ day, onAddMeal, onEditMeal, onDeleteMeal }: DayMenuCardAdminProps) => {
-  const dayDate = new Date(day.date);
+  const dayDate = new Date(day.date + 'T00:00:00');
   const dayName = dayDate.toLocaleDateString('es-ES', { weekday: 'long' });
   const formattedDate = dayDate.toLocaleDateString('es-ES', {
     day: 'numeric',
@@ -287,8 +465,8 @@ const DayMenuCardAdmin = ({ day, onAddMeal, onEditMeal, onDeleteMeal }: DayMenuC
           <p className="text-sm text-primary-foreground/80">{formattedDate}</p>
         </div>
         <button
-          onClick={() => onAddMeal(day.date)}
-          className="flex items-center gap-2 px-3 py-2 bg-white text-primary rounded-lg hover:bg-primary/10 transition-colors font-medium"
+          onClick={() => onAddMeal(day.date, day.id || '')}
+          className="flex items-center gap-2 px-3 py-2 bg-white text-primary rounded-lg hover:bg-gray-100 hover:shadow-lg scale-100 hover:scale-105 transition-all font-medium"
           title="Agregar comida"
         >
           <Plus className="w-4 h-4" />
@@ -307,7 +485,7 @@ const DayMenuCardAdmin = ({ day, onAddMeal, onEditMeal, onDeleteMeal }: DayMenuC
               </div>
               <MealCardAdmin
                 meal={meal}
-                onEdit={onEditMeal}
+                onEdit={(m) => onEditMeal(m, day.id || '')}
                 onDelete={onDeleteMeal}
               />
             </div>
@@ -323,191 +501,422 @@ const DayMenuCardAdmin = ({ day, onAddMeal, onEditMeal, onDeleteMeal }: DayMenuC
   );
 };
 
-export function AdminMenuView({ menuWeek }: AdminMenuViewProps) {
+export function AdminMenuView() {
+  const [menuWeek, setMenuWeek] = useState<MenuWeek | null>(null);
+  const [allWeeks, setAllWeeks] = useState<MenuWeek[]>([]);
+  const [selectedWeekId, setSelectedWeekId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [selectedMeal, 
-    // setSelectedMeal
-  ] = useState<Meal | undefined>();
-  const [editingDayDate, 
-    // setEditingDayDate
-  ] = useState<string>('');
+  const [isNewWeekModalOpen, setIsNewWeekModalOpen] = useState(false);
+  const [selectedMeal, setSelectedMeal] = useState<Meal | undefined>();
+  const [editingDayId, setEditingDayId] = useState<string>('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [specialRequests, setSpecialRequests] = useState<any[]>([]);
 
-  const mockMenuWeek: MenuWeek = menuWeek || {
-    weekStart: '2026-03-09',
-    weekEnd: '2026-03-15',
-    days: [
-      {
-        day: 'lunes',
-        date: '2026-03-09',
-        meals: [
-          {
-            name: 'Café con tostadas',
-            type: 'breakfast',
-            isVegetarian: true,
-          },
-          {
-            name: 'Arroz con pollo',
-            description: 'Acompañado de ensalada fresca',
-            type: 'lunch',
-          },
-          {
-            name: 'Sopa de verduras',
-            type: 'dinner',
-            isVegetarian: true,
-            isVegan: true,
-          },
-        ],
-      },
-      {
-        day: 'martes',
-        date: '2026-03-10',
-        meals: [
-          {
-            name: 'Zumo de naranja y cereales',
-            type: 'breakfast',
-            isVegetarian: true,
-            isVegan: true,
-          },
-          {
-            name: 'Pasta a la boloñesa',
-            type: 'lunch',
-            allergens: ['Gluten', 'Huevo'],
-          },
-          {
-            name: 'Hamburguesas caseras',
-            type: 'dinner',
-          },
-        ],
-      },
-      {
-        day: 'miércoles',
-        date: '2026-03-11',
-        meals: [
-          {
-            name: 'Tostadas con mermelada',
-            type: 'breakfast',
-            isVegetarian: true,
-          },
-          {
-            name: 'Caldereta de res',
-            type: 'lunch',
-          },
-          {
-            name: 'Pizza Margarita',
-            type: 'dinner',
-            isVegetarian: true,
-          },
-        ],
-      },
-      {
-        day: 'jueves',
-        date: '2026-03-12',
-        meals: [
-          {
-            name: 'Yogur con granola',
-            type: 'breakfast',
-            isVegetarian: true,
-          },
-          {
-            name: 'Cuscús con verduras',
-            type: 'lunch',
-            isVegetarian: true,
-            isVegan: true,
-          },
-          {
-            name: 'Pollo al horno con papas',
-            type: 'dinner',
-          },
-        ],
-      },
-      {
-        day: 'viernes',
-        date: '2026-03-13',
-        meals: [
-          {
-            name: 'Desayuno completo',
-            description: 'Huevos, jamón, pan',
-            type: 'breakfast',
-          },
-          {
-            name: 'Paella de mariscos',
-            type: 'lunch',
-          },
-          {
-            name: 'Filete de pescado',
-            type: 'dinner',
-          },
-        ],
-      },
-    ],
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const [confirmConfig, setConfirmConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    action: () => void;
+  }>({ isOpen: false, title: '', message: '', action: () => { } });
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => setToast({ message, type });
+
+  const confirmAction = (title: string, message: string, action: () => void) => {
+    setConfirmConfig({ isOpen: true, title, message, action });
   };
 
-  const week = menuWeek || mockMenuWeek;
+  const loadWeeks = useCallback(async () => {
+    try {
+      const weeks = await menuService.listWeeks();
+      setAllWeeks(weeks);
+      return weeks;
+    } catch {
+      return [];
+    }
+  }, []);
 
+  const loadWeekDetail = useCallback(async (weekId: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const week = await menuService.getWeek(weekId);
+      setMenuWeek(week);
+      setSelectedWeekId(weekId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al cargar el menú');
+      setMenuWeek(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const init = async () => {
+      setLoading(true);
+      
+      try {
+        const requests = await menuService.getSpecialRequests();
+        setSpecialRequests(requests);
+      } catch (err) {
+        console.error("Error al cargar solicitudes:", err);
+      }
+
+      try {
+        const currentWeek = await menuService.getCurrentWeek();
+        setMenuWeek(currentWeek);
+        setSelectedWeekId(currentWeek.id || null);
+        setError(null);
+      } catch {
+        try {
+          const weeks = await menuService.listWeeks();
+          setAllWeeks(weeks);
+          if (weeks.length > 0) {
+            const first = weeks[0];
+            if (first.id) {
+              const firstWeek = await menuService.getWeek(first.id);
+              setMenuWeek(firstWeek);
+              setSelectedWeekId(first.id || null);
+            }
+          } else {
+            setMenuWeek(null);
+          }
+        } catch {
+          setMenuWeek(null);
+        }
+      } finally {
+        setLoading(false);
+      }
+      await loadWeeks();
+    };
+    init();
+  }, [loadWeeks]);
+
+    const handleUpdateSpecialRequest = async (id: string | number, status: 'approved' | 'rejected') => {
+      try {
+      await menuService.updateSpecialRequestStatus(id, status);
+      
+      setSpecialRequests(prev => prev.filter(req => req.id !== id));
+      
+      showToast(`Petición ${status === 'approved' ? 'aprobada' : 'rechazada'}`, 'success');
+      } catch (err) {
+        showToast('Error al actualizar la petición: ' + (err instanceof Error ? err.message : 'Error desconocido'), 'error');
+      }
+  };
   const handleAddMeal = (
-    // dayDate: string
-  ) => {
-    // setEditingDayDate(dayDate);
-    // setSelectedMeal(undefined);
-    // setIsEditModalOpen(true);
-    toast.info("Estamos trabajando en esta funcionalidad");
+     _dayDate: string
+  , dayId: string) => {
+     setEditingDayId(dayId);
+     setSelectedMeal(undefined);
+     setIsEditModalOpen(true);
   };
 
-  const handleEditMeal = (
-    // meal: Meal
-  ) => {
-    // setSelectedMeal(meal);
-    // setIsEditModalOpen(true);
-    toast.info("Estamos trabajando en esta funcionalidad");
+  const handleEditMeal = (meal: Meal, dayId: string) => {
+    setSelectedMeal(meal);
+    setEditingDayId(dayId);
+    setIsEditModalOpen(true);
   };
 
-  const handleDeleteMeal = (mealId?: string) => {
-    // Esta función solo es visual, la lógica se implementará después
-    console.log('Eliminar comida:', mealId);
-    toast.info("Estamos trabajando en esta funcionalidad");
+  const handleDeleteMeal = async (mealId?: string) => {
+    if (!mealId) return;
+
+    confirmAction(
+      'Eliminar comida',
+      '¿Estás seguro de que quieres eliminar esta comida?',
+      async () => {
+        try {
+          await menuService.deleteMeal(mealId);
+          if (selectedWeekId) {
+            await loadWeekDetail(selectedWeekId);
+          }
+          showToast('Comida eliminada correctamente', 'success');
+        } catch (err) {
+          showToast('Error al eliminar: ' + (err instanceof Error ? err.message : 'Error desconocido'), 'error');
+        } finally {
+          setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+        }
+      }
+    );
   };
 
-  const handleSaveMeal = (meal: Meal) => {
-    // Esta función solo es visual, la lógica se implementará después
-    console.log('Guardar comida:', meal);
-    toast.info("Estamos trabajando en esta funcionalidad");
+  const handleSaveMeal = async (meal: Meal, dayId: string, photo: File | null, shouldDeleteImage?: boolean) => {
+  setIsSaving(true);
+  try {
+    const formData = new FormData();
+
+    formData.append('name', meal.name);
+    formData.append('description', meal.description || '');
+    formData.append('type', meal.type);
+    formData.append('isGlutenFree', String(meal.isGlutenFree));
+    formData.append('isVegetarian', String(meal.isVegetarian));
+    formData.append('isVegan', String(meal.isVegan));
+
+    if (shouldDeleteImage) {
+      formData.append('removeImage', 'true');
+    }
+
+    if (photo) {
+      formData.append('image', photo);
+    }
+
+    if (meal.id) {
+      await menuService.updateMeal(meal.id, formData);
+    } else {
+      await menuService.createMeal(dayId, formData);
+    }
+
+    setIsEditModalOpen(false);
+
+    showToast(meal.id ? 'Comida actualizada' : 'Comida agregada', 'success');
+
+    if (selectedWeekId) {
+      await loadWeekDetail(selectedWeekId);
+    }
+  } catch (err) {
+    showToast('Error al guardar: ' + (err instanceof Error ? err.message : 'Error desconocido'), 'error');
+  } finally {
+    setIsSaving(false);
+  }
+};
+
+  const handleCreateWeek = async (weekStart: string, weekEnd: string) => {
+    setIsSaving(true);
+    try {
+      const newWeek = await menuService.createWeek(weekStart, weekEnd);
+      setIsNewWeekModalOpen(false);
+      setMenuWeek(newWeek);
+      setSelectedWeekId(newWeek.id || null);
+      showToast('Semana creada correctamente', 'success');
+      await loadWeeks();
+    } catch (err) {
+      showToast('Error al crear semana: ' + (err instanceof Error ? err.message : 'Error desconocido'), 'error');
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  const handleNavigateWeek = async (direction: 'prev' | 'next') => {
+    if (!selectedWeekId || allWeeks.length === 0) return;
+
+    const currentIndex = allWeeks.findIndex(w => w.id === selectedWeekId);
+    if (currentIndex === -1) return;
+
+    const newIndex = direction === 'prev' ? currentIndex + 1 : currentIndex - 1;
+    if (newIndex < 0 || newIndex >= allWeeks.length) return;
+
+    const targetWeek = allWeeks[newIndex];
+    if (targetWeek.id) {
+      await loadWeekDetail(targetWeek.id);
+    }
+  };
+
+  const handleTogglePublish = async () => {
+    if (!menuWeek?.id) return;
+    setIsSaving(true);
+    try {
+      const updated = await menuService.updateWeek(menuWeek.id, {
+        isPublished: !menuWeek.isPublished
+      });
+      setMenuWeek(updated);
+      showToast(updated.isPublished ? 'Menú publicado' : 'Menú oculto a residentes', 'success');
+      await loadWeeks();
+    } catch (err) {
+      showToast('Error al actualizar estado: ' + (err instanceof Error ? err.message : 'Error desconocido'), 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteWeek = async () => {
+    const weekId = menuWeek?.id;
+    if (!weekId) return;
+
+    confirmAction(
+      'Eliminar semana completa',
+      '¿Estás seguro de que quieres eliminar esta semana completa? Se borrarán todas las comidas y los días.',
+      async () => {
+        setIsSaving(true);
+        try {
+          await menuService.deleteWeek(weekId);
+
+          const updatedWeeks = allWeeks.filter(w => w.id !== weekId);
+          setAllWeeks(updatedWeeks);
+
+          if (updatedWeeks.length > 0) {
+            await loadWeekDetail(updatedWeeks[0].id);
+          } else {
+            setMenuWeek(null);
+            setSelectedWeekId(null);
+          }
+          showToast('Semana eliminada correctamente', 'success');
+        } catch (err) {
+          showToast('Error al eliminar semana: ' + (err instanceof Error ? err.message : 'Error desconocido'), 'error');
+        } finally {
+          setIsSaving(false);
+          setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+        }
+      }
+    );
+  };
+
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-green-600 mx-auto mb-4" />
+          <p className="text-gray-500">Cargando menú...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!menuWeek) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-4xl font-serif text-gray-900 mb-2">
+                Gestión del Menú
+              </h1>
+              <p className="text-gray-600">
+                {error || 'No hay menús semanales creados aún'}
+              </p>
+            </div>
+            <button
+              onClick={() => setIsNewWeekModalOpen(true)}
+              className="px-5 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors font-medium flex items-center gap-2 shadow-sm"
+            >
+              <Plus className="w-5 h-5" />
+              Nueva Semana
+            </button>
+          </div>
+
+          <div className="col-span-full text-center py-16 text-gray-400">
+            <p className="text-lg mb-4">No hay menú disponible</p>
+            <p className="text-sm">Usa el botón "Nueva Semana" para crear el primer menú</p>
+          </div>
+        </div>
+
+        <NewWeekModal
+          isOpen={isNewWeekModalOpen}
+          onClose={() => setIsNewWeekModalOpen(false)}
+          onSave={handleCreateWeek}
+          isSaving={isSaving}
+        />
+
+        <ConfirmModal
+          isOpen={confirmConfig.isOpen}
+          title={confirmConfig.title}
+          message={confirmConfig.message}
+          onConfirm={confirmConfig.action}
+          onCancel={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
+        />
+
+        {toast && (
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast(null)}
+          />
+        )}
+      </div>
+    );
+  }
+
+  const currentIndex = allWeeks.findIndex(w => w.id === selectedWeekId);
+  const canGoPrev = currentIndex < allWeeks.length - 1;
+  const canGoNext = currentIndex > 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-serif text-gray-900 mb-2">
-              Gestión del Menú del Comedor
-            </h1>
-            <p className="text-gray-500">
-              Administra el menú de la semana del{' '}
-              {new Date(week.weekStart).toLocaleDateString('es-ES', {
-                day: 'numeric',
-                month: 'long',
-              })}{' '}
-              al{' '}
-              {new Date(week.weekEnd).toLocaleDateString('es-ES', {
-                day: 'numeric',
-                month: 'long',
-              })}
-            </p>
+        <div className="mb-8 flex flex-col gap-6">
+          <h1 className="text-4xl font-serif text-gray-900 text-center">
+            Gestión del Menú
+          </h1>
+
+          <div className="flex items-center justify-center gap-6">
+            {/* Week Navigation */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => handleNavigateWeek('prev')}
+                disabled={!canGoPrev}
+                className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <span className="text-lg font-semibold text-gray-900 whitespace-nowrap min-w-[120px] text-center">
+                {new Date(menuWeek.weekStart + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                {' - '}
+                {new Date(menuWeek.weekEnd + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+              </span>
+              <button
+                onClick={() => handleNavigateWeek('next')}
+                disabled={!canGoNext}
+                className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="w-5 h-5 rotate-180" />
+              </button>
+            </div>
+
+            {/* Status Badge */}
+            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ${
+              menuWeek.isPublished
+                ? 'bg-green-100 text-green-700'
+                : 'bg-orange-100 text-orange-700'
+            }`}>
+              <div className={`w-2 h-2 rounded-full ${menuWeek.isPublished ? 'bg-green-500' : 'bg-orange-500'}`} />
+              {menuWeek.isPublished ? 'Publicado' : 'Borrador'}
+            </div>
+
+            {/* Right Controls */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-full">
+                <span className="text-sm text-gray-600">Público</span>
+                <button
+                  onClick={handleTogglePublish}
+                  disabled={isSaving}
+                  className={`w-8 h-5 rounded-full transition-colors ${
+                    menuWeek.isPublished ? 'bg-green-500' : 'bg-gray-300'
+                  }`}
+                >
+                  <div
+                    className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                      menuWeek.isPublished ? 'translate-x-3.5' : 'translate-x-0.5'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <button
+                onClick={handleDeleteWeek}
+                disabled={isSaving}
+                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
+
+              <button
+                onClick={() => setIsNewWeekModalOpen(true)}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Nueva Semana
+              </button>
+            </div>
           </div>
-          <button 
-            onClick={() => toast.info("Estamos trabajando en esta funcionalidad")}
-            className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium flex items-center gap-2"
-          >
-            <Plus className="w-5 h-5" />
-            Nueva Semana
-          </button>
         </div>
 
         {/* Menu Days Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {week.days && week.days.length > 0 ? (
-            week.days.map((day, index) => (
+          {menuWeek.days && menuWeek.days.length > 0 ? (
+            menuWeek.days.map((day, index) => (
               <DayMenuCardAdmin
                 key={day.id || index}
                 day={day}
@@ -550,11 +959,73 @@ export function AdminMenuView({ menuWeek }: AdminMenuViewProps) {
       {/* Edit Meal Modal */}
       <EditMealModal
         meal={selectedMeal}
-        dayDate={editingDayDate}
+        dayId={editingDayId}
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         onSave={handleSaveMeal}
+        isSaving={isSaving}
       />
+
+      {/* New Week Modal */}
+      <NewWeekModal
+        isOpen={isNewWeekModalOpen}
+        onClose={() => setIsNewWeekModalOpen(false)}
+        onSave={handleCreateWeek}
+        isSaving={isSaving}
+      />
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirmConfig.isOpen}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        onConfirm={confirmConfig.action}
+        onCancel={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
+      />
+
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+      {/* Sección de Peticiones al final de la página */}
+      <div className="mt-12 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="bg-[#1B4D1C] p-4 flex justify-between items-center">
+          <h3 className="text-white font-bold">Solicitudes Especiales</h3>
+          <span className="bg-white/20 text-white text-xs px-2 py-1 rounded">{specialRequests.length}</span>
+        </div>
+        <div className="divide-y divide-gray-100">
+          {specialRequests.length === 0 ? (
+            <p className="p-8 text-center text-gray-400">No hay peticiones pendientes</p>
+          ) : (
+            specialRequests.map((req) => (
+              <div key={req.id} className="p-4 flex justify-between items-center">
+                <div>
+                  <p className="font-bold text-gray-800">{req.resident_name || 'Residente'}</p>
+                  <p className="text-sm text-gray-500">{req.date}: {req.description}</p>
+                </div>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => handleUpdateSpecialRequest(req.id, 'approved')} 
+                    className="bg-green-600 text-white px-3 py-1 rounded-lg text-sm font-bold"
+                  >
+                    Aprobar
+                  </button>
+                  <button 
+                    onClick={() => handleUpdateSpecialRequest(req.id, 'rejected')} 
+                    className="border border-red-200 text-red-600 px-3 py-1 rounded-lg text-sm font-bold"
+                  >
+                    Rechazar
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
     </div>
   );
 }

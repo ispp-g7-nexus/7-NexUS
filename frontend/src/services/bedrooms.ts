@@ -98,3 +98,17 @@ export async function getBedroomResidents(id: number): Promise<BedroomResident[]
 export async function listResidents() {
     return fetchWithAuth(`${BASE}residents/`);
 }
+
+export interface BedroomAuditEntry {
+    id: number;
+    action: 'CREATED' | 'UPDATED' | 'RESIDENT_ASSIGNED' | 'RESIDENT_REMOVED';
+    changes: Record<string, unknown>;
+    timestamp: string;
+    performed_by: string | null;
+}
+
+export async function getBedroomAuditLog(id: number, options?: { signal?: AbortSignal }): Promise<BedroomAuditEntry[]> {
+    const res = await fetchWithAuth(`${BASE}${id}/audit/`, { signal: options?.signal });
+    if (!res.ok) throw new Error(`Error ${res.status}`);
+    return res.json();
+}

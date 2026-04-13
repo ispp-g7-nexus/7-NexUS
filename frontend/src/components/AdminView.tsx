@@ -1,8 +1,8 @@
-import { AlertCircle, BedDouble, Bell, BookOpen, Briefcase, Calendar, Home, LayoutDashboard, LogOut, Menu, MessageSquare, Package, Palette, Shield, User, UserCheck, Users, Utensils } from "lucide-react";
+import { AlertCircle, AreaChart, BedDouble, Bell, BookOpen, Briefcase, Calendar, Home, LayoutDashboard, LogOut, Menu, MessageSquare, Package, Palette, Shield, User, UserCheck, Users, Utensils, X } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { chatsService, type ChatRealtimeEvent } from "../services/chats";
-import { authService } from "../services/auth";
+import { authService, hasScreenPermission, type AuthMeUser } from "../services/auth";
 import { Events } from "../pages/Social/Events/Events";
 import { Residents } from "../pages/Residents/Residents";
 import logo from "../assets/logo.png";
@@ -26,6 +26,7 @@ import { AdminReservations } from "./AdminReservations";
 import { AdminPackages } from "../pages/Packages/AdminPackages";
 
 import { StatCard } from "./statCard";
+import { AdminAnalytics } from "../pages/Analytics/AdminAnalytics";
 import { AdminBrandingPage } from "../pages/Branding/AdminBrandingPage";
 import { trackFeature } from "../services/analytics";
 import { brandingService, type ResidenceBranding } from "../services/branding";
@@ -36,7 +37,7 @@ import { useAdminNotifications, type AdminNotificationSource } from "./useAdminN
 
 interface AdminViewProps {
     readonly onLogout: () => void;
-    readonly currentUser: { name: string; email: string } | null;
+    readonly currentUser: (AuthMeUser & { name: string; email: string }) | null;
 }
 
 type AdminTab = "dashboard" | "rooms" | "students" | "incidences" | "reservations" | "kitchen" | "analytics" | "staff" | "announcements" | "visitors" | "events" | "roles" | "profile" | "chats" | "packages" | "branding";
@@ -112,6 +113,8 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
     const location = useLocation();
     const [activeTab, setActiveTab] = useState<AdminTab>(() => getAdminTabFromPath(location.pathname));
 
+    const [fullUser, setFullUser] = useState<AuthMeUser | null>(null);
+
     const [totalChats, setTotalChats] = useState<number>(0);
     const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
     const [unreadChatKeys, setUnreadChatKeys] = useState<Set<string>>(new Set());
@@ -119,8 +122,6 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
     const [chatRealtimeEvent, setChatRealtimeEvent] = useState<ChatRealtimeEvent | null>(null);
     const [tenantLogoUrl, setTenantLogoUrl] = useState<string>("");
     const processedGroupMessageEventKeysRef = useRef<Set<string>>(new Set());
-
-
 
     const applyTenantTheme = (branding: ResidenceBranding) => {
         if (branding.logo_url) {
@@ -202,7 +203,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
     };
 
     const [totalActiveGuests, setTotalActiveGuests] = useState<number>(0);
-    
+
     useEffect(() => {
         listAdminGuestPasses("active")
             .then((data) => setTotalActiveGuests(data.length))
@@ -261,8 +262,11 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
 
     useEffect(() => {
         authService.me().then((session) => {
-            if (session.user?.email) {
-                setCurrentUserEmail(session.user.email);
+            if (session.user) {
+                setFullUser(session.user);
+                if (session.user.email) {
+                    setCurrentUserEmail(session.user.email);
+                }
             }
         }).catch(() => { });
     }, []);
@@ -352,6 +356,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
         hasUnreadNotifications,
         handleNotificationsOpenChange,
         handleOpenNotification,
+        handleDismissNotification,
         handleNavbarModuleAccess,
     } = useAdminNotifications();
 
@@ -361,57 +366,93 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
     const [pendingIncidences, setPendingIncidences] = useState<number>(0);
     const [totalRoles, setTotalRoles] = useState<number>(0);
 
+
+    const activeUser = fullUser || currentUser;
+
     useEffect(() => {
         if (activeTab !== "dashboard") return;
 
-        residentsService.list().then((d) => setTotalResidents(d.length)).catch(() => setTotalResidents(0));
+        if (hasScreenPermission(activeUser, 'students')) {
+            residentsService.list().then((d) => setTotalResidents(d.length)).catch(() => setTotalResidents(0));
+        }
 
-        listBedrooms().then((d) => {
-            const totalPlazas = d.reduce((sum, r) => sum + r.capacidad_maxima, 0);
-            const plazasOcupadas = d.reduce((sum, r) => sum + r.ocupantes_actuales, 0);
-            const pct = totalPlazas > 0 ? Math.round((plazasOcupadas / totalPlazas) * 100) : 0;
-            setOccupiedRoomsPercent(`${pct}%`);
-        }).catch(() => setOccupiedRoomsPercent('—'));
+        if (hasScreenPermission(activeUser, 'rooms')) {
+            listBedrooms().then((d) => {
+                const totalPlazas = d.reduce((sum, r) => sum + r.capacidad_maxima, 0);
+                const plazasOcupadas = d.reduce((sum, r) => sum + r.ocupantes_actuales, 0);
+                const pct = totalPlazas > 0 ? Math.round((plazasOcupadas / totalPlazas) * 100) : 0;
+                setOccupiedRoomsPercent(`${pct}%`);
+            }).catch(() => setOccupiedRoomsPercent('—'));
+        }
 
-        staffService.list().then((d) => setTotalStaff(d.length)).catch(() => setTotalStaff(0));
-        listAdminGuestPasses("active").then((d) => setTotalActiveGuests(d.length)).catch(() => setTotalActiveGuests(0));
-        IncidenceService.getAll().then((d) => setPendingIncidences(d.filter(i => i.status === 'pending').length)).catch(() => setPendingIncidences(0));
-        roleService.getRoles().then((d) => setTotalRoles(d.length)).catch(() => setTotalRoles(0));
-        loadChatsCount();
-    }, [activeTab]);
+        if (hasScreenPermission(activeUser, 'staff')) {
+            staffService.list().then((d) => setTotalStaff(d.length)).catch(() => setTotalStaff(0));
+        }
 
-    const allNavItems = [
+        if (hasScreenPermission(activeUser, 'guests')) {
+            listAdminGuestPasses("active").then((d) => setTotalActiveGuests(d.length)).catch(() => setTotalActiveGuests(0));
+        }
+
+        if (hasScreenPermission(activeUser, 'incidences')) {
+            IncidenceService.getAll().then((d) => setPendingIncidences(d.filter(i => i.status === 'pending').length)).catch(() => setPendingIncidences(0));
+        }
+
+        if (hasScreenPermission(activeUser, 'roles')) {
+            roleService.getRoles().then((d) => setTotalRoles(d.length)).catch(() => setTotalRoles(0));
+        }
+
+        if (hasScreenPermission(activeUser, 'chats')) {
+            loadChatsCount();
+        }
+    }, [activeTab, activeUser]);
+
+    const rawNavItems = [
         { id: "dashboard", label: "Panel de Control", icon: <LayoutDashboard className="w-5 h-5" /> },
         { id: "profile", label: "Mi Perfil", icon: <User className="w-5 h-5" /> },
-        { id: "rooms", label: "Habitaciones", icon: <Home className="w-5 h-5" /> },
-        { id: "students", label: "Residentes", icon: <Users className="w-5 h-5" /> },
-        { id: "staff", label: "Personal", icon: <Briefcase className="w-5 h-5" /> },
-        { id: "packages", label: "Paqueteria", icon: <Package className="w-5 h-5" /> },
-        { id: "incidences", label: "Incidencias", icon: <AlertCircle className="w-5 h-5" /> },
-        { id: "kitchen", label: "Menú Comedor", icon: <Utensils className="w-5 h-5" /> },
-        { id: "events", label: "Eventos & Comunidad", icon: <Calendar className="w-5 h-5" /> },
-        { id: "reservations", label: "Recursos & Reservas", icon: <BookOpen className="w-5 h-5" /> },
-        { id: "roles", label: "Roles", icon: <Shield className="w-5 h-5" /> },
+        { id: "rooms", label: "Habitaciones", icon: <Home className="w-5 h-5" />, permission: "rooms" },
+        { id: "students", label: "Residentes", icon: <Users className="w-5 h-5" />, permission: "students" },
+        { id: "staff", label: "Personal", icon: <Briefcase className="w-5 h-5" />, permission: "staff" },
+        { id: "packages", label: "Paquetería", icon: <Package className="w-5 h-5" />, permission: "packages" },
+        { id: "incidences", label: "Incidencias", icon: <AlertCircle className="w-5 h-5" />, permission: "incidences" },
+        { id: "kitchen", label: "Menú Comedor", icon: <Utensils className="w-5 h-5" />, permission: "kitchen" },
+        { id: "events", label: "Eventos & Comunidad", icon: <Calendar className="w-5 h-5" />, permission: "events" },
+        { id: "reservations", label: "Recursos & Reservas", icon: <BookOpen className="w-5 h-5" />, permission: "reservations" },
+        { id: "roles", label: "Roles", icon: <Shield className="w-5 h-5" />, permission: "roles" },
         { id: "branding", label: "Personalización", icon: <Palette className="w-5 h-5" /> },
-        { id: "announcements", label: "Avisos", icon: <Bell className="w-5 h-5" /> },
-        { id: "visitors", label: "Visitantes", icon: <UserCheck className="w-5 h-5" /> },
+        { id: "announcements", label: "Avisos", icon: <Bell className="w-5 h-5" />, permission: "announcements" },
+        { id: "visitors", label: "Visitantes", icon: <UserCheck className="w-5 h-5" />, permission: "guests" },
+        { id: "chats", label: "Chats", icon: <MessageSquare className="w-5 h-5" />, permission: "chats" },
+        { id: "analytics", label: "Analíticas", icon: <AreaChart className="w-5 h-5" />, permission: "analytics" },
     ];
 
-    const metricsData = [
-        { label: 'Residentes',         value: totalResidents,    icon: Users,         theme: 'blue'   as const, onClick: () => setActiveTab('students')      },
-        { label: 'Habitaciones',       value: occupiedRoomsPercent, icon: BedDouble,  theme: 'green'  as const, onClick: () => setActiveTab('rooms')         },
-        { label: 'Personal',           value: totalStaff,        icon: Briefcase,     theme: 'purple' as const, onClick: () => setActiveTab('staff')         },
-        { label: 'Visitantes',         value: totalActiveGuests, icon: UserCheck,     theme: 'purple' as const, onClick: () => setActiveTab('visitors')      },
-        { label: 'Incidencias',        value: pendingIncidences, icon: AlertCircle,   theme: 'red'    as const, onClick: () => setActiveTab('incidences')    },
-        { label: 'Eventos',            value: 'Ver',             icon: Calendar,      theme: 'orange' as const, onClick: () => setActiveTab('events')        },
-        { label: 'Roles',              value: totalRoles,        icon: Shield,        theme: 'purple' as const, onClick: () => setActiveTab('roles')         },
-        { label: 'Chats',              value: totalChats,        icon: MessageSquare, theme: 'blue'   as const,
-          topBadgeText: unreadChatsCount > 0 ? '¡Tienes mensajes sin leer!' : undefined,
-          onClick: () => setActiveTab('chats') },
-        { label: 'Paquetería',         value: 'Ver',             icon: Package,       theme: 'orange'  as const, onClick: () => setActiveTab('packages')      },
-        { label: 'Menú Comedor',       value: 'Ver',             icon: Utensils,      theme: 'blue'   as const, onClick: () => setActiveTab('kitchen')       },
-        { label: 'Recursos & Reservas',value: 'Ver',             icon: BookOpen,      theme: 'green'  as const, onClick: () => setActiveTab('reservations')  },
+
+    const allNavItems = rawNavItems.filter(item => {
+        if (!item.permission) return true;
+        return hasScreenPermission(activeUser, item.permission);
+    });
+
+    const rawMetricsData = [
+        { id: 'students', label: 'Residentes', value: totalResidents, icon: Users, theme: 'blue' as const, onClick: () => goToTab('students') },
+        { id: 'rooms', label: 'Habitaciones', value: occupiedRoomsPercent, icon: BedDouble, theme: 'green' as const, onClick: () => goToTab('rooms') },
+        { id: 'staff', label: 'Personal', value: totalStaff, icon: Briefcase, theme: 'purple' as const, onClick: () => goToTab('staff') },
+        { id: 'guests', label: 'Visitantes', value: totalActiveGuests, icon: UserCheck, theme: 'purple' as const, onClick: () => goToTab('visitors') },
+        { id: 'incidences', label: 'Incidencias', value: pendingIncidences, icon: AlertCircle, theme: 'red' as const, onClick: () => goToTab('incidences') },
+        { id: 'events', label: 'Eventos', value: 'Ver', icon: Calendar, theme: 'orange' as const, onClick: () => goToTab('events') },
+        { id: 'roles', label: 'Roles', value: totalRoles, icon: Shield, theme: 'purple' as const, onClick: () => goToTab('roles') },
+        {
+            id: 'chats', label: 'Chats', value: totalChats, icon: MessageSquare, theme: 'blue' as const,
+            topBadgeText: unreadChatsCount > 0 ? '¡Tienes mensajes sin leer!' : undefined,
+            onClick: () => goToTab('chats')
+        },
+        { id: 'packages', label: 'Paquetería', value: 'Ver', icon: Package, theme: 'orange' as const, onClick: () => goToTab('packages') },
+        { id: 'kitchen', label: 'Menú Comedor', value: 'Ver', icon: Utensils, theme: 'blue' as const, onClick: () => goToTab('kitchen') },
+        { id: 'reservations', label: 'Recursos & Reservas', value: 'Ver', icon: BookOpen, theme: 'green' as const, onClick: () => goToTab('reservations') },
+        { id: 'analytics', label: 'Analíticas', value: 'Ver', icon: AreaChart, theme: 'green' as const, onClick: () => goToTab('analytics') },
     ];
+
+    const metricsData = rawMetricsData.filter(metric => {
+        return hasScreenPermission(activeUser, metric.id);
+    });
 
     const today = new Date().toLocaleDateString('es-ES', {
         weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
@@ -421,6 +462,24 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
     const currentTab = allNavItems.find((item) => item.id === activeTab) || allNavItems[0];
 
     const renderContent = () => {
+        const alwaysAllowed = ["dashboard", "profile", "branding"];
+        const isAllowed = alwaysAllowed.includes(activeTab) || allNavItems.some(item => item.id === activeTab);
+
+        if (!isAllowed) {
+            return (
+                <div className="flex items-center justify-center h-full min-h-[60vh]">
+                    <div className="bg-red-50 border border-red-100 p-8 rounded-2xl text-center max-w-md shadow-sm">
+                        <Shield className="w-16 h-16 mx-auto mb-4 text-red-400" />
+                        <h2 className="text-2xl font-bold text-gray-900 mb-2">Acceso Denegado</h2>
+                        <p className="text-gray-600 mb-6">No tienes los permisos necesarios para visualizar el módulo de <b>{activeTab}</b>.</p>
+                        <Button variant="outline" onClick={() => goToTab("dashboard")}>
+                            Volver al Panel de Control
+                        </Button>
+                    </div>
+                </div>
+            );
+        }
+
         switch (activeTab) {
             case "dashboard":
                 return (
@@ -522,6 +581,13 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
             case "kitchen":
                 return <AdminMenuView />;
 
+            case "analytics":
+                return (
+                    <div className="p-4">
+                        <AdminAnalytics />
+                    </div>
+                );
+
             default:
                 return (
                     <div className="p-4">
@@ -538,7 +604,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
             <header className="bg-card border-b border-border px-4 py-3 sticky top-0 z-10">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <button onClick={() => setActiveTab("dashboard")} className="w-9 h-9 flex items-center justify-center">
+                        <button onClick={() => goToTab("dashboard")} className="w-9 h-9 flex items-center justify-center">
                             <img src={tenantLogoUrl || logo} alt="Logo residencia" className="w-full h-full object-contain" />
                         </button>
                         <div>
@@ -579,23 +645,40 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
                                                 const isSeen = seenNotificationIds.includes(notification.id);
 
                                                 return (
-                                                    <button
+                                                    <div
                                                         key={notification.id}
-                                                        type="button"
-                                                        onClick={() => {
-                                                            const source = handleOpenNotification(notification);
-                                                            if (source === "reservations") setReservationsSubTab(notification.id.startsWith("object-reservations-") ? "objetos" : "espacios");
-                                                            goToTab(getTabByNotificationSource(source));
-                                                        }}
-                                                        className={`w-full rounded-lg border p-3 text-left transition-colors hover:shadow-sm ${getCardClassesBySource(notification.source)}`}
+                                                        className={`relative w-full rounded-lg border transition-colors hover:shadow-sm ${getCardClassesBySource(notification.source)}`}
                                                     >
-                                                        <div className="mb-1 flex items-start justify-between gap-2">
-                                                            <p className="text-sm font-semibold text-gray-900">{notification.title}</p>
-                                                            {!isSeen && <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-red-500" />}
-                                                        </div>
-                                                        <p className="line-clamp-2 text-xs text-gray-600">{notification.message}</p>
-                                                        <p className="mt-2 text-[11px] text-gray-400">{formatRelativeTime(notification.timestamp)}</p>
-                                                    </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const source = handleOpenNotification(notification);
+                                                                if (source === "reservations") setReservationsSubTab(notification.id.startsWith("object-reservations-") ? "objetos" : "espacios");
+                                                                goToTab(getTabByNotificationSource(source));
+                                                            }}
+                                                            className="w-full p-3 pr-10 text-left"
+                                                        >
+                                                            <div className="mb-1 flex items-start justify-between gap-2">
+                                                                <p className="text-sm font-semibold text-gray-900">{notification.title}</p>
+                                                                {!isSeen && <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-red-500" />}
+                                                            </div>
+                                                            <p className="line-clamp-2 text-xs text-gray-600">{notification.message}</p>
+                                                            <p className="mt-2 text-[11px] text-gray-400">{formatRelativeTime(notification.timestamp)}</p>
+                                                        </button>
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={(event) => {
+                                                                event.stopPropagation();
+                                                                handleDismissNotification(notification);
+                                                            }}
+                                                            className="absolute right-2 top-2 inline-flex h-6 w-6 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-700"
+                                                            aria-label="Descartar notificación"
+                                                            title="Descartar notificación"
+                                                        >
+                                                            <X className="h-4 w-4" />
+                                                        </button>
+                                                    </div>
                                                 );
                                             })
                                         )}
@@ -608,7 +691,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
                             size="icon"
                             variant="ghost"
                             className="text-gray-500 w-9 h-9 hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
-                            onClick={() => setActiveTab("dashboard")}
+                            onClick={() => goToTab("dashboard")}
                             title="Panel de Control"
                         >
                             <LayoutDashboard className="w-5 h-5" />
@@ -618,7 +701,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
                             size="icon"
                             variant="ghost"
                             className="text-gray-500 w-9 h-9 hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
-                            onClick={() => setActiveTab("profile")}
+                            onClick={() => goToTab("profile")}
                             title="Mi Perfil"
                         >
                             <User className="w-5 h-5" />
@@ -654,11 +737,10 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
                                                     handleNavbarModuleAccess(nextTab);
                                                     goToTab(nextTab);
                                                 }}
-                                                className={`w-full flex items-center justify-between gap-3 px-4 py-3 text-sm rounded-xl transition-colors ${
-                                                    activeTab === item.id
-                                                        ? 'bg-primary/10 text-primary font-medium'
-                                                        : 'text-gray-600 hover:bg-gray-50'
-                                                }`}
+                                                className={`w-full flex items-center justify-between gap-3 px-4 py-3 text-sm rounded-xl transition-colors ${activeTab === item.id
+                                                    ? 'bg-primary/10 text-primary font-medium'
+                                                    : 'text-gray-600 hover:bg-gray-50'
+                                                    }`}
                                             >
                                                 <span className="flex items-center gap-3">
                                                     {item.icon} {item.label}

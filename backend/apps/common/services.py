@@ -76,18 +76,28 @@ def build_access_token(user, tenant, residence, remember_me=False):
 
     expires_at = now + timedelta(seconds=lifetime_seconds)
 
-    roles = list(
-        Membership.objects.filter(user=user, is_active=True)
-        .values_list("role__name", flat=True)
-        .distinct()
-    )
+    active_memberships = Membership.objects.filter(
+        user=user, is_active=True
+    ).select_related("role")
+
+    roles_set = set()
+    permissions_set = set()
+
+    for m in active_memberships:
+        roles_set.add(m.role.name)
+        # Si es un admin del sistema, le damos acceso total (full_access)
+        if m.role.name.lower() in ["admin", "residence_admin", "portfolio_admin"]:
+            permissions_set.add("full_access")
+        elif m.role.permissions:
+            permissions_set.update(m.role.permissions)
 
     payload = {
         "sub": str(user.pk),
         "user_id": str(user.pk),
         "username": user.get_username(),
         "email": getattr(user, "email", "") or "",
-        "roles": roles,
+        "roles": list(roles_set),
+        "permissions": list(permissions_set),
         "tenant_id": tenant.id,
         "tenant_slug": tenant.slug,
         "residence_id": residence.id if residence else None,
@@ -105,7 +115,6 @@ def build_access_token(user, tenant, residence, remember_me=False):
 
 
 logger = logging.getLogger(__name__)
-UserModel = get_user_model()
 
 
 class SMTPServerError(APIException):
@@ -213,9 +222,14 @@ class CustomJWTAuthentication(authentication.BaseAuthentication):
             raise AuthenticationFailed("El usuario está desactivado.")
 
         tenant_id = payload.get("tenant_id")
-        if tenant_id and (not getattr(request, "tenant", None) or request.tenant.schema_name == "public"):
-            from apps.tenants.models import Client
+        if tenant_id and (
+            not getattr(request, "tenant", None)
+            or request.tenant.schema_name == "public"
+        ):
             from django.db import connection
+
+            from apps.tenants.models import Client
+
             try:
                 tenant = Client.objects.get(pk=tenant_id)
                 request.tenant = tenant
@@ -226,6 +240,7 @@ class CustomJWTAuthentication(authentication.BaseAuthentication):
         residence_id = payload.get("residence_id")
         if residence_id:
             from apps.residences.models import Residence
+
             try:
                 request.residence = Residence.objects.get(pk=residence_id)
             except Residence.DoesNotExist:

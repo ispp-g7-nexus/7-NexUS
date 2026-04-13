@@ -39,7 +39,13 @@ const EMPTY_EVENT_FORM: EventFormState = {
     labels: "",
 };
 
-export function Events() {
+export function Events({
+    onNavigateToChat,
+    onEventChatJoined,
+}: {
+    onNavigateToChat?: (groupId?: number) => void;
+    onEventChatJoined?: () => void;
+}) {
     const [events, setEvents] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isUnauthorized, setIsUnauthorized] = useState(false);
@@ -163,6 +169,31 @@ export function Events() {
             }
         } catch (error) {
             console.error("Error leaving event:", error);
+            toast.error("Error de conexión");
+        }
+    };
+
+    const handleJoinEventChat = async (eventId: number) => {
+        try {
+            const response = await fetchWithAuth(`${API_URL}${eventId}/join-chat/`, {
+                method: 'POST',
+            });
+
+            if (response.status === 401 || response.status === 403) {
+                setIsUnauthorized(true);
+                return;
+            }
+
+            const data = await response.json().catch(() => ({}));
+            if (response.ok) {
+                toast.success(data.detail || "Te has unido al chat del evento.");
+                onEventChatJoined?.();
+                await fetchEvents();
+            } else {
+                toast.error(data.detail || "No se pudo unir al chat del evento.");
+            }
+        } catch (error) {
+            console.error("Error joining event chat:", error);
             toast.error("Error de conexión");
         }
     };
@@ -355,6 +386,8 @@ export function Events() {
                     loading={loading}
                     handleJoinEvent={handleJoinEvent}
                     handleLeaveEvent={handleLeaveEvent}
+                    handleJoinEventChat={handleJoinEventChat}
+                    handleNavigateToChat={onNavigateToChat}
                     handleOpenDetails={handleOpenDetails}
                 />
             ) : (
@@ -363,6 +396,8 @@ export function Events() {
                     loading={loading}
                     handleJoinEvent={handleJoinEvent}
                     handleLeaveEvent={handleLeaveEvent}
+                    handleJoinEventChat={handleJoinEventChat}
+                    handleNavigateToChat={onNavigateToChat}
                     handleOpenDetails={handleOpenDetails}
                 />
             )}
