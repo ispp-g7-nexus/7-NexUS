@@ -110,7 +110,7 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
         {/* Campo Área */}
         <div className="space-y-1.5 text-left">
           <Label className={UI_CLASSES.label}>Área</Label>
-          <Select onValueChange={setLocationType} defaultValue={locationType} required>
+          <Select onValueChange={setLocationType} value={locationType} required>
             <SelectTrigger
               className={`${UI_CLASSES.selectTrigger} ${areaError && !locationType ? 'border-2 border-red-500 bg-red-50' : ''}`}
             >

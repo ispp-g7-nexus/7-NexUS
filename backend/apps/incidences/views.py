@@ -2,6 +2,7 @@ from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError
 from .models import Incidence, IncidenceUpdate
 from .serializers import IncidenceSerializer, AdminIncidenceSerializer
 from .permissions import IsAdminOrReadOnly
@@ -164,12 +165,24 @@ class IncidenceViewSet(viewsets.ModelViewSet):
             if membership and membership.bedroom:
                 assigned_room = membership.bedroom
             else:
-                logger.warning(f"Student {user.id} tried to report a room issue but has no assigned room.")
+                raise ValidationError({"location_type": "No tienes una habitación asignada para reportar incidencias en 'Mi Habitación'."})
 
         # Single save point to prevent double creation
         serializer.save(student=user, room_number=assigned_room)
 
     def perform_update(self, serializer):
+        request = self.get_serializer_context()['request']
+        if serializer.validated_data.get('location_type') == 'habitacion':
+            membership = request.user.memberships.filter(
+                residence=getattr(request, "residence", None),
+                is_active=True,
+                role__name__iexact="Student"
+            ).first()
+            if membership and membership.bedroom:
+                serializer.validated_data['room_number'] = membership.bedroom
+            else:
+                raise ValidationError({"location_type": "No tienes una habitación asignada para reportar incidencias en 'Mi Habitación'."})
+
         instance = self.get_object()
         old_status = instance.status
         
