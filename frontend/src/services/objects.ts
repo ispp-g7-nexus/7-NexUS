@@ -265,6 +265,22 @@ export const objectsService = {
     return response.json();
   },
 
+  // Update object (admin only)
+  updateObject: async (objectId: number, objectData: CreateObjectRequest): Promise<{ id: number; detail: string }> => {
+    const response = await fetch(`${OBJECTS_URL}/${objectId}/`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(objectData)
+    });
+
+    if (!response.ok) {
+      throw await buildApiError(response, 'Error al actualizar objeto');
+    }
+
+    return response.json();
+  },
+
   // Delete object (admin only)
   deleteObject: async (objectId: number): Promise<void> => {
     const response = await fetch(`${OBJECTS_URL}/${objectId}/`, {

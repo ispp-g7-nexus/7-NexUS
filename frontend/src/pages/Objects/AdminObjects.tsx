@@ -1,4 +1,4 @@
-import { Filter, Plus, RefreshCw, Package, Search, Tag, X } from "lucide-react";
+import { Eye, Filter, Plus, RefreshCw, Package, Search, Tag, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -365,10 +365,12 @@ function GlobalRentalHistory({
 
 function ObjectCard({
   object,
+  onViewDetails,
   onDelete,
   onViewRentals,
 }: {
   object: ObjectItem;
+  onViewDetails: (object: ObjectItem) => void;
   onDelete: (object: ObjectItem) => void;
   onViewRentals: (object: ObjectItem) => void;
 }) {
@@ -409,17 +411,11 @@ function ObjectCard({
         </div>
       </div>
 
-      {object.tags && (
-        <div className="flex flex-wrap gap-1">
-          {object.tags.split(",").map((tag, idx) => (
-            <span key={idx} className="rounded-md bg-blue-100 px-2 py-1 text-xs text-blue-700">
-              {tag.trim()}
-            </span>
-          ))}
-        </div>
-      )}
-
       <div className="flex gap-2 flex-wrap">
+        <Button type="button" variant="outline" onClick={() => onViewDetails(object)}>
+          <Eye className="mr-2 h-4 w-4" />
+          Ver detalles
+        </Button>
         <Button variant="outline" size="sm" onClick={() => onViewRentals(object)}>
           Ver préstamos
         </Button>
@@ -432,6 +428,16 @@ function ObjectCard({
           Eliminar
         </Button>
       </div>
+
+      {object.tags && (
+        <div className="flex flex-wrap gap-1">
+          {object.tags.split(",").map((tag, idx) => (
+            <span key={idx} className="rounded-md bg-blue-100 px-2 py-1 text-xs text-blue-700">
+              {tag.trim()}
+            </span>
+          ))}
+        </div>
+      )}
     </article>
   );
 }
@@ -451,6 +457,8 @@ export function AdminObjects() {
   // Create form
   const [formOpen, setFormOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [formMode, setFormMode] = useState<"create" | "edit">("create");
+  const [editingObject, setEditingObject] = useState<ObjectItem | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -477,6 +485,24 @@ export function AdminObjects() {
   const [cancellingRentalIds, setCancellingRentalIds] = useState<number[]>([]);
   const getErrorMessage = (err: unknown, fallback: string) =>
     err instanceof Error && err.message ? err.message : fallback;
+
+  const getEmptyFormData = () => ({
+    name: "",
+    description: "",
+    location: "",
+    stock_total: "1",
+    label_ids: [] as number[],
+    image_url: "",
+  });
+
+  const getFormDataFromObject = (object: ObjectItem) => ({
+    name: object.name ?? "",
+    description: object.description ?? "",
+    location: object.location ?? "",
+    stock_total: String(object.stock_total ?? 1),
+    label_ids: object.labels?.map((label) => label.id) ?? [],
+    image_url: object.image_url ?? "",
+  });
 
   const filteredObjects = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -575,13 +601,24 @@ export function AdminObjects() {
   }, [globalRentalsOpen, globalRentals.length]);
 
   const handleOpenForm = () => {
-    setFormData({ name: "", description: "", location: "", stock_total: "1", label_ids: [], image_url: "" });
+    setFormMode("create");
+    setEditingObject(null);
+    setFormData(getEmptyFormData());
+    setFormOpen(true);
+  };
+
+  const handleViewDetails = (object: ObjectItem) => {
+    setFormMode("edit");
+    setEditingObject(object);
+    setFormData(getFormDataFromObject(object));
     setFormOpen(true);
   };
 
   const handleCloseForm = () => {
     setFormOpen(false);
-    setFormData({ name: "", description: "", location: "", stock_total: "1", label_ids: [], image_url: "" });
+    setFormMode("create");
+    setEditingObject(null);
+    setFormData(getEmptyFormData());
   };
 
   const toggleLabelSelection = (labelId: number) => {
@@ -660,19 +697,26 @@ export function AdminObjects() {
     setSubmitting(true);
 
     try {
-      await objectsService.createObject({
+      const payload = {
         name: trimmedName,
         description: formData.description || undefined,
         location: formData.location || undefined,
         stock_total: Number.parseInt(formData.stock_total, 10) || 1,
         label_ids: formData.label_ids,
         image_url: formData.image_url || undefined,
-      });
-      toast.success("Objeto creado exitosamente");
+      };
+
+      if (formMode === "edit" && editingObject) {
+        await objectsService.updateObject(editingObject.id, payload);
+        toast.success("Objeto actualizado exitosamente");
+      } else {
+        await objectsService.createObject(payload);
+        toast.success("Objeto creado exitosamente");
+      }
       handleCloseForm();
       await loadObjects();
     } catch (err: unknown) {
-      toast.error(getErrorMessage(err, "Error al crear objeto"));
+      toast.error(getErrorMessage(err, formMode === "edit" ? "Error al actualizar objeto" : "Error al crear objeto"));
     } finally {
       setSubmitting(false);
     }
@@ -851,6 +895,7 @@ export function AdminObjects() {
             <ObjectCard
               key={object.id}
               object={object}
+              onViewDetails={handleViewDetails}
               onDelete={handleDelete}
               onViewRentals={handleViewRentals}
             />
@@ -858,14 +903,16 @@ export function AdminObjects() {
         </div>
       )}
 
-      {/* Create Object Dialog */}
-      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+      {/* Create / Edit Object Dialog */}
+      <Dialog open={formOpen} onOpenChange={(open) => (open ? setFormOpen(true) : handleCloseForm())}>
         <DialogContent className="sm:max-w-[500px]">
           <form onSubmit={handleSubmit}>
             <DialogHeader>
-              <DialogTitle>Crear nuevo objeto</DialogTitle>
+              <DialogTitle>{formMode === "edit" ? "Ver detalles del objeto" : "Crear nuevo objeto"}</DialogTitle>
               <DialogDescription>
-                Añade un nuevo objeto para que los residentes puedan reservarlo
+                {formMode === "edit"
+                  ? "Revisa la información del objeto y guarda los cambios cuando termines."
+                  : "Añade un nuevo objeto para que los residentes puedan reservarlo"}
               </DialogDescription>
             </DialogHeader>
 
@@ -948,10 +995,10 @@ export function AdminObjects() {
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={handleCloseForm}>
-                Cancelar
+                Volver
               </Button>
               <Button type="submit" disabled={submitting}>
-                {submitting ? "Creando..." : "Crear objeto"}
+                {submitting ? (formMode === "edit" ? "Actualizando..." : "Creando...") : formMode === "edit" ? "Actualizar" : "Crear objeto"}
               </Button>
             </DialogFooter>
           </form>
