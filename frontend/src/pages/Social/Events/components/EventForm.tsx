@@ -69,7 +69,7 @@ export function EventForm({
 
                 <form onSubmit={handleSaveEvent} className="p-6 space-y-5">
                     <div className="space-y-2">
-                        <label htmlFor="name" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Nombre del evento</label>
+                        <label htmlFor="name" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Nombre del evento *</label>
                         <input
                             id="name"
                             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
@@ -80,7 +80,7 @@ export function EventForm({
                         />
                     </div>
                     <div className="space-y-2">
-                        <label htmlFor="description" className="text-sm font-medium leading-none">Descripción</label>
+                        <label htmlFor="description" className="text-sm font-medium leading-none">Descripción *</label>
                         <textarea
                             id="description"
                             className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y"
@@ -92,7 +92,7 @@ export function EventForm({
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         <div className="space-y-2">
-                            <label htmlFor="date" className="text-sm font-medium leading-none">Fecha del evento</label>
+                            <label htmlFor="date" className="text-sm font-medium leading-none">Fecha del evento *</label>
                             <input
                                 id="date"
                                 type="date"
@@ -106,7 +106,7 @@ export function EventForm({
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         <div className="space-y-2">
-                            <label htmlFor="startTime" className="text-sm font-medium leading-none">Hora de inicio</label>
+                            <label htmlFor="startTime" className="text-sm font-medium leading-none">Hora de inicio *</label>
                             <input
                                 id="startTime"
                                 type="time"
@@ -117,7 +117,7 @@ export function EventForm({
                             />
                         </div>
                         <div className="space-y-2">
-                            <label htmlFor="endTime" className="text-sm font-medium leading-none">Hora de fin</label>
+                            <label htmlFor="endTime" className="text-sm font-medium leading-none">Hora de fin *</label>
                             <input
                                 id="endTime"
                                 type="time"
@@ -175,7 +175,7 @@ export function EventForm({
                     </div>
                     {newEvent.eventType === 'internal' ? (
                         <div className="space-y-2">
-                            <label htmlFor="space" className="text-sm font-medium leading-none">Espacio común</label>
+                            <label htmlFor="space" className="text-sm font-medium leading-none">Espacio común *</label>
                             <select
                                 id="space"
                                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
