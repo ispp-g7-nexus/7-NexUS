@@ -271,6 +271,32 @@ export async function getMyGuestPassPolicy(): Promise<GuestPassPolicy> {
   return (await response.json()) as GuestPassPolicy;
 }
 
+export async function rejectAdminGuestPass(guestPassId: number): Promise<AdminGuestPass> {
+  const response = await fetchWithAuth(`${ADMIN_GUEST_PASSES_API_BASE}/${guestPassId}/reject/`, {
+    method: "POST",
+  });
+  if (!response.ok) {
+    throw await parseError(response, {
+      fallbackMessage: "No se pudo rechazar el pase de invitado.",
+      forbiddenMessage: "No tienes permisos para rechazar este pase de invitado.",
+    });
+  }
+  return (await response.json()) as AdminGuestPass;
+}
+
+export async function unrejectAdminGuestPass(guestPassId: number): Promise<AdminGuestPass> {
+  const response = await fetchWithAuth(`${ADMIN_GUEST_PASSES_API_BASE}/${guestPassId}/unreject/`, {
+    method: "POST",
+  });
+  if (!response.ok) {
+    throw await parseError(response, {
+      fallbackMessage: "No se pudo deshacer el rechazo del pase.",
+      forbiddenMessage: "No tienes permisos para deshacer el rechazo de este pase.",
+    });
+  }
+  return (await response.json()) as AdminGuestPass;
+}
+
 export async function listAdminGuestPasses(statusFilter?: string): Promise<AdminGuestPass[]> {
   const url = statusFilter
     ? `${ADMIN_GUEST_PASSES_API_BASE}/?status=${encodeURIComponent(statusFilter)}`
