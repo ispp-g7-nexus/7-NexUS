@@ -4,7 +4,7 @@ import { MenuWeek, MenuDay, Meal } from "../../types/menu.types";
 import menuService from "../../services/menu.service";
 import { Toast } from "../../components/ui/Toast";
 import { ConfirmModal } from "../../components/ui/ConfirmModal";
-import { API_URL } from '../../services/api';
+
 
 const getMealTypeLabel = (type: Meal['type']): string => {
   switch (type) {
@@ -47,10 +47,9 @@ interface MealCardAdminProps {
   onDelete: (mealId?: string) => void;
 }
 
-function normalizeImageUrl(image: string): string {
-  if (!image) return 'https://via.placeholder.com/150?text=Sin+Imagen';
-  if (image.startsWith('http://') || image.startsWith('https://')) return image;
-  return `${API_URL}${image.startsWith('/') ? '' : '/'}${image}`;
+function getPlaceholderImage(): string {
+  // SVG placeholder local para evitar depender de conexión externa
+  return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23f0f0f0" width="200" height="200"/%3E%3Ctext x="50%" y="50%" font-size="14" fill="%23999" text-anchor="middle" dy=".3em"%3E Imagen no disponible%3C/text%3E%3C/svg%3E';
 }
   
 const MealCardAdmin = ({ meal, onEdit, onDelete }: MealCardAdminProps) => {
@@ -59,11 +58,11 @@ const MealCardAdmin = ({ meal, onEdit, onDelete }: MealCardAdminProps) => {
   {meal?.image && (
     <div className="w-full h-40 mb-3 -mt-4 -mx-4 w-[calc(100%+2rem)] border-b border-black/5 relative group">
             <img
-              src={normalizeImageUrl(meal.image)}
+              src={meal.image || getPlaceholderImage()}
               alt={meal.name}
               className="w-full h-full object-cover"
               onError={(e: SyntheticEvent<HTMLImageElement>) => {
-                e.currentTarget.src = 'https://via.placeholder.com/150?text=Error+Imagen';
+                e.currentTarget.src = getPlaceholderImage();
               }}
             />
       <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
