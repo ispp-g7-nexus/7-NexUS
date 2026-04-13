@@ -465,3 +465,67 @@ class StudentProfileView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AdminStudentProfileView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, user_id):
+        user_data = resolve_user_from_request(request)
+        if not user_data:
+            return Response(
+                {"detail": "No autenticado."}, status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        admin_pk = (
+            user_data.get("user_id") or user_data.get("id") or user_data.get("sub")
+        )
+        try:
+            admin_user = UserModel.objects.get(pk=admin_pk)
+        except UserModel.DoesNotExist:
+            return Response(
+                {"detail": "Usuario no encontrado."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        if not admin_user.is_staff:
+            return Response(
+                {"detail": "Admin privileges required."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        residence = getattr(request, "residence", None)
+        if not residence:
+            return Response(
+                {"detail": "No residence context."}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        membership = (
+            Membership.objects.filter(
+                user_id=user_id,
+                residence=residence,
+                role__name__iexact="Student",
+                is_active=True,
+            )
+            .select_related("user", "bedroom")
+            .first()
+        )
+        if membership is None:
+            return Response(
+                {"detail": "Perfil no encontrado."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        from apps.residences.models import StudentProfile
+
+        profile = StudentProfile.objects.filter(
+            user_id=user_id, residence=residence
+        ).first() or StudentProfile.objects.filter(user_id=user_id).first()
+
+        if profile is None:
+            profile = StudentProfile(
+                user=membership.user,
+                residence=residence,
+                room_number=membership.bedroom.numero if membership.bedroom else "",
+            )
+
+        serializer = StudentProfileSerializer(profile)
+        return Response(serializer.data, status=status.HTTP_200_OK)
