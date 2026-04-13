@@ -20,14 +20,15 @@ import { toast } from "sonner";
 import { authService } from "../services/auth";
 import announcementService from "../services/announcement.service";
 import { packagesService } from "../services/packages";
+import { objectsService } from "../services/objects";
 import { fetchWithAuth, API_URL, API_URL_INCIDENCES } from "../utils/api";
-
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import QRCode from "react-qr-code";
 
 export type StudentTab = "home" | "incidences" | "reservations" | "community" | "events" | "matches" | "announcements" | "menu" | "packages" | "visitors";
 
@@ -427,6 +428,30 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
         }];
     }, []);
 
+    const buildObjectReminderItems = useCallback((count: number): HomeNotification[] => {
+        if (count <= 0) return [];
+        return [{
+            id: "objects-reminder-unread",
+            title: "[Reservas] Recordatorio de devolución",
+            description: `Tienes ${count} objeto${count === 1 ? "" : "s"} cuya reserva finalizará en breve.`,
+            time: "Ahora",
+            type: "warning" as const,
+            source: "reservations" as const,
+            createdAt: new Date().toISOString(),
+        }];
+    }, []);
+
+    const buildObjectStockAlertItems = useCallback((items: Awaited<ReturnType<typeof objectsService.getUserObjectNotifications>>): HomeNotification[] => {
+        return items.map((item) => ({
+            id: item.id,
+            title: `[Reservas] ${item.title}`,
+            description: item.message,
+            time: formatRelativeTime(item.created_at),
+            type: "warning" as const,
+            source: "reservations" as const,
+            createdAt: item.created_at,
+        }));
+    }, []);
     const buildVisitUrgentItems = useCallback((): HomeNotification[] => {
         const storageKey = buildVisitUrgentNotificationStorageKey(currentUserEmail);
         const items = getActiveVisitUrgentNotifications(storageKey);
@@ -453,12 +478,16 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                 announcementsRes, 
                 incidencesRes, 
                 eventsRes, 
-                packagesRes
+                packagesRes,
+                objectRemindersRes,
+                objectStockAlertsRes
             ] = await Promise.allSettled([
                 announcementService.getAnnouncements(),
                 fetchWithAuth(`${API_URL_INCIDENCES}notifications/`),
-                fetchWithAuth(API_URL),
+                fetchWithAuth(`${API_URL}events/`),
                 packagesService.getPendingCount(),
+                objectsService.getPendingRemindersCount(),
+                objectsService.getUserObjectNotifications(),
             ]);
 
             // Evitar actualizaciones si el componente cambió de estado o hubo una petición nueva
@@ -468,6 +497,8 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
             const mergedNotifications: HomeNotification[] = [
                 ...(announcementsRes.status === "fulfilled" ? buildAnnouncementItems(announcementsRes.value) : []),
                 ...(packagesRes.status === "fulfilled" ? buildPackageItems(packagesRes.value || 0) : []),
+                ...(objectRemindersRes.status === "fulfilled" ? buildObjectReminderItems(objectRemindersRes.value || 0) : []),
+                ...(objectStockAlertsRes.status === "fulfilled" ? buildObjectStockAlertItems(objectStockAlertsRes.value || []) : []),
                 ...buildVisitUrgentItems(),
             ];
 
@@ -507,7 +538,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                 setIsNotificationsLoading(false);
             }
         }
-    }, [buildAnnouncementItems, buildIncidenceItems, buildEventItems, buildPackageItems, buildVisitUrgentItems]);
+    }, [buildAnnouncementItems, buildIncidenceItems, buildEventItems, buildPackageItems, buildObjectReminderItems, buildObjectStockAlertItems, buildVisitUrgentItems]);
     useEffect(() => {
         loadHomeNotifications();
         const intervalId = globalThis.setInterval(() => loadHomeNotifications(true), NOTIFICATIONS_POLL);
