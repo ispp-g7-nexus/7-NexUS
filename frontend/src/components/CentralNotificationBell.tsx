@@ -107,7 +107,7 @@ const formatRelativeFuture = (isoDate: string) => {
     return date.toLocaleDateString();
 };
 
-import { Package, MapPin, CalendarDays, KeyIcon, Info, Megaphone, AlertCircle, Calendar } from "lucide-react";
+import { Package, Megaphone, AlertCircle, Calendar } from "lucide-react";
 
 interface CentralNotificationBellProps {
     onNavigate: (view: StudentTab) => void;
