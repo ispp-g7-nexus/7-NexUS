@@ -97,6 +97,7 @@ const getCardClassesBySource = (source: AdminNotificationSource) => {
     if (source === "incidences") return "bg-red-50 border-red-200";
     if (source === "announcements") return "bg-blue-50 border-blue-200";
     if (source === "events") return "bg-yellow-50 border-yellow-200";
+    if (source === "visitors") return "bg-amber-50 border-amber-200";
     return "bg-green-50 border-green-200";
 };
 
@@ -104,6 +105,7 @@ const getTabByNotificationSource = (source: AdminNotificationSource): AdminTab =
     if (source === "incidences") return "incidences";
     if (source === "announcements") return "announcements";
     if (source === "events") return "events";
+    if (source === "visitors") return "visitors";
     return "reservations";
 };
 
@@ -202,11 +204,21 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
     };
 
     const [totalActiveGuests, setTotalActiveGuests] = useState<number>(0);
+    const [outOfScheduleGuests, setOutOfScheduleGuests] = useState<number>(0);
+
+    const loadActiveGuestsDashboardStats = async () => {
+        try {
+            const data = await listAdminGuestPasses("active");
+            setTotalActiveGuests(data.length);
+            setOutOfScheduleGuests(data.filter((guestPass) => guestPass.out_of_schedule).length);
+        } catch {
+            setTotalActiveGuests(0);
+            setOutOfScheduleGuests(0);
+        }
+    };
 
     useEffect(() => {
-        listAdminGuestPasses("active")
-            .then((data) => setTotalActiveGuests(data.length))
-            .catch(() => setTotalActiveGuests(0));
+        loadActiveGuestsDashboardStats();
     }, []);
 
     const loadChatsCount = async () => {
@@ -388,7 +400,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
         }
 
         if (hasScreenPermission(activeUser, 'guests')) {
-            listAdminGuestPasses("active").then((d) => setTotalActiveGuests(d.length)).catch(() => setTotalActiveGuests(0));
+            loadActiveGuestsDashboardStats();
         }
 
         if (hasScreenPermission(activeUser, 'incidences')) {
@@ -433,7 +445,16 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
         { id: 'students', label: 'Residentes', value: totalResidents, icon: Users, theme: 'blue' as const, onClick: () => goToTab('students') },
         { id: 'rooms', label: 'Habitaciones', value: occupiedRoomsPercent, icon: BedDouble, theme: 'green' as const, onClick: () => goToTab('rooms') },
         { id: 'staff', label: 'Personal', value: totalStaff, icon: Briefcase, theme: 'purple' as const, onClick: () => goToTab('staff') },
-        { id: 'guests', label: 'Visitantes', value: totalActiveGuests, icon: UserCheck, theme: 'purple' as const, onClick: () => goToTab('visitors') },
+        {
+            id: 'guests',
+            label: 'Visitantes',
+            value: totalActiveGuests,
+            icon: UserCheck,
+            theme: outOfScheduleGuests > 0 ? ('red' as const) : ('purple' as const),
+            topBadgeText: outOfScheduleGuests > 0 ? `${outOfScheduleGuests} fuera de horario` : undefined,
+            highlighted: outOfScheduleGuests > 0,
+            onClick: () => goToTab('visitors')
+        },
         { id: 'incidences', label: 'Incidencias', value: pendingIncidences, icon: AlertCircle, theme: 'red' as const, onClick: () => goToTab('incidences') },
         { id: 'events', label: 'Eventos', value: 'Ver', icon: Calendar, theme: 'orange' as const, onClick: () => goToTab('events') },
         { id: 'roles', label: 'Roles', value: totalRoles, icon: Shield, theme: 'purple' as const, onClick: () => goToTab('roles') },
@@ -641,6 +662,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
                                         ) : (
                                             notifications.map((notification) => {
                                                 const isSeen = seenNotificationIds.includes(notification.id);
+                                                const canDismiss = notification.source !== "visitors";
 
                                                 return (
                                                     <div
@@ -664,18 +686,20 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
                                                             <p className="mt-2 text-[11px] text-gray-400">{formatRelativeTime(notification.timestamp)}</p>
                                                         </button>
 
-                                                        <button
-                                                            type="button"
-                                                            onClick={(event) => {
-                                                                event.stopPropagation();
-                                                                handleDismissNotification(notification);
-                                                            }}
-                                                            className="absolute right-2 top-2 inline-flex h-6 w-6 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-700"
-                                                            aria-label="Descartar notificación"
-                                                            title="Descartar notificación"
-                                                        >
-                                                            <X className="h-4 w-4" />
-                                                        </button>
+                                                        {canDismiss && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={(event) => {
+                                                                    event.stopPropagation();
+                                                                    handleDismissNotification(notification);
+                                                                }}
+                                                                className="absolute right-2 top-2 inline-flex h-6 w-6 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-700"
+                                                                aria-label="Descartar notificación"
+                                                                title="Descartar notificación"
+                                                            >
+                                                                <X className="h-4 w-4" />
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 );
                                             })

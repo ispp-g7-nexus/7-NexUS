@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import (
     MyReservationsView,
+    MyReservationRemindersView,
     SpaceAvailabilityView,
     SpaceListView,
     SpaceReservationCancelView,
@@ -29,6 +30,11 @@ urlpatterns = [
         "spaces/reservations/me/",
         MyReservationsView.as_view(),
         name="space-reservations-me",
+    ),
+    path(
+        "spaces/reservations/reminders/",
+        MyReservationRemindersView.as_view(),
+        name="space-reservations-reminders",
     ),
     path(
         "spaces/reservations/<int:reservation_id>/cancel/",

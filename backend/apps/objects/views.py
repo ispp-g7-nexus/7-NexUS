@@ -1,7 +1,7 @@
 import json
 import re
 from datetime import datetime, time, timedelta
-from typing import Any
+from typing import Any, Iterable
 from django.http import HttpResponse, JsonResponse
 from django.views import View
 from django.utils.decorators import method_decorator
@@ -34,6 +34,7 @@ OBJECT_RESERVATION_GAP_MINUTES = 5
 OBJECT_RESERVATION_INTERVAL_MINUTES = 60
 ACTIVE_RENTAL_STATUSES = ["ACTIVE", "IN_PROGRESS"]
 ADMIN_CANCELLATION_REASON_MAX_LENGTH = 200
+RESERVATION_REMINDER_WINDOW = timedelta(hours=1)
 
 
 def _parse_datetime_or_none(value):
@@ -215,6 +216,22 @@ def _sync_rental_progress_status(rental: ObjectRental, now: datetime | None = No
         rental.status = "IN_PROGRESS"
         rental.save(update_fields=["status", "updated_at"])
     return rental
+
+
+def _serialize_object_reservation_reminder(rental: ObjectRental) -> dict[str, Any]:
+    start_date = timezone.localtime(rental.start_date)
+    return {
+        "id": f"object-rentals-{rental.id}",
+        "title": f"Tu reserva de {rental.object.name} empieza pronto",
+        "message": f"Tu reserva comienza a las {start_date.strftime('%H:%M')}.",
+        "created_at": rental.start_date.isoformat(),
+        "start_time": rental.start_date.isoformat(),
+        "end_time": rental.end_date.isoformat(),
+    }
+
+
+def _build_object_reservation_reminders(rentals: Iterable[ObjectRental]) -> list[dict[str, Any]]:
+    return [_serialize_object_reservation_reminder(rental) for rental in rentals]
 
 
 def _count_active_rentals_in_interval(*, obj: Object, interval_start: datetime, interval_end: datetime) -> int:
@@ -1129,6 +1146,30 @@ class AdminAllObjectRentalsView(AuthenticatedView):
             data.append(rental_payload)
 
         return JsonResponse(data, safe=False)
+
+
+class UserReservationRemindersView(AuthenticatedView):
+    def get(self, request):
+        if not hasattr(request, "residence") or not request.residence:
+            return JsonResponse({"detail": "No residence context."}, status=400)
+
+        now = timezone.now()
+        reminder_deadline = now + RESERVATION_REMINDER_WINDOW
+
+        rentals = (
+            ObjectRental.objects.filter(
+                user=request.user,
+                object__residence=request.residence,
+                status="ACTIVE",
+                start_date__gt=now,
+                start_date__lte=reminder_deadline,
+                end_date__gt=now,
+            )
+            .select_related("object")
+            .order_by("start_date")
+        )
+
+        return JsonResponse(_build_object_reservation_reminders(rentals), safe=False)
 
 
 class AdminObjectNotificationsView(AuthenticatedView):

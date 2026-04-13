@@ -14,6 +14,7 @@ from .views import (
     UserObjectNotificationsView,
     UserDismissReservationView,
     AdminAllObjectRentalsView,
+    UserReservationRemindersView,
     AdminObjectNotificationsView,
     UserPendingRemindersCountView,
     UserMarkRemindersAsViewedView,
@@ -36,5 +37,6 @@ urlpatterns = [
     path('objects/notifications/', UserObjectNotificationsView.as_view(), name='user-object-notifications'),
     path('my-reservations/<int:rental_id>/dismiss/', UserDismissReservationView.as_view(), name='user-reservation-dismiss'),
     path('admin/objects/rentals/', AdminAllObjectRentalsView.as_view(), name='admin-all-object-rentals'),
+    path('my-reservations/reminders/', UserReservationRemindersView.as_view(), name='user-reservation-reminders'),
     path('admin/objects/notifications/', AdminObjectNotificationsView.as_view(), name='admin-object-notifications'),
 ]

@@ -9,6 +9,7 @@ export interface StatCardProps {
   topBadgeText?: string;
   icon?: React.ElementType | React.ReactElement | null; 
   theme?: 'blue' | 'green' | 'red' | 'purple' | 'orange';
+  highlighted?: boolean;
   onClick?: () => void;
   info?: { title?: string; description: string };
 }
@@ -21,7 +22,18 @@ const themeMap = {
   orange: { color: '#d97c3a', bg: '#fdf0e5', border: 'rgba(217,124,58,0.18)', borderHover: 'rgba(217,124,58,0.40)' },
 };
 
-export const StatCard = ({ label, title, value, valueBadge, topBadgeText, icon: Icon, theme = 'blue', onClick, info }: StatCardProps) => {
+export const StatCard = ({ 
+  label, 
+  title, 
+  value, 
+  valueBadge, 
+  topBadgeText, 
+  icon: Icon, 
+  theme = 'blue', 
+  highlighted = false, 
+  onClick, 
+  info 
+}: StatCardProps) => {
   const displayLabel = label ?? title ?? '';
   const t = themeMap[theme] ?? themeMap['blue'];
   const [hovered, setHovered] = React.useState(false);
@@ -74,7 +86,7 @@ export const StatCard = ({ label, title, value, valueBadge, topBadgeText, icon: 
         padding: '22px',
         borderRadius: '20px',
         border: `1.5px solid ${borderColor}`,
-        background: '#ffffff',
+        background: highlighted ? t.bg : '#ffffff',
         cursor: isInteractive ? 'pointer' : 'default',
         boxShadow,
         transform,
