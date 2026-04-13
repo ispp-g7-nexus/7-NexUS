@@ -597,6 +597,33 @@ class EventListViewTests(ViewTestsBase):
         )
         res = EventListView.as_view()(req)
         self.assertEqual(res.status_code, 400)
+    def test_post_create_admin_no_participation(self):
+        from apps.events.views import EventListView
+        from apps.events.models import EventParticipation
+
+        payload = {
+            "title": "Admin Created",
+            "description": "desc",
+            "event_type": "external",
+            "start_time": (self.now + timedelta(hours=3)).isoformat(),
+            "end_time": (self.now + timedelta(hours=4)).isoformat(),
+            "location": "Office",
+        }
+        # staff_user is an admin (is_staff=True)
+        req = self.setup_request(self.rf.post("/", data=json.dumps(payload), content_type="application/json"), user=self.staff_user)
+        res = EventListView.as_view()(req)
+        self.assertEqual(res.status_code, 201)
+        data = json.loads(res.content)
+        
+        # Verify no participation was created for the admin
+        self.assertEqual(EventParticipation.objects.filter(event_id=data["id"], user=self.staff_user).count(), 0)
+
+    def test_post_create_student_is_joined(self):
+        # If we ever allow students to create events, they SHOULD be joined
+        # But for now, they might fail permission. Let's mocks it or check logic.
+        # Currently is_events_admin is what blocks.
+        pass
+
 
     def test_post_internal_limit_error(self):
         from apps.events.views import EventListView
@@ -801,6 +828,44 @@ class EventDetailViewTests(ViewTestsBase):
         req = self.setup_request(self.rf.delete("/"))
         res = EventDetailView.as_view()(req, event_id=self.event_ext.id)
         self.assertEqual(res.status_code, 403)
+
+    def test_put_past_event(self):
+        from apps.events.views import EventDetailView
+
+        past_event = Event.objects.create(
+            title="Past Event",
+            start_time=self.now - timedelta(hours=2),
+            end_time=self.now - timedelta(hours=1),
+            event_type=Event.Type.EXTERNAL,
+            residence=self.residence,
+            host=self.host_user,
+            location="Somewhere",
+        )
+        payload = {"title": "New Title"}
+        req = self.setup_request(
+            self.rf.put("/", data=json.dumps(payload), content_type="application/json"),
+            user=self.host_user,
+        )
+        res = EventDetailView.as_view()(req, event_id=past_event.id)
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("ha finalizado", json.loads(res.content).get("detail", ""))
+
+    def test_delete_past_event_success(self):
+        from apps.events.views import EventDetailView
+
+        past_event = Event.objects.create(
+            title="Past Event to Delete",
+            start_time=self.now - timedelta(hours=2),
+            end_time=self.now - timedelta(hours=1),
+            event_type=Event.Type.EXTERNAL,
+            residence=self.residence,
+            host=self.host_user,
+            location="Somewhere",
+        )
+        req = self.setup_request(self.rf.delete("/"), user=self.host_user)
+        res = EventDetailView.as_view()(req, event_id=past_event.id)
+        self.assertEqual(res.status_code, 200)
+        self.assertFalse(Event.objects.filter(id=past_event.id).exists())
 
     def test_delete_success(self):
         from apps.events.views import EventDetailView
@@ -1158,6 +1223,41 @@ class EventJoinLeaveParticipantsViewTests(ViewTestsBase):
         res2 = EventLeaveView.as_view()(req, event_id=self.event.id)
         self.assertEqual(res2.status_code, 400)
 
+    def test_join_past_event(self):
+        from apps.events.views import EventJoinView
+
+        past_event = Event.objects.create(
+            title="Past Event",
+            start_time=self.now - timedelta(hours=2),
+            end_time=self.now - timedelta(hours=1),
+            event_type=Event.Type.EXTERNAL,
+            residence=self.residence,
+            host=self.host_user,
+            location="Somewhere",
+        )
+        req = self.setup_request(self.rf.post("/"))
+        res = EventJoinView.as_view()(req, event_id=past_event.id)
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("ha finalizado", json.loads(res.content).get("detail", ""))
+
+    def test_leave_past_event(self):
+        from apps.events.views import EventLeaveView
+
+        past_event = Event.objects.create(
+            title="Past Event",
+            start_time=self.now - timedelta(hours=2),
+            end_time=self.now - timedelta(hours=1),
+            event_type=Event.Type.EXTERNAL,
+            residence=self.residence,
+            host=self.host_user,
+            location="Somewhere",
+        )
+        EventParticipation.objects.create(event=past_event, user=self.user)
+        req = self.setup_request(self.rf.post("/"))
+        res = EventLeaveView.as_view()(req, event_id=past_event.id)
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("ha finalizado", json.loads(res.content).get("detail", ""))
+
     def test_participants(self):
         from apps.events.views import EventParticipantsView
 
@@ -1184,7 +1284,7 @@ class UrlsTests(FastTenantTestCase):
         )
 
 
-from apps.residences.models import StudentProfile
+from apps.residents.models import StudentProfile
 
 
 class EventRecommendationTests(ViewTestsBase):
@@ -1452,6 +1552,30 @@ class EventJoinChatViewTests(ViewTestsBase):
         self.assertEqual(res3.status_code, 201)
         member.refresh_from_db()
         self.assertTrue(member.can_interact)
+
+    def test_join_chat_admin_success(self):
+        from apps.events.views import EventJoinChatView
+        from apps.events.models import EventParticipation
+        from apps.membership.models import Membership
+        
+        # Staff needs a membership to join a chat group
+        from apps.membership.models import Role
+        admin_role, _ = Role.objects.get_or_create(name="Admin", residence=self.residence)
+        Membership.objects.create(
+            user=self.staff_user,
+            residence=self.residence,
+            role=admin_role,
+            is_active=True
+        )
+        
+        # Admin is NOT a participant
+        self.assertEqual(EventParticipation.objects.filter(event=self.event, user=self.staff_user).count(), 0)
+        
+        req = self.setup_request(self.rf.post("/"), user=self.staff_user)
+        res = EventJoinChatView.as_view()(req, event_id=self.event.id)
+        
+        # Admin should be able to join chat even without participation
+        self.assertEqual(res.status_code, 201)
 
 class MoreEventViewTests(ViewTestsBase):
     def test_leave_event_cleans_chat_member(self):

@@ -15,6 +15,8 @@ from apps.membership.models import Membership
 
 from .models import GuestPass, GuestPassPolicy
 
+ERROR_GUEST_PASS_NOT_FOUND = "Pase no encontrado."
+
 DEFAULT_MAX_CONCURRENT_GUESTS = 3
 DEFAULT_MAX_GUEST_PASS_DURATION_HOURS = 24
 PASS_CODE_ALPHABET = string.ascii_uppercase + string.digits
@@ -71,6 +73,35 @@ def get_or_create_guest_pass_policy(residence) -> GuestPassPolicy:
         },
     )
     return policy
+
+
+def is_guest_pass_out_of_schedule(
+    guest_pass: GuestPass,
+    *,
+    visit_start_time: time | None,
+    visit_end_time: time | None,
+    reference_dt: datetime | None = None,
+) -> bool:
+    """Return whether an active pass is currently outside the allowed visit window."""
+    if visit_start_time is None and visit_end_time is None:
+        return False
+
+    now = reference_dt or timezone.now()
+    is_active_now = (
+        guest_pass.status == GuestPass.Status.ACTIVE
+        and guest_pass.cancelled_at is None
+        and guest_pass.revoked_at is None
+        and guest_pass.valid_from <= now <= guest_pass.valid_until
+    )
+    if not is_active_now:
+        return False
+
+    current_time = timezone.localtime(now).time().replace(tzinfo=None)
+    if visit_start_time is not None and current_time < visit_start_time:
+        return True
+    if visit_end_time is not None and current_time >= visit_end_time:
+        return True
+    return False
 
 
 def _build_sweep_events(
@@ -266,7 +297,7 @@ def cancel_guest_pass_for_resident(pass_id: int, membership: Membership, residen
             id=pass_id, resident=membership, residence=residence
         )
     except GuestPass.DoesNotExist:
-        raise NotFound("Pase no encontrado.") from None
+        raise NotFound(ERROR_GUEST_PASS_NOT_FOUND) from None
 
     if guest_pass.cancelled_at is not None or guest_pass.status == GuestPass.Status.CANCELLED:
         raise ValidationError({"detail": "El pase ya está cancelado."})
@@ -290,18 +321,40 @@ def cancel_guest_pass_for_resident(pass_id: int, membership: Membership, residen
     return guest_pass
 
 
-def revoke_guest_pass_admin(pass_id: int, residence) -> GuestPass:
-    try:
-        guest_pass = GuestPass.objects.get(id=pass_id, residence=residence)
-    except GuestPass.DoesNotExist:
-        raise ValidationError({"detail": "Pase no encontrado."}) from None
+def reject_guest_pass_admin(pass_id: int, residence) -> GuestPass:
+    with transaction.atomic():
+        try:
+            guest_pass = GuestPass.objects.select_for_update().get(id=pass_id, residence=residence)
+        except GuestPass.DoesNotExist:
+            raise ValidationError({"detail": ERROR_GUEST_PASS_NOT_FOUND}) from None
 
-    if guest_pass.status != GuestPass.Status.ACTIVE:
-        raise ValidationError({"detail": "Solo se pueden revocar pases activos."}) from None
+        if guest_pass.status == GuestPass.Status.REJECTED:
+            raise ValidationError({"detail": "El pase ya está rechazado."}) from None
 
-    guest_pass.status = GuestPass.Status.REVOKED
-    guest_pass.revoked_at = timezone.now()
-    guest_pass.save(update_fields=["status", "revoked_at"])
+        if guest_pass.status != GuestPass.Status.ACTIVE:
+            raise ValidationError({"detail": "Solo se pueden rechazar pases activos."}) from None
+
+        guest_pass.status = GuestPass.Status.REJECTED
+        guest_pass.cancelled_at = None
+        guest_pass.revoked_at = None
+        guest_pass.save(update_fields=["status", "cancelled_at", "revoked_at", "updated_at"])
+    return guest_pass
+
+
+def unreject_guest_pass_admin(pass_id: int, residence) -> GuestPass:
+    with transaction.atomic():
+        try:
+            guest_pass = GuestPass.objects.select_for_update().get(id=pass_id, residence=residence)
+        except GuestPass.DoesNotExist:
+            raise ValidationError({"detail": ERROR_GUEST_PASS_NOT_FOUND}) from None
+
+        if guest_pass.status != GuestPass.Status.REJECTED:
+            raise ValidationError({"detail": "Solo se pueden restaurar pases rechazados."}) from None
+
+        guest_pass.status = GuestPass.Status.ACTIVE
+        guest_pass.cancelled_at = None
+        guest_pass.revoked_at = None
+        guest_pass.save(update_fields=["status", "cancelled_at", "revoked_at", "updated_at"])
     return guest_pass
 
 

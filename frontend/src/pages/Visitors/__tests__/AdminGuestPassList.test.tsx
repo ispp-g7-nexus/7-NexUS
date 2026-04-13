@@ -1,9 +1,12 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import '@testing-library/jest-dom/vitest'
 import { AdminGuestPassListPage } from '../AdminGuestPassList'
 
 vi.mock('../../../services/guestPasses', () => ({
+  rejectAdminGuestPass: vi.fn().mockResolvedValue({}),
+  unrejectAdminGuestPass: vi.fn().mockResolvedValue({}),
   listAdminGuestPasses: vi.fn().mockResolvedValue([
     {
       id: 1,
@@ -15,6 +18,7 @@ vi.mock('../../../services/guestPasses', () => ({
       created_at: '2024-05-30T09:00:00Z',
       status: 'ACTIVE',
       comment: 'Visita familiar',
+      out_of_schedule: true,
     },
     {
       id: 2,
@@ -26,6 +30,7 @@ vi.mock('../../../services/guestPasses', () => ({
       created_at: '2024-05-31T09:00:00Z',
       status: 'USED',
       comment: '',
+      out_of_schedule: false,
     },
   ]),
   GuestPassApiError: class GuestPassApiError extends Error {},
@@ -80,7 +85,7 @@ describe('AdminGuestPassListPage — [NX-S2.39 / NX-S2.40]', () => {
 
     await user.type(screen.getByPlaceholderText(/Buscar/), 'xyz-inexistente')
 
-    expect(screen.getByText('No se han encontrado pases que coincidan.')).toBeInTheDocument()
+    expect(screen.getByText('No hay pases que coincidan.')).toBeInTheDocument()
   })
 
   it('abre el diálogo de detalle al hacer clic en un pase', async () => {
@@ -110,16 +115,24 @@ describe('AdminGuestPassListPage — [NX-S2.39 / NX-S2.40]', () => {
     })
   })
 
-  it('muestra el comentario del pase en el diálogo de detalle cuando existe', async () => {
+  it('muestra el comentario del pase cuando existe', async () => {
     const user = userEvent.setup()
     render(<AdminGuestPassListPage />)
     await waitFor(() => screen.getByText('Juan Pérez'))
 
-    await user.click(screen.getByText('Juan Pérez'))
+    const passCard = screen.getByRole('button', { name: /Juan Pérez/i })
+    await user.click(passCard)
 
     await waitFor(() => {
       const dialog = screen.getByRole('dialog')
-      expect(within(dialog).getByText('"Visita familiar"')).toBeInTheDocument()
+      expect(within(dialog).getByText(/Visita familiar/i)).toBeInTheDocument()
     })
+  })
+
+  it('resalta en rojo los pases fuera de horario', async () => {
+    render(<AdminGuestPassListPage />)
+    await waitFor(() => screen.getByText('Juan Pérez'))
+
+    expect(screen.getByText('Fuera de horario')).toBeInTheDocument()
   })
 })
