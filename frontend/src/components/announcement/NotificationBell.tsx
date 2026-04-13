@@ -16,6 +16,7 @@ interface NotificationBellProps {
 
 const VISIT_URGENT_NOTIFICATION_KEY_BASE = "visit-urgent-shared-notifications";
 const VISIT_URGENT_NOTIFICATION_EVENT = "visit-urgent-notification-changed";
+const NOTIFICATIONS_POLL = 5000;
 
 type VisitUrgentSharedNotification = {
   id: string;
@@ -99,7 +100,7 @@ export function NotificationBell({ onMarkAsRead, className, mode = "notification
   const hasNotifications = totalNotifications > 0;
   const isAnnouncementsMode = mode === "announcements";
 
-  const title = isAnnouncementsMode ? "Avisos" : "Notificaciones";
+  const title = "Notificaciones";
   const emptyDescription = isAnnouncementsMode
     ? "No tienes avisos nuevos"
     : "No tienes notificaciones nuevas";
@@ -155,7 +156,7 @@ export function NotificationBell({ onMarkAsRead, className, mode = "notification
       refreshBellState().catch((error) => {
         console.error("Error loading bell state:", error);
       });
-    }, 30000);
+    }, NOTIFICATIONS_POLL);
 
     return () => {
       globalThis.removeEventListener(VISIT_URGENT_NOTIFICATION_EVENT, refreshVisitUrgentNotifications);
@@ -202,7 +203,7 @@ export function NotificationBell({ onMarkAsRead, className, mode = "notification
         >
           <Bell className="w-4 h-4 text-current" />
           {hasNotifications && (
-            <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-background" />
+            <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-destructive rounded-full border-2 border-primary" />
           )}
         </button>
       </PopoverTrigger>

@@ -61,7 +61,7 @@ function NotificationCard({ icon, title, description, time, type, onOpenSource }
 
 const HOME_NOTIFICATIONS_SEEN_IDS_KEY = "home-notifications-seen-ids";
 const HOME_INCIDENCES_DISMISSED_IDS_KEY = "home-incidences-dismissed-ids";
-const NOTIFICATIONS_POLL = 15000;
+const NOTIFICATIONS_POLL = 5000;
 const NOTIFICATIONS_LIMIT = 12;
 
 const parseSeenIds = (raw: string | null): string[] => {

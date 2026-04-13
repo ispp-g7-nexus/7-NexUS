@@ -34,7 +34,7 @@ type IncidenceNotification = {
 const INCIDENCE_NOTIFICATIONS_DISMISSED_KEY = "incidences-notifications-dismissed-ids";
 const HOME_INCIDENCES_SEEN_AT_KEY = "home-incidences-seen-at";
 const VISIT_URGENT_NOTIFICATION_KEY_BASE = "visit-urgent-shared-notifications";
-const LIVE_REFRESH_MS = 3000;
+const LIVE_REFRESH_MS = 5000;
 
 type VisitUrgentSharedNotification = {
   id: string;
@@ -382,7 +382,7 @@ export default function StudentIncidences({ onGoToProfile, onLogout }: StudentIn
             <PopoverTrigger asChild>
               <Button type="button" size="icon" variant="ghost" className={`${UI_CLASSES.topIconButton} hover:scale-100`} aria-label="Notificaciones">
                 <Bell className="w-5 h-5" />
-                {unreadNotifications > 0 && <span className={UI_CLASSES.bellBadge}>{unreadNotifications}</span>}
+                {unreadNotifications > 0 && <span className={UI_CLASSES.bellBadge} />}
               </Button>
             </PopoverTrigger>
             <PopoverContent align="end" sideOffset={10} avoidCollisions={false} className="w-[min(26rem,calc(100vw-2rem))] p-0">
@@ -601,7 +601,7 @@ const UI_CLASSES = {
   header: "bg-primary p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg",
   headerTitle: "text-primary-foreground text-2xl font-bold",
   topIconButton: "relative text-primary-foreground hover:bg-primary-foreground/20 hover:scale-110 rounded-full transition-all",
-  bellBadge: "absolute -right-1 -top-1 min-w-5 h-5 flex items-center justify-center rounded-full bg-[#82D14C] text-[10px] font-bold text-[#123313]",
+  bellBadge: "absolute top-1 right-1 w-2.5 h-2.5 bg-destructive rounded-full border-2 border-primary",
   mainContent: "flex-1 overflow-y-auto p-4 md:p-6 pb-32 w-full",
   incidencesGrid: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5",
   card: "border-none shadow-sm rounded-[24px] overflow-hidden bg-white h-full flex flex-col hover:shadow-md transition-shadow",

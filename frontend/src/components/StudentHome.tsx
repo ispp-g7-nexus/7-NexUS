@@ -45,7 +45,7 @@ const HOME_INCIDENCES_DISMISSED_IDS_KEY = "home-incidences-dismissed-ids";
 const HOME_INCIDENCES_SEEN_AT_KEY = "home-incidences-seen-at";
 const HOME_ANNOUNCEMENTS_SEEN_AT_KEY = "home-announcements-seen-at";
 const VISIT_URGENT_NOTIFICATION_KEY_BASE = "visit-urgent-shared-notifications";
-const NOTIFICATIONS_POLL = 15000;
+const NOTIFICATIONS_POLL = 5000;
 const NOTIFICATIONS_LIMIT = 12;
 
 type VisitUrgentSharedNotification = {
@@ -787,15 +787,15 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
         <div className="bg-[#F5F5F5] min-h-full">
             <div className="bg-primary pt-12 pb-24 px-6 rounded-b-[2.5rem] relative">
                 <div className="flex justify-between items-center mb-6">
-                    <div className="flex items-center gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
                         <Avatar className="border-2 border-primary-foreground/30 w-12 h-12">
                             <AvatarFallback className="bg-primary-foreground/20 text-primary-foreground font-bold">
                                 {userData.initials}
                             </AvatarFallback>
                         </Avatar>
-                        <div>
+                        <div className="min-w-0">
                             <p className="text-primary-foreground/80 text-sm">Bienvenido/a,</p>
-                            <h1 className="text-primary-foreground text-2xl font-bold truncate max-w-[180px]">
+                            <h1 className="text-primary-foreground text-2xl font-bold break-words leading-tight">
                                 {userData.name}
                             </h1>
                         </div>

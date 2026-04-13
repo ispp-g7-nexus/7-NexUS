@@ -86,8 +86,8 @@ class AuthMeView(APIView):
                 user_obj = UserModel.objects.get(pk=user_pk)
                 user_data["first_name"] = user_obj.first_name
                 user_data["last_name"] = user_obj.last_name
-            except UserModel.DoesNotExist:
-                pass
+            except (UserModel.DoesNotExist, ValueError, TypeError):
+                user_data = None
 
         return Response(
             {
