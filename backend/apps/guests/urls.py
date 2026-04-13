@@ -2,6 +2,7 @@ from django.urls import path
 
 from .views import (
     AdminGuestPassListView,
+    AdminGuestPassNotificationsView,
     AdminGuestPassPolicyView,
     AdminGuestPassRevokeView,
     AdminVisitorsAnalyticsView,
@@ -54,6 +55,11 @@ urlpatterns = [
         "admin/guest-passes/",
         AdminGuestPassListView.as_view(),
         name="admin-guest-pass-list",
+    ),
+    path(
+        "admin/guest-passes/notifications/",
+        AdminGuestPassNotificationsView.as_view(),
+        name="admin-guest-pass-notifications",
     ),
     path(
         "admin/guest-passes/policy/",
