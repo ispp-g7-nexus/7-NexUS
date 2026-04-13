@@ -4,6 +4,7 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from .models import GuestPass, GuestPassPolicy
+from .services import is_guest_pass_out_of_schedule
 
 
 def get_effective_guest_pass_status(guest_pass: GuestPass) -> str:
@@ -150,6 +151,7 @@ class GuestPassReadSerializer(serializers.ModelSerializer):
 class GuestPassAdminReadSerializer(serializers.ModelSerializer):
     resident_name = serializers.SerializerMethodField()
     status = serializers.SerializerMethodField()
+    out_of_schedule = serializers.SerializerMethodField()
 
     def get_status(self, obj: GuestPass) -> str:
         return get_effective_guest_pass_status(obj)
@@ -166,6 +168,7 @@ class GuestPassAdminReadSerializer(serializers.ModelSerializer):
             "comment",
             "created_at",
             "resident_name",
+            "out_of_schedule",
         ]
 
     def get_resident_name(self, obj) -> str:
@@ -174,6 +177,15 @@ class GuestPassAdminReadSerializer(serializers.ModelSerializer):
         if user is None:
             return "—"
         return user.get_full_name() or user.email
+
+    def get_out_of_schedule(self, obj: GuestPass) -> bool:
+        visit_start_time = self.context.get("visit_start_time")
+        visit_end_time = self.context.get("visit_end_time")
+        return is_guest_pass_out_of_schedule(
+            obj,
+            visit_start_time=visit_start_time,
+            visit_end_time=visit_end_time,
+        )
 
 
 class GuestPassPolicyReadSerializer(serializers.ModelSerializer):
