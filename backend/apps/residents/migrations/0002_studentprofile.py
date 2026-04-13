@@ -11,14 +11,21 @@ def normalize_ranges(apps, schema_editor):
     
     for profile in StudentProfile.objects.all():
         updated = False
-        if profile.study_level < 1:
+        
+        if profile.study_level is None:
+            profile.study_level = 3
+            updated = True
+        elif profile.study_level < 1:
             profile.study_level = 1
             updated = True
         elif profile.study_level > 5:
             profile.study_level = 5
             updated = True
             
-        if profile.noise_sensitivity < 1:
+        if profile.noise_sensitivity is None:
+            profile.noise_sensitivity = 3
+            updated = True
+        elif profile.noise_sensitivity < 1:
             profile.noise_sensitivity = 1
             updated = True
         elif profile.noise_sensitivity > 5:
