@@ -1,5 +1,5 @@
-import { Clock, Flame, Leaf, LogOut, User, Loader2, Send, MessageSquare } from "lucide-react";
-import { useState, useEffect, JSX } from "react";
+import { Clock, Flame, Leaf, LogOut, User, Loader2, Send, MessageSquare, ChevronLeft } from "lucide-react";
+import { useState, useEffect, JSX, useCallback } from "react";
 import { MenuWeek, MenuDay, Meal } from "../../types/menu.types";
 import { NotificationBell } from "../../components/announcement/NotificationBell";
 import { Button } from "../../components/ui/button";
@@ -137,28 +137,100 @@ const DayMenuCard = ({ day }: { day: MenuDay }) => {
 
 export function ResidentMenuView({ onGoToProfile, onLogout }: ResidentMenuViewProps) {
   const [menuWeek, setMenuWeek] = useState<MenuWeek | null>(null);
+  const [allWeeks, setAllWeeks] = useState<MenuWeek[]>([]);
+  const [selectedWeekId, setSelectedWeekId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [requestText, setRequestText] = useState("");
+  const [myRequests, setMyRequests] = useState<any[]>([]);
+
+  const loadWeeks = useCallback(async () => {
+    try {
+      const weeks = await menuService.listWeeks();
+      const sortedWeeks = [...weeks].sort((a, b) =>
+        new Date(a.weekStart).getTime() - new Date(b.weekStart).getTime()
+      );
+      setAllWeeks(sortedWeeks);
+      return sortedWeeks;
+    } catch {
+      return [];
+    }
+  }, []);
+
+  const loadWeekDetail = useCallback(async (weekId: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const week = await menuService.getWeek(weekId);
+      setMenuWeek(week);
+      setSelectedWeekId(weekId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al cargar el menú');
+      setMenuWeek(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const handleNavigateWeek = async (direction: 'prev' | 'next') => {
+    if (!selectedWeekId || allWeeks.length === 0) return;
+
+    const currentIndex = allWeeks.findIndex(w => w.id === selectedWeekId);
+    if (currentIndex === -1) return;
+
+    const newIndex = direction === 'prev' ? currentIndex - 1 : currentIndex + 1;
+    if (newIndex < 0 || newIndex >= allWeeks.length) return;
+
+    const targetWeek = allWeeks[newIndex];
+    if (targetWeek.id) {
+      await loadWeekDetail(targetWeek.id);
+    }
+  };
 
   useEffect(() => {
-    const loadMenu = async () => {
+    const init = async () => {
+      setLoading(true);
+
       try {
-        setLoading(true);
-        const week = await menuService.getCurrentWeek();
-        setMenuWeek(week);
-        setError(null);
+        const myReqs = await menuService.getSpecialRequests();
+        setMyRequests(myReqs);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Error al cargar el menú');
-        setMenuWeek(null);
+        console.error("Error al cargar mis peticiones:", err);
+      }
+
+      try {
+        const currentWeek = await menuService.getCurrentWeek();
+        setMenuWeek(currentWeek);
+        setSelectedWeekId(currentWeek.id || null);
+        setError(null);
+      } catch {
+        try {
+          const weeks = await menuService.listWeeks();
+          const sortedWeeks = [...weeks].sort((a, b) =>
+            new Date(a.weekStart).getTime() - new Date(b.weekStart).getTime()
+          );
+          setAllWeeks(sortedWeeks);
+          if (sortedWeeks.length > 0) {
+            const first = sortedWeeks[0];
+            if (first.id) {
+              const firstWeek = await menuService.getWeek(first.id);
+              setMenuWeek(firstWeek);
+              setSelectedWeekId(first.id || null);
+            }
+          } else {
+            setMenuWeek(null);
+          }
+        } catch {
+          setMenuWeek(null);
+        }
       } finally {
         setLoading(false);
       }
+      await loadWeeks();
     };
-
-    loadMenu();
-  }, []);
+    init();
+  }, [loadWeeks]);
 
   const handleSendRequest = async () => {
     if (requestText.trim()) {
@@ -168,9 +240,13 @@ export function ResidentMenuView({ onGoToProfile, onLogout }: ResidentMenuViewPr
           date: new Date().toISOString().split('T')[0]
         });
 
-      toast.success("Petición enviada");
-      setIsModalOpen(false);
-      setRequestText("");
+        // Recargar peticiones
+        const myReqs = await menuService.getSpecialRequests();
+        setMyRequests(myReqs);
+
+        toast.success("Petición enviada");
+        setIsModalOpen(false);
+        setRequestText("");
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Error al enviar la petición");
       }
@@ -210,6 +286,10 @@ export function ResidentMenuView({ onGoToProfile, onLogout }: ResidentMenuViewPr
     );
   }
 
+  const currentIndex = allWeeks.findIndex(w => w.id === selectedWeekId);
+  const canGoPrev = currentIndex > 0;
+  const canGoNext = currentIndex < allWeeks.length - 1;
+
   return (
     <div className="flex flex-col w-full bg-[#F6F7F9]">
       {/* Header */}
@@ -235,9 +315,34 @@ export function ResidentMenuView({ onGoToProfile, onLogout }: ResidentMenuViewPr
           ) : null}
         </div>
       </header>
-      
+
       <div className="min-h-screen bg-[#F6F7F9] pt-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+          {/* Week Navigation */}
+          <div className="flex items-center justify-center gap-6 mb-8">
+            <button
+              onClick={() => handleNavigateWeek('prev')}
+              disabled={!canGoPrev}
+              className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              aria-label="Semana anterior"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <span className="text-lg font-semibold text-gray-900 whitespace-nowrap min-w-[140px] text-center">
+              {new Date(menuWeek.weekStart + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+              {' - '}
+              {new Date(menuWeek.weekEnd + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+            </span>
+            <button
+              onClick={() => handleNavigateWeek('next')}
+              disabled={!canGoNext}
+              className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              aria-label="Próxima semana"
+            >
+              <ChevronLeft className="w-5 h-5 rotate-180" />
+            </button>
+          </div>
 
         {/* Menu Days Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -270,21 +375,74 @@ export function ResidentMenuView({ onGoToProfile, onLogout }: ResidentMenuViewPr
             </div>
           </div>
         </div>
+
+        {/* Mis Peticiones Especiales */}
+        {myRequests.length > 0 && (
+          <div className="mt-12 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="bg-green-600 p-4 flex justify-between items-center">
+              <h3 className="text-white font-bold">Mis Peticiones Especiales</h3>
+              <span className="bg-white/20 text-white text-xs px-2 py-1 rounded">{myRequests.filter(r => r.status === 'pending').length}</span>
+            </div>
+            <div className="divide-y divide-gray-100">
+              {/* Peticiones Pendientes */}
+              {myRequests.filter(r => r.status === 'pending').map((req) => (
+                <div key={req.id} className="p-4 bg-orange-50/50 hover:bg-orange-50 transition-colors">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-xs font-semibold px-2 py-1 rounded-full bg-orange-100 text-orange-700">
+                      Pendiente de Aprobar/Rechazar
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-500">{req.date}: {req.description}</p>
+                </div>
+              ))}
+              
+              {/* Historial */}
+              {myRequests.filter(r => r.status !== 'pending').length > 0 && (
+                <>
+                  <div className="px-4 py-3 bg-gray-50 border-t border-b border-gray-200">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Historial</p>
+                  </div>
+                  {myRequests.filter(r => r.status !== 'pending').map((req) => (
+                    <div 
+                      key={req.id} 
+                      className={`p-4 ${
+                        req.status === 'approved' 
+                          ? 'bg-green-50/30 hover:bg-green-50/50' 
+                          : 'bg-red-50/30 hover:bg-red-50/50'
+                      } transition-colors`}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                          req.status === 'approved'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-red-100 text-red-700'
+                        }`}>
+                          {req.status === 'approved' ? 'Aprobada' : 'Rechazada'}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-500">{req.date}: {req.description}</p>
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
-    </div>
-    {/* Botón de Petición Especial */}
-<div className="mt-4 pt-4 border-t border-gray-100">
-  {/* Botón flotante corregido */}
-<div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-40 w-full max-w-xs px-4">
-  <button
-    onClick={() => setIsModalOpen(true)}
-    className="w-full flex items-center justify-center gap-2 py-3 bg-orange-500 text-white rounded-full font-bold shadow-lg hover:bg-orange-600 transition-transform active:scale-95"
-  >
-    <MessageSquare size={20} />
-    Petición especial
-  </button>
-</div>
-</div>
+      </div>
+
+      {/* Botón de Petición Especial */}
+      <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-40 w-full max-w-xs px-4">
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="w-full flex items-center justify-center gap-2 py-3 bg-orange-500 text-white rounded-full font-bold shadow-lg hover:bg-orange-600 transition-transform active:scale-95"
+        >
+          <MessageSquare size={20} />
+          Petición especial
+        </button>
+      </div>
+
+      {/* Modal de Petición Especial */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl animate-in fade-in zoom-in duration-200">
@@ -296,14 +454,14 @@ export function ResidentMenuView({ onGoToProfile, onLogout }: ResidentMenuViewPr
               onChange={(e) => setRequestText(e.target.value)}
             />
             <div className="flex gap-3">
-              <button 
-                onClick={() => setIsModalOpen(false)} 
+              <button
+                onClick={() => setIsModalOpen(false)}
                 className="flex-1 rounded-xl border border-gray-300 py-2 text-sm font-medium hover:bg-gray-50 transition-colors"
               >
                 Cancelar
               </button>
-              <button 
-                onClick={handleSendRequest} 
+              <button
+                onClick={handleSendRequest}
                 className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-xl flex items-center justify-center gap-2 font-bold"
               >
                 <Send size={16} /> Enviar

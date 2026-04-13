@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Bed, Building2, Edit2, Eye, Grid3x3, List, Mail, Plus, Search as SearchIcon, Trash2, User, Users } from "lucide-react";
+import { Bed, Building2, Edit2, Eye, History, Grid3x3, List, Mail, Plus, Search as SearchIcon, Trash2, User, Users, X } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import roomSvg from "../../assets/room.svg";
@@ -14,6 +14,7 @@ import {
   type BedroomResident,
 } from "../../services/bedrooms";
 import { getAdminStudentProfile, type StudentProfileDetails } from "../../services/studentProfiles";
+import { BedroomAuditLog } from "./BedroomAuditLog";
 
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
@@ -35,6 +36,12 @@ import {
 } from "../../components/ui/select";
 import { ResidentProfileDialog } from "./components/ResidentProfileDialog";
 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "../../components/ui/dialog";
 
 function validateNumero(v: string): string {
   if (!v.trim()) return "El número es obligatorio";
@@ -86,24 +93,13 @@ export function Rooms() {
   const [isResidentProfileOpen, setIsResidentProfileOpen] = useState(false);
   const [isResidentProfileLoading, setIsResidentProfileLoading] = useState(false);
   const [residentProfileError, setResidentProfileError] = useState<string | null>(null);
+  const [showAudit, setShowAudit] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const validateField = (name: string, value: string | number): boolean => {
-    const v = String(value);
-    const validators: Record<string, () => string> = {
-      numero:    () => validateNumero(v),
-      edificio:  () => validateEdificio(v),
-      planta:    () => validatePlanta(v),
-      unidades:  () => validateUnidades(v, isEditing),
-    };
-    const error = validators[name]?.() ?? "";
-    setErrors((prev) => ({ ...prev, [name]: error }));
-    return !error;
-  };
+  const [roomToDelete, setRoomToDelete] = useState<Bedroom | null>(null);
 
   const [form, setForm] = useState({
     numero: "",
@@ -125,6 +121,9 @@ export function Rooms() {
     setSelectedRoom(null);
     closeResidentProfile();
   };
+  const [filterTipo, setFilterTipo] = useState("todos");
+  const [filterEdificio, setFilterEdificio] = useState("todos");
+  const [buildingOptions, setBuildingOptions] = useState<string[]>([]);
 
   useEffect(() => {
     fetchRooms();
@@ -140,9 +139,29 @@ export function Rooms() {
       setSelectedResidentProfile(null);
       setResidentProfileError(null);
       setIsResidentProfileLoading(false);
+      setRoomToDelete(null);
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  useEffect(() => {
+    setShowAudit(false);
+  }, [selectedRoom]);
+
+  useEffect(() => {
+    const fetchBuildingOptions = async () => {
+      try {
+        const res = await fetch("/api/bedrooms/buildings");
+        if (!res.ok) throw new Error("Error fetching buildings");
+        const data = await res.json();
+        const dataUnique = Array.from(new Set(data.filter((b: string) => b && b.trim()))) as string[];
+        setBuildingOptions(dataUnique);
+      } catch (error) {
+        console.error("Failed to fetch building options:", error);
+      }
+    };
+    fetchBuildingOptions();
   }, []);
 
   const fetchRooms = async () => {
@@ -158,29 +177,23 @@ export function Rooms() {
     }
   };
 
+  const validateField = (name: string, value: string | number): boolean => {
+    const v = String(value);
+    const validators: Record<string, () => string> = {
+      numero: () => validateNumero(v),
+      edificio: () => validateEdificio(v),
+      planta: () => validatePlanta(v),
+      unidades: () => validateUnidades(v, isEditing),
+    };
+    const error = validators[name]?.() ?? "";
+    setErrors((prev) => ({ ...prev, [name]: error }));
+    return !error;
+  };
+
   const stats = useMemo(() => {
     const ocupadas = rooms.filter((r) => r.ocupantes_actuales > 0).length;
     return { total: rooms.length, ocupadas, libres: rooms.length - ocupadas };
   }, [rooms]);
-
-  const [filterTipo, setFilterTipo] = useState("todos");
-  const [filterEdificio, setFilterEdificio] = useState("todos");
-  const [buildingOptions, setBuildingOptions] = useState([]);
-
-  useEffect(() => {
-    const fetchBuildingOptions = async () => {
-      try {
-        const res = await fetch("/api/bedrooms/buildings");
-        if (!res.ok) throw new Error("Error fetching buildings");
-        const data = await res.json();
-        const dataUnique = Array.from(new Set(data.filter((b: string) => b && b.trim())));
-        setBuildingOptions(dataUnique);
-      } catch (error) {
-        console.error("Failed to fetch building options:", error);
-      }
-    };
-    fetchBuildingOptions();
-  }, []);
 
   const filteredRooms = useMemo(() => {
     let list = [...rooms];
@@ -267,13 +280,15 @@ export function Rooms() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (room: Bedroom) => {
-    if (!confirm("¿Eliminar habitación?")) return;
+  const executeDelete = async () => {
+    if (!roomToDelete) return;
     try {
-      const res = await deleteBedroom(room.id);
+      const res = await deleteBedroom(roomToDelete.id);
       if (res.ok) {
         toast.success("Habitación eliminada correctamente.");
         closeRoomDetails();
+        setSelectedRoom(null);
+        setRoomToDelete(null);
         fetchRooms();
       } else {
         const body = await res.json().catch(() => ({}));
@@ -309,7 +324,7 @@ export function Rooms() {
   if (loading) return <div className="p-10">Cargando...</div>;
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="p-6 max-w-7xl mx-auto space-y-6 text-left">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-4">
@@ -460,12 +475,31 @@ export function Rooms() {
         </div>
       )}
 
-      {/* Detalle habitación */}
       {selectedRoom && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div role="button" tabIndex={-1} aria-label="Cerrar detalle" className="fixed inset-0 bg-black/50" onClick={closeRoomDetails} onKeyDown={(e) => { if (e.key === "Escape" || e.key === "Enter") closeRoomDetails(); }} />
-          <div className="relative w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl">
-            <div className="flex items-center gap-3 mb-4">
+          <button
+            type="button"
+            aria-label="Cerrar detalle"
+            className="fixed inset-0 bg-black/50 cursor-default border-none"
+            onClick={() => setSelectedRoom(null)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                setSelectedRoom(null);
+              }
+            }}
+          />
+          <div className="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
+
+            <button
+              type="button"
+              aria-label="Cerrar"
+              className="absolute right-4 top-4 h-8 w-8 rounded-lg text-slate-400 transition-all hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center"
+              onClick={() => setSelectedRoom(null)}
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-4 pr-8">
               <div className={`p-2 rounded-xl ${selectedRoom.ocupantes_actuales > 0 ? "bg-red-100" : "bg-primary/10"}`}>
                 <Bed className={`w-5 h-5 ${selectedRoom.ocupantes_actuales > 0 ? "text-red-600" : "text-primary"}`} />
               </div>
@@ -474,6 +508,7 @@ export function Rooms() {
                 <p className="text-sm text-gray-500">Edificio {selectedRoom.edificio} · Planta {selectedRoom.planta ?? "—"}</p>
               </div>
             </div>
+
             <div className="grid grid-cols-2 gap-3 py-2">
               <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
                 <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1">Tipo</p>
@@ -498,9 +533,21 @@ export function Rooms() {
                   onViewProfile={handleViewResidentProfile}
                 />
               </div>
+              <div className="col-span-2 bg-gray-50 p-3 rounded-xl border border-gray-200">
+                <button
+                  type="button"
+                  className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-gray-500 font-bold w-full text-left"
+                  onClick={() => setShowAudit((v) => !v)}
+                  aria-expanded={showAudit}
+                >
+                  <History className="w-3 h-3" />
+                  Historial de auditoría
+                  <span className="ml-auto">{showAudit ? "▲" : "▼"}</span>
+                </button>
+                {showAudit && <BedroomAuditLog bedroomId={selectedRoom.id} />}
+              </div>
             </div>
 
-            {/* Acciones */}
             <div className="flex gap-2 mt-4">
               <Button
                 className="flex-1"
@@ -515,7 +562,7 @@ export function Rooms() {
               <Button
                 className="flex-1"
                 variant="destructive"
-                onClick={() => handleDelete(selectedRoom)}
+                onClick={() => setRoomToDelete(selectedRoom)}
               >
                 <Trash2 className="w-4 h-4 mr-2" />Eliminar
               </Button>
@@ -534,9 +581,22 @@ export function Rooms() {
       />
 
       {/* Modal crear/editar */}
+      <Dialog open={!!roomToDelete} onOpenChange={() => setRoomToDelete(null)}>
+        <DialogContent className="max-w-[400px] rounded-3xl p-6">
+          <DialogTitle className="text-center text-lg font-bold">¿Eliminar habitación?</DialogTitle>
+          <DialogDescription className="text-center text-gray-500 mt-2">
+            Esta acción no se puede deshacer. La habitación "{roomToDelete?.numero}" del edificio "{roomToDelete?.edificio}" será borrada permanentemente.
+          </DialogDescription>
+          <div className="flex gap-3 mt-6">
+            <Button variant="outline" onClick={() => setRoomToDelete(null)} className="flex-1 rounded-xl h-12 font-bold">Cancelar</Button>
+            <Button variant="destructive" onClick={executeDelete} className="flex-1 rounded-xl h-12 font-bold">Eliminar</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div role="button" tabIndex={-1} aria-label="Cerrar modal" className="fixed inset-0 bg-black/50" onClick={() => setIsModalOpen(false)} onKeyDown={(e) => { if (e.key === "Escape" || e.key === "Enter") setIsModalOpen(false); }} />
+          <div role="button" tabIndex={-1} aria-label="Cerrar modal" className="fixed inset-0 bg-black/50" onClick={() => setIsModalOpen(false)} />
           <div className="relative bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
             <h2 className="text-lg font-semibold mb-4">
               {isEditing ? "Editar habitación" : "Nueva habitación"}
@@ -601,12 +661,8 @@ export function Rooms() {
               )}
 
               <div className="flex gap-2 pt-2">
-                <Button type="button" variant="outline" className="flex-1" onClick={() => setIsModalOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit" className="flex-1" disabled={Object.values(errors).some((e) => e)}>
-                  Guardar
-                </Button>
+                <Button type="button" variant="outline" className="flex-1" onClick={() => setIsModalOpen(false)}>Cancelar</Button>
+                <Button type="submit" className="flex-1" disabled={Object.values(errors).some((e) => e)}>Guardar</Button>
               </div>
             </form>
           </div>
@@ -615,6 +671,7 @@ export function Rooms() {
     </div>
   );
 }
+
 
 function groupByBuildingAndFloor(rooms: Bedroom[]): Record<string, Record<number, Bedroom[]>> {
   const organized: Record<string, Record<number, Bedroom[]>> = {};
@@ -634,9 +691,9 @@ function groupByBuildingAndFloor(rooms: Bedroom[]): Record<string, Record<number
 }
 
 const ROOM_STATES = {
-  full:    { label: "Completa", badgeClass: "bg-red-100 text-red-700 border-0",       cellClass: "bg-red-50 border-red-400 hover:bg-red-100",        iconClass: "text-red-500",    textClass: "text-red-700"    },
-  partial: { label: "Parcial",  badgeClass: "bg-yellow-100 text-yellow-700 border-0", cellClass: "bg-yellow-50 border-yellow-400 hover:bg-yellow-100", iconClass: "text-yellow-600", textClass: "text-yellow-700" },
-  free:    { label: "Libre",    badgeClass: "bg-primary/10 text-primary border-0",   cellClass: "bg-primary/10 border-primary/50 hover:bg-primary/20",   iconClass: "text-primary",  textClass: "text-primary"  },
+  full: { label: "Completa", badgeClass: "bg-red-100 text-red-700 border-0", cellClass: "bg-red-50 border-red-400 hover:bg-red-100", iconClass: "text-red-500", textClass: "text-red-700" },
+  partial: { label: "Parcial", badgeClass: "bg-yellow-100 text-yellow-700 border-0", cellClass: "bg-yellow-50 border-yellow-400 hover:bg-yellow-100", iconClass: "text-yellow-600", textClass: "text-yellow-700" },
+  free: { label: "Libre", badgeClass: "bg-primary/10 text-primary border-0", cellClass: "bg-primary/10 border-primary/50 hover:bg-primary/20", iconClass: "text-primary", textClass: "text-primary" },
 } as const;
 
 function getRoomState(ocupantes: number, capacidad: number) {
@@ -704,12 +761,8 @@ function ResidentsInlineList({ residents, showEmail = false }: { readonly reside
     <ul className="min-w-0 space-y-0.5">
       {residents.map((resident) => (
         <li key={resident.id} className="min-w-0">
-          <p className="text-sm text-gray-900 truncate" title={resident.full_name}>
-            {resident.full_name}
-          </p>
-          {showEmail && resident.email && (
-            <p className="text-xs text-gray-500 truncate">{resident.email}</p>
-          )}
+          <p className="text-sm text-gray-900 truncate" title={resident.full_name}>{resident.full_name}</p>
+          {showEmail && resident.email && <p className="text-xs text-gray-500 truncate">{resident.email}</p>}
         </li>
       ))}
     </ul>

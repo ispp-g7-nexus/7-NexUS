@@ -15,8 +15,8 @@ from apps.membership.permissions import (
     has_screen_permission,
 )
 
-from .models import Bedroom
-from .serializers import BedroomSerializer, ResidentSerializer
+from .models import Bedroom, BedroomAuditLog
+from .serializers import BedroomAuditLogSerializer, BedroomSerializer, ResidentSerializer
 from .services import delete_bedroom, list_available_bedrooms
 
 
@@ -103,6 +103,7 @@ class BedroomCreateView(AdminRequiredView):
             if not serializer.is_valid():
                 return JsonResponse({"detail": serializer.errors}, status=400)
             bedroom = serializer.save(residence=request.residence)
+            BedroomAuditLog.objects.create(bedroom=bedroom, user=request.user, action=BedroomAuditLog.Action.CREATED)
             return JsonResponse(
                 {"id": bedroom.id, "detail": "Bedroom created successfully"}, status=201
             )
@@ -142,7 +143,13 @@ class BedroomUpdateView(AdminRequiredView):
             serializer = BedroomSerializer(bedroom, data=body, partial=True)
             if not serializer.is_valid():
                 return JsonResponse({"detail": serializer.errors}, status=400)
+            changes = {
+                k: {"before": getattr(bedroom, k, None), "after": v}
+                for k, v in serializer.validated_data.items()
+                if getattr(bedroom, k, None) != v
+            }
             bedroom = serializer.save()
+            BedroomAuditLog.objects.create(bedroom=bedroom, user=request.user, action=BedroomAuditLog.Action.UPDATED, changes=changes)
             return JsonResponse(
                 {"id": bedroom.id, "detail": "Bedroom updated successfully"}, status=200
             )
@@ -239,3 +246,13 @@ class BuildingListView(AdminRequiredView):
             .distinct()
         )
         return JsonResponse(list(buildings), safe=False)
+
+
+class BedroomAuditLogView(AdminRequiredView):
+    def get(self, request, bedroom_id):
+        if not hasattr(request, "residence") or not request.residence:
+            return JsonResponse({"detail": "No residence context."}, status=400)
+        bedroom = get_object_or_404(Bedroom, id=bedroom_id, residence=request.residence)
+        logs = bedroom.audit_logs.select_related("user").all()
+        serializer = BedroomAuditLogSerializer(logs, many=True)
+        return JsonResponse(serializer.data, safe=False)

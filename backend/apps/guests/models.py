@@ -92,12 +92,37 @@ class GuestPassPolicy(models.Model):
         default=3,
         validators=[MinValueValidator(1), MaxValueValidator(20)],
     )
+    visit_start_time = models.TimeField(
+        null=True,
+        blank=True,
+        help_text="Hora diaria de inicio permitida para visitas (HH:MM).",
+    )
+    visit_end_time = models.TimeField(
+        null=True,
+        blank=True,
+        help_text="Hora límite diaria para finalizar visitas (HH:MM).",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = "Guest pass policy"
         verbose_name_plural = "Guest pass policies"
+
+    def clean(self) -> None:
+        super().clean()
+        if (
+            self.visit_start_time is not None
+            and self.visit_end_time is not None
+            and self.visit_start_time >= self.visit_end_time
+        ):
+            raise ValidationError(
+                {
+                    "visit_start_time": (
+                        "La hora de inicio de visitas debe ser anterior a la hora límite de salida."
+                    )
+                }
+            )
 
     def __str__(self) -> str:
         return (
