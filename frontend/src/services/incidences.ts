@@ -51,7 +51,6 @@ export interface CreateIncidenceDTO {
   description: string;
   location_type: LocationType;
   room_number?: number | null;
-  room_number_detail?: BedroomDetail | null;
   priority?: PriorityLevel;
 }
 
@@ -67,7 +66,6 @@ export interface UpdateIncidenceDTO {
   admin_notes?: string;
   quick_comment?: string;
   room_number?: number | null;
-  room_number_detail?: BedroomDetail | null;
 
 }
 
