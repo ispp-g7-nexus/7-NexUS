@@ -430,13 +430,21 @@ export function Rooms() {
         </div>
       )}
 
-      {/* DETALLE HABITACIÓN (CON BOTÓN X) */}
       {selectedRoom && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div role="button" tabIndex={-1} aria-label="Cerrar detalle" className="fixed inset-0 bg-black/50" onClick={() => setSelectedRoom(null)} />
+          <button
+            type="button"
+            aria-label="Cerrar detalle"
+            className="fixed inset-0 bg-black/50 cursor-default border-none"
+            onClick={() => setSelectedRoom(null)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                setSelectedRoom(null);
+              }
+            }}
+          />
           <div className="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
-            
-            {/* BOTÓN X PARA CERRAR */}
+
             <button
               type="button"
               aria-label="Cerrar"
@@ -446,7 +454,7 @@ export function Rooms() {
               <X className="h-5 w-5" />
             </button>
 
-            <div className="flex items-center gap-3 mb-4 pr-8"> {/* Padding derecho para no pisar la X */}
+            <div className="flex items-center gap-3 mb-4 pr-8">
               <div className={`p-2 rounded-xl ${selectedRoom.ocupantes_actuales > 0 ? "bg-red-100" : "bg-primary/10"}`}>
                 <Bed className={`w-5 h-5 ${selectedRoom.ocupantes_actuales > 0 ? "text-red-600" : "text-primary"}`} />
               </div>
@@ -490,7 +498,6 @@ export function Rooms() {
               </div>
             </div>
 
-            {/* Acciones */}
             <div className="flex gap-2 mt-4">
               <Button
                 className="flex-1"
@@ -624,9 +631,9 @@ function groupByBuildingAndFloor(rooms: Bedroom[]): Record<string, Record<number
 }
 
 const ROOM_STATES = {
-  full:    { label: "Completa", badgeClass: "bg-red-100 text-red-700 border-0",       cellClass: "bg-red-50 border-red-400 hover:bg-red-100",        iconClass: "text-red-500",    textClass: "text-red-700"    },
-  partial: { label: "Parcial",  badgeClass: "bg-yellow-100 text-yellow-700 border-0", cellClass: "bg-yellow-50 border-yellow-400 hover:bg-yellow-100", iconClass: "text-yellow-600", textClass: "text-yellow-700" },
-  free:    { label: "Libre",    badgeClass: "bg-primary/10 text-primary border-0",   cellClass: "bg-primary/10 border-primary/50 hover:bg-primary/20",   iconClass: "text-primary",  textClass: "text-primary"  },
+  full: { label: "Completa", badgeClass: "bg-red-100 text-red-700 border-0", cellClass: "bg-red-50 border-red-400 hover:bg-red-100", iconClass: "text-red-500", textClass: "text-red-700" },
+  partial: { label: "Parcial", badgeClass: "bg-yellow-100 text-yellow-700 border-0", cellClass: "bg-yellow-50 border-yellow-400 hover:bg-yellow-100", iconClass: "text-yellow-600", textClass: "text-yellow-700" },
+  free: { label: "Libre", badgeClass: "bg-primary/10 text-primary border-0", cellClass: "bg-primary/10 border-primary/50 hover:bg-primary/20", iconClass: "text-primary", textClass: "text-primary" },
 } as const;
 
 function getRoomState(ocupantes: number, capacidad: number) {

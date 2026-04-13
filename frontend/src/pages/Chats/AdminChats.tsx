@@ -638,7 +638,7 @@ export function AdminChats({
                                 ? "bg-primary text-primary-foreground rounded-br-md"
                                 : "bg-gray-50 text-gray-900 rounded-bl-md";
                             const timeClasses = isMine ? "text-primary-foreground/70" : "text-gray-400";
-                            
+
                             return (
                                 <div key={msg.id} className={`flex flex-col ${isMine ? "items-end text-right" : "items-start text-left"} mb-3`}>
                                     {!isMine && (
@@ -799,6 +799,7 @@ export function AdminChats({
                             </div>
                         );
                     })}
+                    {!loading && filteredGroups.length === 0 && <p className="p-10 text-center text-gray-400">No se encontraron grupos.</p>}
                 </div>
             </div>
 

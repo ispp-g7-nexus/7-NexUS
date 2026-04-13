@@ -390,7 +390,7 @@ function PassesList({
   }
 
   if (error) {
-    return <ErrorState message={error} onRetry={onRetry || (() => {})} />;
+    return <ErrorState message={error} onRetry={onRetry || (() => { })} />;
   }
 
   if (passes.length === 0) {
@@ -870,7 +870,7 @@ async function submitGuestPass({
     });
     setForm(buildInitialFormState());
     globalThis.dispatchEvent(new Event(VISIT_STATE_CHANGED_EVENT));
-      await loadPasses();
+    await loadPasses();
   } catch (unknownError) {
     handleCreateError(unknownError, setFormErrors);
   } finally {
@@ -933,13 +933,20 @@ export function ActiveGuestPassesPage({ onGoToProfile, onLogout }: ActiveGuestPa
   };
 
   const handleDelete = async () => {
-      if (!passToDeactivate) return;
-      try {
-        await cancelMyGuestPass(passToDeactivate.id);
-        loadPasses();
-        setPassToDeactivate(null);
-      } catch (e) { alert("No se pudo eliminar la incidencia"); }
-    };
+    if (!passToDeactivate) return;
+    setCancellingPassId(passToDeactivate.id); 
+    try {
+      await cancelMyGuestPass(passToDeactivate.id);
+      toast.success("Pase cancelado.");
+      setPassToDeactivate(null);
+      globalThis.dispatchEvent(new Event(VISIT_STATE_CHANGED_EVENT));
+      await loadPasses();
+    } catch {
+      toast.error("No se pudo cancelar.");
+    } finally {
+      setCancellingPassId(null);
+    }
+  };
 
   return (
     <div className="flex flex-col w-full bg-background">
@@ -1029,30 +1036,30 @@ export function ActiveGuestPassesPage({ onGoToProfile, onLogout }: ActiveGuestPa
         />
 
         {/* MODAL DESACTIVAR */}
-      <Dialog open={!!passToDeactivate} onOpenChange={() => setPassToDeactivate(null)}>
-        <DialogContent className="max-w-[400px] rounded-3xl p-6">
-          <DialogTitle className="text-center text-lg font-bold">¿Cancelar pase?</DialogTitle>
-          <DialogDescription className="text-center text-gray-500 mt-2">
-            Esta acción cancelará el pase para "{passToDeactivate?.full_name}".
-          </DialogDescription>
-          <div className="flex gap-3 mt-6">
-            <Button 
-              variant="outline" 
-              onClick={() => setPassToDeactivate(null)} 
-              className="flex-1 rounded-xl h-12 font-bold"
-            >
-              Cancelar
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={handleDelete} 
-              className="flex-1 rounded-xl h-12 font-bold"
-            >
-              Eliminar pase
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+        <Dialog open={!!passToDeactivate} onOpenChange={() => setPassToDeactivate(null)}>
+          <DialogContent className="max-w-[400px] rounded-3xl p-6">
+            <DialogTitle className="text-center text-lg font-bold">¿Cancelar pase?</DialogTitle>
+            <DialogDescription className="text-center text-gray-500 mt-2">
+              Esta acción cancelará el pase para "{passToDeactivate?.full_name}".
+            </DialogDescription>
+            <div className="flex gap-3 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => setPassToDeactivate(null)}
+                className="flex-1 rounded-xl h-12 font-bold"
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                className="flex-1 rounded-xl h-12 font-bold"
+              >
+                Eliminar pase
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </section>
     </div>
   );
