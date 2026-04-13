@@ -41,6 +41,15 @@ export interface SpaceReservation {
   updated_at: string;
 }
 
+export interface ReservationReminderNotification {
+  id: string;
+  title: string;
+  message: string;
+  created_at: string;
+  start_time: string;
+  end_time: string;
+}
+
 export interface AvailableSlot {
   start_time: string;
   end_time: string;
@@ -124,6 +133,10 @@ export async function createReservation(
 
 export async function listMyReservations(): Promise<SpaceReservation[]> {
   return requestJson<SpaceReservation[]>(`${SPACES_API_BASE}/reservations/me/`);
+}
+
+export async function listMyReservationReminders(): Promise<ReservationReminderNotification[]> {
+  return requestJson<ReservationReminderNotification[]>(`${SPACES_API_BASE}/reservations/reminders/`);
 }
 
 export async function cancelReservation(reservationId: number): Promise<void> {

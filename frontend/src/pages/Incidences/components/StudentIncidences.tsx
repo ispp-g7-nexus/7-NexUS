@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Plus, Bell, MapPin, User, Wrench, MessageSquare, Loader2, Clock, Pencil, Trash2, LogOut, X } from "lucide-react";
+import { Plus, Bell, MapPin, User, Wrench, MessageSquare, Loader2, Clock, Pencil, Trash2, LogOut, X, AlertCircle, AlertTriangle } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent } from "../../../components/ui/card";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "../../../components/ui/dialog";
@@ -51,32 +51,102 @@ interface IncidenceNotificationCardProps {
 }
 
 function IncidenceNotificationCard({ notification, onDismiss }: IncidenceNotificationCardProps) {
+  const normalizedKind = (notification.kind || "").trim().toLowerCase();
   const isVisitUrgent = notification.kind === "visit_limit_warning";
+  const hasKnownKind = normalizedKind.length > 0 && normalizedKind !== "unknown";
+  const statusUpdateKinds = new Set(["admin_update", "status_update", "incidence_update", "estado", "update"]);
+  const fallbackStatusUpdate = /estado|status/i.test(`${notification.title} ${notification.message}`);
+  const isStatusUpdate = hasKnownKind ? statusUpdateKinds.has(normalizedKind) : fallbackStatusUpdate;
+  const isRedundantStatusTitle = isStatusUpdate && /cambio de estado|status update/i.test(notification.title);
+  const stateChangedMatch = isStatusUpdate ? notification.message.match(/Estado cambiado/i) : null;
+
+  const containerClasses = isVisitUrgent
+    ? "border-amber-300 bg-gradient-to-br from-amber-50 via-white to-orange-50 shadow-[0_8px_24px_rgba(245,158,11,0.16)]"
+    : isStatusUpdate
+      ? "border-slate-200 bg-gradient-to-br from-white via-slate-50 to-slate-100"
+      : "border-red-200 bg-gradient-to-br from-red-50 via-white to-rose-50 shadow-[0_3px_10px_rgba(239,68,68,0.08)]";
+
+  const accentClass = isVisitUrgent
+    ? "bg-gradient-to-b from-amber-400 to-orange-600"
+    : isStatusUpdate
+      ? "bg-gradient-to-b from-slate-300 to-slate-500"
+      : "bg-gradient-to-b from-red-400 to-rose-600";
+
+  const badgeClass = isVisitUrgent
+    ? "bg-amber-100 text-amber-700"
+    : isStatusUpdate
+      ? "bg-slate-200 text-slate-700"
+      : "bg-red-100 text-red-700";
+
+  const iconWrapClass = isVisitUrgent
+    ? "bg-amber-100 ring-1 ring-amber-200"
+    : isStatusUpdate
+      ? "bg-slate-100 ring-1 ring-slate-200"
+      : "bg-red-100 ring-1 ring-red-200";
+
+  const timeClass = isVisitUrgent
+    ? "text-amber-700"
+    : isStatusUpdate
+      ? "text-slate-500"
+      : "text-red-700";
+
+  const badgeLabel = isVisitUrgent ? "Urgente" : isStatusUpdate ? "Actualización" : "Incidencia";
+
+  const renderNotificationMessage = () => {
+    if (!stateChangedMatch || stateChangedMatch.index === undefined) {
+      return notification.message;
+    }
+
+    const start = stateChangedMatch.index;
+    const highlightedText = stateChangedMatch[0];
+    const end = start + highlightedText.length;
+
+    return (
+      <>
+        {notification.message.slice(0, start)}
+        <strong className="font-semibold text-gray-700">{highlightedText}</strong>
+        {notification.message.slice(end)}
+      </>
+    );
+  };
 
   return (
-    <div
-      className={`relative rounded-xl border p-3 ${isVisitUrgent
-        ? "border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50 shadow-[0_6px_18px_rgba(245,158,11,0.18)]"
-        : "border-red-200 bg-red-50"
-      }`}
-    >
+    <div className={`relative w-full overflow-hidden rounded-xl border ${containerClasses} transition-all hover:shadow-sm`}>
+      <span className={`absolute left-0 top-0 h-full ${isVisitUrgent ? "w-1.5" : "w-1"} ${accentClass}`} />
       {isVisitUrgent ? null : (
         <button
           type="button"
           aria-label="Descartar notificación"
-          className="absolute right-2 top-2 h-8 w-8 rounded-lg text-slate-400 transition-all hover:bg-red-50 hover:text-red-600"
+          className="absolute right-1 top-1 h-7 w-7 rounded-lg text-slate-400 transition-all hover:bg-red-50 hover:text-red-600"
           onClick={() => onDismiss(notification.id)}
         >
-          <X className="h-4 w-4" />
+          <X className="h-3.5 w-3.5" />
         </button>
       )}
 
-      <div className="mb-0.5 flex items-start justify-between gap-2 pr-8 text-left">
-        <p className="text-sm font-semibold text-gray-900">{notification.title}</p>
-        <span className="text-[11px] text-gray-400">{formatNotificationTime(notification.created_at)}</span>
+      <div className={`flex gap-2 py-1.5 pl-2.5 text-left ${isVisitUrgent ? "pr-2.5" : "pr-8"}`}>
+        <div className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full shadow-sm ${iconWrapClass}`}>
+          {isVisitUrgent ? (
+            <AlertTriangle className="h-3 w-3 text-amber-700" />
+          ) : isStatusUpdate ? (
+            <Clock className="h-3 w-3 text-slate-600" />
+          ) : (
+            <AlertCircle className="h-3 w-3 text-red-600" />
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          {badgeLabel ? (
+            <span className={`mb-0.5 inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${badgeClass}`}>
+              {badgeLabel}
+            </span>
+          ) : null}
+          {isRedundantStatusTitle ? null : (
+            <p className="mb-0.5 text-[13px] font-semibold leading-tight text-gray-900">{notification.title}</p>
+          )}
+          <p className={`line-clamp-1 text-[12px] leading-tight text-gray-600 ${isRedundantStatusTitle ? "mb-0" : "mb-0.5"}`}>{renderNotificationMessage()}</p>
+          <span className={`text-[11px] font-medium ${timeClass}`}>{formatNotificationTime(notification.created_at)}</span>
+        </div>
       </div>
-
-      <p className="text-xs text-gray-600 text-left">{notification.message}</p>
     </div>
   );
 }
