@@ -19,6 +19,8 @@ export function AuthPage() {
 
     const RULES_KEY = "nexus.community_rules.accepted";
 
+    const getUserRulesKey = (userId: string) => `${RULES_KEY}.${userId}`;
+
     useEffect(() => {
         const restoreSession = async () => {
             try {
@@ -41,8 +43,29 @@ export function AuthPage() {
 
                 localStorage.setItem('userRole', role);
                 
-                // Verificar si estudiante tiene el formulario de preferencias completado
+                // Verificar si estudiante aceptó las normas de convivencia
                 if (role === 'student') {
+                    // Primero verificar si ya completó las preferencias
+                    try {
+                        const preferences = await preferencesService.getMyPreferences();
+                        if (preferences.is_completed) {
+                            // Si completó preferencias, ir al dashboard sin importar normas
+                            navigate('/dashboard');
+                            return;
+                        }
+                    } catch {
+                        // Si error, continuar con la verificación normal
+                    }
+
+                    const userRulesKey = getUserRulesKey(session.user.id.toString());
+                    const skipRules = localStorage.getItem(userRulesKey) === 'true';
+                    if (!skipRules) {
+                        // Mostrar el modal de normas de convivencia
+                        setShowRulesModal(true);
+                        return;
+                    }
+
+                    // Si skipRules es true pero preferencias no completas, mostrar preferencias
                     try {
                         const preferences = await preferencesService.getMyPreferences();
                         if (!preferences.is_completed) {
@@ -87,6 +110,30 @@ export function AuthPage() {
 
     const checkPreferencesAndFinalize = async () => {
         try {
+            // Obtener el usuario actual
+            const session = await authService.me();
+            const userRulesKey = getUserRulesKey(session.user.id.toString());
+            const skipRules = localStorage.getItem(userRulesKey) === 'true';
+
+            if (!skipRules) {
+                setShowRulesModal(true);
+                return;
+            }
+
+            const preferences = await preferencesService.getMyPreferences();
+            if (!preferences.is_completed) {
+                setShowPreferencesForm(true);
+            } else {
+                await finalizeLogin('student');
+                setShowPreferencesForm(false);
+            }
+        } catch {
+            setShowPreferencesForm(true);
+        }
+    };
+
+    const checkPreferencesOnly = async () => {
+        try {
             const preferences = await preferencesService.getMyPreferences();
             if (!preferences.is_completed) {
                 setShowPreferencesForm(true);
@@ -105,14 +152,8 @@ export function AuthPage() {
     };
 
     const handleStudentLogin = async () => {
-        const skipRules = localStorage.getItem(RULES_KEY) === 'true';
         setShowStudentLogin(false);
-
-        if (!skipRules) {
-            setShowRulesModal(true);
-        } else {
-            await checkPreferencesAndFinalize();
-        }
+        await checkPreferencesAndFinalize();
     };
 
     const handleAdminLogin = async () => {
@@ -121,18 +162,23 @@ export function AuthPage() {
 
     const handleRulesAccepted = async (dontShowAgain: boolean) => {
         try {
+            // Solo guardar que las normas fueron aceptadas si el usuario marcó "no mostrar de nuevo"
             if (dontShowAgain) {
-                localStorage.setItem(RULES_KEY, 'true');
+                const session = await authService.me();
+                const userRulesKey = getUserRulesKey(session.user.id.toString());
+                localStorage.setItem(userRulesKey, 'true');
             }
         } catch (e) {
             console.error("Error saving rules preference", e);
         }
         setShowRulesModal(false);
-        await checkPreferencesAndFinalize();
+        await checkPreferencesOnly();
     };
 
     const handlePreferencesComplete = async () => {
         setShowPreferencesForm(false);
+        // Esperar un momento para que el servidor procese completamente
+        await new Promise(resolve => setTimeout(resolve, 500));
         await finalizeLogin('student');
     };
 

@@ -274,7 +274,14 @@ export function PreferencesForm({ onComplete, onBack }: PreferencesFormProps) {
                 temperature_preference: preferences.temperaturePreference,
             };
 
-            await preferencesService.saveMyPreferences(payload);
+            const response = await preferencesService.saveMyPreferences(payload);
+            
+            // Verificar que se guardó correctamente con is_completed=true
+            if (!response.is_completed) {
+                toast.error("Error al completar el formulario. Por favor, intenta de nuevo.");
+                return;
+            }
+            
             toast.success("¡Preferencias guardadas exitosamente!");
             onComplete();
         } catch (error: any) {
