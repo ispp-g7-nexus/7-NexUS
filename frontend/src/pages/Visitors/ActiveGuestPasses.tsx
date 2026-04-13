@@ -25,6 +25,7 @@ import {
 const DEFAULT_MAX_DURATION_HOURS = 24;
 const DEFAULT_MAX_CONCURRENT_PASSES = 3;
 const TIME_SLOT_INTERVAL_MINUTES = 30;
+const VISIT_STATE_CHANGED_EVENT = "visit-state-changed";
 
 type GuestPassFormState = {
   guest_first_name: string;
@@ -867,7 +868,8 @@ async function submitGuestPass({
       description: `Código asignado: ${created.pass_code}`,
     });
     setForm(buildInitialFormState());
-    await loadPasses();
+    globalThis.dispatchEvent(new Event(VISIT_STATE_CHANGED_EVENT));
+      await loadPasses();
   } catch (unknownError) {
     handleCreateError(unknownError, setFormErrors);
   } finally {
@@ -936,6 +938,7 @@ export function ActiveGuestPassesPage({ onGoToProfile, onLogout }: ActiveGuestPa
     try {
       await cancelMyGuestPass(pass.id);
       toast.success("Pase cancelado correctamente.");
+      globalThis.dispatchEvent(new Event(VISIT_STATE_CHANGED_EVENT));
       await loadPasses();
     } catch (unknownError) {
       const message =

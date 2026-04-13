@@ -145,6 +145,7 @@ class AdminGuestPassRevokeView(AdminGuestPassBaseView):
 class AdminGuestPassListView(AdminGuestPassBaseView):
     def get(self, request):
         residence = self._get_residence(request)
+        policy = get_or_create_guest_pass_policy(residence)
 
         queryset = residence.guest_passes.select_related("resident__user").order_by(
             "-created_at"
@@ -171,7 +172,14 @@ class AdminGuestPassListView(AdminGuestPassBaseView):
             else:
                 queryset = queryset.filter(status=normalized_status)
 
-        serializer = GuestPassAdminReadSerializer(queryset, many=True)
+        serializer = GuestPassAdminReadSerializer(
+            queryset,
+            many=True,
+            context={
+                "visit_start_time": policy.visit_start_time,
+                "visit_end_time": policy.visit_end_time,
+            },
+        )
         return Response(serializer.data)
 
 

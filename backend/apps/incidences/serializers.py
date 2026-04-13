@@ -4,6 +4,10 @@ from apps.membership.permissions import (
     has_screen_permission,
 )
 
+
+from apps.bedrooms.serializers import BedroomSerializer
+from apps.membership.models import Membership
+from apps.bedrooms.models import Bedroom
 from .models import Incidence, IncidenceUpdate
 
 
@@ -18,34 +22,21 @@ class IncidenceUpdateSerializer(serializers.ModelSerializer):
 class IncidenceSerializer(serializers.ModelSerializer):
     updates = IncidenceUpdateSerializer(many=True, read_only=True)
     student_name = serializers.SerializerMethodField()
+    room_number_detail = BedroomSerializer(source='room_number', read_only=True)
     is_mine = serializers.SerializerMethodField()
-    assigned_staff_name = serializers.CharField(
-        source="assigned_staff.user.get_full_name", read_only=True, default=None
-    )
-    assigned_staff_job = serializers.CharField(
-        source="assigned_staff.job_title", read_only=True, default=None
-    )
+    assigned_staff_name = serializers.CharField(source='assigned_staff.user.get_full_name', read_only=True, default=None)
+    assigned_staff_job = serializers.CharField(source='assigned_staff.job_title', read_only=True, default=None)
+    room_number = serializers.PrimaryKeyRelatedField(
+        queryset=Bedroom.objects.all(), 
+        required=False, 
+        allow_null=True)
 
     class Meta:
         model = Incidence
         fields = [
-            "id",
-            "title",
-            "description",
-            "location_type",
-            "room_number",
-            "status",
-            "priority",
-            "updates",
-            "admin_notes",
-            "img",
-            "created_at",
-            "is_mine",
-            "student_name",
-            "assigned_staff",
-            "assigned_staff_name",
-            "assigned_staff_job",
-            "assigned_external_name",
+            'id', 'title', 'description', 'location_type', 'room_number', 'room_number_detail',
+            'status', 'priority', 'updates', 'admin_notes', 'img', 'created_at', 'is_mine', 'student_name', 'assigned_staff',
+            'assigned_staff_name', 'assigned_staff_job', 'assigned_external_name'
         ]
         read_only_fields = ["id", "created_at", "is_mine"]
 
