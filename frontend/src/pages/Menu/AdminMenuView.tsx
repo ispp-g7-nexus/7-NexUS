@@ -210,7 +210,7 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
           {/* Nombre */}
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-1">
-              Nombre de la comida
+              Nombre de la comida *
             </label>
             <input
               type="text"
@@ -224,7 +224,7 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
           {/* Tipo */}
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-1">
-              Tipo de comida
+              Tipo de comida *
             </label>
             <select
               value={formData.type}

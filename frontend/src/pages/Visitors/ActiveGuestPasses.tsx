@@ -620,7 +620,7 @@ function CreateGuestPassForm({
         <form onSubmit={onSubmit} className="grid gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
-              <Label htmlFor="guest-first-name">Nombre del invitado</Label>
+              <Label htmlFor="guest-first-name">Nombre del invitado *</Label>
               <Input
                 id="guest-first-name"
                 value={form.guest_first_name}
@@ -635,7 +635,7 @@ function CreateGuestPassForm({
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="guest-last-name">Apellidos del invitado</Label>
+              <Label htmlFor="guest-last-name">Apellidos del invitado *</Label>
               <Input
                 id="guest-last-name"
                 value={form.guest_last_name}
