@@ -1,4 +1,5 @@
 import type React from 'react';
+import { X } from 'lucide-react'; // Importamos el icono
 
 type EventType = 'internal' | 'external';
 
@@ -44,11 +45,28 @@ export function EventForm({
 
     return (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-white text-card-foreground border border-gray-200 mt-10 rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-lg animate-in fade-in zoom-in duration-200">
+            {/* Contenedor relativo para que la X se posicione correctamente */}
+            <div className="relative bg-white text-card-foreground border border-gray-200 mt-10 rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-lg animate-in fade-in zoom-in duration-200">
+                
+                {/* BOTÓN X PARA CERRAR */}
+                <button
+                    type="button"
+                    onClick={() => setIsCreateEventOpen(false)}
+                    className="absolute right-4 top-4 p-2 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-all z-10"
+                    aria-label="Cerrar formulario"
+                >
+                    <X size={20} />
+                </button>
+
                 <div className="p-6 border-b border-gray-200">
-                    <h3 className="text-xl font-semibold mb-1 tracking-tight">{isEditingEvent ? "Editar Evento" : "Nuevo Evento"}</h3>
-                    <p className="text-sm text-gray-500">{isEditingEvent ? "Modifica los detalles del evento." : "Organiza una actividad para compartir con otros residentes."}</p>
+                    <h3 className="text-xl font-semibold mb-1 tracking-tight pr-8">
+                        {isEditingEvent ? "Editar Evento" : "Nuevo Evento"}
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                        {isEditingEvent ? "Modifica los detalles del evento." : "Organiza una actividad para compartir con otros residentes."}
+                    </p>
                 </div>
+
                 <form onSubmit={handleSaveEvent} className="p-6 space-y-5">
                     <div className="space-y-2">
                         <label htmlFor="name" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Nombre del evento</label>

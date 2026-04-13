@@ -21,6 +21,7 @@ import {
   listMyUpcomingGuestPasses,
   listMyGuestPassHistory,
 } from "../../services/guestPasses";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "../../components/ui/dialog";
 
 const DEFAULT_MAX_DURATION_HOURS = 24;
 const DEFAULT_MAX_CONCURRENT_PASSES = 3;
@@ -888,6 +889,7 @@ export function ActiveGuestPassesPage({ onGoToProfile, onLogout }: ActiveGuestPa
   const [cancellingPassId, setCancellingPassId] = useState<number | null>(null);
   const [form, setForm] = useState<GuestPassFormState>(() => buildInitialFormState());
   const [formErrors, setFormErrors] = useState<GuestPassFormErrors>({});
+  const [passToDeactivate, setPassToDeactivate] = useState<GuestPass | null>(null);
 
   const loadPasses = useCallback(async () => {
     setLoading(true);
@@ -926,30 +928,18 @@ export function ActiveGuestPassesPage({ onGoToProfile, onLogout }: ActiveGuestPa
     await submitGuestPass({ form, policy, setFormErrors, setIsSubmitting, setForm, loadPasses });
   };
 
-  const handleCancelPass = async (pass: GuestPass) => {
-    const confirmed = window.confirm(
-      `¿Quieres cancelar el pase ${pass.pass_code} de ${pass.full_name}?`
-    );
-    if (!confirmed) {
-      return;
-    }
-
-    setCancellingPassId(pass.id);
-    try {
-      await cancelMyGuestPass(pass.id);
-      toast.success("Pase cancelado correctamente.");
-      globalThis.dispatchEvent(new Event(VISIT_STATE_CHANGED_EVENT));
-      await loadPasses();
-    } catch (unknownError) {
-      const message =
-        unknownError instanceof Error
-          ? unknownError.message
-          : "No se pudo cancelar el pase de invitado.";
-      toast.error(message);
-    } finally {
-      setCancellingPassId(null);
-    }
+  const handleCancelPass = (pass: GuestPass) => {
+    setPassToDeactivate(pass);
   };
+
+  const handleDelete = async () => {
+      if (!passToDeactivate) return;
+      try {
+        await cancelMyGuestPass(passToDeactivate.id);
+        loadPasses();
+        setPassToDeactivate(null);
+      } catch (e) { alert("No se pudo eliminar la incidencia"); }
+    };
 
   return (
     <div className="flex flex-col w-full bg-background">
@@ -1037,6 +1027,32 @@ export function ActiveGuestPassesPage({ onGoToProfile, onLogout }: ActiveGuestPa
           isHistory={true}
           onRetry={() => void loadPasses()}
         />
+
+        {/* MODAL DESACTIVAR */}
+      <Dialog open={!!passToDeactivate} onOpenChange={() => setPassToDeactivate(null)}>
+        <DialogContent className="max-w-[400px] rounded-3xl p-6">
+          <DialogTitle className="text-center text-lg font-bold">¿Cancelar pase?</DialogTitle>
+          <DialogDescription className="text-center text-gray-500 mt-2">
+            Esta acción cancelará el pase para "{passToDeactivate?.full_name}".
+          </DialogDescription>
+          <div className="flex gap-3 mt-6">
+            <Button 
+              variant="outline" 
+              onClick={() => setPassToDeactivate(null)} 
+              className="flex-1 rounded-xl h-12 font-bold"
+            >
+              Cancelar
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDelete} 
+              className="flex-1 rounded-xl h-12 font-bold"
+            >
+              Eliminar pase
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       </section>
     </div>
   );

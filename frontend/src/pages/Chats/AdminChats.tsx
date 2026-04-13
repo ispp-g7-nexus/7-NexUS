@@ -15,7 +15,7 @@ import {
 } from "../../components/ui/dialog";
 import { chatsService, type ChatGroup, type GroupMessage, type ChatGroupLabelItem, type ChatRealtimeEvent, type UpsertChatGroupPayload } from "../../services/chats";
 
-// Helper
+
 function timeAgo(iso: string): string {
     const diff = Date.now() - new Date(iso).getTime();
     const mins = Math.floor(diff / 60000);
@@ -128,6 +128,9 @@ export function AdminChats({
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
     const [createForm, setCreateForm] = useState<UpsertChatGroupPayload>(EMPTY_GROUP_FORM);
+
+    const [groupToDelete, setGroupToDelete] = useState<ChatGroup | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // ── Chatting in Group (Inline) ──
     const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
@@ -392,16 +395,13 @@ export function AdminChats({
             }
         });
 
-        source.onerror = () => {
-            // EventSource reintenta automaticamente; no hacemos polling de respaldo.
-        };
+        source.onerror = () => { };
 
         return () => {
             source.close();
         };
     }, [chattingGroup, currentUserEmail, enableRealtimeStream]);
 
-    // Carga mensajes al entrar al grupo y cuando la pestaña recupera foco
     useEffect(() => {
         if (!chattingGroup) return;
 
@@ -510,16 +510,18 @@ export function AdminChats({
         setEditingGroup(group);
     };
 
-    const handleDeleteGroup = async (groupId: number) => {
-        const confirmed = globalThis.confirm("¿Seguro que quieres eliminar este grupo?");
-        if (!confirmed) return;
-
+    const executeDeleteGroup = async () => {
+        if (!groupToDelete) return;
+        setIsDeleting(true);
         try {
-            await chatsService.deleteGroup(groupId);
-            setGroups((prev) => prev.filter((group) => group.id !== groupId));
+            await chatsService.deleteGroup(groupToDelete.id);
+            setGroups((prev) => prev.filter((group) => group.id !== groupToDelete.id));
             toast.success("Grupo eliminado correctamente.");
+            setGroupToDelete(null);
         } catch (err: unknown) {
             toast.error(err instanceof Error ? err.message : "No se pudo eliminar el grupo.");
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -614,7 +616,7 @@ export function AdminChats({
                     <div className="w-9 h-9 bg-gradient-to-br from-primary/20 to-primary/40 rounded-full flex items-center justify-center text-primary font-bold text-sm shrink-0">
                         {chattingGroup.name.charAt(0).toUpperCase()}
                     </div>
-                    <div className="min-w-0 flex flex-col">
+                    <div className="min-w-0 flex flex-col text-left">
                         <h2 className="text-base font-bold text-gray-900 truncate">{chattingGroup.name}</h2>
                         <span className={`inline-flex items-center gap-1 mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-medium w-fit ${config.color}`}>
                             {config.icon} {config.label}
@@ -638,12 +640,12 @@ export function AdminChats({
                             const timeClasses = isMine ? "text-primary-foreground/70" : "text-gray-400";
                             
                             return (
-                                <div key={msg.id} className={`flex flex-col ${isMine ? "items-end" : "items-start"} mb-3`}>
+                                <div key={msg.id} className={`flex flex-col ${isMine ? "items-end text-right" : "items-start text-left"} mb-3`}>
                                     {!isMine && (
-                                        <span className="text-[10px] text-gray-500 mb-1 ml-1">{msg.sender_name}</span>
+                                        <span className="text-[10px] text-gray-500 mb-1 ml-1 font-bold">{msg.sender_name}</span>
                                     )}
                                     <div className={`max-w-[75%] px-3.5 py-2 rounded-2xl text-sm ${bubbleClasses}`}>
-                                        <p className="whitespace-pre-line break-words">{msg.content}</p>
+                                        <p className="whitespace-pre-line break-words text-left">{msg.content}</p>
                                         <p className={`text-[10px] mt-1 ${timeClasses}`}>
                                             {timeAgo(msg.created_at)}
                                         </p>
@@ -677,7 +679,7 @@ export function AdminChats({
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 text-left">
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Chats Grupales</h1>
@@ -721,11 +723,9 @@ export function AdminChats({
 
             <div className="bg-white rounded-lg border border-gray-200">
                 <div className="p-4 border-b border-gray-200">
-                    <div className="flex items-center justify-between">
-                        <h3 className="font-medium text-gray-900">
-                            {filteredGroups.length} {filteredGroups.length === 1 ? 'grupo' : 'grupos'} encontrados
-                        </h3>
-                    </div>
+                    <h3 className="font-medium text-gray-900">
+                        {filteredGroups.length} {filteredGroups.length === 1 ? 'grupo' : 'grupos'} encontrados
+                    </h3>
                 </div>
 
                 <div className="divide-y divide-gray-200">
@@ -740,14 +740,11 @@ export function AdminChats({
                                 <div className="flex items-start justify-between">
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-3 mb-2">
-                                            <h4 className="font-medium text-gray-900 truncate">
+                                            <h4 className="font-bold text-gray-900 truncate">
                                                 {group.name}
                                             </h4>
                                             {(unreadCountsByGroup[group.id] ?? 0) > 0 && (
-                                                <span
-                                                    className="inline-flex shrink-0 items-center justify-center min-w-5 h-5 px-1 rounded-full text-[10px] font-semibold bg-red-500 text-white"
-                                                    title="Mensajes nuevos sin leer"
-                                                >
+                                                <span className="inline-flex shrink-0 items-center justify-center min-w-5 h-5 px-1 rounded-full text-[10px] font-semibold bg-red-500 text-white">
                                                     {(unreadCountsByGroup[group.id] ?? 0) > 99 ? "99+" : unreadCountsByGroup[group.id]}
                                                 </span>
                                             )}
@@ -756,11 +753,11 @@ export function AdminChats({
                                                 {config.label}
                                             </span>
                                         </div>
-                                        <p className="text-sm text-gray-500 mb-2">
+                                        <p className="text-sm text-gray-500 mb-2 truncate">
                                             {group.description}
                                         </p>
                                         <div className="flex items-center gap-4 text-xs text-gray-500">
-                                            <span className="flex items-center gap-1">
+                                            <span className="flex items-center gap-1 font-medium">
                                                 <Users className="w-3 h-3" />
                                                 {group.members} miembros
                                             </span>
@@ -771,19 +768,20 @@ export function AdminChats({
                                             <Button
                                                 variant="default"
                                                 size="sm"
-                                                className="bg-primary text-primary-foreground hover:bg-primary/90"
+                                                className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl"
                                                 onClick={() => {
                                                     clearUnreadForGroup(group.id);
                                                     setChattingGroup(group);
                                                     setGroupMessages([]);
                                                 }}
                                             >
-                                                <MessageSquare className="w-4 h-4 mr-1.5" /> Entrar Chat
+                                                <MessageSquare className="w-4 h-4 mr-1.5" /> Entrar
                                             </Button>
                                         )}
                                         <Button
                                             variant="outline"
                                             size="sm"
+                                            className="rounded-xl border-gray-300 font-bold"
                                             onClick={() => handleEditGroup(group)}
                                         >
                                             Gestionar
@@ -792,7 +790,7 @@ export function AdminChats({
                                             variant="ghost"
                                             size="icon"
                                             className="w-8 h-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                            onClick={() => handleDeleteGroup(group.id)}
+                                            onClick={() => setGroupToDelete(group)}
                                         >
                                             <Trash2 className="w-4 h-4" />
                                         </Button>
@@ -804,58 +802,59 @@ export function AdminChats({
                 </div>
             </div>
 
-            {loading && (
-                <div className="text-sm text-gray-500">Cargando grupos...</div>
-            )}
-
-            {filteredGroups.length === 0 && (
-                <div className="text-center py-12">
-                    <MessageSquare className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron grupos</h3>
-                    <p className="text-gray-500">Intenta cambiar los filtros de búsqueda o crear un nuevo grupo.</p>
-                </div>
-            )}
+            <Dialog open={!!groupToDelete} onOpenChange={() => setGroupToDelete(null)}>
+                <DialogContent className="max-w-[400px] rounded-3xl p-6">
+                    <DialogTitle className="text-center text-lg font-bold">¿Eliminar grupo?</DialogTitle>
+                    <DialogDescription className="text-center text-gray-500 mt-2">
+                        Esta acción borrará permanentemente el grupo <span className="font-bold text-gray-900">"{groupToDelete?.name}"</span> y todos sus mensajes. Esta acción no se puede deshacer.
+                    </DialogDescription>
+                    <div className="flex gap-3 mt-6">
+                        <Button variant="outline" onClick={() => setGroupToDelete(null)} className="flex-1 rounded-xl h-12 font-bold">
+                            Cancelar
+                        </Button>
+                        <Button variant="destructive" onClick={executeDeleteGroup} disabled={isDeleting} className="flex-1 rounded-xl h-12 font-bold">
+                            {isDeleting ? "Eliminando..." : "Eliminar"}
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
 
             <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-                <DialogContent>
+                <DialogContent className="rounded-2xl max-w-md">
                     <DialogHeader>
-                        <DialogTitle>Crear nuevo grupo</DialogTitle>
+                        <DialogTitle className="font-bold">Crear nuevo grupo</DialogTitle>
                         <DialogDescription>
-                            Define el nombre, descripción, etiqueta y si los miembros pueden abandonarlo.
+                            Define el nombre, descripción y etiqueta del grupo.
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="space-y-4">
-                        <div>
-                            <label htmlFor="create-group-name" className="block text-sm font-medium text-gray-500 mb-1">
-                                Nombre <span className="text-red-500">*</span>
-                            </label>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label className="font-bold text-gray-700">Nombre <span className="text-red-500">*</span></Label>
                             <Input
-                                id="create-group-name"
                                 value={createForm.name}
                                 onChange={(e) => setCreateForm((prev) => ({ ...prev, name: e.target.value }))}
-                                placeholder="Ej. Grupo General"
+                                placeholder="Ej. Club de Lectura"
                             />
                         </div>
 
-                        <div>
-                            <label htmlFor="create-group-description" className="block text-sm font-medium text-gray-500 mb-1">Descripción</label>
+                        <div className="space-y-2">
+                            <Label className="font-bold text-gray-700">Descripción</Label>
                             <textarea
-                                id="create-group-description"
                                 value={createForm.description}
                                 onChange={(e) => setCreateForm((prev) => ({ ...prev, description: e.target.value }))}
                                 rows={3}
-                                className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                                className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                                placeholder="De qué trata el grupo..."
                             />
                         </div>
 
-                        <div>
-                            <label htmlFor="create-group-label" className="block text-sm font-medium text-gray-500 mb-1">Etiqueta</label>
+                        <div className="space-y-2">
+                            <Label className="font-bold text-gray-700">Etiqueta</Label>
                             <select
-                                id="create-group-label"
                                 value={createForm.label}
                                 onChange={(e) => setCreateForm((prev) => ({ ...prev, label: e.target.value }))}
-                                className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                                className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                             >
                                 {allLabelOptions.map((opt) => (
                                     <option key={opt.value} value={opt.value}>{opt.display}</option>
@@ -868,22 +867,20 @@ export function AdminChats({
                                 type="checkbox"
                                 id="create-can-leave"
                                 checked={createForm.can_members_leave}
-                                onChange={(e) =>
-                                    setCreateForm((prev) => ({ ...prev, can_members_leave: e.target.checked }))
-                                }
-                                className="w-4 h-4 text-primary border-gray-200 rounded focus:ring-primary"
+                                onChange={(e) => setCreateForm((prev) => ({ ...prev, can_members_leave: e.target.checked }))}
+                                className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
                             />
-                            <label htmlFor="create-can-leave" className="text-sm text-gray-500">
-                                Los miembros pueden abandonar el grupo
+                            <label htmlFor="create-can-leave" className="text-sm font-medium text-gray-600">
+                                Permitir a los miembros abandonar
                             </label>
                         </div>
                     </div>
 
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
+                    <DialogFooter className="gap-2">
+                        <Button variant="outline" className="rounded-xl font-bold" onClick={() => setIsCreateOpen(false)}>
                             Cancelar
                         </Button>
-                        <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleCreateGroup} disabled={isCreating}>
+                        <Button className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl font-bold" onClick={handleCreateGroup} disabled={isCreating}>
                             {isCreating ? "Creando..." : "Crear grupo"}
                         </Button>
                     </DialogFooter>
@@ -892,73 +889,57 @@ export function AdminChats({
 
             {/* Dialog: Gestionar etiquetas */}
             <Dialog open={isLabelsOpen} onOpenChange={setIsLabelsOpen}>
-                <DialogContent>
+                <DialogContent className="rounded-2xl max-w-md">
                     <DialogHeader>
-                        <DialogTitle>Gestionar etiquetas</DialogTitle>
+                        <DialogTitle className="font-bold">Gestionar etiquetas</DialogTitle>
                         <DialogDescription>
-                            Crea o elimina etiquetas personalizadas. Estarán disponibles al crear o editar un grupo.
+                            Las etiquetas personalizadas aparecerán al crear o editar grupos.
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="space-y-4">
+                    <div className="space-y-6 py-4">
                         <div className="flex items-center gap-2">
                             <Input
                                 value={newLabelName}
                                 onChange={(e) => setNewLabelName(e.target.value)}
-                                placeholder="Nombre de la etiqueta..."
-                                className="flex-1"
-                                onKeyDown={(e) => {
-                                    if (e.key === "Enter") {
-                                        e.preventDefault();
-                                        handleCreateLabel();
-                                    }
-                                }}
+                                placeholder="Nombre de etiqueta..."
+                                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleCreateLabel(); } }}
                             />
-                            <Button
-                                className="bg-primary text-primary-foreground hover:bg-primary/90"
-                                onClick={handleCreateLabel}
-                                disabled={creatingLabel || !newLabelName.trim()}
-                            >
-                                <Plus className="w-4 h-4 mr-1" />
-                                Añadir
+                            <Button className="bg-primary text-primary-foreground rounded-xl font-bold px-4" onClick={handleCreateLabel} disabled={creatingLabel || !newLabelName.trim()}>
+                                <Plus className="w-4 h-4" />
                             </Button>
                         </div>
 
-                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Predefinidas</div>
-                        <div className="flex flex-wrap gap-2">
-                            {["General", "Planta", "Actividad", "Privado"].map((l) => (
-                                <span key={l} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-gray-50 text-gray-500">
-                                    <Tag className="w-3 h-3" /> {l}
-                                </span>
-                            ))}
+                        <div className="space-y-2">
+                            <div className="text-xs font-bold text-gray-400 uppercase tracking-widest">Predefinidas</div>
+                            <div className="flex flex-wrap gap-2">
+                                {["General", "Planta", "Actividad", "Privado"].map((l) => (
+                                    <span key={l} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold bg-gray-50 text-gray-400 border border-gray-200">
+                                        <Tag className="w-3 h-3" /> {l}
+                                    </span>
+                                ))}
+                            </div>
                         </div>
 
                         {customLabels.length > 0 && (
-                            <>
-                                <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Personalizadas</div>
+                            <div className="space-y-2">
+                                <div className="text-xs font-bold text-gray-400 uppercase tracking-widest">Personalizadas</div>
                                 <div className="flex flex-wrap gap-2">
                                     {customLabels.map((label) => (
-                                        <span
-                                            key={label.id}
-                                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-primary/10 text-primary"
-                                        >
+                                        <span key={label.id} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20">
                                             <Tag className="w-3 h-3" /> {label.name}
-                                            <button
-                                                onClick={() => handleDeleteLabel(label.id)}
-                                                className="ml-1 hover:text-red-600 transition-colors"
-                                                title="Eliminar etiqueta"
-                                            >
+                                            <button onClick={() => handleDeleteLabel(label.id)} className="ml-1 hover:text-red-600 transition-colors">
                                                 <X className="w-3 h-3" />
                                             </button>
                                         </span>
                                     ))}
                                 </div>
-                            </>
+                            </div>
                         )}
                     </div>
 
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsLabelsOpen(false)}>
+                        <Button variant="outline" className="w-full rounded-xl font-bold" onClick={() => setIsLabelsOpen(false)}>
                             Cerrar
                         </Button>
                     </DialogFooter>
@@ -966,4 +947,8 @@ export function AdminChats({
             </Dialog>
         </div>
     );
+}
+
+function Label({ children, className }: { children: React.ReactNode, className?: string }) {
+    return <label className={`text-sm ${className}`}>{children}</label>;
 }
