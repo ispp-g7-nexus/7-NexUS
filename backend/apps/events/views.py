@@ -535,7 +535,8 @@ class EventListView(AuthenticatedView):
                     event.save(update_fields=["chat_group"])
                     _publish_group_created_for_event(request, chat_group)
 
-                EventParticipation.objects.create(event=event, user=request.user)
+                if not is_events_admin(request.user, request.residence):
+                    EventParticipation.objects.create(event=event, user=request.user)
 
             return JsonResponse(
                 {"id": event.id, "detail": "Event created successfully"}, status=201
@@ -565,6 +566,12 @@ class EventDetailView(AuthenticatedView):
 
         try:
             body = json.loads(request.body)
+
+            if event.end_time < timezone.now():
+                return JsonResponse(
+                    {"detail": "No se puede editar un evento que ya ha finalizado."},
+                    status=400,
+                )
 
             event_type = _normalize_event_type(body.get("event_type", event.event_type))
             if not event_type:
@@ -812,6 +819,12 @@ class EventJoinView(AuthenticatedView):
 
         event = get_object_or_404(Event, id=event_id, residence=request.residence)
 
+        if event.end_time < timezone.now():
+            return JsonResponse(
+                {"detail": "No puedes inscribirte en un evento que ya ha finalizado."},
+                status=400,
+            )
+
         if not event.can_join():
             return JsonResponse(
                 {"detail": "El evento ha alcanzado el límite de participantes."},
@@ -862,7 +875,8 @@ class EventJoinChatView(AuthenticatedView):
         is_participant = EventParticipation.objects.filter(
             event=event, user=request.user
         ).exists()
-        if not is_participant:
+        is_admin = is_events_admin(request.user, request.residence)
+        if not is_participant and not is_admin:
             return JsonResponse(
                 {"detail": "Debes estar apuntado al evento para unirte al chat."},
                 status=403,
@@ -900,6 +914,12 @@ class EventJoinChatView(AuthenticatedView):
 class EventLeaveView(AuthenticatedView):
     def post(self, request, event_id):
         event = get_object_or_404(Event, id=event_id, residence=request.residence)
+
+        if event.end_time < timezone.now():
+            return JsonResponse(
+                {"detail": "No puedes abandonar un evento que ya ha finalizado."},
+                status=400,
+            )
 
         try:
             with transaction.atomic():
