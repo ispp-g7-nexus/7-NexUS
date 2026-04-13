@@ -1,4 +1,4 @@
-import { CalendarClock, LogOut, RefreshCw, ShieldCheck, Ticket, User, UserRoundPlus } from "lucide-react";
+import { CalendarClock, History, LogOut, RefreshCw, ShieldCheck, Ticket, User, UserRoundPlus } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -7,9 +7,11 @@ import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
+import { Select1, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { Textarea } from "../../components/ui/textarea";
 import { NotificationBell } from "../../components/announcement/NotificationBell";
 import {
+  cancelMyGuestPass,
   createMyGuestPass,
   GuestPassApiError,
   type GuestPass,
@@ -17,10 +19,13 @@ import {
   getMyGuestPassPolicy,
   listMyActiveGuestPasses,
   listMyUpcomingGuestPasses,
+  listMyGuestPassHistory,
 } from "../../services/guestPasses";
 
 const DEFAULT_MAX_DURATION_HOURS = 24;
 const DEFAULT_MAX_CONCURRENT_PASSES = 3;
+const TIME_SLOT_INTERVAL_MINUTES = 30;
+const VISIT_STATE_CHANGED_EVENT = "visit-state-changed";
 
 type GuestPassFormState = {
   guest_first_name: string;
@@ -40,10 +45,96 @@ function toDateTimeLocalValue(date: Date): string {
   return normalized.toISOString().slice(0, 16);
 }
 
+function toDateInputValue(date: Date): string {
+  return toDateTimeLocalValue(date).slice(0, 10);
+}
+
+function splitDateTimeLocal(value: string): { datePart: string; timePart: string } {
+  if (!value) {
+    return { datePart: "", timePart: "" };
+  }
+  const [datePart = "", timePart = ""] = value.split("T");
+  return { datePart, timePart: timePart.slice(0, 5) };
+}
+
+function combineDateAndTimeLocal(datePart: string, timePart: string): string {
+  if (!datePart) {
+    return "";
+  }
+  if (!timePart) {
+    return `${datePart}T`;
+  }
+  return `${datePart}T${timePart}`;
+}
+
+function buildTimeSlotValues(slotMinutes: number): string[] {
+  const slots: string[] = [];
+  for (let minutes = 0; minutes < 24 * 60; minutes += slotMinutes) {
+    const hourPart = String(Math.floor(minutes / 60)).padStart(2, "0");
+    const minutePart = String(minutes % 60).padStart(2, "0");
+    slots.push(`${hourPart}:${minutePart}`);
+  }
+  return slots;
+}
+
+const TIME_SLOT_VALUES = buildTimeSlotValues(TIME_SLOT_INTERVAL_MINUTES);
+
+function toMinutesFromClock(clockValue: string): number | null {
+  const normalized = clockValue.trim().slice(0, 5);
+  const [hourPart, minutePart] = normalized.split(":");
+  const hours = Number(hourPart);
+  const minutes = Number(minutePart);
+
+  if (!Number.isInteger(hours) || !Number.isInteger(minutes)) {
+    return null;
+  }
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+    return null;
+  }
+
+  return hours * 60 + minutes;
+}
+
+function getAvailableTimeSlots(
+  selectedDate: string,
+  minDateTimeExclusive: Date,
+  visitStartTime?: string | null,
+  visitEndTime?: string | null
+): string[] {
+  if (!selectedDate) {
+    return [];
+  }
+
+  const visitStartMinutes = visitStartTime ? toMinutesFromClock(visitStartTime) : null;
+  const visitEndMinutes = visitEndTime ? toMinutesFromClock(visitEndTime) : null;
+
+  return TIME_SLOT_VALUES.filter((timeValue) => {
+    if (visitStartMinutes !== null) {
+      const candidateMinutes = toMinutesFromClock(timeValue);
+      if (candidateMinutes === null || candidateMinutes < visitStartMinutes) {
+        return false;
+      }
+    }
+
+    if (visitEndMinutes !== null) {
+      const candidateMinutes = toMinutesFromClock(timeValue);
+      if (candidateMinutes === null || candidateMinutes >= visitEndMinutes) {
+        return false;
+      }
+    }
+
+    const candidateDate = parseDateTimeLocal(combineDateAndTimeLocal(selectedDate, timeValue));
+    if (!candidateDate) {
+      return false;
+    }
+    return candidateDate.getTime() > minDateTimeExclusive.getTime();
+  });
+}
+
 function buildInitialFormState(): GuestPassFormState {
-  const start = new Date();
-  const roundedMinutes = Math.ceil(start.getMinutes() / 5) * 5;
-  start.setMinutes(roundedMinutes, 0, 0);
+  const slotMs = TIME_SLOT_INTERVAL_MINUTES * 60 * 1000;
+  const start = new Date(Math.ceil(Date.now() / slotMs) * slotMs);
+  start.setSeconds(0, 0);
   const end = new Date(start.getTime() + 60 * 60 * 1000);
 
   return {
@@ -75,10 +166,15 @@ function parseDateTimeLocal(value: string): Date | null {
 
 function validateForm(
   state: GuestPassFormState,
-  maxDurationHours: number
+  maxDurationHours: number,
+  visitStartTime?: string | null,
+  visitEndTime?: string | null
 ): GuestPassFormErrors {
   const errors: GuestPassFormErrors = {};
   const maxDurationMs = maxDurationHours * 60 * 60 * 1000;
+  const now = new Date();
+  const visitStartClock = (visitStartTime ?? "").slice(0, 5);
+  const visitEndClock = (visitEndTime ?? "").slice(0, 5);
 
   if (!state.guest_first_name.trim()) {
     errors.guest_first_name = "El nombre del invitado es obligatorio.";
@@ -103,11 +199,54 @@ function validateForm(
     errors.valid_until = "Formato de fecha/hora de fin inválido.";
   }
 
+  if (start && start < new Date()) {
+    errors.valid_from = "La fecha de inicio no puede ser en el pasado.";
+  }
+
   if (start && end) {
+    if (start < now) {
+      errors.valid_from = "La fecha/hora de inicio no puede ser anterior al momento actual.";
+    }
+    if (end < now) {
+      errors.valid_until = "La fecha/hora de fin no puede ser anterior al momento actual.";
+    }
     if (end <= start) {
       errors.valid_until = "La fecha/hora de fin debe ser posterior a la de inicio.";
     } else if (end.getTime() - start.getTime() > maxDurationMs) {
       errors.valid_until = `La duración máxima del pase es de ${maxDurationHours} horas.`;
+    }
+
+    const startClock = `${String(start.getHours()).padStart(2, "0")}:${String(
+      start.getMinutes()
+    ).padStart(2, "0")}`;
+    const endClock = `${String(end.getHours()).padStart(2, "0")}:${String(
+      end.getMinutes()
+    ).padStart(2, "0")}`;
+
+    if (visitStartClock) {
+      if (startClock < visitStartClock) {
+        errors.valid_from =
+          "La fecha/hora de inicio no puede ser anterior a la hora de inicio de visitas " +
+          `(${visitStartClock}).`;
+      }
+      if (endClock < visitStartClock) {
+        errors.valid_until =
+          "La fecha/hora de fin no puede ser anterior a la hora de inicio de visitas " +
+          `(${visitStartClock}).`;
+      }
+    }
+
+    if (visitEndClock) {
+      if (startClock >= visitEndClock) {
+        errors.valid_from =
+          "La fecha de inicio debe ser anterior a la hora límite de salida " +
+          `(${visitEndClock}).`;
+      }
+      if (endClock >= visitEndClock) {
+        errors.valid_until =
+          "La fecha de fin debe ser anterior a la hora límite de salida " +
+          `(${visitEndClock}).`;
+      }
     }
   }
 
@@ -124,7 +263,7 @@ function LoadingState() {
   );
 }
 
-function EmptyState({ message }: { message: string }) {
+function EmptyState({ message }: { readonly message: string }) {
   return (
     <Card className="border-border/80 shadow-sm">
       <CardContent className="flex flex-col items-center justify-center gap-3 py-14 text-center text-gray-500">
@@ -136,8 +275,8 @@ function EmptyState({ message }: { message: string }) {
 }
 
 interface ErrorStateProps {
-  message: string;
-  onRetry: () => void;
+  readonly message: string;
+  readonly onRetry: () => void;
 }
 
 function ErrorState({ message, onRetry }: ErrorStateProps) {
@@ -154,14 +293,34 @@ function ErrorState({ message, onRetry }: ErrorStateProps) {
   );
 }
 
+const STATUS_BADGE_STYLES = {
+  ACTIVE: { label: "Inactivo", badgeClass: "bg-yellow-100 text-yellow-700 hover:bg-yellow-100" },
+  USED: { label: "Usado", badgeClass: "bg-blue-100 text-blue-700 hover:bg-blue-100" },
+  CANCELLED: { label: "Cancelado", badgeClass: "bg-gray-100 text-gray-600 hover:bg-gray-100" },
+  REVOKED: { label: "Revocado", badgeClass: "bg-red-100 text-red-700 hover:bg-red-100" },
+  REJECTED: { label: "Rechazado", badgeClass: "bg-orange-100 text-orange-700 hover:bg-orange-100" },
+  INACTIVE: { label: "Inactivo", badgeClass: "bg-yellow-100 text-yellow-700 hover:bg-yellow-100" },
+};
+
+function getHistoryStatusConfig(status: string) {
+  return STATUS_BADGE_STYLES[status as keyof typeof STATUS_BADGE_STYLES] || {
+    label: status || "Desconocido",
+    badgeClass: "bg-gray-100 text-gray-600 hover:bg-gray-100",
+  };
+}
+
 function GuestPassCard({
   pass,
   statusLabel,
   badgeClassName,
+  onCancel,
+  isCancelling = false,
 }: {
-  pass: GuestPass;
-  statusLabel: string;
-  badgeClassName: string;
+  readonly pass: GuestPass;
+  readonly statusLabel: string;
+  readonly badgeClassName: string;
+  readonly onCancel?: (pass: GuestPass) => void;
+  readonly isCancelling?: boolean;
 }) {
   return (
     <article className="rounded-xl border border-border/80 bg-white p-4 shadow-sm">
@@ -188,7 +347,434 @@ function GuestPassCard({
           </span>
         </div>
       </div>
+
+      {onCancel ? (
+        <div className="mt-4 flex justify-end">
+          <Button type="button" variant="destructive" onClick={() => onCancel(pass)} disabled={isCancelling}>
+            {isCancelling ? "Cancelando..." : "Cancelar pase"}
+          </Button>
+        </div>
+      ) : null}
     </article>
+  );
+}
+
+interface PassesListProps {
+  readonly loading: boolean;
+  readonly error: string | null;
+  readonly passes: GuestPass[];
+  readonly emptyMessage: string;
+  readonly statusLabel: string;
+  readonly badgeClassName: string;
+  readonly isHistory?: boolean;
+  readonly onRetry?: () => void;
+  readonly onCancel?: (pass: GuestPass) => void;
+  readonly cancellingPassId?: number | null;
+}
+
+function PassesList({
+  loading,
+  error,
+  passes,
+  emptyMessage,
+  statusLabel,
+  badgeClassName,
+  isHistory = false,
+  onRetry,
+  onCancel,
+  cancellingPassId = null,
+}: PassesListProps) {
+  if (loading) {
+    return <LoadingState />;
+  }
+
+  if (error) {
+    return <ErrorState message={error} onRetry={onRetry || (() => {})} />;
+  }
+
+  if (passes.length === 0) {
+    return <EmptyState message={emptyMessage} />;
+  }
+
+  return (
+    <div className="space-y-4">
+      {passes.map((pass) => {
+        const historyStatus = pass.status ?? "";
+        const finalStatusLabel = isHistory ? getHistoryStatusConfig(historyStatus).label : statusLabel;
+        const finalBadgeClass = isHistory ? getHistoryStatusConfig(historyStatus).badgeClass : badgeClassName;
+        return (
+          <GuestPassCard
+            key={pass.id}
+            pass={pass}
+            statusLabel={finalStatusLabel}
+            badgeClassName={finalBadgeClass}
+            onCancel={isHistory ? undefined : onCancel}
+            isCancelling={cancellingPassId === pass.id}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+interface GuestPassSectionProps {
+  readonly title: string;
+  readonly description?: string;
+  readonly icon?: React.ReactNode;
+  readonly passes: GuestPass[];
+  readonly loading: boolean;
+  readonly error: string | null;
+  readonly emptyMessage: string;
+  readonly statusLabel: string;
+  readonly badgeClassName: string;
+  readonly isHistory?: boolean;
+  readonly onRetry: () => void;
+  readonly onRefresh?: () => void;
+  readonly onCancel?: (pass: GuestPass) => void;
+  readonly cancellingPassId?: number | null;
+}
+
+interface TimeSelectProps {
+  readonly id: string;
+  readonly selectedDate: string;
+  readonly selectedTime: string;
+  readonly slots: string[];
+  readonly disabled?: boolean;
+  readonly placeholder: string;
+  readonly emptyMessage: string;
+  readonly onSelect: (timeValue: string) => void;
+}
+
+function TimeSelect({
+  id,
+  selectedDate,
+  selectedTime,
+  slots,
+  disabled = false,
+  placeholder,
+  emptyMessage,
+  onSelect,
+}: TimeSelectProps) {
+  if (!selectedDate) {
+    return (
+      <div className="flex h-10 items-center rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 text-sm text-slate-500">
+        Selecciona una fecha primero
+      </div>
+    );
+  }
+
+  if (slots.length === 0) {
+    return (
+      <div className="flex h-10 items-center rounded-xl border border-dashed border-amber-300 bg-amber-50 px-3 text-sm text-amber-700">
+        {emptyMessage}
+      </div>
+    );
+  }
+
+  return (
+    <Select1
+      value={slots.includes(selectedTime) ? selectedTime : undefined}
+      onValueChange={onSelect}
+      disabled={disabled}
+    >
+      <SelectTrigger
+        id={id}
+        className="h-10 rounded-xl border-slate-200 bg-white/95 px-3 shadow-sm transition-all hover:border-primary/40 hover:shadow-md focus:ring-2 focus:ring-primary/20 data-[state=open]:border-primary data-[state=open]:ring-primary/10"
+      >
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent className="max-h-72 rounded-2xl border-slate-200 bg-white/95 p-2 shadow-xl backdrop-blur">
+        {slots.map((timeValue) => (
+          <SelectItem
+            key={timeValue}
+            value={timeValue}
+            className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 focus:bg-primary/10 focus:text-primary"
+          >
+            {timeValue}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select1>
+  );
+}
+
+function GuestPassSection({
+  title,
+  description,
+  icon,
+  passes,
+  loading,
+  error,
+  emptyMessage,
+  statusLabel,
+  badgeClassName,
+  isHistory = false,
+  onRetry,
+  onRefresh,
+  onCancel,
+  cancellingPassId,
+}: GuestPassSectionProps) {
+  return (
+    <section className="space-y-4">
+      <header className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            {icon}
+            {title}
+          </h3>
+          {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
+        </div>
+        {onRefresh ? (
+          <Button type="button" variant="outline" onClick={onRefresh}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Actualizar
+          </Button>
+        ) : null}
+      </header>
+      <PassesList
+        loading={loading}
+        error={error}
+        passes={passes}
+        emptyMessage={emptyMessage}
+        statusLabel={statusLabel}
+        badgeClassName={badgeClassName}
+        isHistory={isHistory}
+        onRetry={onRetry}
+        onCancel={onCancel}
+        cancellingPassId={cancellingPassId}
+      />
+    </section>
+  );
+}
+
+function CreateGuestPassForm({
+  policy,
+  form,
+  formErrors,
+  isSubmitting,
+  onFieldChange,
+  onSubmit,
+}: {
+  readonly policy: GuestPassPolicy | null;
+  readonly form: GuestPassFormState;
+  readonly formErrors: GuestPassFormErrors;
+  readonly isSubmitting: boolean;
+  readonly onFieldChange: <K extends keyof GuestPassFormState>(field: K, value: GuestPassFormState[K]) => void;
+  readonly onSubmit: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+}) {
+  const maxDuration = policy?.max_duration_hours ?? DEFAULT_MAX_DURATION_HOURS;
+  const maxConcurrent = policy?.max_concurrent_passes ?? DEFAULT_MAX_CONCURRENT_PASSES;
+  const visitStartTime = policy?.visit_start_time?.slice(0, 5);
+  const visitEndTime = policy?.visit_end_time?.slice(0, 5);
+  const now = new Date();
+  const todayDate = toDateInputValue(now);
+
+  const { datePart: startDate, timePart: startTime } = splitDateTimeLocal(form.valid_from);
+  const { datePart: endDate, timePart: endTime } = splitDateTimeLocal(form.valid_until);
+
+  const startTimeOptions = getAvailableTimeSlots(
+    startDate,
+    now,
+    policy?.visit_start_time,
+    policy?.visit_end_time
+  );
+  const parsedStart = parseDateTimeLocal(form.valid_from);
+  const minEndDateTime =
+    parsedStart && parsedStart.getTime() > now.getTime() ? parsedStart : now;
+  const endTimeOptions = getAvailableTimeSlots(
+    endDate,
+    minEndDateTime,
+    policy?.visit_start_time,
+    policy?.visit_end_time
+  );
+  const minEndDate = startDate || todayDate;
+
+  return (
+    <Card className="border-border/80 shadow-sm">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+          <UserRoundPlus className="h-5 w-5" />
+          Crear nuevo pase
+        </CardTitle>
+        <CardDescription>
+          El pase se aprueba automáticamente si cumple las reglas de duración y concurrencia.
+        </CardDescription>
+        <p className="text-xs text-gray-500">
+          Configuración actual: duración máxima <strong>{maxDuration}h</strong> y máximo{" "}
+          <strong>{maxConcurrent}</strong> pases concurrentes.
+          {visitStartTime ? (
+            <>
+              {" "}
+              Hora de inicio: <strong>{visitStartTime}</strong>.
+            </>
+          ) : null}
+          {visitEndTime ? (
+            <>
+              {" "}
+              Hora límite de salida: <strong>{visitEndTime}</strong>.
+            </>
+          ) : null}
+        </p>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={onSubmit} className="grid gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="guest-first-name">Nombre del invitado</Label>
+              <Input
+                id="guest-first-name"
+                value={form.guest_first_name}
+                onChange={(event) => onFieldChange("guest_first_name", event.target.value)}
+                aria-invalid={Boolean(formErrors.guest_first_name)}
+                maxLength={100}
+                required
+              />
+              {formErrors.guest_first_name ? (
+                <p className="text-xs text-red-600">{formErrors.guest_first_name}</p>
+              ) : null}
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="guest-last-name">Apellidos del invitado</Label>
+              <Input
+                id="guest-last-name"
+                value={form.guest_last_name}
+                onChange={(event) => onFieldChange("guest_last_name", event.target.value)}
+                aria-invalid={Boolean(formErrors.guest_last_name)}
+                maxLength={100}
+                required
+              />
+              {formErrors.guest_last_name ? (
+                <p className="text-xs text-red-600">{formErrors.guest_last_name}</p>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="guest-valid-from-date">Fecha/hora inicio</Label>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Input
+                  id="guest-valid-from-date"
+                  type="date"
+                  value={startDate}
+                  min={todayDate}
+                  onChange={(event) => {
+                    const nextDate = event.target.value;
+                    const availableTimes = getAvailableTimeSlots(
+                      nextDate,
+                      new Date(),
+                      policy?.visit_start_time,
+                      policy?.visit_end_time
+                    );
+                    const nextTime = availableTimes.includes(startTime)
+                      ? startTime
+                      : (availableTimes[0] ?? "");
+                    onFieldChange("valid_from", combineDateAndTimeLocal(nextDate, nextTime));
+                  }}
+                  aria-invalid={Boolean(formErrors.valid_from)}
+                  required
+                />
+                <TimeSelect
+                  id="guest-valid-from-time"
+                  selectedDate={startDate}
+                  selectedTime={startTimeOptions.includes(startTime) ? startTime : ""}
+                  slots={startTimeOptions}
+                  disabled={!startDate}
+                  placeholder="Selecciona hora"
+                  emptyMessage="Sin horas disponibles para este día."
+                  onSelect={(timeValue) =>
+                    onFieldChange("valid_from", combineDateAndTimeLocal(startDate, timeValue))
+                  }
+                />
+              </div>
+              {startDate && startTimeOptions.length === 0 ? (
+                <p className="text-xs text-amber-700">
+                  No quedan horas futuras para esta fecha. Selecciona otro día.
+                </p>
+              ) : null}
+              {formErrors.valid_from ? (
+                <p className="text-xs text-red-600">{formErrors.valid_from}</p>
+              ) : null}
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="guest-valid-until-date">Fecha/hora fin</Label>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Input
+                  id="guest-valid-until-date"
+                  type="date"
+                  value={endDate}
+                  min={minEndDate}
+                  onChange={(event) => {
+                    const nextDate = event.target.value;
+                    const latestNow = new Date();
+                    const latestStart = parseDateTimeLocal(form.valid_from);
+                    const minDateTime =
+                      latestStart && latestStart.getTime() > latestNow.getTime()
+                        ? latestStart
+                        : latestNow;
+                    const availableTimes = getAvailableTimeSlots(
+                      nextDate,
+                      minDateTime,
+                      policy?.visit_start_time,
+                      policy?.visit_end_time
+                    );
+                    const nextTime = availableTimes.includes(endTime)
+                      ? endTime
+                      : (availableTimes[0] ?? "");
+                    onFieldChange("valid_until", combineDateAndTimeLocal(nextDate, nextTime));
+                  }}
+                  aria-invalid={Boolean(formErrors.valid_until)}
+                  required
+                />
+                <TimeSelect
+                  id="guest-valid-until-time"
+                  selectedDate={endDate}
+                  selectedTime={endTimeOptions.includes(endTime) ? endTime : ""}
+                  slots={endTimeOptions}
+                  disabled={!endDate}
+                  placeholder="Selecciona hora"
+                  emptyMessage="Sin horas disponibles para este rango."
+                  onSelect={(timeValue) =>
+                    onFieldChange("valid_until", combineDateAndTimeLocal(endDate, timeValue))
+                  }
+                />
+              </div>
+              {endDate && endTimeOptions.length === 0 ? (
+                <p className="text-xs text-amber-700">
+                  No hay horas válidas para esta fecha y rango. Ajusta inicio o elige otro día.
+                </p>
+              ) : null}
+              {formErrors.valid_until ? (
+                <p className="text-xs text-red-600">{formErrors.valid_until}</p>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="guest-comment">Motivo o comentario (opcional)</Label>
+            <Textarea
+              id="guest-comment"
+              value={form.comment}
+              onChange={(event) => onFieldChange("comment", event.target.value)}
+              aria-invalid={Boolean(formErrors.comment)}
+              maxLength={500}
+              rows={3}
+            />
+            {formErrors.comment ? (
+              <p className="text-xs text-red-600">{formErrors.comment}</p>
+            ) : null}
+          </div>
+
+          <div className="flex justify-end">
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Creando..." : "Crear pase"}
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -197,13 +783,109 @@ interface ActiveGuestPassesPageProps {
   onLogout?: () => void;
 }
 
+function toErrorMessage(unknownError: unknown): string {
+  return unknownError instanceof Error
+    ? unknownError.message
+    : "No se pudieron cargar los pases de invitados.";
+}
+
+async function loadGuestPassPolicy(setPolicy: (p: GuestPassPolicy) => void): Promise<void> {
+  try {
+    const data = await getMyGuestPassPolicy();
+    setPolicy(data);
+  } catch {
+    setPolicy({
+      max_duration_hours: DEFAULT_MAX_DURATION_HOURS,
+      max_concurrent_passes: DEFAULT_MAX_CONCURRENT_PASSES,
+      visit_start_time: null,
+      visit_end_time: null,
+    });
+  }
+}
+
+
+function handleCreateError(
+  unknownError: unknown,
+  setFormErrors: (v: GuestPassFormErrors) => void
+): void {
+  if (unknownError instanceof GuestPassApiError) {
+    setFormErrors((unknownError.fieldErrors || {}) as GuestPassFormErrors);
+    toast.error(unknownError.message);
+  } else {
+    toast.error("No se pudo crear el pase de invitado.");
+  }
+}
+
+interface SubmitGuestPassOptions {
+  form: GuestPassFormState;
+  policy: GuestPassPolicy | null;
+  setFormErrors: (v: GuestPassFormErrors) => void;
+  setIsSubmitting: (v: boolean) => void;
+  setForm: (v: GuestPassFormState) => void;
+  loadPasses: () => Promise<void>;
+}
+
+async function submitGuestPass({
+  form,
+  policy,
+  setFormErrors,
+  setIsSubmitting,
+  setForm,
+  loadPasses,
+}: SubmitGuestPassOptions): Promise<void> {
+  const maxDurationHours = policy?.max_duration_hours ?? DEFAULT_MAX_DURATION_HOURS;
+  const validationErrors = validateForm(
+    form,
+    maxDurationHours,
+    policy?.visit_start_time,
+    policy?.visit_end_time
+  );
+  if (Object.keys(validationErrors).length > 0) {
+    setFormErrors(validationErrors);
+    toast.error("Revisa los campos del formulario.");
+    return;
+  }
+
+  const start = parseDateTimeLocal(form.valid_from);
+  const end = parseDateTimeLocal(form.valid_until);
+  if (!(start && end)) {
+    toast.error("Formato de fecha/hora inválido.");
+    return;
+  }
+
+  setIsSubmitting(true);
+  setFormErrors({});
+
+  try {
+    const created = await createMyGuestPass({
+      guest_first_name: form.guest_first_name.trim(),
+      guest_last_name: form.guest_last_name.trim(),
+      valid_from: start.toISOString(),
+      valid_until: end.toISOString(),
+      comment: form.comment.trim(),
+    });
+    toast.success("Pase creado correctamente.", {
+      description: `Código asignado: ${created.pass_code}`,
+    });
+    setForm(buildInitialFormState());
+    globalThis.dispatchEvent(new Event(VISIT_STATE_CHANGED_EVENT));
+      await loadPasses();
+  } catch (unknownError) {
+    handleCreateError(unknownError, setFormErrors);
+  } finally {
+    setIsSubmitting(false);
+  }
+}
+
 export function ActiveGuestPassesPage({ onGoToProfile, onLogout }: ActiveGuestPassesPageProps) {
   const [activePasses, setActivePasses] = useState<GuestPass[]>([]);
   const [upcomingPasses, setUpcomingPasses] = useState<GuestPass[]>([]);
+  const [historyPasses, setHistoryPasses] = useState<GuestPass[]>([]);
   const [policy, setPolicy] = useState<GuestPassPolicy | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [cancellingPassId, setCancellingPassId] = useState<number | null>(null);
   const [form, setForm] = useState<GuestPassFormState>(() => buildInitialFormState());
   const [formErrors, setFormErrors] = useState<GuestPassFormErrors>({});
 
@@ -211,18 +893,16 @@ export function ActiveGuestPassesPage({ onGoToProfile, onLogout }: ActiveGuestPa
     setLoading(true);
     setError(null);
     try {
-      const [active, upcoming] = await Promise.all([
+      const [active, upcoming, history] = await Promise.all([
         listMyActiveGuestPasses(),
         listMyUpcomingGuestPasses(),
+        listMyGuestPassHistory(),
       ]);
       setActivePasses(active);
       setUpcomingPasses(upcoming);
+      setHistoryPasses(history);
     } catch (unknownError) {
-      const message =
-        unknownError instanceof Error
-          ? unknownError.message
-          : "No se pudieron cargar los pases de invitados.";
-      setError(message);
+      setError(toErrorMessage(unknownError));
     } finally {
       setLoading(false);
     }
@@ -233,18 +913,7 @@ export function ActiveGuestPassesPage({ onGoToProfile, onLogout }: ActiveGuestPa
   }, [loadPasses]);
 
   useEffect(() => {
-    const loadPolicy = async () => {
-      try {
-        const data = await getMyGuestPassPolicy();
-        setPolicy(data);
-      } catch {
-        setPolicy({
-          max_duration_hours: DEFAULT_MAX_DURATION_HOURS,
-          max_concurrent_passes: DEFAULT_MAX_CONCURRENT_PASSES,
-        });
-      }
-    };
-    void loadPolicy();
+    void loadGuestPassPolicy(setPolicy);
   }, []);
 
   const setField = <K extends keyof GuestPassFormState,>(field: K, value: GuestPassFormState[K]) => {
@@ -252,57 +921,38 @@ export function ActiveGuestPassesPage({ onGoToProfile, onLogout }: ActiveGuestPa
     setFormErrors((previous) => ({ ...previous, [field]: undefined }));
   };
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
+    await submitGuestPass({ form, policy, setFormErrors, setIsSubmitting, setForm, loadPasses });
+  };
 
-    const maxDurationHours = policy?.max_duration_hours ?? DEFAULT_MAX_DURATION_HOURS;
-    const validationErrors = validateForm(form, maxDurationHours);
-    if (Object.keys(validationErrors).length > 0) {
-      setFormErrors(validationErrors);
-      toast.error("Revisa los campos del formulario.");
+  const handleCancelPass = async (pass: GuestPass) => {
+    const confirmed = window.confirm(
+      `¿Quieres cancelar el pase ${pass.pass_code} de ${pass.full_name}?`
+    );
+    if (!confirmed) {
       return;
     }
 
-    const start = parseDateTimeLocal(form.valid_from);
-    const end = parseDateTimeLocal(form.valid_until);
-    if (!start || !end) {
-      toast.error("Formato de fecha/hora inválido.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    setFormErrors({});
-
+    setCancellingPassId(pass.id);
     try {
-      const created = await createMyGuestPass({
-        guest_first_name: form.guest_first_name.trim(),
-        guest_last_name: form.guest_last_name.trim(),
-        valid_from: start.toISOString(),
-        valid_until: end.toISOString(),
-        comment: form.comment.trim(),
-      });
-
-      toast.success("Pase creado correctamente.", {
-        description: `Código asignado: ${created.pass_code}`,
-      });
-
-      setForm(buildInitialFormState());
+      await cancelMyGuestPass(pass.id);
+      toast.success("Pase cancelado correctamente.");
+      globalThis.dispatchEvent(new Event(VISIT_STATE_CHANGED_EVENT));
       await loadPasses();
     } catch (unknownError) {
-      if (unknownError instanceof GuestPassApiError) {
-        setFormErrors((unknownError.fieldErrors || {}) as GuestPassFormErrors);
-        toast.error(unknownError.message);
-      } else {
-        toast.error("No se pudo crear el pase de invitado.");
-      }
+      const message =
+        unknownError instanceof Error
+          ? unknownError.message
+          : "No se pudo cancelar el pase de invitado.";
+      toast.error(message);
     } finally {
-      setIsSubmitting(false);
+      setCancellingPassId(null);
     }
   };
 
   return (
     <div className="flex flex-col w-full bg-background">
-      {/* Header */}
       <header className="bg-primary p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg sticky top-0 z-20">
         <h1 className="text-primary-foreground text-2xl font-bold">Pases de Invitados</h1>
         <div className="flex items-center gap-2">
@@ -329,180 +979,67 @@ export function ActiveGuestPassesPage({ onGoToProfile, onLogout }: ActiveGuestPa
           ) : null}
         </div>
       </header>
-      
       <section className="mx-auto flex w-full max-w-4xl flex-col gap-6 pb-24 pt-6 px-4">
-      <header className="rounded-xl border border-border/80 bg-card p-4 shadow-sm sm:p-6">
-        <h2 className="text-2xl font-bold tracking-tight">Gestión de pases de invitados</h2>
-        <p className="mt-1 text-sm text-gray-500">
-          Crea nuevos pases para tus invitados y consulta los activos y los próximos.
-        </p>
-      </header>
-
-      <Card className="border-border/80 shadow-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-            <UserRoundPlus className="h-5 w-5" />
-            Crear nuevo pase
-          </CardTitle>
-          <CardDescription>
-            El pase se aprueba automáticamente si cumple las reglas de duración y concurrencia.
-          </CardDescription>
-          <p className="text-xs text-gray-500">
-            Configuración actual: duración máxima{" "}
-            <strong>{policy?.max_duration_hours ?? DEFAULT_MAX_DURATION_HOURS}h</strong> y
-            máximo <strong>{policy?.max_concurrent_passes ?? DEFAULT_MAX_CONCURRENT_PASSES}</strong>{" "}
-            pases concurrentes.
-          </p>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="grid gap-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="grid gap-2">
-                <Label htmlFor="guest-first-name">Nombre del invitado</Label>
-                <Input
-                  id="guest-first-name"
-                  value={form.guest_first_name}
-                  onChange={(event) => setField("guest_first_name", event.target.value)}
-                  aria-invalid={Boolean(formErrors.guest_first_name)}
-                  maxLength={100}
-                  required
-                />
-                {formErrors.guest_first_name ? (
-                  <p className="text-xs text-red-600">{formErrors.guest_first_name}</p>
-                ) : null}
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="guest-last-name">Apellidos del invitado</Label>
-                <Input
-                  id="guest-last-name"
-                  value={form.guest_last_name}
-                  onChange={(event) => setField("guest_last_name", event.target.value)}
-                  aria-invalid={Boolean(formErrors.guest_last_name)}
-                  maxLength={100}
-                  required
-                />
-                {formErrors.guest_last_name ? (
-                  <p className="text-xs text-red-600">{formErrors.guest_last_name}</p>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="grid gap-2">
-                <Label htmlFor="guest-valid-from">Fecha/hora inicio</Label>
-                <Input
-                  id="guest-valid-from"
-                  type="datetime-local"
-                  value={form.valid_from}
-                  onChange={(event) => setField("valid_from", event.target.value)}
-                  aria-invalid={Boolean(formErrors.valid_from)}
-                  required
-                />
-                {formErrors.valid_from ? (
-                  <p className="text-xs text-red-600">{formErrors.valid_from}</p>
-                ) : null}
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="guest-valid-until">Fecha/hora fin</Label>
-                <Input
-                  id="guest-valid-until"
-                  type="datetime-local"
-                  value={form.valid_until}
-                  onChange={(event) => setField("valid_until", event.target.value)}
-                  aria-invalid={Boolean(formErrors.valid_until)}
-                  required
-                />
-                {formErrors.valid_until ? (
-                  <p className="text-xs text-red-600">{formErrors.valid_until}</p>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="guest-comment">Motivo o comentario (opcional)</Label>
-              <Textarea
-                id="guest-comment"
-                value={form.comment}
-                onChange={(event) => setField("comment", event.target.value)}
-                aria-invalid={Boolean(formErrors.comment)}
-                maxLength={500}
-                rows={3}
-              />
-              {formErrors.comment ? (
-                <p className="text-xs text-red-600">{formErrors.comment}</p>
-              ) : null}
-            </div>
-
-            <div className="flex justify-end">
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Creando..." : "Crear pase"}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-
-      <section className="space-y-4">
-        <header className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Pases activos</h3>
-          <Button type="button" variant="outline" onClick={() => void loadPasses()}>
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Actualizar
-          </Button>
-        </header>
-
-        {loading ? (
-          <LoadingState />
-        ) : error ? (
-          <ErrorState message={error} onRetry={() => void loadPasses()} />
-        ) : activePasses.length === 0 ? (
-          <EmptyState message="No tienes pases de invitados activos en este momento." />
-        ) : (
-          <div className="space-y-4">
-            {activePasses.map((pass) => (
-              <GuestPassCard
-                key={pass.id}
-                pass={pass}
-                statusLabel="Activo"
-                badgeClassName="bg-primary/10 text-primary hover:bg-primary/10"
-              />
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className="space-y-4">
-        <header>
-          <h3 className="text-lg font-semibold">Pases próximos</h3>
-          <p className="text-sm text-gray-500">
-            Pases ya creados que comenzarán en el futuro.
+        <header className="rounded-xl border border-border/80 bg-card p-4 shadow-sm sm:p-6">
+          <h2 className="text-2xl font-bold tracking-tight">Gestión de pases de invitados</h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Crea nuevos pases para tus invitados y consulta los activos y los próximos.
           </p>
         </header>
 
-        {loading ? (
-          <LoadingState />
-        ) : error ? (
-          <ErrorState message={error} onRetry={() => void loadPasses()} />
-        ) : upcomingPasses.length === 0 ? (
-          <EmptyState message="No tienes pases de invitados programados próximamente." />
-        ) : (
-          <div className="space-y-4">
-            {upcomingPasses.map((pass) => (
-              <GuestPassCard
-                key={pass.id}
-                pass={pass}
-                statusLabel="Próximo"
-                badgeClassName="bg-accent/20 text-accent-foreground hover:bg-accent/20"
-              />
-            ))}
-          </div>
-        )}
+        <CreateGuestPassForm
+          policy={policy}
+          form={form}
+          formErrors={formErrors}
+          isSubmitting={isSubmitting}
+          onFieldChange={setField}
+          onSubmit={handleSubmit}
+        />
+
+        <GuestPassSection
+          title="Pases activos"
+          passes={activePasses}
+          loading={loading}
+          error={error}
+          emptyMessage="No tienes pases de invitados activos en este momento."
+          statusLabel="Activo"
+          badgeClassName="bg-primary/10 text-primary hover:bg-primary/10"
+          onRetry={() => void loadPasses()}
+          onRefresh={() => void loadPasses()}
+          onCancel={handleCancelPass}
+          cancellingPassId={cancellingPassId}
+        />
+
+        <GuestPassSection
+          title="Pases próximos"
+          description="Pases ya creados que comenzarán en el futuro."
+          passes={upcomingPasses}
+          loading={loading}
+          error={error}
+          emptyMessage="No tienes pases de invitados programados próximamente."
+          statusLabel="Próximo"
+          badgeClassName="bg-accent/20 text-accent-foreground hover:bg-accent/20"
+          onRetry={() => void loadPasses()}
+          onCancel={handleCancelPass}
+          cancellingPassId={cancellingPassId}
+        />
+
+        <GuestPassSection
+          title="Historial de pases"
+          description="Pases completados, cancelados, revocados y otros estados históricos."
+          icon={<History className="h-5 w-5 text-muted-foreground" />}
+          passes={historyPasses}
+          loading={loading}
+          error={error}
+          emptyMessage="No tienes historial de pases de invitados."
+          statusLabel=""
+          badgeClassName=""
+          isHistory={true}
+          onRetry={() => void loadPasses()}
+        />
       </section>
-    </section>
     </div>
   );
 }
 
-export default ActiveGuestPassesPage;
+export default ActiveGuestPassesPage

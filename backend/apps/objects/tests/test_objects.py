@@ -140,7 +140,10 @@ class ObjectAvailabilityApiTests(FastTenantTestCase):
 
         self.assertEqual(response.status_code, 201)
         self.assertEqual(Object.objects.count(), 4)
-        self.assertEqual(Object.objects.filter(name="Kit de Herramientas (Básico) 2.0").exists(), True)
+        self.assertEqual(
+            Object.objects.filter(name="Kit de Herramientas (Básico) 2.0").exists(),
+            True,
+        )
 
     def test_create_object_rejects_invalid_special_characters_in_name(self):
         response = self.client.post(
@@ -169,7 +172,7 @@ class ObjectAvailabilityApiTests(FastTenantTestCase):
         self.assertFalse(object_payload["can_rent"])
         self.assertTrue(object_payload["lending_enabled"])
 
-    def test_object_is_released_automatically_after_reservation_end(self):
+    def test_object_is_not_released_automatically_after_reservation_end_without_return(self):
         rental = self._create_active_rental_now(self.object_busy_now, self.other_user)
 
         response_during = self.client.get("/api/objects/")
@@ -183,7 +186,7 @@ class ObjectAvailabilityApiTests(FastTenantTestCase):
         response_after = self.client.get("/api/objects/")
         self.assertEqual(response_after.status_code, 200)
         after_payload = {item["id"]: item for item in response_after.json()}
-        self.assertTrue(after_payload[self.object_busy_now.id]["availability"])
+        self.assertFalse(after_payload[self.object_busy_now.id]["availability"])
 
     def test_cancel_without_rental_id_preserves_past_history(self):
         now = timezone.now()
@@ -206,8 +209,11 @@ class ObjectAvailabilityApiTests(FastTenantTestCase):
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(ObjectRental.objects.filter(id=past_rental.id).exists())
-        self.assertFalse(ObjectRental.objects.filter(id=future_rental.id).exists())
+        past_rental.refresh_from_db()
+        future_rental.refresh_from_db()
+        self.assertEqual(past_rental.status, "ACTIVE")
+        self.assertEqual(future_rental.status, "CANCELLED")
+
         self.assertEqual(Object.objects.count(), 3)
 
     def test_create_object_rejects_blank_name(self):

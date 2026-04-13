@@ -52,7 +52,12 @@ urlpatterns = [
     path("api/", include("apps.spaces.urls")),
     path("api/", include("apps.guests.urls")),
     path("api/", include("apps.residences.urls")),
+    path("api/", include("apps.menu.urls")),
 ]
 
 if settings.MATCHING_ENABLED:
     urlpatterns.append(path("api/", include("apps.matching.urls")))
+
+from django.conf.urls.static import static
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

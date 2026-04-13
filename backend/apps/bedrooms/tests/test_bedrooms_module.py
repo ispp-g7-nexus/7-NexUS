@@ -1,29 +1,21 @@
 from django.contrib.auth import get_user_model
-from django_tenants.test.cases import FastTenantTestCase
 from django_tenants.test.client import TenantClient
 
 from apps.bedrooms.models import Bedroom
 from apps.bedrooms.services import list_available_bedrooms, delete_bedroom
-from apps.membership.models import Membership, Role
+from apps.membership.models import Role
 from apps.residences.models import Residence, ResidenceDomain
 
+from .base import BedroomTestBase
 
-class BedroomsModuleTests(FastTenantTestCase):
-    @classmethod
-    def get_test_tenant_domain(cls):
-        return "bedrooms.test.local"
 
+class BedroomsModuleTests(BedroomTestBase):
     @classmethod
     def setup_tenant(cls, tenant):
         tenant.name = "Tenant Bedrooms Test"
         tenant.slug = "tenant-bedrooms-test"
         tenant.is_active = True
         tenant.on_trial = True
-
-    @classmethod
-    def setup_domain(cls, domain):
-        domain.domain = cls.get_test_tenant_domain()
-        domain.is_primary = True
 
     def setUp(self):
         super().setUp()
@@ -77,15 +69,6 @@ class BedroomsModuleTests(FastTenantTestCase):
 
     def _url(self, path):
         return f"/api/bedrooms{path}"
-
-    def _create_membership(self, user, bedroom=None, is_active=True):
-        return Membership.objects.create(
-            user=user,
-            role=self.student_role,
-            residence=self.residence,
-            bedroom=bedroom,
-            is_active=is_active,
-        )
 
     # ------------------------
     # SERVICES

@@ -56,6 +56,7 @@ TENANT_APPS = [
     "apps.objects",
     "apps.packages",
     "apps.guests",
+    "apps.menu",
 ]
 
 if MATCHING_ENABLED:
@@ -151,6 +152,13 @@ CELERY_IMPORTS = tuple(
     if module
 )
 
+CELERY_BEAT_SCHEDULE = {
+    "object-rental-return-reminders": {
+        "task": "apps.objects.tasks.send_return_reminders",
+        "schedule": 60.0,  # every 60 seconds
+    },
+}
+
 MATCHING_ROOM_CHANGE_MODEL = os.getenv("MATCHING_ROOM_CHANGE_MODEL", "")
 MATCHING_ROOM_CHANGE_MEMBERSHIP_FIELD = os.getenv(
     "MATCHING_ROOM_CHANGE_MEMBERSHIP_FIELD",
@@ -181,3 +189,6 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ("apps.common.services.CustomJWTAuthentication",),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
 }
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"

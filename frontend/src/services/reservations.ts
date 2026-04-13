@@ -8,6 +8,7 @@ export interface CommonSpace {
   id: number;
   name: string;
   description: string;
+  img?: string;
   capacity: number;
   is_active: boolean;
   open_time: string;
@@ -38,6 +39,15 @@ export interface SpaceReservation {
   notes: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface ReservationReminderNotification {
+  id: string;
+  title: string;
+  message: string;
+  created_at: string;
+  start_time: string;
+  end_time: string;
 }
 
 export interface AvailableSlot {
@@ -123,6 +133,10 @@ export async function createReservation(
 
 export async function listMyReservations(): Promise<SpaceReservation[]> {
   return requestJson<SpaceReservation[]>(`${SPACES_API_BASE}/reservations/me/`);
+}
+
+export async function listMyReservationReminders(): Promise<ReservationReminderNotification[]> {
+  return requestJson<ReservationReminderNotification[]>(`${SPACES_API_BASE}/reservations/reminders/`);
 }
 
 export async function cancelReservation(reservationId: number): Promise<void> {
