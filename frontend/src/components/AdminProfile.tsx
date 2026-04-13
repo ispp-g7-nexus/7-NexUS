@@ -277,7 +277,7 @@ export function AdminProfile() {
                     <button
                         type="button"
                         onClick={handleLogout}
-                        className="w-full flex items-center justify-center gap-3 px-6 py-3.5 bg-primary text-primary-foreground rounded-xl hover:shadow-lg transition-all font-bold tracking-wide"
+                        className="w-full flex items-center justify-center gap-3 px-6 py-3.5 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-xl hover:shadow-lg hover:from-red-700 hover:to-red-600 transition-all font-bold tracking-wide"
                     >
                         <LogOut size={22} />
                         CERRAR SESIÓN
