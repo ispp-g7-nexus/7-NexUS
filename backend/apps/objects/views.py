@@ -230,11 +230,8 @@ def _serialize_object_reservation_reminder(rental: ObjectRental) -> dict[str, An
     }
 
 
-def _build_object_reservation_reminders(rentals: list[ObjectRental]) -> list[dict[str, Any]]:
-    return sorted(
-        [_serialize_object_reservation_reminder(rental) for rental in rentals],
-        key=lambda item: item["start_time"],
-    )
+def _build_object_reservation_reminders(rentals: Iterable[ObjectRental]) -> list[dict[str, Any]]:
+    return [_serialize_object_reservation_reminder(rental) for rental in rentals]
 
 
 def _count_active_rentals_in_interval(*, obj: Object, interval_start: datetime, interval_end: datetime) -> int:
@@ -1172,7 +1169,7 @@ class UserReservationRemindersView(AuthenticatedView):
             .order_by("start_date")
         )
 
-        return JsonResponse(_build_object_reservation_reminders(list(rentals)), safe=False)
+        return JsonResponse(_build_object_reservation_reminders(rentals), safe=False)
 
 
 class AdminObjectNotificationsView(AuthenticatedView):

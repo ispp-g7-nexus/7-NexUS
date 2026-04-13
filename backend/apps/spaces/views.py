@@ -441,7 +441,6 @@ class MyReservationRemindersView(AuthenticatedView):
                 status=SpaceReservation.Status.ACTIVE,
                 start_time__gt=now,
                 start_time__lte=reminder_deadline,
-                end_time__gt=now,
             )
             .select_related("space", "user")
             .order_by("start_time")

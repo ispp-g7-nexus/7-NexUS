@@ -382,20 +382,20 @@ export const objectsService = {
     }
     
     return response.json();
-      },
+  },
 
-      getUserObjectReservationReminders: async (): Promise<ReservationReminderNotification[]> => {
-        const response = await fetch(`${API_URL}/my-reservations/reminders/`, {
-          method: 'GET',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' }
-        });
+  getUserObjectReservationReminders: async (): Promise<ReservationReminderNotification[]> => {
+    const response = await fetch(`${API_URL}/my-reservations/reminders/`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' }
+    });
 
-        if (!response.ok) {
-          throw await buildApiError(response, 'Error al obtener recordatorios de reservas');
-        }
+    if (!response.ok) {
+      throw await buildApiError(response, 'Error al obtener recordatorios de reservas');
+    }
 
-        return response.json();
+    return response.json();
   },
 
   getUserObjectNotifications: async (): Promise<UserObjectNotification[]> => {

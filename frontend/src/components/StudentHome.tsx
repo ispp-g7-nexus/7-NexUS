@@ -15,7 +15,7 @@ import {
     X,
     Wifi
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { authService } from "../services/auth";
 import announcementService from "../services/announcement.service";
@@ -32,6 +32,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 
 
 export type StudentTab = "home" | "incidences" | "reservations" | "community" | "events" | "matches" | "announcements" | "menu" | "packages" | "visitors";
+type NotificationType = "urgent" | "admin" | "event" | "info" | "success" | "warning";
 
 interface StudentHomeProps {
     onNavigate: (view: StudentTab) => void;
@@ -261,6 +262,126 @@ const getNotificationPriority = (notification: HomeNotification): number => {
     }
 
     return 0;
+};
+
+const isNotificationDismissible = (notification: HomeNotification): boolean => {
+    return notification.source !== "visitors";
+};
+
+const sourceStyles: Partial<Record<StudentTab, {
+    container: string;
+    accent: string;
+    badge: string;
+    badgeText: string;
+    iconWrap: string;
+    time: string;
+}>> = {
+    announcements: {
+        container: "border-blue-200 bg-gradient-to-br from-blue-50 via-white to-slate-50 shadow-[0_4px_14px_rgba(59,130,246,0.08)]",
+        accent: "bg-gradient-to-b from-blue-400 to-blue-600",
+        badge: "bg-blue-100 text-blue-700",
+        badgeText: "Aviso",
+        iconWrap: "bg-blue-100 ring-1 ring-blue-200",
+        time: "text-blue-700",
+    },
+    incidences: {
+        container: "border-red-200 bg-gradient-to-br from-red-50 via-white to-rose-50 shadow-[0_4px_14px_rgba(239,68,68,0.09)]",
+        accent: "bg-gradient-to-b from-red-400 to-rose-600",
+        badge: "bg-red-100 text-red-700",
+        badgeText: "Incidencia",
+        iconWrap: "bg-red-100 ring-1 ring-red-200",
+        time: "text-red-700",
+    },
+    events: {
+        container: "border-violet-200 bg-gradient-to-br from-violet-50 via-white to-fuchsia-50 shadow-[0_4px_14px_rgba(139,92,246,0.08)]",
+        accent: "bg-gradient-to-b from-violet-400 to-fuchsia-600",
+        badge: "bg-violet-100 text-violet-700",
+        badgeText: "Evento",
+        iconWrap: "bg-violet-100 ring-1 ring-violet-200",
+        time: "text-violet-700",
+    },
+    packages: {
+        container: "border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-teal-50 shadow-[0_4px_14px_rgba(16,185,129,0.08)]",
+        accent: "bg-gradient-to-b from-emerald-400 to-teal-600",
+        badge: "bg-emerald-100 text-emerald-700",
+        badgeText: "Paquete",
+        iconWrap: "bg-emerald-100 ring-1 ring-emerald-200",
+        time: "text-emerald-700",
+    },
+    reservations: {
+        container: "border-teal-300 bg-gradient-to-br from-teal-50 via-white to-cyan-50 shadow-[0_8px_24px_rgba(13,148,136,0.14)]",
+        accent: "bg-gradient-to-b from-teal-400 to-cyan-600",
+        badge: "bg-teal-100 text-teal-700",
+        badgeText: "Recordatorio",
+        iconWrap: "bg-teal-100 ring-1 ring-teal-200",
+        time: "text-teal-700",
+    },
+    visitors: {
+        container: "border-amber-300 bg-gradient-to-br from-amber-50 via-white to-orange-50 shadow-[0_8px_24px_rgba(245,158,11,0.16)]",
+        accent: "bg-gradient-to-b from-amber-400 to-orange-600",
+        badge: "bg-amber-100 text-amber-700",
+        badgeText: "Urgente",
+        iconWrap: "bg-amber-100 ring-1 ring-amber-200",
+        time: "text-amber-700",
+    },
+};
+
+const fallbackByType: Record<NotificationType, {
+    container: string;
+    accent: string;
+    badge: string;
+    badgeText: string;
+    iconWrap: string;
+    time: string;
+}> = {
+    urgent: {
+        container: "border-amber-300 bg-gradient-to-br from-amber-50 via-white to-orange-50",
+        accent: "bg-gradient-to-b from-amber-400 to-orange-600",
+        badge: "bg-amber-100 text-amber-700",
+        badgeText: "Urgente",
+        iconWrap: "bg-amber-100 ring-1 ring-amber-200",
+        time: "text-amber-700",
+    },
+    admin: {
+        container: "border-blue-200 bg-gradient-to-br from-blue-50 via-white to-slate-50",
+        accent: "bg-gradient-to-b from-blue-400 to-blue-600",
+        badge: "bg-blue-100 text-blue-700",
+        badgeText: "Admin",
+        iconWrap: "bg-blue-100 ring-1 ring-blue-200",
+        time: "text-blue-700",
+    },
+    event: {
+        container: "border-violet-200 bg-gradient-to-br from-violet-50 via-white to-fuchsia-50",
+        accent: "bg-gradient-to-b from-violet-400 to-fuchsia-600",
+        badge: "bg-violet-100 text-violet-700",
+        badgeText: "Evento",
+        iconWrap: "bg-violet-100 ring-1 ring-violet-200",
+        time: "text-violet-700",
+    },
+    info: {
+        container: "border-slate-200 bg-gradient-to-br from-slate-50 via-white to-slate-100",
+        accent: "bg-gradient-to-b from-slate-400 to-slate-600",
+        badge: "bg-slate-100 text-slate-700",
+        badgeText: "Info",
+        iconWrap: "bg-slate-100 ring-1 ring-slate-200",
+        time: "text-slate-600",
+    },
+    success: {
+        container: "border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-green-50",
+        accent: "bg-gradient-to-b from-emerald-400 to-green-600",
+        badge: "bg-emerald-100 text-emerald-700",
+        badgeText: "OK",
+        iconWrap: "bg-emerald-100 ring-1 ring-emerald-200",
+        time: "text-emerald-700",
+    },
+    warning: {
+        container: "border-rose-200 bg-gradient-to-br from-rose-50 via-white to-red-50",
+        accent: "bg-gradient-to-b from-rose-400 to-red-600",
+        badge: "bg-rose-100 text-rose-700",
+        badgeText: "Alerta",
+        iconWrap: "bg-rose-100 ring-1 ring-rose-200",
+        time: "text-rose-700",
+    },
 };
 
 export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
@@ -617,7 +738,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
     };
 
     const handleDismissNotification = (notification: HomeNotification) => {
-        if (notification.source === "visitors") {
+        if (!isNotificationDismissible(notification)) {
             return;
         }
 
@@ -711,7 +832,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                                                     time={notification.time}
                                                     type={notification.type}
                                                     source={notification.source}
-                                                    dismissible={notification.source !== "visitors"}
+                                                    dismissible={isNotificationDismissible(notification)}
                                                     onDismiss={() => handleDismissNotification(notification)}
                                                     onOpenSource={() => {
                                                         if (notification.source === "incidences") {
@@ -826,10 +947,6 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
     );
 }
 
-import { ReactNode } from "react";
-
-type NotificationType = "urgent" | "admin" | "event" | "info" | "success" | "warning";
-
 interface NotificationCardProps {
     icon: ReactNode;
     title: string;
@@ -853,122 +970,6 @@ interface QuickActionProps {
 function NotificationCard({ icon, title, description, time, type, source, onDismiss, onOpenSource, dismissible = true }: Readonly<NotificationCardProps>) {
     const isReservationReminder = source === "reservations";
     const isVisitorUrgent = source === "visitors";
-    const sourceStyles: Partial<Record<StudentTab, {
-        container: string;
-        accent: string;
-        badge: string;
-        badgeText: string;
-        iconWrap: string;
-        time: string;
-    }>> = {
-        announcements: {
-            container: "border-blue-200 bg-gradient-to-br from-blue-50 via-white to-slate-50 shadow-[0_4px_14px_rgba(59,130,246,0.08)]",
-            accent: "bg-gradient-to-b from-blue-400 to-blue-600",
-            badge: "bg-blue-100 text-blue-700",
-            badgeText: "Aviso",
-            iconWrap: "bg-blue-100 ring-1 ring-blue-200",
-            time: "text-blue-700",
-        },
-        incidences: {
-            container: "border-red-200 bg-gradient-to-br from-red-50 via-white to-rose-50 shadow-[0_4px_14px_rgba(239,68,68,0.09)]",
-            accent: "bg-gradient-to-b from-red-400 to-rose-600",
-            badge: "bg-red-100 text-red-700",
-            badgeText: "Incidencia",
-            iconWrap: "bg-red-100 ring-1 ring-red-200",
-            time: "text-red-700",
-        },
-        events: {
-            container: "border-violet-200 bg-gradient-to-br from-violet-50 via-white to-fuchsia-50 shadow-[0_4px_14px_rgba(139,92,246,0.08)]",
-            accent: "bg-gradient-to-b from-violet-400 to-fuchsia-600",
-            badge: "bg-violet-100 text-violet-700",
-            badgeText: "Evento",
-            iconWrap: "bg-violet-100 ring-1 ring-violet-200",
-            time: "text-violet-700",
-        },
-        packages: {
-            container: "border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-teal-50 shadow-[0_4px_14px_rgba(16,185,129,0.08)]",
-            accent: "bg-gradient-to-b from-emerald-400 to-teal-600",
-            badge: "bg-emerald-100 text-emerald-700",
-            badgeText: "Paquete",
-            iconWrap: "bg-emerald-100 ring-1 ring-emerald-200",
-            time: "text-emerald-700",
-        },
-        reservations: {
-            container: "border-teal-300 bg-gradient-to-br from-teal-50 via-white to-cyan-50 shadow-[0_8px_24px_rgba(13,148,136,0.14)]",
-            accent: "bg-gradient-to-b from-teal-400 to-cyan-600",
-            badge: "bg-teal-100 text-teal-700",
-            badgeText: "Recordatorio",
-            iconWrap: "bg-teal-100 ring-1 ring-teal-200",
-            time: "text-teal-700",
-        },
-        visitors: {
-            container: "border-amber-300 bg-gradient-to-br from-amber-50 via-white to-orange-50 shadow-[0_8px_24px_rgba(245,158,11,0.16)]",
-            accent: "bg-gradient-to-b from-amber-400 to-orange-600",
-            badge: "bg-amber-100 text-amber-700",
-            badgeText: "Urgente",
-            iconWrap: "bg-amber-100 ring-1 ring-amber-200",
-            time: "text-amber-700",
-        },
-    };
-
-    const fallbackByType: Record<NotificationType, {
-        container: string;
-        accent: string;
-        badge: string;
-        badgeText: string;
-        iconWrap: string;
-        time: string;
-    }> = {
-        urgent: {
-            container: "border-amber-300 bg-gradient-to-br from-amber-50 via-white to-orange-50",
-            accent: "bg-gradient-to-b from-amber-400 to-orange-600",
-            badge: "bg-amber-100 text-amber-700",
-            badgeText: "Urgente",
-            iconWrap: "bg-amber-100 ring-1 ring-amber-200",
-            time: "text-amber-700",
-        },
-        admin: {
-            container: "border-blue-200 bg-gradient-to-br from-blue-50 via-white to-slate-50",
-            accent: "bg-gradient-to-b from-blue-400 to-blue-600",
-            badge: "bg-blue-100 text-blue-700",
-            badgeText: "Admin",
-            iconWrap: "bg-blue-100 ring-1 ring-blue-200",
-            time: "text-blue-700",
-        },
-        event: {
-            container: "border-violet-200 bg-gradient-to-br from-violet-50 via-white to-fuchsia-50",
-            accent: "bg-gradient-to-b from-violet-400 to-fuchsia-600",
-            badge: "bg-violet-100 text-violet-700",
-            badgeText: "Evento",
-            iconWrap: "bg-violet-100 ring-1 ring-violet-200",
-            time: "text-violet-700",
-        },
-        info: {
-            container: "border-slate-200 bg-gradient-to-br from-slate-50 via-white to-slate-100",
-            accent: "bg-gradient-to-b from-slate-400 to-slate-600",
-            badge: "bg-slate-100 text-slate-700",
-            badgeText: "Info",
-            iconWrap: "bg-slate-100 ring-1 ring-slate-200",
-            time: "text-slate-600",
-        },
-        success: {
-            container: "border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-green-50",
-            accent: "bg-gradient-to-b from-emerald-400 to-green-600",
-            badge: "bg-emerald-100 text-emerald-700",
-            badgeText: "OK",
-            iconWrap: "bg-emerald-100 ring-1 ring-emerald-200",
-            time: "text-emerald-700",
-        },
-        warning: {
-            container: "border-rose-200 bg-gradient-to-br from-rose-50 via-white to-red-50",
-            accent: "bg-gradient-to-b from-rose-400 to-red-600",
-            badge: "bg-rose-100 text-rose-700",
-            badgeText: "Alerta",
-            iconWrap: "bg-rose-100 ring-1 ring-rose-200",
-            time: "text-rose-700",
-        },
-    };
-
     const style = sourceStyles[source] || fallbackByType[type] || fallbackByType.info;
 
     return (
