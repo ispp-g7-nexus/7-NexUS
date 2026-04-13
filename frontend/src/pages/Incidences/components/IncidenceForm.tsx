@@ -21,8 +21,8 @@ interface IncidenceFormProps {
 
 export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData }: IncidenceFormProps) {
   const [loading, setLoading] = useState(false)
-  const [locationType, setLocationType] = useState<string>("")
-  const [urgent, setUrgent] = useState<boolean>(false)
+  const [locationType, setLocationType] = useState<string>(initialData?.location_type ?? "")
+  const [urgent, setUrgent] = useState<boolean>(initialData?.priority === "high")
   const [staffId] = useState("")
   const [externalName] = useState("")
   const [areaError, setAreaError] = useState(false)

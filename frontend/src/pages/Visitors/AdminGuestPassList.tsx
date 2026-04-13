@@ -1,4 +1,4 @@
-import { UserCheck, RefreshCw, Search, Calendar, User, Hash, Clock, MessageSquare } from "lucide-react";
+import { Ban, Calendar, Clock, Hash, MessageSquare, RefreshCw, Search, Undo2, User, UserCheck } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -7,7 +7,7 @@ import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { Input } from "../../components/ui/input";
-import { type AdminGuestPass, GuestPassApiError, listAdminGuestPasses } from "../../services/guestPasses";
+import { type AdminGuestPass, GuestPassApiError, listAdminGuestPasses, rejectAdminGuestPass, unrejectAdminGuestPass } from "../../services/guestPasses";
 
 const STATUS_OPTIONS = [
   { value: "", label: "Todos los estados" },
@@ -57,9 +57,43 @@ function formatDateTime(iso: string): string {
 interface GuestPassDetailDialogProps {
   readonly pass: AdminGuestPass | null;
   readonly onClose: () => void;
+  readonly onRefresh: () => void;
 }
 
-function GuestPassDetailDialog({ pass, onClose }: GuestPassDetailDialogProps) {
+function GuestPassDetailDialog({ pass, onClose, onRefresh }: GuestPassDetailDialogProps) {
+  const [revoking, setRevoking] = useState(false);
+  const [unrevoking, setUnrevoking] = useState(false);
+
+  async function handleRevoke() {
+    if (!pass) return;
+    setRevoking(true);
+    try {
+      await rejectAdminGuestPass(pass.id);
+      toast.success("Pase rechazado correctamente.");
+      onRefresh();
+      onClose();
+    } catch (err) {
+      toast.error(err instanceof GuestPassApiError ? err.message : "Error al rechazar el pase.");
+    } finally {
+      setRevoking(false);
+    }
+  }
+
+  async function handleUnrevoke() {
+    if (!pass) return;
+    setUnrevoking(true);
+    try {
+      await unrejectAdminGuestPass(pass.id);
+      toast.success("Rechazo deshecho correctamente.");
+      onRefresh();
+      onClose();
+    } catch (err) {
+      toast.error(err instanceof GuestPassApiError ? err.message : "Error al deshacer el rechazo.");
+    } finally {
+      setUnrevoking(false);
+    }
+  }
+
   return (
     <Dialog open={pass !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="max-w-md">
@@ -111,6 +145,28 @@ function GuestPassDetailDialog({ pass, onClose }: GuestPassDetailDialogProps) {
                     <p className="text-sm italic text-gray-700">"{pass.comment}"</p>
                   </div>
                 </div>
+              )}
+              {(pass.status === "ACTIVE" || pass.status === "INACTIVE") && (
+                <Button
+                  variant="outline"
+                  className="w-full mt-2 border-orange-300 text-orange-700 hover:bg-orange-50 hover:text-orange-800"
+                  onClick={handleRevoke}
+                  disabled={revoking}
+                >
+                  <Ban className="w-4 h-4 mr-2" />
+                  {revoking ? "Rechazando..." : "Rechazar pase"}
+                </Button>
+              )}
+              {pass.status === "REJECTED" && (
+                <Button
+                  variant="outline"
+                  className="w-full mt-2"
+                  onClick={handleUnrevoke}
+                  disabled={unrevoking}
+                >
+                  <Undo2 className="w-4 h-4 mr-2" />
+                  {unrevoking ? "Deshaciendo..." : "Deshacer rechazo"}
+                </Button>
               )}
             </div>
           </>
@@ -179,7 +235,7 @@ export function AdminGuestPassListPage() {
     content = (
       <Card className="border-dashed shadow-none bg-gray-50/50">
         <CardContent className="py-12 text-center">
-          <p className="text-gray-500 font-medium">No se han encontrado pases que coincidan</p>
+          <p className="text-gray-500 font-medium">No hay pases que coincidan.</p>
         </CardContent>
       </Card>
     );
@@ -247,6 +303,9 @@ export function AdminGuestPassListPage() {
                     <p className="text-[10px] text-gray-400">hasta {formatDateTime(pass.valid_until).split(',')[0]}</p>
                   </div>
                 </div>
+                {pass.comment && (
+                  <p className="text-[11px] italic text-gray-500 line-clamp-1">"{pass.comment}"</p>
+                )}
               </div>
 
               <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-[10px] text-gray-400 font-medium">
@@ -316,7 +375,11 @@ export function AdminGuestPassListPage() {
 
       {content}
 
-      <GuestPassDetailDialog pass={selectedPass} onClose={() => setSelectedPass(null)} />
+      <GuestPassDetailDialog
+        pass={selectedPass}
+        onClose={() => setSelectedPass(null)}
+        onRefresh={() => fetchPasses(statusFilter)}
+      />
     </div>
   );
 }
