@@ -125,3 +125,42 @@ export const IncidenceService = {
     if (!response.ok) throw new Error('Error al eliminar la incidencia');
   },
 };
+
+// ── Incidence Analytics ───────────────────────────────────────────────────────
+
+export interface IncidenceAnalyticsSummary {
+  total_created_in_period: number;
+  total_resolved_in_period: number;
+  currently_open: number;
+  avg_resolution_hours: number | null;
+}
+
+export interface IncidenceOpenByDay {
+  date: string;
+  open_count: number;
+}
+
+export interface IncidenceResolvedByStaff {
+  staff_name: string;
+  resolved_count: number;
+}
+
+export interface IncidenceAnalyticsResponse {
+  summary: IncidenceAnalyticsSummary;
+  open_by_day: IncidenceOpenByDay[];
+  resolved_by_staff: IncidenceResolvedByStaff[];
+  meta: { from: string; to: string };
+}
+
+export async function getIncidenceAnalytics(params: {
+  from: string;
+  to: string;
+}): Promise<IncidenceAnalyticsResponse> {
+  const qs = new URLSearchParams({ from: params.from, to: params.to }).toString();
+  const response = await fetchWithAuth(`/api/incidences/analytics/?${qs}`);
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error((body as { detail?: string }).detail ?? `Error ${response.status}`);
+  }
+  return response.json() as Promise<IncidenceAnalyticsResponse>;
+}

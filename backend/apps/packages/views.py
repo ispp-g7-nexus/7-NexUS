@@ -1,4 +1,7 @@
-from django.db.models import Q
+from datetime import date, timedelta
+
+from django.db.models import Count, Q
+from django.db.models.functions import TruncDate
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, ValidationError
@@ -218,3 +221,109 @@ class ResidentPackageMarkAsViewedView(ResidentPackageBaseView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+class PackageAnalyticsView(APIView):
+    permission_classes = [IsPackageAdmin]
+
+    def get(self, request):
+        residence = getattr(request, "residence", None)
+        if not residence:
+            raise ValidationError({"detail": ERROR_NO_RESIDENCE})
+
+        from_str = (request.query_params.get("from") or "").strip()
+        to_str = (request.query_params.get("to") or "").strip()
+
+        try:
+            from_date = date.fromisoformat(from_str) if from_str else date.today() - timedelta(days=29)
+            to_date = date.fromisoformat(to_str) if to_str else date.today()
+        except ValueError:
+            raise ValidationError({"detail": "Formato de fecha inválido. Usa YYYY-MM-DD."})
+
+        if from_date > to_date:
+            raise ValidationError({"detail": "La fecha inicial debe ser anterior o igual a la final."})
+
+        base_qs = Package.objects.filter(residence=residence)
+
+        # Received per day in range
+        received_map = {
+            item["day"]: item["count"]
+            for item in (
+                base_qs
+                .filter(received_at__date__gte=from_date, received_at__date__lte=to_date)
+                .annotate(day=TruncDate("received_at"))
+                .values("day")
+                .annotate(count=Count("id"))
+            )
+        }
+
+        # Delivered per day in range
+        delivered_map = {
+            item["day"]: item["count"]
+            for item in (
+                base_qs
+                .filter(
+                    status=Package.Status.DELIVERED,
+                    delivered_at__date__gte=from_date,
+                    delivered_at__date__lte=to_date,
+                )
+                .annotate(day=TruncDate("delivered_at"))
+                .values("day")
+                .annotate(count=Count("id"))
+            )
+        }
+
+        # Running cumulative pending (received - delivered) up to each day
+        received_before = base_qs.filter(received_at__date__lt=from_date).count()
+        delivered_before = base_qs.filter(
+            status=Package.Status.DELIVERED, delivered_at__date__lt=from_date
+        ).count()
+
+        running_received = received_before
+        running_delivered = delivered_before
+        daily_activity = []
+        for i in range((to_date - from_date).days + 1):
+            day = from_date + timedelta(days=i)
+            rec = received_map.get(day, 0)
+            dlv = delivered_map.get(day, 0)
+            running_received += rec
+            running_delivered += dlv
+            daily_activity.append({
+                "date": day.isoformat(),
+                "received": rec,
+                "delivered": dlv,
+                "pending_cumulative": max(0, running_received - running_delivered),
+            })
+
+        # Top 15 residents by packages received in period
+        by_resident = list(
+            base_qs
+            .filter(received_at__date__gte=from_date, received_at__date__lte=to_date)
+            .values("resident_name_snapshot")
+            .annotate(
+                total_received=Count("id"),
+                total_delivered=Count("id", filter=Q(status=Package.Status.DELIVERED)),
+            )
+            .order_by("-total_received")[:15]
+        )
+
+        return Response({
+            "summary": {
+                "total_received_in_period": sum(received_map.values()),
+                "total_delivered_in_period": sum(delivered_map.values()),
+                "currently_pending": base_qs.filter(status=Package.Status.RECEIVED).count(),
+            },
+            "daily_activity": daily_activity,
+            "by_resident": [
+                {
+                    "resident_name": item["resident_name_snapshot"],
+                    "total_received": item["total_received"],
+                    "total_delivered": item["total_delivered"],
+                }
+                for item in by_resident
+            ],
+            "meta": {
+                "from": from_date.isoformat(),
+                "to": to_date.isoformat(),
+            },
+        })

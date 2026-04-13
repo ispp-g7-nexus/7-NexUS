@@ -1,12 +1,18 @@
+from datetime import date, timedelta
+
+from django.db.models import Avg, DurationField, ExpressionWrapper, F, Q
+from django.db.models.functions import TruncDate
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from .models import Incidence, IncidenceUpdate
-from .serializers import IncidenceSerializer, AdminIncidenceSerializer
-from .permissions import IsAdminOrReadOnly
+from rest_framework.views import APIView
+
 from apps.common.authentication import CookieJWTAuthentication
-from django.db.models import Q
+
+from .models import Incidence, IncidenceUpdate
+from .permissions import IsAdminOrReadOnly, IsIncidenceAdmin
+from .serializers import AdminIncidenceSerializer, IncidenceSerializer
 
 class IncidenceViewSet(viewsets.ModelViewSet):
     LOCATION_LABELS = dict(Incidence.LOCATION_CHOICES)
@@ -202,9 +208,125 @@ class IncidenceViewSet(viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         instance.is_active = False
         instance.save()
-        
+
         IncidenceUpdate.objects.create(
             incidence=instance,
             author_name=self.request.user.get_full_name() or self.request.user.username,
             text="Incidencia marcada como eliminada/cancelada."
         )
+
+
+class IncidenceAnalyticsView(APIView):
+    """
+    GET /api/incidences/analytics/?from=YYYY-MM-DD&to=YYYY-MM-DD
+
+    Métricas:
+    - Incidencias abiertas por día (acumuladas: suma si no se resuelven).
+    - Tiempo medio de resolución en horas (aproximado con updated_at).
+    - Incidencias resueltas por staff en el periodo.
+    """
+
+    authentication_classes = [CookieJWTAuthentication]
+    permission_classes = [IsIncidenceAdmin]
+
+    _OPEN_STATUSES = {"pending", "reviewing", "in_progress"}
+
+    def get(self, request):
+        from_str = (request.query_params.get("from") or "").strip()
+        to_str = (request.query_params.get("to") or "").strip()
+
+        try:
+            from_date = date.fromisoformat(from_str) if from_str else date.today() - timedelta(days=29)
+            to_date = date.fromisoformat(to_str) if to_str else date.today()
+        except ValueError:
+            return Response({"detail": "Formato de fecha inválido. Usa YYYY-MM-DD."}, status=400)
+
+        if from_date > to_date:
+            return Response({"detail": "La fecha inicial debe ser anterior o igual a la final."}, status=400)
+
+        base_qs = Incidence.objects.filter(is_active=True)
+
+        # ── Summary ──────────────────────────────────────────────────────────
+        total_created = base_qs.filter(
+            created_at__date__gte=from_date, created_at__date__lte=to_date
+        ).count()
+
+        # Resolved in period: approximated by updated_at (last modification date)
+        total_resolved = base_qs.filter(
+            status="resolved",
+            updated_at__date__gte=from_date,
+            updated_at__date__lte=to_date,
+        ).count()
+
+        currently_open = base_qs.filter(status__in=self._OPEN_STATUSES).count()
+
+        avg_result = (
+            base_qs.filter(status="resolved")
+            .annotate(
+                duration=ExpressionWrapper(
+                    F("updated_at") - F("created_at"), output_field=DurationField()
+                )
+            )
+            .aggregate(avg_duration=Avg("duration"))
+        )
+        avg_td = avg_result["avg_duration"]
+        avg_resolution_hours = round(avg_td.total_seconds() / 3600, 1) if avg_td else None
+
+        # ── Open by day ───────────────────────────────────────────────────────
+        # Fetch all incidences created on or before to_date once (avoid N queries)
+        all_inc = list(
+            base_qs.filter(created_at__date__lte=to_date).values(
+                "status", "created_at", "updated_at"
+            )
+        )
+
+        days = [from_date + timedelta(days=i) for i in range((to_date - from_date).days + 1)]
+        open_by_day = []
+        for day in days:
+            count = sum(
+                1
+                for inc in all_inc
+                if inc["created_at"].date() <= day
+                and (
+                    inc["status"] in self._OPEN_STATUSES
+                    or inc["updated_at"].date() > day
+                )
+            )
+            open_by_day.append({"date": day.isoformat(), "open_count": count})
+
+        # ── Resolved by staff (in period) ─────────────────────────────────────
+        resolved_in_period = base_qs.filter(
+            status="resolved",
+            updated_at__date__gte=from_date,
+            updated_at__date__lte=to_date,
+        ).select_related("assigned_staff__user")
+
+        staff_counts: dict = {}
+        for inc in resolved_in_period:
+            if inc.assigned_staff:
+                name = (
+                    inc.assigned_staff.user.get_full_name()
+                    or inc.assigned_staff.user.username
+                )
+            elif inc.assigned_external_name:
+                name = inc.assigned_external_name
+            else:
+                name = "Sin asignar"
+            staff_counts[name] = staff_counts.get(name, 0) + 1
+
+        resolved_by_staff = sorted(
+            [{"staff_name": n, "resolved_count": c} for n, c in staff_counts.items()],
+            key=lambda x: -x["resolved_count"],
+        )
+
+        return Response({
+            "summary": {
+                "total_created_in_period": total_created,
+                "total_resolved_in_period": total_resolved,
+                "currently_open": currently_open,
+                "avg_resolution_hours": avg_resolution_hours,
+            },
+            "open_by_day": open_by_day,
+            "resolved_by_staff": resolved_by_staff,
+            "meta": {"from": from_date.isoformat(), "to": to_date.isoformat()},
+        })

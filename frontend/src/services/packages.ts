@@ -231,3 +231,40 @@ export const packagesService = {
     return handleResponse<{ message: string; marked_count: number }>(response);
   },
 };
+
+// ── Package Analytics ─────────────────────────────────────────────────────────
+
+export interface PackageAnalyticsSummary {
+  total_received_in_period: number;
+  total_delivered_in_period: number;
+  currently_pending: number;
+}
+
+export interface PackageDailyActivity {
+  date: string;
+  received: number;
+  delivered: number;
+  pending_cumulative: number;
+}
+
+export interface PackageByResident {
+  resident_name: string;
+  total_received: number;
+  total_delivered: number;
+}
+
+export interface PackageAnalyticsResponse {
+  summary: PackageAnalyticsSummary;
+  daily_activity: PackageDailyActivity[];
+  by_resident: PackageByResident[];
+  meta: { from: string; to: string };
+}
+
+export async function getPackageAnalytics(params: {
+  from: string;
+  to: string;
+}): Promise<PackageAnalyticsResponse> {
+  const qs = new URLSearchParams({ from: params.from, to: params.to }).toString();
+  const response = await fetchWithAuth(`${PACKAGES_URL}analytics/?${qs}`);
+  return handleResponse<PackageAnalyticsResponse>(response);
+}
