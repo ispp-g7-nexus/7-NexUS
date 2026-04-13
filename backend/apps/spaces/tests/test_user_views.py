@@ -209,3 +209,126 @@ class UserSpaceViewsTests(FastTenantTestCase):
 
         resp = self.client2.post(f"/api/spaces/reservations/{res.id}/cancel/")
         self.assertEqual(resp.status_code, 403)
+
+    def test_create_reservation_with_user_overlap_returns_400(self):
+        start = timezone.now().replace(hour=10, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        end = start + timedelta(hours=1)
+        payload = {"start_time": start.isoformat(), "end_time": end.isoformat()}
+
+        resp1 = self.client1.post(
+            f"/api/spaces/{self.space.id}/reservations/",
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(resp1.status_code, 201)
+
+        resp2 = self.client1.post(
+            f"/api/spaces/{self.space.id}/reservations/",
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(resp2.status_code, 400)
+        self.assertIn("otra reserva", str(resp2.json()).lower())
+
+    def test_create_reservation_past_datetime_returns_400(self):
+        start = timezone.now() - timedelta(hours=1)
+        end = start + timedelta(hours=1)
+        payload = {"start_time": start.isoformat(), "end_time": end.isoformat()}
+        
+        resp = self.client1.post(
+            f"/api/spaces/{self.space.id}/reservations/",
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("pasado", str(resp.json()).lower())
+
+    def test_create_reservation_different_days_returns_400(self):
+        start = timezone.now().replace(hour=20, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        end = start + timedelta(hours=5)
+        payload = {"start_time": start.isoformat(), "end_time": end.isoformat()}
+        
+        resp = self.client1.post(
+            f"/api/spaces/{self.space.id}/reservations/",
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("mismo día", str(resp.json()).lower())
+
+    def test_create_reservation_invalid_json_returns_400(self):
+        resp = self.client1.post(
+            f"/api/spaces/{self.space.id}/reservations/",
+            data="invalid json",
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("JSON", resp.json()["detail"])
+
+    def test_create_reservation_missing_times_returns_400(self):
+        payload = {"start_time": ""}
+        resp = self.client1.post(
+            f"/api/spaces/{self.space.id}/reservations/",
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("inicio y fin", str(resp.json()).lower())
+
+    def test_space_availability_missing_date_param_returns_400(self):
+        resp = self.client1.get(f"/api/spaces/{self.space.id}/availability/")
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("fecha", str(resp.json()).lower())
+
+    def test_space_availability_invalid_date_format_returns_400(self):
+        resp = self.client1.get(f"/api/spaces/{self.space.id}/availability/?date=invalid-date")
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("fecha inválido", str(resp.json()).lower())
+
+    def test_list_spaces_includes_all_active_spaces(self):
+        space2 = CommonSpace.objects.create(
+            name="Sala 2",
+            capacity=3,
+            is_active=True,
+            open_time=time(9, 0),
+            close_time=time(21, 0),
+            residence=self.residence,
+        )
+        resp = self.client1.get("/api/spaces/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(len(resp.json()), 2)
+
+    def test_space_availability_shows_all_reservations_for_date(self):
+        date_str = (timezone.now() + timedelta(days=1)).date().isoformat()
+        start1 = timezone.now().replace(hour=10, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        end1 = start1 + timedelta(hours=1)
+        start2 = start1 + timedelta(hours=2)
+        end2 = start2 + timedelta(hours=1)
+        
+        SpaceReservation.objects.create(
+            space=self.space, user=self.user1, residence=self.residence,
+            start_time=start1, end_time=end1, status=SpaceReservation.Status.ACTIVE
+        )
+        SpaceReservation.objects.create(
+            space=self.space, user=self.user2, residence=self.residence,
+            start_time=start2, end_time=end2, status=SpaceReservation.Status.ACTIVE
+        )
+        
+        resp = self.client1.get(f"/api/spaces/{self.space.id}/availability/?date={date_str}")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(len(data["reservations"]), 2)
+
+    def test_my_reservations_returns_empty_when_no_reservations(self):
+        resp = self.client1.get("/api/spaces/reservations/me/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(len(resp.json()), 0)
+
+    def test_reminders_returns_empty_when_no_upcoming_reservations(self):
+        resp = self.client1.get("/api/spaces/reservations/reminders/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(len(resp.json()), 0)
+
+    def test_cancel_nonexistent_reservation_returns_404(self):
+        resp = self.client1.post("/api/spaces/reservations/99999/cancel/")
+        self.assertEqual(resp.status_code, 404)
