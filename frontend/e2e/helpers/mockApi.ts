@@ -101,6 +101,8 @@ export async function mockAdminApi(page: Page, overrides: {
       await route.fulfill(json(guestPasses))
     } else if (path === '/api/admin/guest-passes/policy/') {
       await route.fulfill(json({ max_duration_hours: 24, max_concurrent_passes: 3 }))
+    } else if (path === '/api/admin/guest-passes/notifications/') {
+      await route.fulfill(json([]))
     } else if (path === '/api/chats/groups/') {
       await route.fulfill(json([]))
     } else if (path.startsWith('/api/announcements/')) {
