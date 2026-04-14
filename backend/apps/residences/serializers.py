@@ -1,5 +1,6 @@
-from rest_framework import serializers
 import re
+
+from rest_framework import serializers
 
 from .models import ResidenceBranding
 
@@ -14,6 +15,7 @@ class ResidenceBrandingSerializer(serializers.ModelSerializer):
             "logo_url",
             "favicon_url",
             "custom_css",
+            "legal_terms",
             "updated_at",
         ]
         read_only_fields = ["updated_at"]
@@ -44,7 +46,7 @@ class ResidenceBrandingSerializer(serializers.ModelSerializer):
                 f"La URL del logo no debe exceder 200 caracteres (proporcionados: {len(value)})"
             )
 
-        if not value.startswith(("http://", "https://")): #NOSONAR
+        if not value.startswith(("http://", "https://")):  # NOSONAR
             raise serializers.ValidationError(
                 "La URL del logo debe comenzar con http:// o https://"
             )
@@ -61,7 +63,7 @@ class ResidenceBrandingSerializer(serializers.ModelSerializer):
                 f"La URL del favicon no debe exceder 200 caracteres (proporcionados: {len(value)})"
             )
 
-        if not value.startswith(("http://", "https://")): #NOSONAR
+        if not value.startswith(("http://", "https://")):  # NOSONAR
             raise serializers.ValidationError(
                 "La URL del favicon debe comenzar con http:// o https://"
             )

@@ -10,6 +10,7 @@ export interface ResidenceBranding {
   logo_url: string;
   favicon_url: string;
   custom_css: string;
+  legal_terms?: string;
   updated_at: string;
 }
 
@@ -20,6 +21,7 @@ export interface UpdateResidenceBrandingPayload {
   logo_url?: string;
   favicon_url?: string;
   custom_css?: string;
+  legal_terms?: string;
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
