@@ -30,6 +30,7 @@ type BrandingFormState = {
 };
 
 const URL_MAX_LENGTH = 200;
+const FALLBACK_COLOR = "#000000";
 
 const INITIAL_FORM: BrandingFormState = {
   primary_color: "#0F4C81",
@@ -50,6 +51,11 @@ function mapBrandingToForm(branding: ResidenceBranding): BrandingFormState {
     // 🟢 Si el admin borra el texto, le volvemos a cargar el de por defecto
     legal_terms: branding.legal_terms || DEFAULT_LEGAL_TEXT,
   };
+}
+
+function normalizeHexColorOrFallback(value: string): string {
+  const normalized = (value || "").trim().toUpperCase();
+  return /^#[0-9A-F]{6}$/.test(normalized) ? normalized : FALLBACK_COLOR;
 }
 
 export function AdminBrandingPage() {
@@ -138,10 +144,17 @@ export function AdminBrandingPage() {
   };
 
   const handleColorChange = (field: keyof BrandingFormState, value: string) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
+    setForm((prev) => ({ ...prev, [field]: normalizeHexColorOrFallback(value) }));
     if (fieldErrors[field]) {
       setFieldErrors((prev) => ({ ...prev, [field]: "" }));
     }
+  };
+
+  const handleColorBlur = (field: keyof BrandingFormState) => {
+    setForm((prev) => ({
+      ...prev,
+      [field]: normalizeHexColorOrFallback(String(prev[field] || "")),
+    }));
   };
 
   const handleInputChange = (field: keyof BrandingFormState, value: string) => {
@@ -182,9 +195,9 @@ export function AdminBrandingPage() {
   };
 
   const buildPayload = (): UpdateResidenceBrandingPayload => ({
-    primary_color: form.primary_color,
-    secondary_color: form.secondary_color,
-    accent_color: form.accent_color,
+    primary_color: normalizeHexColorOrFallback(form.primary_color),
+    secondary_color: normalizeHexColorOrFallback(form.secondary_color),
+    accent_color: normalizeHexColorOrFallback(form.accent_color),
     logo_url: form.logo_url.trim(),
     favicon_url: form.favicon_url.trim(),
     legal_terms: form.legal_terms.trim(),
@@ -258,7 +271,7 @@ export function AdminBrandingPage() {
                   <div className="flex items-center gap-3">
                     <input
                       type="color"
-                      value={form[item.field as keyof BrandingFormState] as string}
+                      value={normalizeHexColorOrFallback(form[item.field as keyof BrandingFormState] as string)}
                       onChange={(event) => handleColorChange(item.field as keyof BrandingFormState, event.target.value)}
                       className="h-10 w-14 cursor-pointer rounded border border-gray-200 bg-white"
                     />
@@ -266,6 +279,7 @@ export function AdminBrandingPage() {
                       type="text"
                       value={form[item.field as keyof BrandingFormState] as string}
                       onChange={(event) => handleInputChange(item.field as keyof BrandingFormState, event.target.value)}
+                      onBlur={() => handleColorBlur(item.field as keyof BrandingFormState)}
                       className="h-10 w-full rounded-lg border border-gray-200 px-3 text-sm outline-none focus:border-primary"
                       placeholder="#000000"
                     />

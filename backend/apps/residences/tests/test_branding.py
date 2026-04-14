@@ -226,37 +226,34 @@ class ResidenceBrandingTests(FastTenantTestCase):
     # --- Validation Tests ---
 
     def test_patch_branding_invalid_primary_color_format(self):
-        """Invalid hex color for primary should fail."""
+        """Invalid hex color for primary should fallback to black."""
         payload = {
             "primary_color": "invalid-color",
         }
         response = self._patch_json(self.admin_client, payload)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-        error_data = response.json()
-        self.assertIn("primary_color", error_data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(data["primary_color"], "#000000")
 
     def test_patch_branding_invalid_secondary_color_format(self):
-        """Invalid hex color for secondary should fail."""
+        """Invalid hex color for secondary should fallback to black."""
         payload = {
             "secondary_color": "#GGGGGG",
         }
         response = self._patch_json(self.admin_client, payload)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-        error_data = response.json()
-        self.assertIn("secondary_color", error_data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(data["secondary_color"], "#000000")
 
     def test_patch_branding_invalid_accent_color_format(self):
-        """Invalid hex color for accent should fail."""
+        """Invalid hex color for accent should fallback to black."""
         payload = {
             "accent_color": "#12345",  # Only 5 chars instead of 6
         }
         response = self._patch_json(self.admin_client, payload)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-        error_data = response.json()
-        self.assertIn("accent_color", error_data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(data["accent_color"], "#000000")
 
     def test_patch_branding_logo_url_too_long(self):
         """Logo URL exceeding 200 chars should fail."""

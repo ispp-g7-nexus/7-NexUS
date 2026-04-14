@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   createSpace,
   deactivateSpace,
+  getSpace,
   listAdminSpaces,
   listSpaceReservations,
   updateSpace,
@@ -76,6 +77,14 @@ describe('services/adminSpaces', () => {
     })
   })
 
+  it('getSpace consulta el detalle del espacio', async () => {
+    mockedFetchWithAuth.mockResolvedValue(mockJsonResponse({ id: 3, name: 'Sala detalle' }))
+
+    await getSpace(3)
+
+    expect(mockedFetchWithAuth).toHaveBeenCalledWith('/api/admin/spaces/3/', undefined)
+  })
+
   it('listSpaceReservations aplica status como query param', async () => {
     mockedFetchWithAuth.mockResolvedValue(mockJsonResponse([]))
 
@@ -87,11 +96,38 @@ describe('services/adminSpaces', () => {
     )
   })
 
+  it('listSpaceReservations omite query param cuando no hay filtro', async () => {
+    mockedFetchWithAuth.mockResolvedValue(mockJsonResponse([]))
+
+    await listSpaceReservations(11)
+
+    expect(mockedFetchWithAuth).toHaveBeenCalledWith(
+      '/api/admin/spaces/11/reservations/',
+      undefined,
+    )
+  })
+
   it('lanza ApiError cuando backend devuelve detail', async () => {
     mockedFetchWithAuth.mockResolvedValue(mockJsonResponse({ detail: 'Sin permisos' }, 403))
 
     const error = await listAdminSpaces().catch((caught) => caught)
     expect(error).toEqual(expect.any(ApiError))
     expect(error).toMatchObject({ message: 'Sin permisos', status: 403 })
+  })
+
+  it('usa el mensaje generico de permisos cuando la respuesta no trae JSON', async () => {
+    mockedFetchWithAuth.mockResolvedValue({
+      ok: false,
+      status: 403,
+      json: vi.fn().mockRejectedValue(new Error('invalid json')),
+    } as unknown as Response)
+
+    const error = await listAdminSpaces().catch((caught) => caught)
+
+    expect(error).toEqual(expect.any(ApiError))
+    expect(error).toMatchObject({
+      message: 'No tienes permisos para realizar esta acción.',
+      status: 403,
+    })
   })
 })

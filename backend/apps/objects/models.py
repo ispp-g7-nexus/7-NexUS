@@ -11,7 +11,7 @@ class Object(models.Model):
     residence = models.ForeignKey('residences.Residence', on_delete=models.CASCADE, related_name='residence_objects')
     available = models.BooleanField(default=True)
     stock_total = models.PositiveIntegerField(default=1)
-    image_url = models.URLField(blank=True, null=True)
+    image_url = models.URLField(max_length=300, blank=True, null=True)
     tags = models.CharField(max_length=255, blank=True)
     labels = models.ManyToManyField('ObjectLabel', blank=True, related_name='tagged_objects')
     created_at = models.DateTimeField(auto_now_add=True)

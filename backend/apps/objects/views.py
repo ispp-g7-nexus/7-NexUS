@@ -2,6 +2,8 @@ import json
 import re
 from datetime import datetime, time, timedelta
 from typing import Any, Iterable
+from django.core.exceptions import ValidationError
+from django.core.validators import URLValidator
 from django.http import HttpResponse, JsonResponse
 from django.views import View
 from django.utils.decorators import method_decorator
@@ -35,6 +37,12 @@ OBJECT_RESERVATION_INTERVAL_MINUTES = 60
 ACTIVE_RENTAL_STATUSES = ["ACTIVE", "IN_PROGRESS"]
 ADMIN_CANCELLATION_REASON_MAX_LENGTH = 200
 RESERVATION_REMINDER_WINDOW = timedelta(hours=1)
+OBJECT_NAME_MAX_LENGTH = 30
+OBJECT_DESCRIPTION_MAX_LENGTH = 255
+OBJECT_LOCATION_MAX_LENGTH = 100
+OBJECT_IMAGE_URL_MAX_LENGTH = 300
+OBJECT_LABEL_MAX_LENGTH = 15
+HTTP_URL_VALIDATOR = URLValidator(schemes=["http", "https"])
 
 
 def _parse_datetime_or_none(value):
@@ -48,12 +56,39 @@ def _validate_object_name(raw_name) -> tuple[str, str | None]:
     name = str(raw_name or "").strip()
     if not name:
         return "", "El nombre del objeto es obligatorio."
+    if len(name) > OBJECT_NAME_MAX_LENGTH:
+        return "", f"El nombre del objeto no puede superar {OBJECT_NAME_MAX_LENGTH} caracteres."
     if not OBJECT_NAME_PATTERN.fullmatch(name):
         return (
             "",
             "El nombre contiene caracteres no válidos. Usa letras, números, espacios, guiones, paréntesis, comas o puntos.",
         )
     return name, None
+
+
+def _validate_optional_text(raw_value, *, field_name: str, max_length: int) -> tuple[str, str | None]:
+    value = str(raw_value or "").strip()
+    if len(value) > max_length:
+        return "", f"El campo '{field_name}' no puede superar {max_length} caracteres."
+    return value, None
+
+
+def _validate_optional_url(raw_value, *, field_name: str, max_length: int) -> tuple[str, str | None]:
+    value, error = _validate_optional_text(
+        raw_value,
+        field_name=field_name,
+        max_length=max_length,
+    )
+    if error:
+        return "", error
+
+    if value:
+        try:
+            HTTP_URL_VALIDATOR(value)
+        except ValidationError:
+            return "", f"El campo '{field_name}' debe ser una URL válida."
+
+    return value, None
 
 
 def _sync_started_rentals_for_residence(residence) -> None:
@@ -339,6 +374,30 @@ class ObjectListView(AuthenticatedView):
         if name_error:
             return JsonResponse({"detail": name_error}, status=400)
 
+        description, description_error = _validate_optional_text(
+            body.get("description"),
+            field_name="description",
+            max_length=OBJECT_DESCRIPTION_MAX_LENGTH,
+        )
+        if description_error:
+            return JsonResponse({"detail": description_error}, status=400)
+
+        location, location_error = _validate_optional_text(
+            body.get("location"),
+            field_name="location",
+            max_length=OBJECT_LOCATION_MAX_LENGTH,
+        )
+        if location_error:
+            return JsonResponse({"detail": location_error}, status=400)
+
+        image_url, image_url_error = _validate_optional_url(
+            body.get("image_url"),
+            field_name="image_url",
+            max_length=OBJECT_IMAGE_URL_MAX_LENGTH,
+        )
+        if image_url_error:
+            return JsonResponse({"detail": image_url_error}, status=400)
+
         try:
             raw_stock_total = body.get('stock_total', 1)
             stock_total = int(1 if raw_stock_total is None else raw_stock_total)
@@ -359,12 +418,14 @@ class ObjectListView(AuthenticatedView):
             if len(labels) != len(set(label_ids)):
                 return JsonResponse({"detail": "Alguna etiqueta no existe o no pertenece a la residencia."}, status=400)
             computed_tags = ", ".join(sorted({label.name for label in labels}))
+            if len(computed_tags) > 255:
+                return JsonResponse({"detail": "La combinación de etiquetas supera 255 caracteres."}, status=400)
             obj = Object.objects.create(
                 name=name,
-                description=body.get('description', ''),
-                location=body.get('location', ''),
+                description=description,
+                location=location,
                 stock_total=stock_total,
-                image_url=body.get('image_url', None),
+                image_url=image_url or None,
                 tags=computed_tags,
                 residence=request.residence,
             )
@@ -406,8 +467,8 @@ class ObjectLabelListCreateView(AuthenticatedView):
         if not name:
             return JsonResponse({"detail": "El nombre de la etiqueta es obligatorio."}, status=400)
 
-        if len(name) > 30:
-            return JsonResponse({"detail": "La etiqueta no puede superar 30 caracteres."}, status=400)
+        if len(name) > OBJECT_LABEL_MAX_LENGTH:
+            return JsonResponse({"detail": f"La etiqueta no puede superar {OBJECT_LABEL_MAX_LENGTH} caracteres."}, status=400)
 
         label, created = ObjectLabel.objects.get_or_create(
             residence=request.residence,
