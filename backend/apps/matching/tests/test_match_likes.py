@@ -1,16 +1,28 @@
 import json
+import unittest
 
-from django.contrib.auth import get_user_model
-from django.db import IntegrityError
-from django_tenants.test.cases import FastTenantTestCase
-from django_tenants.test.client import TenantClient
+from django.conf import settings
 
-from apps.chats.models import PrivateConversation
-from apps.common.services import build_access_token
-from apps.matching.models import MatchLike, ResidenceCompatibility
-from apps.membership.models import Membership, Role
-from apps.onboarding.models import ResidentPreference
-from apps.residences.models import Residence, ResidenceDomain
+# apps.matching está detrás de un feature flag: solo se instala en INSTALLED_APPS
+# si ``MATCHING_ENABLED=1``. Cuando el flag está apagado (default en sprint3),
+# los modelos ni siquiera tienen app_label, así que evitamos siquiera importar
+# este módulo.
+if not getattr(settings, "MATCHING_ENABLED", False):
+    raise unittest.SkipTest(
+        "apps.matching está deshabilitado (MATCHING_ENABLED=0); se omiten sus tests."
+    )
+
+from django.contrib.auth import get_user_model  # noqa: E402
+from django.db import IntegrityError  # noqa: E402
+from django_tenants.test.cases import FastTenantTestCase  # noqa: E402
+from django_tenants.test.client import TenantClient  # noqa: E402
+
+from apps.chats.models import PrivateConversation  # noqa: E402
+from apps.common.services import build_access_token  # noqa: E402
+from apps.matching.models import MatchLike, ResidenceCompatibility  # noqa: E402
+from apps.membership.models import Membership, Role  # noqa: E402
+from apps.onboarding.models import ResidentPreference  # noqa: E402
+from apps.residences.models import Residence, ResidenceDomain  # noqa: E402
 
 TEST_PASSWORD = "demo1234"  # NOSONAR
 

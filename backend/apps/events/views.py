@@ -2,6 +2,8 @@ import json
 from datetime import datetime
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+from django.core.validators import URLValidator
 from django.db import transaction
 from django.db.utils import IntegrityError
 from django.http import JsonResponse
@@ -26,6 +28,14 @@ from .analytics import (
 )
 from .models import Event, EventParticipation
 from .permissions import is_events_admin
+
+EVENT_TITLE_MAX_LENGTH = 20
+EVENT_DESCRIPTION_MAX_LENGTH = 255
+EVENT_LOCATION_MAX_LENGTH = 100
+EVENT_IMAGE_URL_MAX_LENGTH = 300
+EVENT_TAG_MAX_LENGTH = 10
+EVENT_TAGS_MAX_LENGTH = 50
+HTTP_URL_VALIDATOR = URLValidator(schemes=["http", "https"])
 
 
 def _normalize_event_type(raw_event_type) -> str | None:
@@ -84,6 +94,8 @@ def _create_event_chat_group(
     """
     try:
         chat_name = f"Evento: {event.title} ({event.start_time.strftime('%d/%m/%Y')})"
+        # Keep chat names aligned with chat module limits.
+        chat_name = chat_name[:45]
 
         chat_group = ChatGroup.objects.create(
             residence=event.residence,
@@ -111,6 +123,61 @@ def _create_event_chat_group(
         return None, "Este evento ya tiene un chat asociado o el nombre del chat está duplicado."
     except Exception:
         return None, "No se pudo crear el grupo de chat para este evento."
+
+
+def _normalize_text_field(raw_value, *, field_name: str, max_length: int, required: bool) -> tuple[str, str | None]:
+    value = str(raw_value or "").strip()
+    if required and not value:
+        return "", f"El campo '{field_name}' es obligatorio."
+    if len(value) > max_length:
+        return "", f"El campo '{field_name}' no puede superar {max_length} caracteres."
+    return value, None
+
+
+def _normalize_optional_url_field(raw_value, *, field_name: str, max_length: int) -> tuple[str, str | None]:
+    value, error = _normalize_text_field(
+        raw_value,
+        field_name=field_name,
+        max_length=max_length,
+        required=False,
+    )
+    if error:
+        return "", error
+
+    if value:
+        try:
+            HTTP_URL_VALIDATOR(value)
+        except ValidationError:
+            return "", f"El campo '{field_name}' debe ser una URL válida."
+
+    return value, None
+
+
+def _normalize_event_tags(raw_tags, *, required: bool) -> tuple[str, str | None]:
+    tags_value = str(raw_tags or "").strip()
+    if not tags_value:
+        if required:
+            return "", "Debes indicar al menos una etiqueta válida para el evento."
+        return "", None
+
+    tags = [tag.strip() for tag in tags_value.split(",") if tag.strip()]
+    if required and not tags:
+        return "", "Debes indicar al menos una etiqueta válida para el evento."
+
+    for tag in tags:
+        if len(tag) > EVENT_TAG_MAX_LENGTH:
+            return "", (
+                "Cada etiqueta del evento no puede superar "
+                f"{EVENT_TAG_MAX_LENGTH} caracteres."
+            )
+
+    normalized = ",".join(tags)
+    if len(normalized) > EVENT_TAGS_MAX_LENGTH:
+        return "", (
+            "El listado de etiquetas no puede superar "
+            f"{EVENT_TAGS_MAX_LENGTH} caracteres en total."
+        )
+    return normalized, None
 
 
 def _publish_group_created_for_event(request, chat_group: ChatGroup) -> None:
@@ -407,23 +474,58 @@ class EventListView(AuthenticatedView):
                     {"detail": "Ya asistes a otro evento en ese horario."}, status=400
                 )
 
-            # Validar que no haya otro evento con el mismo título para la misma fecha
-            event_title = str(body.get("title") or "").strip()
-            if event_title:
-                event_date = start_time.date()
-                if Event.objects.filter(
-                    residence=request.residence,
-                    title__iexact=event_title,
-                    start_time__date=event_date,
-                ).exists():
-                    return JsonResponse(
-                        {
-                            "detail": f"Ya existe un evento con el título '{event_title}' para la fecha seleccionada."
-                        },
-                        status=400,
-                    )
+            event_title, title_error = _normalize_text_field(
+                body.get("title"),
+                field_name="title",
+                max_length=EVENT_TITLE_MAX_LENGTH,
+                required=True,
+            )
+            if title_error:
+                return JsonResponse({"detail": title_error}, status=400)
 
-            location = str(body.get("location") or "").strip()
+            description, description_error = _normalize_text_field(
+                body.get("description"),
+                field_name="description",
+                max_length=EVENT_DESCRIPTION_MAX_LENGTH,
+                required=True,
+            )
+            if description_error:
+                return JsonResponse({"detail": description_error}, status=400)
+
+            image_url, image_url_error = _normalize_optional_url_field(
+                body.get("image_url"),
+                field_name="image_url",
+                max_length=EVENT_IMAGE_URL_MAX_LENGTH,
+            )
+            if image_url_error:
+                return JsonResponse({"detail": image_url_error}, status=400)
+
+            tags, tags_error = _normalize_event_tags(body.get("tags"), required=True)
+            if tags_error:
+                return JsonResponse({"detail": tags_error}, status=400)
+
+            # Validar que no haya otro evento con el mismo título para la misma fecha
+            event_date = start_time.date()
+            if Event.objects.filter(
+                residence=request.residence,
+                title__iexact=event_title,
+                start_time__date=event_date,
+            ).exists():
+                return JsonResponse(
+                    {
+                        "detail": f"Ya existe un evento con el título '{event_title}' para la fecha seleccionada."
+                    },
+                    status=400,
+                )
+
+            location, location_error = _normalize_text_field(
+                body.get("location"),
+                field_name="location",
+                max_length=EVENT_LOCATION_MAX_LENGTH,
+                required=False,
+            )
+            if location_error:
+                return JsonResponse({"detail": location_error}, status=400)
             space_id = body.get("space_id")
 
             target_space = None
@@ -509,16 +611,16 @@ class EventListView(AuthenticatedView):
                         return reservation_error
 
                 event = Event.objects.create(
-                    title=body.get("title"),
-                    description=body.get("description"),
+                    title=event_title,
+                    description=description,
                     start_time=start_time,
                     end_time=end_time,
                     event_type=event_type,
                     location=location if event_type == Event.Type.EXTERNAL else "",
                     space=target_space,
                     reservation=reservation,
-                    image_url=body.get("image_url"),
-                    tags=body.get("tags"),
+                    image_url=image_url or None,
+                    tags=tags or None,
                     max_participants=normalized_max_participants,
                     residence=request.residence,
                     host=request.user,
@@ -606,28 +708,66 @@ class EventDetailView(AuthenticatedView):
                         status=400,
                     )
 
-            # Validar que no haya otro evento con el mismo título para la misma fecha
             raw_title = body.get("title", event.title)
-            event_title = str(raw_title or "").strip()
-            if event_title:
-                event_date = start_time.date()
-                if (
-                    Event.objects.filter(
-                        residence=request.residence,
-                        title__iexact=event_title,
-                        start_time__date=event_date,
-                    )
-                    .exclude(id=event_id)
-                    .exists()
-                ):
-                    return JsonResponse(
-                        {
-                            "detail": f"Ya existe otro evento con el título '{event_title}' para la fecha seleccionada."
-                        },
-                        status=400,
-                    )
+            event_title, title_error = _normalize_text_field(
+                raw_title,
+                field_name="title",
+                max_length=EVENT_TITLE_MAX_LENGTH,
+                required=True,
+            )
+            if title_error:
+                return JsonResponse({"detail": title_error}, status=400)
 
-            location = str(body.get("location", event.location) or "").strip()
+            description, description_error = _normalize_text_field(
+                body.get("description", event.description),
+                field_name="description",
+                max_length=EVENT_DESCRIPTION_MAX_LENGTH,
+                required=True,
+            )
+            if description_error:
+                return JsonResponse({"detail": description_error}, status=400)
+
+            image_url, image_url_error = _normalize_optional_url_field(
+                body.get("image_url", event.image_url),
+                field_name="image_url",
+                max_length=EVENT_IMAGE_URL_MAX_LENGTH,
+            )
+            if image_url_error:
+                return JsonResponse({"detail": image_url_error}, status=400)
+
+            tags, tags_error = _normalize_event_tags(
+                body.get("tags", event.tags),
+                required=True,
+            )
+            if tags_error:
+                return JsonResponse({"detail": tags_error}, status=400)
+
+            # Validar que no haya otro evento con el mismo título para la misma fecha
+            event_date = start_time.date()
+            if (
+                Event.objects.filter(
+                    residence=request.residence,
+                    title__iexact=event_title,
+                    start_time__date=event_date,
+                )
+                .exclude(id=event_id)
+                .exists()
+            ):
+                return JsonResponse(
+                    {
+                        "detail": f"Ya existe otro evento con el título '{event_title}' para la fecha seleccionada."
+                    },
+                    status=400,
+                )
+
+            location, location_error = _normalize_text_field(
+                body.get("location", event.location),
+                field_name="location",
+                max_length=EVENT_LOCATION_MAX_LENGTH,
+                required=False,
+            )
+            if location_error:
+                return JsonResponse({"detail": location_error}, status=400)
             requested_space_id = body.get("space_id")
             max_participants_provided = "max_participants" in body
 
@@ -757,16 +897,16 @@ class EventDetailView(AuthenticatedView):
                     new_reservation = None
                     new_location = location
 
-                event.title = body.get("title", event.title)
-                event.description = body.get("description", event.description)
+                event.title = event_title
+                event.description = description
                 event.start_time = start_time
                 event.end_time = end_time
                 event.event_type = event_type
                 event.location = new_location
                 event.space = new_space
                 event.reservation = new_reservation
-                event.image_url = body.get("image_url", event.image_url)
-                event.tags = body.get("tags", event.tags)
+                event.image_url = image_url or None
+                event.tags = tags or None
                 event.max_participants = normalized_max_participants
                 event.save()
 

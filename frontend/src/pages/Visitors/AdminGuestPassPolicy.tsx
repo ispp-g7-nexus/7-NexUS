@@ -26,6 +26,11 @@ const DURATION_MAX = 168;
 const CONCURRENT_MIN = 1;
 const CONCURRENT_MAX = 20;
 
+function normalizeTimeValue(value: string | null | undefined): string {
+  if (!value) return "";
+  return value.trim().slice(0, 5);
+}
+
 function validatePolicy(form: PolicyForm): PolicyErrors {
   const errors: PolicyErrors = {};
 
@@ -69,8 +74,8 @@ export function AdminGuestPassPolicyPage() {
       setForm({
         max_duration_hours: String(policy.max_duration_hours),
         max_concurrent_passes: String(policy.max_concurrent_passes),
-        visit_start_time: policy.visit_start_time || "",
-        visit_end_time: policy.visit_end_time || "",
+        visit_start_time: normalizeTimeValue(policy.visit_start_time),
+        visit_end_time: normalizeTimeValue(policy.visit_end_time),
       });
       setErrors({});
     } catch (error) {
@@ -109,8 +114,8 @@ export function AdminGuestPassPolicyPage() {
       setForm({
         max_duration_hours: String(updated.max_duration_hours),
         max_concurrent_passes: String(updated.max_concurrent_passes),
-        visit_start_time: updated.visit_start_time || "",
-        visit_end_time: updated.visit_end_time || "",
+        visit_start_time: normalizeTimeValue(updated.visit_start_time),
+        visit_end_time: normalizeTimeValue(updated.visit_end_time),
       });
       setErrors({});
       toast.success("Configuración de visitantes guardada.");

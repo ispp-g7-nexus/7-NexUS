@@ -6,6 +6,7 @@ from django_tenants.test.client import TenantClient
 
 from apps.residences.models import Residence, ResidenceDomain
 from apps.spaces.models import CommonSpace, SpaceReservation
+from apps.spaces.tests import ensure_tenant_domain, make_tenant_client
 
 
 class CommonSpaceModelTests(FastTenantTestCase):
@@ -28,14 +29,9 @@ class CommonSpaceModelTests(FastTenantTestCase):
 
     def setUp(self):
         super().setUp()
+        ensure_tenant_domain(self.tenant, self.get_test_tenant_domain())
         domain = self.get_test_tenant_domain()
-        self.client = TenantClient(self.tenant, SERVER_NAME=domain, HTTP_HOST=domain)
-        self.client.defaults["HTTP_HOST"] = domain
-        try:
-            self.client.tenant = self.tenant
-        except Exception:
-            pass
-        self.client.defaults["HTTP_X_TEST_TENANT"] = self.tenant.slug
+        self.client = make_tenant_client(self.tenant, domain)
 
         self.residence = Residence.objects.create(
             name="Residencia Models",
@@ -120,9 +116,10 @@ class SpaceReservationModelTests(FastTenantTestCase):
 
     def setUp(self):
         super().setUp()
+        ensure_tenant_domain(self.tenant, self.get_test_tenant_domain())
         from django.contrib.auth import get_user_model
 
-        self.client = TenantClient(self.tenant)
+        self.client = make_tenant_client(self.tenant, self.get_test_tenant_domain())
         User = get_user_model()
         self.user = User.objects.create_user(username="u1", email="u1@t.local")
 

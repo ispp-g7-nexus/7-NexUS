@@ -53,6 +53,10 @@ class DummyInvalidJsonFireworksResponse:
 )
 class PackageApiTests(TenantTestCase):
     @classmethod
+    def get_test_schema_name(cls):
+        return "test_packages_api"
+
+    @classmethod
     def get_test_tenant_domain(cls):
         return "packages.test.local"
 

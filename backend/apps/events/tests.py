@@ -533,6 +533,7 @@ class EventListViewTests(ViewTestsBase):
         payload = {
             "title": "New Internal",
             "description": "desc",
+            "tags": "social",
             "event_type": "internal",
             "start_time": (self.now + timedelta(hours=3)).isoformat(),
             "end_time": (self.now + timedelta(hours=4)).isoformat(),
@@ -572,6 +573,7 @@ class EventListViewTests(ViewTestsBase):
         payload = {
             "title": "New External",
             "description": "desc",
+            "tags": "social",
             "event_type": "external",
             "start_time": (self.now + timedelta(hours=3)).isoformat(),
             "end_time": (self.now + timedelta(hours=4)).isoformat(),
@@ -604,6 +606,7 @@ class EventListViewTests(ViewTestsBase):
         payload = {
             "title": "Admin Created",
             "description": "desc",
+            "tags": "social",
             "event_type": "external",
             "start_time": (self.now + timedelta(hours=3)).isoformat(),
             "end_time": (self.now + timedelta(hours=4)).isoformat(),
@@ -690,6 +693,8 @@ class EventDetailViewTests(ViewTestsBase):
         super().setUp()
         self.event_ext = Event.objects.create(
             title="Detail Ext",
+            description="Descripción del evento externo",
+            tags="social",
             start_time=self.now + timedelta(hours=1),
             end_time=self.now + timedelta(hours=2),
             event_type=Event.Type.EXTERNAL,
@@ -699,6 +704,8 @@ class EventDetailViewTests(ViewTestsBase):
         )
         self.event_int = Event.objects.create(
             title="Detail Int",
+            description="Descripción del evento interno",
+            tags="social",
             start_time=self.now + timedelta(hours=4),
             end_time=self.now + timedelta(hours=5),
             event_type=Event.Type.INTERNAL,
@@ -1105,6 +1112,9 @@ class EventDetailViewTests(ViewTestsBase):
         mock_event = MagicMock()
         mock_event.id = 999
         mock_event.title = "Internal Test Event"
+        mock_event.description = "Descripción"
+        mock_event.tags = "social"
+        mock_event.image_url = ""
         mock_event.event_type = Event.Type.INTERNAL
         mock_event.space_id = self.space.id
         mock_event.start_time = self.now + timedelta(hours=4)
@@ -1621,16 +1631,30 @@ class MoreEventViewTests(ViewTestsBase):
 
     def test_post_event_duplicate_title_same_date(self):
         from apps.events.views import EventListView
+        # Usamos una hora fija a mediodía local para que el lookup start_time__date
+        # no cruce fronteras de día por el desfase UTC→local.
+        target_day = (self.now + timedelta(days=1)).replace(
+            hour=12, minute=0, second=0, microsecond=0
+        )
         Event.objects.create(
-            title="Duplicate", start_time=self.now+timedelta(days=1), end_time=self.now+timedelta(days=1, hours=1),
-            event_type=Event.Type.EXTERNAL, residence=self.residence, host=self.host_user, location="L"
+            title="Duplicate",
+            description="Descripción",
+            tags="social",
+            start_time=target_day,
+            end_time=target_day + timedelta(hours=1),
+            event_type=Event.Type.EXTERNAL,
+            residence=self.residence,
+            host=self.host_user,
+            location="L",
         )
         payload = {
             "title": "Duplicate",
+            "description": "Descripción",
+            "tags": "social",
             "event_type": "external",
-            "start_time": (self.now + timedelta(days=1)).isoformat(),
-            "end_time": (self.now + timedelta(days=1, hours=1)).isoformat(),
-            "location": "L2"
+            "start_time": target_day.isoformat(),
+            "end_time": (target_day + timedelta(hours=1)).isoformat(),
+            "location": "L2",
         }
         req = self.setup_request(self.rf.post("/", data=json.dumps(payload), content_type="application/json"))
         res = EventListView.as_view()(req)
@@ -1640,14 +1664,17 @@ class MoreEventViewTests(ViewTestsBase):
     def test_put_event_errors(self):
         from apps.events.views import EventDetailView
         event = Event.objects.create(
-            title="E", start_time=self.now+timedelta(hours=1), end_time=self.now+timedelta(hours=2),
+            title="E",
+            description="Descripción",
+            tags="social",
+            start_time=self.now+timedelta(hours=1), end_time=self.now+timedelta(hours=2),
             event_type=Event.Type.EXTERNAL, residence=self.residence, host=self.host_user, location="L"
         )
         # 1. Time error (invalid/empty)
         req = self.setup_request(self.rf.put("/", data=json.dumps({"start_time": ""}), content_type="application/json"), user=self.host_user)
         res = EventDetailView.as_view()(req, event_id=event.id)
         self.assertEqual(res.status_code, 400)
-        
+
         # 2. Limit error (internal) - assigning reservation to satisfy constraint
         event.event_type = Event.Type.INTERNAL
         event.space = self.space

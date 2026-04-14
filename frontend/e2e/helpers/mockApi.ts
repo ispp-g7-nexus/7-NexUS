@@ -141,6 +141,13 @@ type Overrides = {
   bedroomAnalytics?: unknown
   packageAnalytics?: unknown
   incidenceAnalytics?: unknown
+  adminSpaces?: unknown[]
+  adminSpaceDetail?: unknown
+  adminSpaceReservations?: {
+    all?: unknown[]
+    active?: unknown[]
+    cancelled?: unknown[]
+  }
 }
 
 async function handleBedroomsRoute(route: Route, path: string, overrides: Overrides) {
@@ -171,6 +178,41 @@ async function handleIncidencesRoute(route: Route, path: string, overrides: Over
   }
 }
 
+async function handleSpacesRoute(route: Route, requestUrl: string, path: string, overrides: Overrides) {
+  const url = new URL(requestUrl)
+  const adminSpaces = overrides.adminSpaces ?? []
+  const defaultAdminSpaceDetail =
+    overrides.adminSpaceDetail ??
+    (Array.isArray(adminSpaces) && adminSpaces.length > 0 ? adminSpaces[0] : null)
+
+  if (path === '/api/admin/spaces/') {
+    await route.fulfill(json(adminSpaces))
+    return
+  }
+
+  if (/^\/api\/admin\/spaces\/\d+\/reservations\/$/.test(path)) {
+    const status = (url.searchParams.get('status') ?? 'all') as 'all' | 'active' | 'cancelled'
+    const reservationsByStatus = overrides.adminSpaceReservations ?? {}
+    const fallbackAll = reservationsByStatus.all ?? []
+    const response =
+      status === 'active'
+        ? reservationsByStatus.active ?? fallbackAll
+        : status === 'cancelled'
+          ? reservationsByStatus.cancelled ?? fallbackAll
+          : fallbackAll
+
+    await route.fulfill(json(response))
+    return
+  }
+
+  if (/^\/api\/admin\/spaces\/\d+\/$/.test(path)) {
+    await route.fulfill(json(defaultAdminSpaceDetail ?? {}))
+    return
+  }
+
+  await route.fulfill(json([]))
+}
+
 export async function mockAdminApi(page: Page, overrides: Overrides = {}) {
   const guestPasses = overrides.guestPasses ?? []
 
@@ -195,7 +237,9 @@ export async function mockAdminApi(page: Page, overrides: Overrides = {}) {
       await handlePackagesRoute(route, path, overrides)
     } else if (path.startsWith('/api/announcements/') || path.startsWith('/api/events/') || path.startsWith('/api/residents/') || path.startsWith('/api/staff/') || path.startsWith('/api/membership/')) {
       await route.fulfill(json([]))
-    } else if (path.startsWith('/api/spaces/') || path.startsWith('/api/admin/spaces/') || path.startsWith('/api/objects/') || path.startsWith('/api/admin/objects/') || path.startsWith('/api/chats/')) {
+    } else if (path.startsWith('/api/spaces/') || path.startsWith('/api/admin/spaces/')) {
+      await handleSpacesRoute(route, route.request().url(), path, overrides)
+    } else if (path.startsWith('/api/objects/') || path.startsWith('/api/admin/objects/') || path.startsWith('/api/chats/')) {
       await route.fulfill(json([]))
     } else {
       throw new Error(`Unmocked API route: ${route.request().url()}`)

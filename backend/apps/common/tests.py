@@ -364,12 +364,18 @@ class CommonViewsTests(FastTenantTestCase):
 
     @patch("apps.common.views.resolve_user_from_request")
     def test_auth_me_view_user_not_found(self, mock_resolve):
-        """Camino triste: el token es válido pero el usuario ya no existe"""
+        """Camino triste: el token resuelve a un user_id que ya no existe.
+
+        GET devuelve ``authenticated=False`` porque la vista comprueba que
+        el usuario del token existe realmente en la base de datos. El PATCH
+        con el mismo id inválido responde 404.
+        """
         mock_resolve.return_value = {"user_id": "99999"}  # ID inventado
         url = reverse("auth-me")
 
         response_get = self.student_client.get(url)
-        self.assertTrue(response_get.json()["authenticated"])
+        self.assertFalse(response_get.json()["authenticated"])
+        self.assertIsNone(response_get.json()["user"])
 
         response_patch = self.student_client.patch(
             url, data=json.dumps({"first_name": "X"}), content_type="application/json"
@@ -451,10 +457,14 @@ class CommonViewsTests(FastTenantTestCase):
         self.assertEqual(resp_invalid.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_student_profile_not_found(self):
-        """GET a perfil que no existe usando a admin que no tiene perfil creado"""
+        """GET a perfil para un usuario sin ``StudentProfile`` creado.
+
+        La vista usa ``get_or_create``, por lo que responde 200 con el perfil
+        recién generado (en lugar del 404 del comportamiento original).
+        """
         url = reverse("student-profile")
         response = self.admin_client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         
 
 class AdminCreateResidentViewsTests(FastTenantTestCase):

@@ -20,6 +20,10 @@ TEST_PASSWORD = "demo1234"  # NOSONAR
 class PackageAnalyticsViewTests(TenantTestCase):
 
     @classmethod
+    def get_test_schema_name(cls):
+        return "test_package_analytics"
+
+    @classmethod
     def get_test_tenant_domain(cls):
         return "package-analytics.test.local"
 
