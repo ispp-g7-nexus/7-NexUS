@@ -1,4 +1,5 @@
 import { fetchWithAuth } from "../utils/api";
+import { trackEvent } from "./analytics";
 
 const GUEST_PASSES_API_BASE = "/api/guest-passes";
 const ADMIN_GUEST_PASSES_API_BASE = "/api/admin/guest-passes";
@@ -257,7 +258,9 @@ export async function createMyGuestPass(payload: CreateGuestPassPayload): Promis
       forbiddenMessage: "No tienes permisos para crear pases de invitados.",
     });
   }
-  return (await response.json()) as GuestPass;
+  const pass = (await response.json()) as GuestPass;
+  trackEvent('guest_pass_created');
+  return pass;
 }
 
 export async function getMyGuestPassPolicy(): Promise<GuestPassPolicy> {
@@ -335,7 +338,9 @@ export async function updateAdminGuestPassPolicy(
       forbiddenMessage: "No tienes permisos para actualizar la configuración de visitantes.",
     });
   }
-  return (await response.json()) as GuestPassPolicy;
+  const policy = (await response.json()) as GuestPassPolicy;
+  trackEvent('guest_pass_policy_updated');
+  return policy;
 }
 
 export async function getAdminVisitorsAnalytics(

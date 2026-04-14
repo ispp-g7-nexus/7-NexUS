@@ -1,4 +1,6 @@
 // src/services/api.ts
+import { trackEvent } from "./analytics";
+
 const API_URL = import.meta.env.VITE_API_URL || "/api";
 export { API_URL };
 
@@ -40,6 +42,7 @@ export async function saveStudentProfile(profileData: Record<string, any>) {
     if (res.status === 401) throw new Error("Sesión no válida");
     if (!res.ok) throw new Error(`Error ${res.status}`);
 
+    trackEvent('student_profile_saved');
     return await res.json();
   } catch (error) {
     console.error("Error saving student profile:", error);
