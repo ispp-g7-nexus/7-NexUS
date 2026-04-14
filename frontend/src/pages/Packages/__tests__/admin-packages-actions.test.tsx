@@ -8,13 +8,9 @@ vi.mock('../../../services/packages', () => ({
   packagesService: {
     list: vi.fn(),
     create: vi.fn(),
-    scanLabel: vi.fn(),
-    markPending: vi.fn(),
-    markDelivered: vi.fn(),
-    markFailed: vi.fn(),
-    listStudent: vi.fn(),
-    getUnreadCount: vi.fn(),
-    getPendingCount: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+    previewLabel: vi.fn(),
   }
 }));
 
@@ -29,8 +25,16 @@ vi.mock('sonner', () => ({
     success: vi.fn(),
     error: vi.fn(),
     promise: vi.fn(),
+    info: vi.fn(),
   }
 }));
+
+global.ResizeObserver = class ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
+global.HTMLElement.prototype.hasPointerCapture = () => false;
 
 describe('AdminPackages Actions Coverage', () => {
   beforeEach(() => {
@@ -51,92 +55,81 @@ describe('AdminPackages Actions Coverage', () => {
     render(<AdminPackages />);
     await waitFor(() => expect(screen.getByText('TRACK1')).toBeInTheDocument());
 
-    const searchInput = screen.getByPlaceholderText(/Buscar/i);
-    fireEvent.change(searchInput, { target: { value: 'TRACK' } });
+    const searchInput = screen.getByPlaceholderText(/Buscar por/i);
+    fireEvent.change(searchInput, { target: { value: 'TRACK1' } });
+    
+    await waitFor(() => {
+      expect(screen.queryByText('TRACK2')).not.toBeInTheDocument();
+    });
   });
 
   it('opens create modal, fills form and submits', async () => {
     render(<AdminPackages />);
     await waitFor(() => expect(screen.getByText('TRACK1')).toBeInTheDocument());
 
-    // Click "Registrar llegada"
     const addBtn = screen.getByText('Registrar llegada');
     fireEvent.click(addBtn);
-
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument());
-    
-    // Fill tracking input
-    const trackingInput = screen.getByPlaceholderText(/Codigo de seguimiento/i);
-    if (trackingInput) {
-      fireEvent.change(trackingInput, { target: { value: 'NEWTRACK' } });
-    }
 
-    // Try submit using the exact text rendered by component
-    const submitBtns = screen.queryAllByRole('button');
-    const saveBtn = submitBtns.find(btn => btn.textContent?.includes('Guardar') || btn.textContent?.includes('Registrar') || btn.textContent?.includes('Añadir'));
-    if (saveBtn) {
-        fireEvent.click(saveBtn);
-    }
+    const trackingInput = screen.getByPlaceholderText(/seguimiento/i);
+    fireEvent.change(trackingInput, { target: { value: 'NEWTRACK' } });
+
+    packagesService.create.mockResolvedValue({ id: 5, tracking_number: 'NEWTRACK', status: 'RECEIVED' });
+    fireEvent.submit(trackingInput.closest('form')!);
   });
 
   it('performs actions on a package row (mark pending, deliver, fail)', async () => {
     render(<AdminPackages />);
     await waitFor(() => expect(screen.getByText('TRACK1')).toBeInTheDocument());
 
-    // Click all buttons that look like actions
-    const allButtons = screen.queryAllByRole('button');
-    allButtons.forEach(btn => {
-        if (!btn.disabled && btn.textContent !== 'Registrar llegada') {
-            fireEvent.click(btn);
-        }
-    });
+    const deliverBtns = screen.getAllByText('Entregar');
+    fireEvent.click(deliverBtns[0]);
 
-    const refreshBtns = screen.queryAllByText('Actualizar');
-    refreshBtns.forEach(btn => fireEvent.click(btn));
+    await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument());
+    packagesService.update.mockResolvedValue({ id: 1, tracking_number: 'TRACK1', status: 'DELIVERED' });
+    
+    const confirmBtn = screen.getByText('Sí, entregar');
+    fireEvent.click(confirmBtn);
+
+    await waitFor(() => {
+        expect(packagesService.update).toHaveBeenCalled();
+    });
   });
-});
 
   it('changes package filters and interacts with settings', async () => {
     render(<AdminPackages />);
     await waitFor(() => expect(screen.getByText('TRACK1')).toBeInTheDocument());
 
-    const selectors = screen.queryAllByRole('combobox');
-    if (selectors.length > 0) {
-      fireEvent.change(selectors[0], { target: { value: 'PENDING' }});
-    }
-
-    const radios = screen.queryAllByRole('radio');
-    if (radios.length > 0) {
-      fireEvent.click(radios[0]);
-    }
+    const refreshBtn = screen.getByText('Actualizar');
+    fireEvent.click(refreshBtn);
+    
+    await waitFor(() => {
+        expect(packagesService.list).toHaveBeenCalledTimes(2);
+    });
   });
 
   it('triggers editing flow', async () => {
     render(<AdminPackages />);
     await waitFor(() => expect(screen.getByText('TRACK1')).toBeInTheDocument());
 
-    // Expand menu actions
-    const ellipsisBtn = screen.queryAllByRole('button').filter(btn => btn.querySelector('svg'));
-    if (ellipsisBtn.length > 0) {
-      fireEvent.click(ellipsisBtn[0]);
-    }
+    const editBtns = screen.getAllByText('Editar');
+    fireEvent.click(editBtns[0]);
     
-    // Check if Edit shows up
-    const editBtn = screen.queryByText('Editar');
-});
+    await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument());
+    expect(screen.getByText('Editar paquete')).toBeInTheDocument();
+  });
+
   it('triggers editing, detail, check modals and error bounds', async () => {
     render(<AdminPackages />);
     await waitFor(() => expect(screen.getByText('TRACK1')).toBeInTheDocument());
 
-    const options = screen.queryAllByRole('button').filter(btn => btn.textContent?.includes('Registrar llegada') === false);
-    for (let idx = 0; idx < options.length; idx++) {
-       // Just clicking everything we find to blast through branch statements
-       fireEvent.click(options[idx]); 
-    }
+    const viewBtns = screen.getAllByText('Ver detalle');
+    fireEvent.click(viewBtns[0]);
+    
+    await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument());
   });
 
   it('triggers scan modal actions and closes', async () => {
-    // Quick scanner test
     render(<AdminPackages />);
     await waitFor(() => expect(screen.getByText('TRACK1')).toBeInTheDocument());
     
@@ -144,13 +137,10 @@ describe('AdminPackages Actions Coverage', () => {
     fireEvent.click(rootAddBtn);
     
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument());
-    
-    const labels = screen.queryAllByText(/Escanear/i);
-    labels.forEach(l => fireEvent.click(l));
-});
+    expect(screen.getByPlaceholderText(/Codigo de seguimiento/i)).toBeInTheDocument();
+  });
 
   it('handles permission and toast errors explicitly', async () => {
-    // Force a throw in listAdmin mock
     packagesService.list.mockRejectedValueOnce(new Error('Permission Denied'));
     
     render(<AdminPackages />);
@@ -158,3 +148,4 @@ describe('AdminPackages Actions Coverage', () => {
         expect(packagesService.list).toHaveBeenCalled();
     });
   });
+});

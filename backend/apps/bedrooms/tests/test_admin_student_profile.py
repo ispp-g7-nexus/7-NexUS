@@ -3,8 +3,7 @@ from django_tenants.test.cases import FastTenantTestCase
 from django_tenants.test.client import TenantClient
 
 from apps.membership.models import Membership, Role
-from apps.residences.models import Residence, ResidenceDomain
-from apps.residents.models import StudentProfile
+from apps.residences.models import Residence, ResidenceDomain, StudentProfile
 
 
 class AdminStudentProfileViewTests(FastTenantTestCase):
@@ -132,7 +131,7 @@ class AdminStudentProfileViewTests(FastTenantTestCase):
     def test_non_staff_is_forbidden(self):
         response = self.non_staff_client.get(self._url(self.student_user.id))
 
-        self.assertIn(response.status_code, [401, 403])
+        self.assertEqual(response.status_code, 403)
 
     def test_unauthenticated_is_rejected(self):
         response = self.anon_client.get(self._url(self.student_user.id))

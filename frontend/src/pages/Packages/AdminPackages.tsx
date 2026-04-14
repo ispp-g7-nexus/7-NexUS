@@ -1226,11 +1226,11 @@ export function AdminPackages() {
       const matchesSearch =
         !query ||
         packageItem.resident_name.toLowerCase().includes(query) ||
-        packageItem.carrier.toLowerCase().includes(query) ||
-        packageItem.tracking_number.toLowerCase().includes(query) ||
-        packageItem.notes.toLowerCase().includes(query) ||
-        packageItem.room.toLowerCase().includes(query) ||
-        packageItem.building.toLowerCase().includes(query);
+        (packageItem.carrier ?? "").toLowerCase().includes(query) ||
+        (packageItem.tracking_number ?? "").toLowerCase().includes(query) ||
+        (packageItem.notes ?? "").toLowerCase().includes(query) ||
+        (packageItem.room ?? "").toLowerCase().includes(query) ||
+        (packageItem.building ?? "").toLowerCase().includes(query);
 
       const matchesStatus =
         statusFilter === "all" || packageItem.status === statusFilter;

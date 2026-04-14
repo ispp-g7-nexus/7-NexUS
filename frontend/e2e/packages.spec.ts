@@ -1,4 +1,4 @@
-import { test, expect, type Page, type Route } from '@playwright/test'
+import { test, expect, type Route } from '@playwright/test'
 import { mockAdminApi } from './helpers/mockApi'
 
 const STUDENT_ME = {
@@ -78,7 +78,7 @@ test.describe('Packages module E2E', () => {
     let markAsViewedCalled = false;
 
     await page.route('**/api/**', async (route: Route) => {
-      const url = route.request().url(); console.log('INTERCEPT:', url);
+      const url = route.request().url(); 
       const path = new URL(url).pathname;
 
       if (path === '/api/preferences/my-preferences/' || path === '/api/onboarding/preferences/me/') {
@@ -120,13 +120,17 @@ test.describe('Packages module E2E', () => {
     await expect(page.locator('text=Amazon')).toBeVisible()
     await expect(page.locator('text=AMZ-123456789')).toBeVisible()
     
-    expect(markAsViewedCalled).toBeTruthy()
+      await expect.poll(() => markAsViewedCalled, { timeout: 5000 }).toBeTruthy()
 
-    await page.goto('/dashboard/student')
+      await page.goto('/dashboard/student')
 
-    await page.locator('button').filter({ has: page.locator('.lucide-bell') }).first().click(); /* Removed check 2 */
-    
-    await expect(page.locator('button:has-text("Paquetes") span.bg-red-500:has-text("1")').first()).toBeVisible()
+      await page.locator('button').filter({ has: page.locator('.lucide-bell') }).first().click(); /* Removed check 2 */
+      
+      // The pending packages button still shows 1 because there is 1 package pending collection
+      await expect(page.locator('button:has-text("Paquetes") span.bg-red-500:has-text("1")').first()).toBeVisible()
+      
+      // But the unread notifications badge should disappear because count is now 0
+      // Assuming unread packages go to the notification badge on the bell
+      await expect(page.locator('button').filter({ has: page.locator('.lucide-bell') }).locator('span.bg-red-500')).toHaveCount(0);
   })
-
 })
