@@ -7,7 +7,7 @@ from apps.membership.models import Membership, Role
 from apps.residences.models import Residence, ResidenceDomain
 import datetime
 
-PASSWORD = "demo1234"
+PASSWORD = "demo1234" #NOSONAR
 
 class MenuTestBase(FastTenantTestCase):
 
