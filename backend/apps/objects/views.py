@@ -341,7 +341,7 @@ class ObjectListView(AuthenticatedView):
 
         try:
             raw_stock_total = body.get('stock_total', 1)
-            stock_total = int(raw_stock_total or 1)
+            stock_total = int(1 if raw_stock_total is None else raw_stock_total)
             if stock_total < 1:
                 raise ValueError("stock_total debe ser positivo")
             label_ids_raw = body.get('label_ids', [])
