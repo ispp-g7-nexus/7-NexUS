@@ -7,13 +7,13 @@ import { residentsService } from '../../../services/residents';
 
 vi.mock('../../../services/packages', () => ({
   packagesService: {
-    listAdmin: vi.fn(),
+    list: vi.fn(),
     create: vi.fn(),
     scanLabel: vi.fn(),
     markPending: vi.fn(),
     markDelivered: vi.fn(),
     markFailed: vi.fn(),
-    listStudent: vi.fn(),
+    getMyPackages: vi.fn(),
     getUnreadCount: vi.fn(),
     getPendingCount: vi.fn(),
   }
@@ -36,7 +36,7 @@ vi.mock('react-router-dom', async () => {
 describe('Packages Module - Authentic Marvel Tests', () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    packagesService.listAdmin.mockResolvedValue([]);
+    packagesService.list.mockResolvedValue([]);
     residentsService.getResidents.mockResolvedValue([]);
   });
 
@@ -44,7 +44,7 @@ describe('Packages Module - Authentic Marvel Tests', () => {
     it('should render loading state initially and then display packages', async () => {
       render(<AdminPackages />);
       expect(screen.getByText('Paqueteria')).toBeInTheDocument();
-      await waitFor(() => expect(packagesService.listAdmin).toHaveBeenCalled());
+      await waitFor(() => expect(packagesService.list).toHaveBeenCalled());
     });
   });
 
