@@ -73,10 +73,74 @@ function json(data: unknown) {
 /**
  * Intercepts only /api/** requests — no interference with Vite HMR or JS bundles.
  */
+export const MOCK_BEDROOM_ANALYTICS = {
+  summary: {
+    total_rooms: 9,
+    total_capacity: 14,
+    total_occupants: 6,
+    occupation_rate: 43,
+  },
+  occupation_by_building: [
+    { edificio: 'Edificio A', total_rooms: 5, total_capacity: 7, occupied_rooms: 4, occupants: 4, occupation_rate: 57 },
+    { edificio: 'Edificio B', total_rooms: 4, total_capacity: 7, occupied_rooms: 2, occupants: 2, occupation_rate: 29 },
+  ],
+  occupation_by_type: [
+    { tipo: 'Individual', total_rooms: 5, capacity: 5, occupants: 3, occupation_rate: 60 },
+    { tipo: 'Doble', total_rooms: 2, capacity: 4, occupants: 2, occupation_rate: 50 },
+    { tipo: 'Triple', total_rooms: 2, capacity: 6, occupants: 1, occupation_rate: 17 },
+  ],
+  occupation_by_year: [
+    { year: 2024, count: 3 },
+    { year: 2025, count: 3 },
+    { year: 2026, count: 3 },
+  ],
+}
+
+export const MOCK_PACKAGE_ANALYTICS = {
+  summary: {
+    total_received_in_period: 12,
+    total_delivered_in_period: 8,
+    currently_pending: 4,
+  },
+  daily_activity: [
+    { date: '2026-03-15', received: 3, delivered: 1, cumulative_pending: 2 },
+    { date: '2026-03-16', received: 2, delivered: 2, cumulative_pending: 2 },
+    { date: '2026-03-17', received: 1, delivered: 1, cumulative_pending: 2 },
+  ],
+  by_resident: [
+    { resident_name: 'Ana García', received_count: 5, delivered_count: 3 },
+    { resident_name: 'Luis Martínez', received_count: 4, delivered_count: 3 },
+    { resident_name: 'Sofía Rodríguez', received_count: 3, delivered_count: 2 },
+  ],
+  meta: { from: '2026-03-15', to: '2026-03-17' },
+}
+
+export const MOCK_INCIDENCE_ANALYTICS = {
+  summary: {
+    total_created_in_period: 10,
+    total_resolved_in_period: 7,
+    currently_open: 3,
+    avg_resolution_hours: 48.5,
+  },
+  open_by_day: [
+    { date: '2026-03-15', open_count: 1 },
+    { date: '2026-03-16', open_count: 3 },
+    { date: '2026-03-17', open_count: 3 },
+  ],
+  resolved_by_staff: [
+    { staff_name: 'María García', resolved_count: 4 },
+    { staff_name: 'Carlos López', resolved_count: 3 },
+  ],
+  meta: { from: '2026-03-15', to: '2026-03-17' },
+}
+
 export async function mockAdminApi(page: Page, overrides: {
   bedrooms?: unknown[]
   guestPasses?: unknown[]
   auditLog?: unknown[]
+  bedroomAnalytics?: unknown
+  packageAnalytics?: unknown
+  incidenceAnalytics?: unknown
 } = {}) {
   const bedrooms = overrides.bedrooms ?? [MOCK_BEDROOM]
   const guestPasses = overrides.guestPasses ?? []
@@ -91,6 +155,8 @@ export async function mockAdminApi(page: Page, overrides: {
     } else if (path.startsWith('/api/bedrooms/')) {
       if (path === '/api/bedrooms/') {
         await route.fulfill(json(bedrooms))
+      } else if (path === '/api/bedrooms/analytics/') {
+        await route.fulfill(json(overrides.bedroomAnalytics ?? MOCK_BEDROOM_ANALYTICS))
       } else if (path.endsWith('/audit/')) {
         const auditLog = overrides.auditLog ?? []
         await route.fulfill(json(auditLog))
@@ -106,7 +172,11 @@ export async function mockAdminApi(page: Page, overrides: {
     } else if (path.startsWith('/api/announcements/')) {
       await route.fulfill(json([]))
     } else if (path.startsWith('/api/incidences/')) {
-      await route.fulfill(json([]))
+      if (path === '/api/incidences/analytics/') {
+        await route.fulfill(json(overrides.incidenceAnalytics ?? MOCK_INCIDENCE_ANALYTICS))
+      } else {
+        await route.fulfill(json([]))
+      }
     } else if (path.startsWith('/api/residents/')) {
       await route.fulfill(json([]))
     } else if (path.startsWith('/api/staff/')) {
@@ -118,7 +188,11 @@ export async function mockAdminApi(page: Page, overrides: {
     } else if (path.startsWith('/api/events/')) {
       await route.fulfill(json([]))
     } else if (path.startsWith('/api/packages/')) {
-      await route.fulfill(json([]))
+      if (path === '/api/packages/analytics/') {
+        await route.fulfill(json(overrides.packageAnalytics ?? MOCK_PACKAGE_ANALYTICS))
+      } else {
+        await route.fulfill(json([]))
+      }
     } else if (path.startsWith('/api/spaces/') || path.startsWith('/api/admin/spaces/')) {
       await route.fulfill(json([]))
     } else if (path.startsWith('/api/objects/') || path.startsWith('/api/admin/objects/')) {
