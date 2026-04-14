@@ -4,7 +4,7 @@ import { User, Sparkles, Home, Edit, Music, Heart } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { ProfileEditForm, type ProfileFormData } from "./components/ProfileEditForm";
 import { getStudentProfile } from "../../../services/api";
-
+import { preferencesService } from "../../../services/preferences"; // <-- AÑADIDA ESTA LÍNEA
 
 const emptyProfileData: ProfileFormData = {
   name: "", 
@@ -33,32 +33,41 @@ export function Profile() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-
   // Load profile from API on mount
   useEffect(() => {
     const loadProfile = async () => {
       try {
-        const apiData = await getStudentProfile();
-        if (apiData) {
-          // Map API data to frontend format
+        // Hacemos ambas peticiones en paralelo para que sea más rápido
+        const [apiData, prefData] = await Promise.all([
+          getStudentProfile().catch(() => null),
+          preferencesService.getMyPreferences().catch(() => null)
+        ]);
+
+        if (apiData || prefData) {
+          // Map API data to frontend format combinando ambos resultados
           setProfileData(prev => ({
             ...prev,
-            nickname: apiData.nickname || prev.nickname,
-            bio: apiData.bio || prev.bio,
-            birthplace: apiData.birthplace || prev.birthplace,
-            profileImage: apiData.profile_image || prev.profileImage,
-            chronotype: mapChronotypeFromApi(apiData.chronotype) || prev.chronotype,
-            studyLevel: apiData.study_level || prev.studyLevel,
-            noiseSensitivity: apiData.noise_sensitivity || prev.noiseSensitivity,
-            temperaturePreference: mapTemperatureFromApi(apiData.temperature_preference) || prev.temperaturePreference,
-            orderLevel: mapOrderLevelFromApi(apiData.order_level) || prev.orderLevel,
-            interests: apiData.interests || prev.interests,
-            customInterests: apiData.custom_interests || prev.customInterests,
-            lifestyle: apiData.lifestyle || prev.lifestyle,
-            musicGenres: apiData.music_genres || prev.musicGenres,
-            dealbreakers: apiData.dealbreakers || prev.dealbreakers,
-            name: apiData.name || prev.name,
-            room: apiData.room || apiData.room_number || prev.room,
+            nickname: apiData?.nickname || prev.nickname,
+            bio: apiData?.bio || prev.bio,
+            birthplace: apiData?.birthplace || prev.birthplace,
+            profileImage: apiData?.profile_image || prev.profileImage,
+            
+            // Damos prioridad a prefData (preferences), si no está, usamos apiData (profile)
+            chronotype: mapChronotypeFromApi(prefData?.schedule || apiData?.chronotype) || prev.chronotype,
+            temperaturePreference: mapTemperatureFromApi(prefData?.temperature_preference || apiData?.temperature_preference) || prev.temperaturePreference,
+            orderLevel: mapOrderLevelFromApi(prefData?.order_importance || apiData?.order_level) || prev.orderLevel,
+            
+            // Adaptamos el nivel de ruido (en preferences viene sobre 10, en tu UI lo muestras sobre 5, así que lo dividimos entre 2 y redondeamos)
+            noiseSensitivity: prefData?.noise_tolerance ? Math.round(prefData.noise_tolerance / 2) : (apiData?.noise_sensitivity || prev.noiseSensitivity),
+            
+            studyLevel: apiData?.study_level || prev.studyLevel,
+            interests: apiData?.interests || prev.interests,
+            customInterests: apiData?.custom_interests || prev.customInterests,
+            lifestyle: apiData?.lifestyle || prev.lifestyle,
+            musicGenres: apiData?.music_genres || prev.musicGenres,
+            dealbreakers: apiData?.dealbreakers || prev.dealbreakers,
+            name: apiData?.name || prev.name,
+            room: apiData?.room || apiData?.room_number || prev.room,
           }));
         }
       } catch (error) {
@@ -71,21 +80,32 @@ export function Profile() {
     loadProfile();
   }, []);
 
-  // Helper functions to map API values to frontend format
-  const mapChronotypeFromApi = (value: string): "early" | "night" | "flexible" => {
-    if (value === "morning") return "early";
-    if (value === "night") return "night";
+  // Helper functions to map API values to frontend format (Actualizadas para entender Español e Inglés)
+  const mapChronotypeFromApi = (value: string | undefined | null): "early" | "night" | "flexible" => {
+    if (!value) return "flexible";
+    const val = String(value).toLowerCase();
+    if (val === "morning" || val === "madrugador") return "early";
+    if (val === "night" || val === "nocturno") return "night";
     return "flexible";
   };
 
-  const mapTemperatureFromApi = (value: string): "cold" | "neutral" | "warm" => {
-    if (value === "cold") return "cold";
-    if (value === "warm" || value === "hot") return "warm";
+  const mapTemperatureFromApi = (value: string | undefined | null): "cold" | "neutral" | "warm" => {
+    if (!value) return "neutral";
+    const val = String(value).toLowerCase();
+    if (val === "cold" || val === "friolero" || val === "frio") return "cold";
+    if (val === "warm" || val === "hot" || val === "caluroso") return "warm";
     return "neutral";
   };
 
-  const mapOrderLevelFromApi = (value: string): "meticulous" | "relaxed" => {
-    if (value === "very_organized" || value === "organized") return "meticulous";
+  const mapOrderLevelFromApi = (value: string | number | undefined | null): "meticulous" | "relaxed" => {
+    if (value === undefined || value === null || value === "") return "relaxed";
+    // Si viene de preferences (es un número del 1 al 10)
+    if (typeof value === 'number') {
+      return value > 5 ? "meticulous" : "relaxed";
+    }
+    // Si viene de profile (es texto)
+    const val = String(value).toLowerCase();
+    if (val === "very_organized" || val === "organized" || val === "meticuloso") return "meticulous";
     return "relaxed";
   };
 
@@ -132,7 +152,6 @@ export function Profile() {
       </div>
     );
   }
-
 
   return (
     <div className="profile-container">
@@ -269,7 +288,7 @@ export function Profile() {
         )}
       </div>
 
-      {/* Edit Modal - PASAMOS handleSaveSuccess en onSaveSuccess */}
+      {/* Edit Modal */}
       {isEditModalOpen && (
         <ProfileEditForm
           initialData={profileData}
