@@ -212,8 +212,8 @@ class ObjectAvailabilityApiTests(FastTenantTestCase):
         self.assertEqual(response.status_code, 200)
         past_rental.refresh_from_db()
         future_rental.refresh_from_db()
-        self.assertEqual(past_rental.status, "IN_PROGRESS")
-        self.assertEqual(future_rental.status, "CANCELLED")
+        self.assertEqual(past_rental.status, ObjectRental.Status.IN_PROGRESS)
+        self.assertEqual(future_rental.status, ObjectRental.Status.CANCELLED)
 
         self.assertEqual(Object.objects.count(), 3)
 

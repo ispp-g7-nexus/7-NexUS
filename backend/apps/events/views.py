@@ -20,6 +20,10 @@ from apps.membership.models import Membership
 from apps.spaces.models import CommonSpace, SpaceReservation
 from apps.spaces.views import SpaceReservationCreateView
 
+from .analytics import (
+    EventsAnalyticsValidationError,
+    get_admin_events_analytics,
+)
 from .models import Event, EventParticipation
 from .permissions import is_events_admin
 
@@ -968,3 +972,30 @@ class EventParticipantsView(AuthenticatedView):
                 }
             )
         return JsonResponse(data, safe=False)
+
+
+class AdminEventsAnalyticsView(AuthenticatedView):
+    def get(self, request):
+        residence = getattr(request, "residence", None)
+        if not residence:
+            return JsonResponse({"detail": "No residence context."}, status=400)
+
+        if not is_events_admin(request.user, residence):
+            return JsonResponse(
+                {"detail": "No tienes permisos para consultar analíticas de eventos."},
+                status=403,
+            )
+
+        try:
+            payload = get_admin_events_analytics(
+                residence=residence,
+                from_value=request.GET.get("from"),
+                to_value=request.GET.get("to"),
+                compare_value=request.GET.get("compare"),
+                event_type_value=request.GET.get("event_type"),
+                creator_id_value=request.GET.get("creator_id"),
+            )
+        except EventsAnalyticsValidationError as exc:
+            return JsonResponse(exc.detail, status=400)
+
+        return JsonResponse(payload)
