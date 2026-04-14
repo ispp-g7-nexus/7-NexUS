@@ -1,4 +1,5 @@
 import { fetchWithAuth } from "../utils/api";
+import { trackEvent } from "./analytics";
 
 const GUEST_PASSES_API_BASE = "/api/guest-passes";
 const ADMIN_GUEST_PASSES_API_BASE = "/api/admin/guest-passes";
@@ -257,7 +258,9 @@ export async function createMyGuestPass(payload: CreateGuestPassPayload): Promis
       forbiddenMessage: "No tienes permisos para crear pases de invitados.",
     });
   }
-  return (await response.json()) as GuestPass;
+  const pass = (await response.json()) as GuestPass;
+  trackEvent('guest_pass_created');
+  return pass;
 }
 
 export async function getMyGuestPassPolicy(): Promise<GuestPassPolicy> {
@@ -269,6 +272,32 @@ export async function getMyGuestPassPolicy(): Promise<GuestPassPolicy> {
     });
   }
   return (await response.json()) as GuestPassPolicy;
+}
+
+export async function rejectAdminGuestPass(guestPassId: number): Promise<AdminGuestPass> {
+  const response = await fetchWithAuth(`${ADMIN_GUEST_PASSES_API_BASE}/${guestPassId}/reject/`, {
+    method: "POST",
+  });
+  if (!response.ok) {
+    throw await parseError(response, {
+      fallbackMessage: "No se pudo rechazar el pase de invitado.",
+      forbiddenMessage: "No tienes permisos para rechazar este pase de invitado.",
+    });
+  }
+  return (await response.json()) as AdminGuestPass;
+}
+
+export async function unrejectAdminGuestPass(guestPassId: number): Promise<AdminGuestPass> {
+  const response = await fetchWithAuth(`${ADMIN_GUEST_PASSES_API_BASE}/${guestPassId}/unreject/`, {
+    method: "POST",
+  });
+  if (!response.ok) {
+    throw await parseError(response, {
+      fallbackMessage: "No se pudo deshacer el rechazo del pase.",
+      forbiddenMessage: "No tienes permisos para deshacer el rechazo de este pase.",
+    });
+  }
+  return (await response.json()) as AdminGuestPass;
 }
 
 export async function listAdminGuestPasses(statusFilter?: string): Promise<AdminGuestPass[]> {
@@ -309,7 +338,9 @@ export async function updateAdminGuestPassPolicy(
       forbiddenMessage: "No tienes permisos para actualizar la configuración de visitantes.",
     });
   }
-  return (await response.json()) as GuestPassPolicy;
+  const policy = (await response.json()) as GuestPassPolicy;
+  trackEvent('guest_pass_policy_updated');
+  return policy;
 }
 
 export async function getAdminVisitorsAnalytics(

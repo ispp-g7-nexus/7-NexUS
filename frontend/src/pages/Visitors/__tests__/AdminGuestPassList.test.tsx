@@ -5,17 +5,20 @@ import '@testing-library/jest-dom/vitest'
 import { AdminGuestPassListPage } from '../AdminGuestPassList'
 
 vi.mock('../../../services/guestPasses', () => ({
+  rejectAdminGuestPass: vi.fn().mockResolvedValue({}),
+  unrejectAdminGuestPass: vi.fn().mockResolvedValue({}),
   listAdminGuestPasses: vi.fn().mockResolvedValue([
     {
       id: 1,
       full_name: 'Juan Pérez',
       pass_code: 'GP-0001',
       resident_name: 'Ana García',
-      valid_from: '2024-06-01T10:00:00Z',
-      valid_until: '2024-06-01T12:00:00Z',
-      created_at: '2024-05-30T09:00:00Z',
+      valid_from: '2099-06-01T10:00:00Z',
+      valid_until: '2099-06-01T12:00:00Z',
+      created_at: '2099-05-30T09:00:00Z',
       status: 'ACTIVE',
       comment: 'Visita familiar',
+      out_of_schedule: true,
     },
     {
       id: 2,
@@ -27,6 +30,7 @@ vi.mock('../../../services/guestPasses', () => ({
       created_at: '2024-05-31T09:00:00Z',
       status: 'USED',
       comment: '',
+      out_of_schedule: false,
     },
   ]),
   GuestPassApiError: class GuestPassApiError extends Error {},
@@ -45,10 +49,10 @@ describe('AdminGuestPassListPage — [NX-S2.39 / NX-S2.40]', () => {
     })
   })
 
-  it('muestra el badge de estado correcto (Activo / Usado)', async () => {
+  it('muestra el badge de estado correcto (Programado / Usado)', async () => {
     render(<AdminGuestPassListPage />)
     await waitFor(() => screen.getByText('Juan Pérez'))
-    expect(screen.getByText('Activo')).toBeInTheDocument()
+    expect(screen.getByText('Programado')).toBeInTheDocument()
     expect(screen.getByText('Usado')).toBeInTheDocument()
   })
 
@@ -81,7 +85,7 @@ describe('AdminGuestPassListPage — [NX-S2.39 / NX-S2.40]', () => {
 
     await user.type(screen.getByPlaceholderText(/Buscar/), 'xyz-inexistente')
 
-    expect(screen.getByText('No se han encontrado pases que coincidan')).toBeInTheDocument()
+    expect(screen.getByText('No hay pases que coincidan.')).toBeInTheDocument()
   })
 
   it('abre el diálogo de detalle al hacer clic en un pase', async () => {
@@ -89,9 +93,7 @@ describe('AdminGuestPassListPage — [NX-S2.39 / NX-S2.40]', () => {
     render(<AdminGuestPassListPage />)
     await waitFor(() => screen.getByText('Juan Pérez'))
 
-    // Clic en la tarjeta (role="button")
-    const passCard = screen.getByRole('button', { name: /Juan Pérez/i })
-    await user.click(passCard)
+    await user.click(screen.getByText('Juan Pérez'))
 
     // El diálogo muestra los datos del detalle
     await waitFor(() => {
@@ -105,8 +107,7 @@ describe('AdminGuestPassListPage — [NX-S2.39 / NX-S2.40]', () => {
     render(<AdminGuestPassListPage />)
     await waitFor(() => screen.getByText('Juan Pérez'))
 
-    const passCard = screen.getByRole('button', { name: /Juan Pérez/i })
-    await user.click(passCard)
+    await user.click(screen.getByText('Juan Pérez'))
 
     await waitFor(() => {
       const dialog = screen.getByRole('dialog')
@@ -126,5 +127,12 @@ describe('AdminGuestPassListPage — [NX-S2.39 / NX-S2.40]', () => {
       const dialog = screen.getByRole('dialog')
       expect(within(dialog).getByText(/Visita familiar/i)).toBeInTheDocument()
     })
+  })
+
+  it('resalta en rojo los pases fuera de horario', async () => {
+    render(<AdminGuestPassListPage />)
+    await waitFor(() => screen.getByText('Juan Pérez'))
+
+    expect(screen.getByText('Fuera de horario')).toBeInTheDocument()
   })
 })

@@ -1,6 +1,12 @@
 # apps/common/views.py
+import base64
+import logging
+import uuid
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.core.files.base import ContentFile
+from django.db import DataError
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -9,6 +15,7 @@ from rest_framework.views import APIView
 from apps.common.utils.jwt_auth import resolve_user_from_request
 from apps.membership.models import Membership, Role
 from apps.residences.models import ResidenceBranding
+from apps.residents.models import StudentProfile
 
 from .serializers import (
     AdminCreateResidentSerializer,
@@ -18,6 +25,7 @@ from .serializers import (
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
     PlanSerializer,
+    StudentProfileSerializer,
 )
 from .services import (
     authenticate_user,
@@ -28,6 +36,7 @@ from .services import (
 )
 
 UserModel = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 class TenantContextView(APIView):
@@ -75,10 +84,16 @@ class TenantContextView(APIView):
 
 class AuthMeView(APIView):
     permission_classes = [AllowAny]
+    authentication_classes = []
 
     def get(self, request):
-        user_data = resolve_user_from_request(request)
-        if user_data:
+        try:
+            user_data = resolve_user_from_request(request)
+        except Exception:
+            logger.exception("AuthMeView: unexpected error resolving session user")
+            user_data = None
+
+        if isinstance(user_data, dict):
             user_pk = (
                 user_data.get("user_id") or user_data.get("id") or user_data.get("sub")
             )
@@ -86,8 +101,10 @@ class AuthMeView(APIView):
                 user_obj = UserModel.objects.get(pk=user_pk)
                 user_data["first_name"] = user_obj.first_name
                 user_data["last_name"] = user_obj.last_name
-            except UserModel.DoesNotExist:
-                pass
+            except (UserModel.DoesNotExist, ValueError, TypeError, OverflowError, DjangoValidationError, DataError):
+                user_data = None
+        else:
+            user_data = None
 
         return Response(
             {
@@ -151,7 +168,7 @@ class AuthLoginView(APIView):
 
         residence = getattr(request, "residence", None)
         if not has_access_for_portal(user, portal, residence):
-            from apps.membership.models import Membership
+            
             has_any_access = False
             fallback_residence = None
 
@@ -376,21 +393,26 @@ class StudentProfileView(APIView):
                 {"detail": "No autenticado."}, status=status.HTTP_401_UNAUTHORIZED
             )
 
-        from apps.residences.models import StudentProfile
+        user_pk = user_data.get("user_id") or user_data.get("id") or user_data.get("sub")
+        try:
+            user = UserModel.objects.get(pk=user_pk)
+        except UserModel.DoesNotExist:
+            return Response(
+                {"detail": "Usuario no encontrado."}, status=status.HTTP_404_NOT_FOUND
+            )
 
         try:
-            user_pk = (
-                user_data.get("user_id") or user_data.get("id") or user_data.get("sub")
+            profile, _ = StudentProfile.objects.get_or_create(
+                user=user,
+                defaults={"residence": getattr(request, "residence", None)},
             )
-            user = UserModel.objects.get(pk=user_pk)
-            profile = StudentProfile.objects.get(user=user)
-            from .serializers import StudentProfileSerializer
-
             serializer = StudentProfileSerializer(profile)
             return Response(serializer.data, status=status.HTTP_200_OK)
-        except StudentProfile.DoesNotExist:
+        except Exception:
+            logger.exception("Error retrieving student profile for user_id=%s", user_pk)
             return Response(
-                {"detail": "Perfil no encontrado."}, status=status.HTTP_404_NOT_FOUND
+                {"detail": "Error al procesar el perfil."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
     def post(self, request):
@@ -401,28 +423,119 @@ class StudentProfileView(APIView):
                 {"detail": "No autenticado."}, status=status.HTTP_401_UNAUTHORIZED
             )
 
-        from apps.residences.models import StudentProfile
-
-        from .serializers import StudentProfileSerializer
-
         user_pk = (
             user_data.get("user_id") or user_data.get("id") or user_data.get("sub")
         )
-        user = UserModel.objects.get(pk=user_pk)
+        try:
+            user = UserModel.objects.get(pk=user_pk)
+        except UserModel.DoesNotExist:
+            return Response(
+                {"detail": "Usuario no encontrado."}, status=status.HTTP_404_NOT_FOUND
+            )
 
         request.user = user
+
+        mutable_data = request.data.copy()
+        profile_image_b64 = mutable_data.pop("profile_image", None)
+
+        # Handle base64 image if present
+        if (
+            profile_image_b64
+            and isinstance(profile_image_b64, str)
+            and profile_image_b64.startswith("data:image")
+        ):
+            try:
+                image_format, imgstr = profile_image_b64.split(";base64,")
+                ext = image_format.split("/")[-1]
+                ext = ext.split(";")[0] if ";" in ext else ext
+                file_name = f"{uuid.uuid4().hex}.{ext}"
+                mutable_data["profile_image"] = ContentFile(
+                    base64.b64decode(imgstr), name=file_name
+                )
+            except Exception:
+                logger.exception(
+                    "Failed to decode student profile image for user_id=%s", user_pk
+                )
+                return Response(
+                    {"profile_image": ["Formato de imagen no valido."]},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
         try:
             profile = StudentProfile.objects.get(user=user)
             serializer = StudentProfileSerializer(
-                profile, data=request.data, partial=True, context={"request": request}
+                profile, data=mutable_data, partial=True, context={"request": request}
             )
         except StudentProfile.DoesNotExist:
             serializer = StudentProfileSerializer(
-                data=request.data, context={"request": request}
+                data=mutable_data, context={"request": request}
             )
 
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AdminStudentProfileView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, user_id):
+        user_data = resolve_user_from_request(request)
+        if not user_data:
+            return Response(
+                {"detail": "No autenticado."}, status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        admin_pk = (
+            user_data.get("user_id") or user_data.get("id") or user_data.get("sub")
+        )
+        try:
+            admin_user = UserModel.objects.get(pk=admin_pk)
+        except UserModel.DoesNotExist:
+            return Response(
+                {"detail": "Usuario no encontrado."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        if not admin_user.is_staff:
+            return Response(
+                {"detail": "Admin privileges required."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        residence = getattr(request, "residence", None)
+        if not residence:
+            return Response(
+                {"detail": "No residence context."}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        membership = (
+            Membership.objects.filter(
+                user_id=user_id,
+                residence=residence,
+                role__name__iexact="Student",
+                is_active=True,
+            )
+            .select_related("user", "bedroom")
+            .first()
+        )
+        if membership is None:
+            return Response(
+                {"detail": "Perfil no encontrado."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        from apps.residences.models import StudentProfile
+
+        profile = StudentProfile.objects.filter(
+            user_id=user_id, residence=residence
+        ).first() or StudentProfile.objects.filter(user_id=user_id).first()
+
+        if profile is None:
+            profile = StudentProfile(
+                user=membership.user,
+                residence=residence,
+                room_number=membership.bedroom.numero if membership.bedroom else "",
+            )
+
+        serializer = StudentProfileSerializer(profile)
+        return Response(serializer.data, status=status.HTTP_200_OK)

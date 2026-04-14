@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { LogOut, User } from "lucide-react";
 import { Objects } from "../pages/Objects/Objects";
 import { Reservations } from "../pages/Reservations/Reservations";
 import { CentralNotificationBell } from "./CentralNotificationBell";
 import { Button } from "./ui/button";
+import { authService } from "../services/auth";
 
 interface StudentReservationsProps {
   onGoToProfile?: () => void;
@@ -13,6 +14,25 @@ interface StudentReservationsProps {
 
 export function StudentReservations({ onGoToProfile, onLogout, onNavigate }: StudentReservationsProps) {
   const [activeTab, setActiveTab] = useState("objetos");
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [currentUserEmail, setCurrentUserEmail] = useState("");
+  const [isSessionUserResolved, setIsSessionUserResolved] = useState(false);
+
+  useEffect(() => {
+    authService.me()
+      .then((session) => {
+        const parsedId = Number(session.user?.id);
+        setCurrentUserId(Number.isFinite(parsedId) ? parsedId : null);
+        setCurrentUserEmail((session.user?.email || "").trim().toLowerCase());
+      })
+      .catch(() => {
+        setCurrentUserId(null);
+        setCurrentUserEmail("");
+      })
+      .finally(() => {
+        setIsSessionUserResolved(true);
+      });
+  }, []);
 
   const tabs = [
     { id: "espacios", label: "Espacios" },
@@ -27,8 +47,9 @@ export function StudentReservations({ onGoToProfile, onLogout, onNavigate }: Stu
         <div className="flex items-center gap-2">
           <CentralNotificationBell 
             onNavigate={(tab) => onNavigate?.(tab)} 
-            currentUserId={null} 
-            isSessionUserResolved={true} 
+            currentUserId={currentUserId}
+            currentUserEmail={currentUserEmail}
+            isSessionUserResolved={isSessionUserResolved}
           />
           <Button
             size="icon"

@@ -83,7 +83,7 @@ const MealCardAdmin = ({ meal, onEdit, onDelete }: MealCardAdminProps) => {
         <div className={`flex gap-2 ml-4 shrink-0 ${meal.image ? ' z-10 relative' : ''}`}>
           <button
             onClick={() => onEdit(meal)}
-            className="p-1.5 hover:bg-blue-100 rounded-md text-blue-600 transition-colors"
+            className="p-1.5 hover:bg-green-100 rounded-md text-green-600 transition-colors"
             title="Editar comida"
           >
             <Edit2 className="w-4 h-4" />
@@ -210,7 +210,7 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
           {/* Nombre */}
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-1">
-              Nombre de la comida
+              Nombre de la comida *
             </label>
             <input
               type="text"
@@ -224,7 +224,7 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
           {/* Tipo */}
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-1">
-              Tipo de comida
+              Tipo de comida *
             </label>
             <select
               value={formData.type}
@@ -357,7 +357,7 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
               }
             }}
             disabled={isSaving || !formData.name.trim()}
-            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
             Guardar

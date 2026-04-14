@@ -8,6 +8,7 @@ import { ForgotPassword } from './pages/ForgotPassword';
 import { ResetPassword } from './pages/ResetPassword';
 import RolesPage from './pages/RolesPage';
 
+import { PostHogPageviewTracker } from './components/PostHogProvider';
 import { useTenantBranding } from './hooks/useTenantBranding';
 
 export default function App() {
@@ -15,6 +16,7 @@ export default function App() {
 
   return (
     <Router>
+      <PostHogPageviewTracker />
       <Toaster position="top-center" richColors />
       <Routes>
         <Route path="/" element={<AuthPage />} />

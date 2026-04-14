@@ -1,5 +1,6 @@
 // src/services/staff.ts
 import { fetchWithAuth } from "../utils/api";
+import { trackEvent } from "./analytics";
 
 const STAFF_URL = "/api/staff/";
 
@@ -55,7 +56,9 @@ export const staffService = {
       method: "POST",
       body: JSON.stringify(payload),
     });
-    return handleResponse<StaffMember>(res);
+    const staff = await handleResponse<StaffMember>(res);
+    trackEvent('staff_created', { department: payload.department });
+    return staff;
   },
 
   update: async (id: number, payload: Partial<StaffPayload>): Promise<StaffMember> => {
@@ -63,7 +66,9 @@ export const staffService = {
       method: "PATCH",
       body: JSON.stringify(payload),
     });
-    return handleResponse<StaffMember>(res);
+    const staff = await handleResponse<StaffMember>(res);
+    trackEvent('staff_updated', { staff_id: id });
+    return staff;
   },
 
   delete: async (id: number): Promise<void> => {
@@ -72,5 +77,6 @@ export const staffService = {
       const body = await res.json().catch(() => ({}));
       throw new Error((body as { detail?: string }).detail ?? `Error ${res.status}`);
     }
+    trackEvent('staff_deleted', { staff_id: id });
   },
 };

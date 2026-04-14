@@ -17,8 +17,12 @@ import announcementService from "../services/announcement.service";
 import { StudentReservations } from "./StudentReservations";
 import { chatsService, type ChatRealtimeEvent } from "../services/chats";
 import { authService } from "../services/auth";
+import { trackFeature } from "../services/analytics";
 import { ActiveGuestPassesPage } from "../pages/Visitors/ActiveGuestPasses";
 import type { ResidenceBranding } from "../services/branding";
+import { fetchWithAuth, API_URL_INCIDENCES } from "../utils/api";
+import { listMyReservationReminders } from "../services/reservations";
+import { objectsService } from "../services/objects";
 import {
     getMyGuestPassPolicy,
     listMyActiveGuestPasses,
@@ -30,6 +34,9 @@ interface StudentViewProps {
 }
 
 const HOME_ANNOUNCEMENTS_SEEN_AT_KEY = "home-announcements-seen-at";
+const HOME_INCIDENCES_SEEN_AT_KEY = "home-incidences-seen-at";
+const HOME_RESERVATIONS_SEEN_AT_KEY = "home-reservations-seen-at";
+const FOOTER_BADGES_POLL_MS = 5000;
 const VISIT_URGENT_WARNING_WINDOW_MS = 10 * 60 * 1000;
 const VISIT_URGENT_CHECK_INTERVAL_MS = 30 * 1000;
 const VISIT_STATE_CHANGED_EVENT = "visit-state-changed";
@@ -203,6 +210,8 @@ function buildVisitUrgentNotificationStorageKey(email: string): string | null {
 export function StudentView({ onLogout }: StudentViewProps) {
     const [activeTab, setActiveTab] = useState<StudentTab>("home");
     const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
+    const [unreadIncidences, setUnreadIncidences] = useState(0);
+    const [unreadReservations, setUnreadReservations] = useState(0);
     const [currentUserEmail, setCurrentUserEmail] = useState("");
     const [chatRealtimeTick, setChatRealtimeTick] = useState(0);
     const [chatRealtimeEvent, setChatRealtimeEvent] = useState<ChatRealtimeEvent | null>(null);
@@ -218,6 +227,13 @@ export function StudentView({ onLogout }: StudentViewProps) {
     const visitUrgentStorageKey = buildVisitUrgentNotificationStorageKey(currentUserEmail);
 
     const hasAnyChatNews = hasGroupChatNews || hasPrivateChatNews;
+
+    const getSeenTimestamp = useCallback((key: string) => {
+        const raw = globalThis.localStorage.getItem(key);
+        if (!raw) return 0;
+        const parsed = Date.parse(raw);
+        return Number.isNaN(parsed) ? 0 : parsed;
+    }, []);
 
     const syncVisitUrgentSharedNotifications = useCallback((payload: VisitUrgentSharedNotification[]) => {
         if (globalThis.window === undefined || !visitUrgentStorageKey) {
@@ -520,6 +536,7 @@ export function StudentView({ onLogout }: StudentViewProps) {
     useEffect(() => {
         if (activeTab === "announcements") {
             globalThis.localStorage.setItem(HOME_ANNOUNCEMENTS_SEEN_AT_KEY, new Date().toISOString());
+            setUnreadAnnouncements(0);
         }
 
         const loadUnreadCount = async () => {
@@ -551,18 +568,92 @@ export function StudentView({ onLogout }: StudentViewProps) {
 
         loadUnreadCount();
 
-        const intervalId = globalThis.setInterval(loadUnreadCount, 15000);
+        const intervalId = globalThis.setInterval(loadUnreadCount, FOOTER_BADGES_POLL_MS);
         return () => globalThis.clearInterval(intervalId);
     }, [activeTab]);
 
     useEffect(() => {
         if (activeTab === "incidences") {
-            globalThis.localStorage.setItem("home-incidences-seen-at", new Date().toISOString());
+            globalThis.localStorage.setItem(HOME_INCIDENCES_SEEN_AT_KEY, new Date().toISOString());
+            setUnreadIncidences(0);
+        }
+
+        if (activeTab === "reservations") {
+            globalThis.localStorage.setItem(HOME_RESERVATIONS_SEEN_AT_KEY, new Date().toISOString());
+            setUnreadReservations(0);
         }
     }, [activeTab]);
 
+    useEffect(() => {
+        const loadIncidencesUnreadCount = async () => {
+            try {
+                const response = await fetchWithAuth(`${API_URL_INCIDENCES}notifications/`);
+                if (!response.ok) {
+                    setUnreadIncidences(0);
+                    return;
+                }
+
+                const payload = await response.json();
+                const notifications = Array.isArray(payload?.results) ? payload.results : [];
+                const seenAt = getSeenTimestamp(HOME_INCIDENCES_SEEN_AT_KEY);
+                const count = notifications.filter((item: { created_at?: string }) => {
+                    const createdAt = item?.created_at ? Date.parse(item.created_at) : Number.NaN;
+                    return Number.isFinite(createdAt) && createdAt > seenAt;
+                }).length;
+
+                if (activeTab === "incidences") {
+                    setUnreadIncidences(0);
+                    return;
+                }
+
+                setUnreadIncidences(count);
+            } catch {
+                setUnreadIncidences(0);
+            }
+        };
+
+        void loadIncidencesUnreadCount();
+        const intervalId = globalThis.setInterval(loadIncidencesUnreadCount, FOOTER_BADGES_POLL_MS);
+        return () => globalThis.clearInterval(intervalId);
+    }, [activeTab, getSeenTimestamp]);
+
+    useEffect(() => {
+        const loadReservationsUnreadCount = async () => {
+            try {
+                const [spaceRemindersResult, objectRemindersResult] = await Promise.allSettled([
+                    listMyReservationReminders(),
+                    objectsService.getUserObjectReservationReminders(),
+                ]);
+
+                const notifications = [
+                    ...(spaceRemindersResult.status === "fulfilled" ? spaceRemindersResult.value : []),
+                    ...(objectRemindersResult.status === "fulfilled" ? objectRemindersResult.value : []),
+                ];
+                const seenAt = getSeenTimestamp(HOME_RESERVATIONS_SEEN_AT_KEY);
+                const count = notifications.filter((item) => {
+                    const createdAt = item?.created_at ? Date.parse(item.created_at) : Number.NaN;
+                    return Number.isFinite(createdAt) && createdAt > seenAt;
+                }).length;
+
+                if (activeTab === "reservations") {
+                    setUnreadReservations(0);
+                    return;
+                }
+
+                setUnreadReservations(count);
+            } catch {
+                setUnreadReservations(0);
+            }
+        };
+
+        void loadReservationsUnreadCount();
+        const intervalId = globalThis.setInterval(loadReservationsUnreadCount, FOOTER_BADGES_POLL_MS);
+        return () => globalThis.clearInterval(intervalId);
+    }, [activeTab, getSeenTimestamp]);
+
     const handleNavigation = (tab: StudentTab) => {
         setActiveTab(tab);
+        trackFeature(tab, { portal: 'student' });
     };
 
     const handleGoToProfile = () => {
@@ -579,7 +670,7 @@ export function StudentView({ onLogout }: StudentViewProps) {
         let tabContent;
         switch (activeTab) {
             case "incidences":
-                tabContent = <StudentIncidences onGoToProfile={handleGoToProfile} onLogout={onLogout} />;
+                tabContent = <StudentIncidences onGoToProfile={handleGoToProfile} onLogout={onLogout} onNavigate={handleNavigation} />;
                 break;
             case "reservations":
                 tabContent = (
@@ -593,6 +684,7 @@ export function StudentView({ onLogout }: StudentViewProps) {
             case "community":
                 tabContent = (
                     <SocialHub
+                        onNavigate={handleNavigation}
                         onLogout={onLogout}
                         chatRealtimeTick={chatRealtimeTick}
                         chatRealtimeEvent={chatRealtimeEvent}
@@ -609,7 +701,7 @@ export function StudentView({ onLogout }: StudentViewProps) {
                 );
                 break;
             case "events":
-                tabContent = <SocialHub initialTab="eventos" />;
+                tabContent = <SocialHub initialTab="eventos" onNavigate={handleNavigation} />;
                 break;
             case "matches":
                 tabContent = <MyMatchesPage />;
@@ -619,6 +711,7 @@ export function StudentView({ onLogout }: StudentViewProps) {
                     <StudentAnnouncements
                         onGoToProfile={handleGoToProfile}
                         onLogout={onLogout}
+                        onNavigate={handleNavigation}
                         onAnnouncementsLoaded={() => {
                             globalThis.localStorage.setItem(HOME_ANNOUNCEMENTS_SEEN_AT_KEY, new Date().toISOString());
                             setUnreadAnnouncements(0);
@@ -630,10 +723,10 @@ export function StudentView({ onLogout }: StudentViewProps) {
                 tabContent = <PackagesPage onGoToProfile={handleGoToProfile} onLogout={onLogout} />;
                 break;
             case "visitors":
-                tabContent = <ActiveGuestPassesPage onGoToProfile={handleGoToProfile} onLogout={onLogout} />;
+                tabContent = <ActiveGuestPassesPage onGoToProfile={handleGoToProfile} onLogout={onLogout} onNavigate={handleNavigation} />;
                 break;
             case "menu":
-                tabContent = <ResidentMenuView onGoToProfile={handleGoToProfile} onLogout={onLogout} />;
+                tabContent = <ResidentMenuView onGoToProfile={handleGoToProfile} onLogout={onLogout} onNavigate={handleNavigation} />;
                 break;
             default:
                 tabContent = <div className="p-8 text-center text-gray-500">Módulo en construcción</div>;
@@ -669,14 +762,14 @@ export function StudentView({ onLogout }: StudentViewProps) {
 
             <nav className="fixed bottom-0 left-0 right-0 bg-background border-t border-border px-6 py-2 pb-6 z-20 w-full shadow-[0_-4px_15px_rgba(0,0,0,0.02)]">
                 <div className="flex justify-between items-center">
-                    <NavButton icon={<AlertCircle className="w-5 h-5" />} label="Incidencias" active={activeTab === "incidences"} onClick={() => setActiveTab("incidences")} />
+                    <NavButton icon={<AlertCircle className="w-5 h-5" />} label="Incidencias" active={activeTab === "incidences"} onClick={() => setActiveTab("incidences")} showIndicator={unreadIncidences > 0} />
                     <NavButton icon={<User className="w-5 h-5" />} label="Social" active={activeTab === "community"} onClick={() => setActiveTab("community")} showIndicator={hasAnyChatNews} />
                     <div className="relative -top-5">
                         <motion.button whileTap={{ scale: 0.95 }} onClick={() => setActiveTab("home")} className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-colors ${activeTab === "home" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground border border-border"}`}>
                             <Home className="w-6 h-6" />
                         </motion.button>
                     </div>
-                    <NavButton icon={<Calendar className="w-5 h-5" />} label="Reservas" active={activeTab === "reservations"} onClick={() => setActiveTab("reservations")} />
+                    <NavButton icon={<Calendar className="w-5 h-5" />} label="Reservas" active={activeTab === "reservations"} onClick={() => setActiveTab("reservations")} showIndicator={unreadReservations > 0} />
                     <NavButton icon={<MessageSquare className="w-5 h-5" />} label="Avisos" active={activeTab === "announcements"} onClick={() => setActiveTab("announcements")} showIndicator={unreadAnnouncements > 0} />
                 </div>
             </nav>
