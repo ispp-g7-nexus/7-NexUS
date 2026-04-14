@@ -85,6 +85,17 @@ async function mockRolesApi(page: Page) {
       }
 
       if (method === 'PATCH' || method === 'PUT') {
+        if (role.is_system_default) {
+          await route.fulfill({
+            status: 400,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              detail: 'No se pueden editar los roles por defecto del sistema (Admin, Student).',
+            }),
+          })
+          return
+        }
+
         const payload = JSON.parse(request.postData() || '{}')
         role.name = payload.name ?? role.name
         role.description = payload.description ?? role.description
@@ -99,6 +110,17 @@ async function mockRolesApi(page: Page) {
       }
 
       if (method === 'DELETE') {
+        if (role.is_system_default) {
+          await route.fulfill({
+            status: 400,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              detail: 'Acción denegada: No se pueden eliminar los roles del sistema.',
+            }),
+          })
+          return
+        }
+
         const index = roles.findIndex((item) => item.id === roleId)
         if (index >= 0) {
           roles.splice(index, 1)

@@ -40,14 +40,14 @@ describe('AdminGuestPassPolicyPage', () => {
     mockedGetPolicy.mockResolvedValue({
       max_duration_hours: 24,
       max_concurrent_passes: 3,
-      visit_start_time: '09:00:00',
-      visit_end_time: '22:00:00',
+      visit_start_time: '09:00',
+      visit_end_time: '22:00',
     })
     mockedUpdatePolicy.mockResolvedValue({
       max_duration_hours: 12,
       max_concurrent_passes: 5,
-      visit_start_time: '10:00:00',
-      visit_end_time: '21:00:00',
+      visit_start_time: '10:00',
+      visit_end_time: '21:00',
     })
   })
 
@@ -57,8 +57,8 @@ describe('AdminGuestPassPolicyPage', () => {
     await waitFor(() => {
       expect(screen.getByLabelText('Duración máxima (horas)')).toHaveValue(24)
       expect(screen.getByLabelText('Máximo de pases concurrentes')).toHaveValue(3)
-      expect(screen.getByLabelText('Hora de inicio de visitas')).toHaveValue('09:00:00')
-      expect(screen.getByLabelText('Hora límite de visitas')).toHaveValue('22:00:00')
+      expect(screen.getByLabelText('Hora de inicio de visitas')).toHaveValue('09:00')
+      expect(screen.getByLabelText('Hora límite de visitas')).toHaveValue('22:00')
     })
   })
 
