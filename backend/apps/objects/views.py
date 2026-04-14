@@ -341,7 +341,7 @@ class ObjectListView(AuthenticatedView):
 
         try:
             raw_stock_total = body.get('stock_total', 1)
-            stock_total = int(raw_stock_total or 1)
+            stock_total = int(1 if raw_stock_total is None else raw_stock_total)
             if stock_total < 1:
                 raise ValueError("stock_total debe ser positivo")
             label_ids_raw = body.get('label_ids', [])
@@ -691,15 +691,18 @@ class ObjectCancelView(AuthenticatedView):
             rental_id = body.get("rental_id")
             if rental_id:
                 updated = ObjectRental.objects.filter(
-                    id=rental_id, object=obj, user=request.user, status="ACTIVE"
-                ).update(status="CANCELLED")
+                    id=rental_id,
+                    object=obj,
+                    user=request.user,
+                    status=ObjectRental.Status.ACTIVE,
+                ).update(status=ObjectRental.Status.CANCELLED)
             else:
                 updated = ObjectRental.objects.filter(
                     object=obj,
                     user=request.user,
-                    status="ACTIVE",
+                    status=ObjectRental.Status.ACTIVE,
                     end_date__gt=timezone.now(),
-                ).update(status="CANCELLED")
+                ).update(status=ObjectRental.Status.CANCELLED)
 
             if updated:
                 residence_id = getattr(obj, 'residence_id', None)
@@ -750,9 +753,9 @@ class ObjectRentalsView(AuthenticatedView):
             r = _sync_rental_progress_status(r, now=now)
             rental_data = _serialize_admin_rental(r)
 
-            if r.status == "CANCELLED":
+            if r.status == ObjectRental.Status.CANCELLED:
                 cancelled.append(rental_data)
-            elif r.status == "COMPLETED":
+            elif r.status == ObjectRental.Status.COMPLETED:
                 completed.append(rental_data)
             elif r.status == "IN_PROGRESS":
                 if now > r.end_date:

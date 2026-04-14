@@ -7,6 +7,7 @@ import { Events } from "./Events/Events";
 import { StudentChats } from "./Chats/StudentChats";
 import { Profile } from "./Profile/Profile";
 import { type ChatRealtimeEvent } from "../../services/chats";
+import type { StudentTab } from "../../components/StudentHome";
 
 type Tab = "eventos" | "chat" | "matches" | "perfil";
 
@@ -20,6 +21,7 @@ export function SocialHub({
   hasGroupChatNews = false,
   hasPrivateChatNews = false,
   initialTab = "perfil",
+  onNavigate,
   onLogout,
 }: {
   readonly onChatTabActiveChange?: (active: boolean) => void;
@@ -31,6 +33,7 @@ export function SocialHub({
   readonly hasGroupChatNews?: boolean;
   readonly hasPrivateChatNews?: boolean;
   readonly initialTab?: Tab;
+  readonly onNavigate?: (view: StudentTab) => void;
   readonly onLogout?: () => void;
 }) {
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
@@ -74,7 +77,7 @@ export function SocialHub({
       <header className="bg-primary p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg sticky top-0 z-20">
         <h1 className="text-primary-foreground text-2xl font-bold">Social</h1>
         <div className="flex items-center gap-2">
-          <NotificationBell />
+          <NotificationBell onNavigate={onNavigate} />
           <Button
             size="icon"
             variant="ghost"

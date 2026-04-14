@@ -56,6 +56,8 @@ class UserSpaceViewsTests(FastTenantTestCase):
         self.client2 = TenantClient(self.tenant, SERVER_NAME=domain, HTTP_HOST=domain)
         self.client2.force_login(self.user2)
 
+        self.anon_client = TenantClient(self.tenant, SERVER_NAME=domain, HTTP_HOST=domain)
+
     def test_list_active_spaces(self):
         resp = self.client1.get("/api/spaces/")
         self.assertEqual(resp.status_code, 200)
@@ -285,6 +287,19 @@ class UserSpaceViewsTests(FastTenantTestCase):
         self.assertEqual(resp.status_code, 400)
         self.assertIn("fecha inválido", str(resp.json()).lower())
 
+    def test_space_availability_nonexistent_space_returns_404(self):
+        date_str = timezone.now().date().isoformat()
+        resp = self.client1.get(f"/api/spaces/999999/availability/?date={date_str}")
+        self.assertEqual(resp.status_code, 404)
+
+    def test_space_availability_marks_past_slots_for_past_date(self):
+        date_str = (timezone.now() - timedelta(days=1)).date().isoformat()
+        resp = self.client1.get(f"/api/spaces/{self.space.id}/availability/?date={date_str}")
+        self.assertEqual(resp.status_code, 200)
+        payload = resp.json()
+        self.assertTrue(len(payload["available_slots"]) > 0)
+        self.assertTrue(all(slot["status"] == "past" for slot in payload["available_slots"]))
+
     def test_list_spaces_includes_all_active_spaces(self):
         space2 = CommonSpace.objects.create(
             name="Sala 2",
@@ -332,3 +347,74 @@ class UserSpaceViewsTests(FastTenantTestCase):
     def test_cancel_nonexistent_reservation_returns_404(self):
         resp = self.client1.post("/api/spaces/reservations/99999/cancel/")
         self.assertEqual(resp.status_code, 404)
+
+    def test_create_reservation_for_inactive_space_returns_404(self):
+        self.space.is_active = False
+        self.space.save(update_fields=["is_active"])
+
+        start = timezone.now().replace(hour=10, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        end = start + timedelta(hours=1)
+        payload = {"start_time": start.isoformat(), "end_time": end.isoformat()}
+
+        resp = self.client1.post(
+            f"/api/spaces/{self.space.id}/reservations/",
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 404)
+
+    def test_admin_can_cancel_others_reservation(self):
+        User = get_user_model()
+        admin_user = User.objects.create_user(
+            username="spaces-admin",
+            email="spaces-admin@test.local",
+            password="123",
+            is_staff=True,
+        )
+        admin_client = TenantClient(self.tenant, SERVER_NAME=self.get_test_tenant_domain(), HTTP_HOST=self.get_test_tenant_domain())
+        admin_client.force_login(admin_user)
+
+        start = timezone.now().replace(hour=12, minute=0) + timedelta(days=1)
+        end = start + timedelta(hours=1)
+        res = SpaceReservation.objects.create(
+            space=self.space,
+            user=self.user1,
+            residence=self.residence,
+            start_time=start,
+            end_time=end,
+            status=SpaceReservation.Status.ACTIVE,
+        )
+
+        resp = admin_client.post(f"/api/spaces/reservations/{res.id}/cancel/")
+        self.assertEqual(resp.status_code, 200)
+        res.refresh_from_db()
+        self.assertEqual(res.status, SpaceReservation.Status.CANCELLED)
+
+    def test_user_views_require_authentication(self):
+        start = timezone.now().replace(hour=10, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        end = start + timedelta(hours=1)
+        date_str = timezone.now().date().isoformat()
+
+        urls = [
+            ("/api/spaces/", "get", None),
+            (f"/api/spaces/{self.space.id}/availability/?date={date_str}", "get", None),
+            (
+                f"/api/spaces/{self.space.id}/reservations/",
+                "post",
+                json.dumps({"start_time": start.isoformat(), "end_time": end.isoformat()}),
+            ),
+            ("/api/spaces/reservations/me/", "get", None),
+            ("/api/spaces/reservations/reminders/", "get", None),
+            ("/api/spaces/reservations/99999/cancel/", "post", json.dumps({})),
+        ]
+
+        for url, method, payload in urls:
+            if method == "get":
+                resp = self.anon_client.get(url)
+            else:
+                resp = self.anon_client.post(
+                    url,
+                    data=payload,
+                    content_type="application/json",
+                )
+            self.assertEqual(resp.status_code, 401)

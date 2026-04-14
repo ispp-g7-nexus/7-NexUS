@@ -1,4 +1,5 @@
 import { fetchWithAuth } from "../utils/api";
+import { trackEvent } from "./analytics";
 
 const BRANDING_URL = "/api/residences/branding/";
 
@@ -40,6 +41,8 @@ export const brandingService = {
       method: "PATCH",
       body: JSON.stringify(payload),
     });
-    return handleResponse<ResidenceBranding>(response);
+    const result = await handleResponse<ResidenceBranding>(response);
+    trackEvent('branding_updated');
+    return result;
   },
 };

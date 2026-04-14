@@ -61,6 +61,22 @@ class IncidenceSerializer(serializers.ModelSerializer):
             is_admin = has_screen_permission(user, residence, "incidences")
             is_owner = self.instance.student_id == user.id
 
+            # Si no es admin y la incidencia ya tiene asignación o ya fue tocada por un administrador, no permitir edición
+            if not is_admin and is_owner:
+                has_staff_assignment = self.instance.assigned_staff is not None
+                has_external_assignment = self.instance.assigned_external_name and self.instance.assigned_external_name.strip()
+                has_admin_updates = self.instance.updates.exists()
+                has_non_pending_status = self.instance.status != 'pending'
+
+                if has_staff_assignment or has_external_assignment:
+                    raise serializers.ValidationError(
+                        {"detail": "No puedes editar una incidencia que ya ha sido asignada a personal."}
+                    )
+                if has_admin_updates or has_non_pending_status:
+                    raise serializers.ValidationError(
+                        {"detail": "No puedes editar una incidencia que ya ha sido gestionada por un administrador."}
+                    )
+
             if not is_admin:
                 if not is_owner:
                     for f in [

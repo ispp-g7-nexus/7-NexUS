@@ -1,4 +1,5 @@
 import type React from 'react';
+import { X } from 'lucide-react'; // Importamos el icono
 
 type EventType = 'internal' | 'external';
 
@@ -44,14 +45,31 @@ export function EventForm({
 
     return (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-white text-card-foreground border border-gray-200 mt-10 rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-lg animate-in fade-in zoom-in duration-200">
+            {/* Contenedor relativo para que la X se posicione correctamente */}
+            <div className="relative bg-white text-card-foreground border border-gray-200 mt-10 rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-lg animate-in fade-in zoom-in duration-200">
+                
+                {/* BOTÓN X PARA CERRAR */}
+                <button
+                    type="button"
+                    onClick={() => setIsCreateEventOpen(false)}
+                    className="absolute right-4 top-4 p-2 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-all z-10"
+                    aria-label="Cerrar formulario"
+                >
+                    <X size={20} />
+                </button>
+
                 <div className="p-6 border-b border-gray-200">
-                    <h3 className="text-xl font-semibold mb-1 tracking-tight">{isEditingEvent ? "Editar Evento" : "Nuevo Evento"}</h3>
-                    <p className="text-sm text-gray-500">{isEditingEvent ? "Modifica los detalles del evento." : "Organiza una actividad para compartir con otros residentes."}</p>
+                    <h3 className="text-xl font-semibold mb-1 tracking-tight pr-8">
+                        {isEditingEvent ? "Editar Evento" : "Nuevo Evento"}
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                        {isEditingEvent ? "Modifica los detalles del evento." : "Organiza una actividad para compartir con otros residentes."}
+                    </p>
                 </div>
+
                 <form onSubmit={handleSaveEvent} className="p-6 space-y-5">
                     <div className="space-y-2">
-                        <label htmlFor="name" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Nombre del evento</label>
+                        <label htmlFor="name" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Nombre del evento *</label>
                         <input
                             id="name"
                             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
@@ -62,7 +80,7 @@ export function EventForm({
                         />
                     </div>
                     <div className="space-y-2">
-                        <label htmlFor="description" className="text-sm font-medium leading-none">Descripción</label>
+                        <label htmlFor="description" className="text-sm font-medium leading-none">Descripción *</label>
                         <textarea
                             id="description"
                             className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y"
@@ -74,7 +92,7 @@ export function EventForm({
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         <div className="space-y-2">
-                            <label htmlFor="date" className="text-sm font-medium leading-none">Fecha del evento</label>
+                            <label htmlFor="date" className="text-sm font-medium leading-none">Fecha del evento *</label>
                             <input
                                 id="date"
                                 type="date"
@@ -88,7 +106,7 @@ export function EventForm({
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         <div className="space-y-2">
-                            <label htmlFor="startTime" className="text-sm font-medium leading-none">Hora de inicio</label>
+                            <label htmlFor="startTime" className="text-sm font-medium leading-none">Hora de inicio *</label>
                             <input
                                 id="startTime"
                                 type="time"
@@ -99,7 +117,7 @@ export function EventForm({
                             />
                         </div>
                         <div className="space-y-2">
-                            <label htmlFor="endTime" className="text-sm font-medium leading-none">Hora de fin</label>
+                            <label htmlFor="endTime" className="text-sm font-medium leading-none">Hora de fin *</label>
                             <input
                                 id="endTime"
                                 type="time"
@@ -157,7 +175,7 @@ export function EventForm({
                     </div>
                     {newEvent.eventType === 'internal' ? (
                         <div className="space-y-2">
-                            <label htmlFor="space" className="text-sm font-medium leading-none">Espacio común</label>
+                            <label htmlFor="space" className="text-sm font-medium leading-none">Espacio común *</label>
                             <select
                                 id="space"
                                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"

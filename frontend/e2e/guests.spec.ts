@@ -20,7 +20,7 @@ test.describe('Visitantes — pases de invitado', () => {
   })
 
   test('muestra el badge de estado correcto', async ({ page }) => {
-    await expect(page.getByText('Activo', { exact: true })).toBeVisible()
+    await expect(page.getByText('Programado', { exact: true })).toBeVisible()
     await expect(page.getByText('Usado', { exact: true })).toBeVisible()
   })
 
@@ -38,7 +38,7 @@ test.describe('Visitantes — pases de invitado', () => {
 
   test('muestra mensaje cuando la búsqueda no tiene resultados', async ({ page }) => {
     await page.getByPlaceholder(/Buscar/i).fill('xyz-inexistente')
-    await expect(page.getByText('No se han encontrado pases que coincidan')).toBeVisible()
+    await expect(page.getByText('No hay pases que coincidan.')).toBeVisible()
   })
 
   // ── S2.40: Detalle ────────────────────────────────────────────────────────
