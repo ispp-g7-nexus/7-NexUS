@@ -90,9 +90,9 @@ export const MOCK_BEDROOM_ANALYTICS = {
     { tipo: 'Triple', total_rooms: 2, capacity: 6, occupants: 1, occupation_rate: 17 },
   ],
   occupation_by_year: [
-    { year: 2024, count: 3 },
-    { year: 2025, count: 3 },
-    { year: 2026, count: 3 },
+    { year: 2024, assignments: 3 },
+    { year: 2025, assignments: 3 },
+    { year: 2026, assignments: 3 },
   ],
 }
 
