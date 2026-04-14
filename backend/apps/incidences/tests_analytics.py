@@ -28,6 +28,7 @@ class IncidenceAnalyticsViewTests(TenantTestCase):
     def setup_tenant(cls, tenant):
         tenant.name = "Tenant Incidence Analytics"
         tenant.slug = "tenant-incidence-analytics"
+        tenant.schema_name = f"test_schema_{cls.__name__.lower()}"
         tenant.is_active = True
         tenant.on_trial = True
 
