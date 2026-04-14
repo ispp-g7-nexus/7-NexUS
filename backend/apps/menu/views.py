@@ -195,7 +195,8 @@ class SpecialMenuRequestViewSet(viewsets.ModelViewSet):
         if not user.is_authenticated:
             raise PermissionDenied({"detail": "Usuario no autenticado."})
         
-        serializer.save(user=user)
+        tenant = getattr(self.request, 'tenant', None)
+        serializer.save(user=user, residence=tenant)
 
     @action(detail=False, methods=['get'])
     def list_requests(self, request):
