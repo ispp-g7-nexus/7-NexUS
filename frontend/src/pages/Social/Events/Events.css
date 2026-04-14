@@ -456,11 +456,16 @@ textarea {
 
 .details-info-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 16px;
   margin-bottom: 24px;
   font-size: 0.9rem;
   color: hsl(var(--popover-foreground));
   font-weight: 500;
+}
+
+.details-info-row span {
+  overflow-wrap: anywhere;
 }
 
 .details-description h3,
@@ -474,6 +479,9 @@ textarea {
   color: hsl(var(--popover-foreground));
   line-height: 1.5;
   margin-bottom: 24px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .participants-list {
