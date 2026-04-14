@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import MenuWeekViewSet, MealViewSet, SpecialMenuRequestViewSet
+from .views import MenuWeekViewSet, MealViewSet, SpecialMenuRequestViewSet, MenuAnalyticsView
 
 router = DefaultRouter()
 router.register(r'menu/weeks', MenuWeekViewSet, basename='menu-week')
@@ -14,4 +14,5 @@ urlpatterns = [
         name='day-meals',
     ),
     path('', include(router.urls)),
+    path("menu/analytics/", MenuAnalyticsView.as_view(), name="menu-analytics"),
 ]

@@ -19,6 +19,9 @@ from .serializers import (
     SpecialMenuRequestSerializer,
 )
 from .permissions import IsStaffOrReadOnly
+from .analytics_services import get_menu_analytics
+from apps.membership.permissions import RequireScreenAccess
+from rest_framework.views import APIView
 
 logger = logging.getLogger(__name__)
 
@@ -183,27 +186,27 @@ class MealViewSet(TenantMixin, viewsets.ModelViewSet):
 class SpecialMenuRequestViewSet(TenantMixin, viewsets.ModelViewSet):
     serializer_class = SpecialMenuRequestSerializer
     permission_classes = [permissions.IsAuthenticated]
-    
+
     def get_queryset(self):
         user = self.request.user
         if not user.is_authenticated:
             return SpecialMenuRequest.objects.none()
-        
+
         tenant = self._resolve_tenant()
         if not tenant:
             return SpecialMenuRequest.objects.none()
-        
+
         return SpecialMenuRequest.objects.filter(user=user, residence=tenant)
 
     def perform_create(self, serializer):
         user = self.request.user
         if not user.is_authenticated:
             raise PermissionDenied({"detail": "Usuario no autenticado."})
-        
+
         tenant = self._resolve_tenant()
         if not tenant:
             raise ValidationError({"detail": "No se ha podido determinar la residencia."})
-        
+
         serializer.save(user=user, residence=tenant)
 
     @action(detail=False, methods=['get'])
@@ -211,10 +214,10 @@ class SpecialMenuRequestViewSet(TenantMixin, viewsets.ModelViewSet):
         """GET /api/menu/special-requests/list_requests/ - Listar solicitudes (pending primero, luego historial)"""
         if not request.user.is_staff:
             raise PermissionDenied({"detail": "Solo el personal puede ver todas las peticiones."})
-        
+
         # Pendientes primero, luego aprobadas/rechazadas ordenadas por fecha (más recientes primero)
         from django.db.models import Case, When, Value, IntegerField
-        
+
         requests_list = SpecialMenuRequest.objects.all().annotate(
             status_order=Case(
                 When(status='pending', then=Value(0)),
@@ -223,7 +226,7 @@ class SpecialMenuRequestViewSet(TenantMixin, viewsets.ModelViewSet):
                 output_field=IntegerField()
             )
         ).order_by('status_order', '-created_at')
-        
+
         serializer = self.get_serializer(requests_list, many=True)
         return Response(serializer.data)
 
@@ -232,24 +235,45 @@ class SpecialMenuRequestViewSet(TenantMixin, viewsets.ModelViewSet):
         """PATCH /api/menu/special-requests/{id}/update_status/ - Actualizar estado"""
         if not request.user.is_staff:
             raise PermissionDenied({"detail": "Solo el personal puede actualizar el estado."})
-        
+
         # No usar get_object() para evitar filtrado por usuario
         try:
             instance = SpecialMenuRequest.objects.get(pk=pk)
         except SpecialMenuRequest.DoesNotExist:
             raise ValidationError({'detail': 'Solicitud no encontrada.'})
-        
+
         new_status = request.data.get('status')
-        
+
         if not new_status:
             raise ValidationError({'detail': 'Se requiere el campo status.'})
-        
+
         valid_statuses = ['pending', 'approved', 'rejected']
         if new_status not in valid_statuses:
             raise ValidationError({'detail': f'Estado inválido. Opciones: {", ".join(valid_statuses)}'})
-        
+
         instance.status = new_status
         instance.save()
-        
+
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
+
+
+class MenuAnalyticsView(TenantMixin, APIView):
+    permission_classes = [permissions.IsAuthenticated, RequireScreenAccess('analytics')]
+
+    def get(self, request):
+        tenant = self._resolve_tenant()
+        if not tenant:
+            return Response({"detail": "Tenant no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Support optional date window parameters: start_date and end_date (YYYY-MM-DD)
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+
+        try:
+            analytics_data = get_menu_analytics(residence=tenant, start_date=start_date, end_date=end_date)
+        except Exception:
+            # Defensive fallback: return minimal payload on unexpected errors
+            analytics_data = get_menu_analytics(residence=tenant)
+
+        return Response(analytics_data)
