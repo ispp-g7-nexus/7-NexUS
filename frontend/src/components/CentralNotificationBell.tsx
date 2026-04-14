@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useCallback, ReactNode } from "react";
-import { Bell, X } from "lucide-react";
+import { Bell, X, Package, Megaphone, AlertCircle, Calendar } from "lucide-react";
 import { Button } from "./ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { fetchWithAuth, API_URL_INCIDENCES, API_URL } from "../utils/api";
 import announcementService from "../services/announcement.service";
+import type { AnnouncementList } from "../types/announcement.types";
 import { packagesService } from "../services/packages";
 import { objectsService } from "../services/objects";
 import { listMyReservationReminders, type ReservationReminderNotification } from "../services/reservations";
@@ -22,6 +23,25 @@ type HomeNotification = {
 };
 
 type ReservationNotificationItem = ReservationReminderNotification;
+
+interface IncidenceItem {
+    id: string;
+    created_at: string;
+    title?: string;
+    message?: string;
+}
+
+interface EventItem {
+    id: number;
+    end_time: string;
+    start_time: string;
+    created_at?: string;
+    title: string;
+    location?: string;
+    host?: {
+        id?: number;
+    };
+}
 
 interface NotificationCardProps {
     icon: ReactNode;
@@ -190,6 +210,7 @@ const HOME_NOTIFICATIONS_DISMISSED_IDS_KEY = "home-notifications-dismissed-ids";
 const HOME_INCIDENCES_DISMISSED_IDS_KEY = "home-incidences-dismissed-ids";
 const HOME_INCIDENCES_SEEN_AT_KEY = "home-incidences-seen-at";
 const HOME_ANNOUNCEMENTS_SEEN_AT_KEY = "home-announcements-seen-at";
+const HOME_RESERVATIONS_SEEN_AT_KEY = "home-reservations-seen-at";
 const HOME_NOTIFICATIONS_CACHE_KEY = "home-notifications-cache";
 const VISIT_URGENT_NOTIFICATION_KEY_BASE = "visit-urgent-shared-notifications";
 const NOTIFICATIONS_POLL = 5000;
@@ -229,6 +250,14 @@ const getIncidencesSeenAtMs = (): number => {
 const getAnnouncementsSeenAtMs = (): number => {
     if (typeof window === "undefined") return 0;
     const raw = globalThis.localStorage.getItem(HOME_ANNOUNCEMENTS_SEEN_AT_KEY);
+    if (!raw) return 0;
+    const parsedMs = Date.parse(raw);
+    return Number.isFinite(parsedMs) ? parsedMs : 0;
+};
+
+const getReservationsSeenAtMs = (): number => {
+    if (typeof window === "undefined") return 0;
+    const raw = globalThis.localStorage.getItem(HOME_RESERVATIONS_SEEN_AT_KEY);
     if (!raw) return 0;
     const parsedMs = Date.parse(raw);
     return Number.isFinite(parsedMs) ? parsedMs : 0;
@@ -371,8 +400,6 @@ const isNotificationDismissible = (notification: HomeNotification): boolean => {
     return notification.source !== "visitors";
 };
 
-import { Package, Megaphone, AlertCircle, Calendar } from "lucide-react";
-
 interface CentralNotificationBellProps {
     onNavigate: (view: StudentTab) => void;
     currentUserId: number | null;
@@ -415,7 +442,7 @@ export function CentralNotificationBell({ onNavigate, currentUserId, currentUser
         saveStoredIds(HOME_NOTIFICATIONS_DISMISSED_IDS_KEY, nextIds);
     };
 
-    const buildAnnouncementItems = useCallback((announcements: any[]): HomeNotification[] => {
+    const buildAnnouncementItems = useCallback((announcements: AnnouncementList[]): HomeNotification[] => {
         const announcementsSeenAtMs = getAnnouncementsSeenAtMs();
         return announcements
             .filter((announcement) => !announcement.has_passed)
@@ -434,7 +461,7 @@ export function CentralNotificationBell({ onNavigate, currentUserId, currentUser
             .filter((announcement) => Date.parse(announcement.createdAt) > announcementsSeenAtMs);
     }, []);
 
-    const buildIncidenceItems = useCallback((incidenceItems: any[]): HomeNotification[] => {
+    const buildIncidenceItems = useCallback((incidenceItems: IncidenceItem[]): HomeNotification[] => {
         const incidencesSeenAtMs = getIncidencesSeenAtMs();
         return incidenceItems
             .filter((item) => !dismissedIncidenceIdsRef.current.includes(item.id))
@@ -450,7 +477,7 @@ export function CentralNotificationBell({ onNavigate, currentUserId, currentUser
             }));
     }, []);
 
-    const buildEventItems = useCallback((events: any[]): HomeNotification[] => {
+    const buildEventItems = useCallback((events: EventItem[]): HomeNotification[] => {
         if (!isSessionUserResolved) return [];
         const now = Date.now();
         return events
@@ -524,15 +551,22 @@ export function CentralNotificationBell({ onNavigate, currentUserId, currentUser
     }, [currentUserEmail]);
 
     const buildReservationReminderItems = useCallback((items: ReservationNotificationItem[]): HomeNotification[] => {
-        return items.map((item) => ({
-            id: item.id,
-            title: item.title,
-            description: item.message,
-            time: formatRelativeFuture(item.start_time),
-            type: "warning" as const,
-            source: "reservations" as const,
-            createdAt: item.start_time,
-        }));
+        const reservationsSeenAtMs = getReservationsSeenAtMs();
+
+        return items
+            .filter((item) => {
+                const createdAtMs = Date.parse(item.created_at);
+                return Number.isFinite(createdAtMs) && createdAtMs > reservationsSeenAtMs;
+            })
+            .map((item) => ({
+                id: item.id,
+                title: item.title,
+                description: item.message,
+                time: formatRelativeFuture(item.start_time),
+                type: "warning" as const,
+                source: "reservations" as const,
+                createdAt: item.created_at,
+            }));
     }, []);
 
     const loadNotifications = useCallback(async (silent = false) => {
@@ -561,7 +595,7 @@ export function CentralNotificationBell({ onNavigate, currentUserId, currentUser
                 spaceReservationsRes,
                 objectReservationsRes
             ] = await Promise.all([
-                withTimeout(announcementService.getAnnouncements(), [] as any[]),
+                withTimeout(announcementService.getAnnouncements(), [] as AnnouncementList[]),
                 withTimeout(announcementService.getUnviewedCount(), { count: 0 } as { count: number }),
                 withTimeout(fetchWithAuth(`${API_URL_INCIDENCES}notifications/`), null as Response | null),
                 withTimeout(fetchWithAuth(API_URL), null as Response | null),
