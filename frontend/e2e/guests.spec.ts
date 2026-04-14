@@ -20,7 +20,7 @@ test.describe('Visitantes — pases de invitado', () => {
   })
 
   test('muestra el badge de estado correcto', async ({ page }) => {
-    await expect(page.getByText('Activo', { exact: true })).toBeVisible()
+    await expect(page.getByText('Programado', { exact: true })).toBeVisible()
     await expect(page.getByText('Usado', { exact: true })).toBeVisible()
   })
 
