@@ -85,6 +85,10 @@ const EMPTY_GROUP_FORM: UpsertChatGroupPayload = {
     can_members_leave: true,
 };
 
+const CHAT_GROUP_NAME_MAX_LENGTH = 45;
+const CHAT_GROUP_DESCRIPTION_MAX_LENGTH = 255;
+const CHAT_LABEL_MAX_LENGTH = 15;
+
 const typeConfig: Record<string, { label: string; color: string; icon: ReactElement }> = {
     general: {
         label: "General",
@@ -195,7 +199,7 @@ export function AdminChats({
         refreshGroups();
         chatsService.listLabels().then(setCustomLabels).catch(() => { });
         authService.me().then(session => {
-            if (session.user) setCurrentUserEmail(session.user.email);
+            if (session.user) setCurrentUserEmail(session.user.email || "");
         }).catch(() => { });
     }, []);
 
@@ -526,8 +530,23 @@ export function AdminChats({
     };
 
     const handleCreateGroup = async () => {
-        if (!createForm.name.trim()) {
+        const normalizedName = createForm.name.trim();
+        const normalizedDescription = createForm.description.trim();
+
+        if (!normalizedName) {
             toast.error("El nombre del grupo es obligatorio.");
+            return;
+        }
+        if (normalizedName.length > CHAT_GROUP_NAME_MAX_LENGTH) {
+            toast.error(`El nombre del grupo no puede superar ${CHAT_GROUP_NAME_MAX_LENGTH} caracteres.`);
+            return;
+        }
+        if (normalizedDescription.length > CHAT_GROUP_DESCRIPTION_MAX_LENGTH) {
+            toast.error(`La descripción no puede superar ${CHAT_GROUP_DESCRIPTION_MAX_LENGTH} caracteres.`);
+            return;
+        }
+        if (createForm.label.length > CHAT_LABEL_MAX_LENGTH) {
+            toast.error(`La etiqueta no puede superar ${CHAT_LABEL_MAX_LENGTH} caracteres.`);
             return;
         }
 
@@ -535,8 +554,8 @@ export function AdminChats({
         try {
             const created = await chatsService.createGroup({
                 ...createForm,
-                name: createForm.name.trim(),
-                description: createForm.description.trim(),
+                name: normalizedName,
+                description: normalizedDescription,
             });
             setGroups((prev) => upsertGroup(prev, created));
             setCreateForm(EMPTY_GROUP_FORM);
@@ -557,6 +576,10 @@ export function AdminChats({
     const handleCreateLabel = async () => {
         const name = newLabelName.trim();
         if (!name) return;
+        if (name.length > CHAT_LABEL_MAX_LENGTH) {
+            toast.error(`La etiqueta no puede superar ${CHAT_LABEL_MAX_LENGTH} caracteres.`);
+            return;
+        }
         setCreatingLabel(true);
         try {
             const created = await chatsService.createLabel(name);
@@ -836,7 +859,11 @@ export function AdminChats({
                                 value={createForm.name}
                                 onChange={(e) => setCreateForm((prev) => ({ ...prev, name: e.target.value }))}
                                 placeholder="Ej. Club de Lectura"
+                                maxLength={45}
                             />
+                            <p className="text-xs text-gray-500 text-right">
+                                {createForm.name.length}/45
+                            </p>
                         </div>
 
                         <div className="space-y-2">
@@ -845,9 +872,13 @@ export function AdminChats({
                                 value={createForm.description}
                                 onChange={(e) => setCreateForm((prev) => ({ ...prev, description: e.target.value }))}
                                 rows={3}
+                                maxLength={255}
                                 className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                                 placeholder="De qué trata el grupo..."
                             />
+                            <p className="text-xs text-gray-500 text-right">
+                                {createForm.description.length}/255
+                            </p>
                         </div>
 
                         <div className="space-y-2">
@@ -904,12 +935,16 @@ export function AdminChats({
                                 value={newLabelName}
                                 onChange={(e) => setNewLabelName(e.target.value)}
                                 placeholder="Nombre de etiqueta..."
+                                maxLength={15}
                                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleCreateLabel(); } }}
                             />
                             <Button className="bg-primary text-primary-foreground rounded-xl font-bold px-4" onClick={handleCreateLabel} disabled={creatingLabel || !newLabelName.trim()}>
                                 <Plus className="w-4 h-4" />
                             </Button>
                         </div>
+                        <p className="text-xs text-gray-500 text-right -mt-3">
+                            {newLabelName.length}/15
+                        </p>
 
                         <div className="space-y-2">
                             <div className="text-xs font-bold text-gray-400 uppercase tracking-widest">Predefinidas</div>
