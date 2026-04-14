@@ -5,17 +5,17 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { ConfirmationModal } from "../../components/ui/ConfirmationModal";
 import { ResidentSelector } from "../../components/ResidentSelector";
-import { chatsService, type ChatGroup, type ChatGroupLabelItem } from "../../services/chats";
-import { type Resident } from "../../services/residents";
+import { chatsService, type ChatGroup, type ChatGroupLabelItem, type ChatResident } from "../../services/chats";
 import { authService } from "../../services/auth";
 
 interface AdminGroupEditProps {
     group: ChatGroup;
     onBack: () => void;
     onGroupUpdated: (group: ChatGroup) => void;
+    enforceCurrentMemberAdmin?: boolean;
 }
 
-export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEditProps) {
+export function AdminGroupEdit({ group, onBack, onGroupUpdated, enforceCurrentMemberAdmin = false }: AdminGroupEditProps) {
     const [currentGroup, setCurrentGroup] = useState(group);
     const [groupName, setGroupName] = useState(group.name);
     const [groupDescription, setGroupDescription] = useState(group.description);
@@ -49,16 +49,21 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
     }, []);
 
     useEffect(() => {
+        if (!enforceCurrentMemberAdmin) return;
         if (!currentUserEmail) return;
 
         const myMember = currentGroup.members_list.find((member) => member.email === currentUserEmail);
-        if (!myMember) return;
+        if (!myMember) {
+            toast.info("Ya no perteneces a este grupo.");
+            onBack();
+            return;
+        }
 
         if (!myMember.is_admin) {
             toast.info("Ya no eres administrador del grupo.");
             onBack();
         }
-    }, [currentGroup, currentUserEmail, onBack]);
+    }, [currentGroup, currentUserEmail, enforceCurrentMemberAdmin, onBack]);
 
     const normalizeSearchValue = (value: string) =>
         value
@@ -151,7 +156,7 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated }: AdminGroupEdit
         }
     };
 
-    const handleAddSelectedMembers = async (residents: Resident[]) => {
+    const handleAddSelectedMembers = async (residents: ChatResident[]) => {
         if (residents.length === 0) {
             toast.error("Debes seleccionar al menos un residente.");
             return;

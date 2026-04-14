@@ -180,7 +180,7 @@ class MealViewSet(TenantMixin, viewsets.ModelViewSet):
         return Response(MealSerializer(instance).data)
 
 
-class SpecialMenuRequestViewSet(viewsets.ModelViewSet):
+class SpecialMenuRequestViewSet(TenantMixin, viewsets.ModelViewSet):
     serializer_class = SpecialMenuRequestSerializer
     permission_classes = [permissions.IsAuthenticated]
     
@@ -188,14 +188,22 @@ class SpecialMenuRequestViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if not user.is_authenticated:
             return SpecialMenuRequest.objects.none()
-        return SpecialMenuRequest.objects.filter(user=user)
+        
+        tenant = self._resolve_tenant()
+        if not tenant:
+            return SpecialMenuRequest.objects.none()
+        
+        return SpecialMenuRequest.objects.filter(user=user, residence=tenant)
 
     def perform_create(self, serializer):
         user = self.request.user
         if not user.is_authenticated:
             raise PermissionDenied({"detail": "Usuario no autenticado."})
         
-        tenant = getattr(self.request, 'tenant', None)
+        tenant = self._resolve_tenant()
+        if not tenant:
+            raise ValidationError({"detail": "No se ha podido determinar la residencia."})
+        
         serializer.save(user=user, residence=tenant)
 
     @action(detail=False, methods=['get'])

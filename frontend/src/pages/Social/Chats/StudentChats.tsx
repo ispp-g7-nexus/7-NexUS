@@ -746,6 +746,7 @@ export function StudentChats({
                 group={editingGroup}
                 onBack={() => setEditingGroup(null)}
                 onGroupUpdated={handleGroupUpdatedFromManagement}
+                enforceCurrentMemberAdmin
             />
         );
     }

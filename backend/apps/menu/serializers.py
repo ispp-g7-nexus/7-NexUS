@@ -27,6 +27,13 @@ class MealSerializer(serializers.ModelSerializer):
         data['isVegan'] = data.pop('is_vegan')
         # Convertir id a string para consistencia con el frontend
         data['id'] = str(data['id'])
+        
+        # Enviar la URL relativa de la imagen para evitar problemas de resolución DNS
+        if instance.image:
+            data['image'] = instance.image.url
+        else:
+            data['image'] = None
+        
         return data
 
 
