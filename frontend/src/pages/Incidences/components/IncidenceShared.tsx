@@ -13,11 +13,19 @@ export interface BaseIncidence {
   description?: string;
   img?: string;
   student_name?: string;
-  room_number?: string;
+  room_number?: number | null;
+  room_number_detail?: {
+    id: number;
+    numero: string;
+    planta?: number;
+    edificio?: string;
+    tipo?: string;
+  };
   location_type: string;
   status: any;
   priority: 'low' | 'high';
   created_at: string;
+  updated_at: string;
   assigned_staff?: number;
   assigned_staff_name?: string;
   assigned_external_name?: string;
@@ -88,7 +96,14 @@ export const saveLastReadNotificationsAt = (timestamp?: string) => {
 export const applyIncidenceFilters = (inc: any, filters: any) => {
   const { search, location, status, priority } = filters;
   const q = search.trim().toLowerCase();
-  if (q && !(inc.title?.toLowerCase().includes(q) || inc.room_number?.toLowerCase().includes(q) || (inc.student_name || '').toLowerCase().includes(q))) return false;
+  if (q) {
+    const roomNumber = inc.room_number_detail?.numero || inc.room_number || '';
+    const roomStr = typeof roomNumber === 'string' ? roomNumber.toLowerCase() : roomNumber.toString();
+    const matches = (inc.title?.toLowerCase() || '').includes(q) || 
+                   roomStr.includes(q) || 
+                   (inc.student_name || '').toLowerCase().includes(q);
+    if (!matches) return false;
+  }
   if (location !== 'all' && inc.location_type !== location) return false;
   if (status !== 'all' && inc.status !== status) return false;
   if (priority !== 'all' && inc.priority !== priority) return false;

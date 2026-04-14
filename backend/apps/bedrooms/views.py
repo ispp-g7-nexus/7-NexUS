@@ -85,7 +85,9 @@ class BedroomListView(AdminRequiredView):
         if capacidad_maxima:
             filters["capacidad_maxima__gte"] = capacidad_maxima
 
-        queryset = Bedroom.objects.filter(residence=request.residence, **filters)
+        queryset = self._with_active_student_residents(
+            Bedroom.objects.filter(residence=request.residence, **filters)
+        )
         serializer = BedroomSerializer(queryset, many=True)
         return JsonResponse(serializer.data, safe=False)
 

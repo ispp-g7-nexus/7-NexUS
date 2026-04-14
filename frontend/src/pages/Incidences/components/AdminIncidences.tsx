@@ -58,7 +58,7 @@ const ManageIncidenceModal = ({ incidence, onClose, onRefresh }: ManageModalProp
   };
 
   const locationDisplay = incidence.location_type === 'habitacion'
-    ? `Habitación ${incidence.room_number || ''}`
+    ? `Habitación ${incidence.room_number_detail?.numero} Planta ${incidence.room_number_detail?.planta} Edificio ${incidence.room_number_detail?.edificio || ''}`
     : (LOCATION_LABELS[incidence.location_type] || incidence.location_type);
 
   return (
@@ -211,7 +211,7 @@ export const AdminIncidences = () => {
                       </div>
                       <div className="flex flex-col items-end gap-2">
                         <div className="flex gap-1">
-                          {inc.is_mine && inc.status === 'pending' && (
+                          {inc.is_mine && (!inc.updates || inc.updates.length === 0) && !inc.assigned_staff && !(inc.assigned_external_name && inc.assigned_external_name.trim()) && (
                             <>
                               <button
                                 onClick={() => setIncidenceToEdit(inc)}
@@ -239,10 +239,7 @@ export const AdminIncidences = () => {
                     <div className="text-left flex-1 flex flex-col justify-between">
                       <div>
                         <h2 className={UI_CLASSES.cardTitle}>{inc.title}</h2>
-                        <div className={UI_CLASSES.cardLocation}>
-                          <MapPin size={14} />
-                          {LOCATION_LABELS[inc.location_type] || inc.location_type}
-                          {inc.location_type === 'habitacion' && inc.room_number ? ` • Hab. ${inc.room_number}` : ''}
+                        <div className={UI_CLASSES.cardLocation}><MapPin size={14} /> {LOCATION_LABELS[inc.location_type]} 
                         </div>
                         <div className="flex flex-wrap gap-2 mt-4">
                           <span className={`${cfg.admin.bg} ${cfg.admin.text} ${UI_CLASSES.statusBadge}`}>{cfg.label}</span>

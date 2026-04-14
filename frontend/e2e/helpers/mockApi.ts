@@ -47,9 +47,9 @@ export const MOCK_PASSES = [
     full_name: 'Juan Pérez',
     pass_code: 'GP-0001',
     resident_name: 'Ana García',
-    valid_from: '2024-06-01T10:00:00Z',
-    valid_until: '2024-06-01T12:00:00Z',
-    created_at: '2024-05-30T09:00:00Z',
+    valid_from: '2099-06-01T10:00:00Z',
+    valid_until: '2099-06-01T12:00:00Z',
+    created_at: '2099-05-30T09:00:00Z',
     status: 'ACTIVE',
     comment: 'Visita familiar',
   },
@@ -167,6 +167,8 @@ export async function mockAdminApi(page: Page, overrides: {
       await route.fulfill(json(guestPasses))
     } else if (path === '/api/admin/guest-passes/policy/') {
       await route.fulfill(json({ max_duration_hours: 24, max_concurrent_passes: 3 }))
+    } else if (path === '/api/admin/guest-passes/notifications/') {
+      await route.fulfill(json([]))
     } else if (path === '/api/chats/groups/') {
       await route.fulfill(json([]))
     } else if (path.startsWith('/api/announcements/')) {

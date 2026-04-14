@@ -1,4 +1,5 @@
 import { fetchWithAuth } from "../utils/api";
+import { trackEvent } from "./analytics";
 
 const PACKAGES_URL = "/api/packages/";
 
@@ -145,7 +146,9 @@ export const packagesService = {
       method: "POST",
       body: JSON.stringify(payload),
     });
-    return handleResponse<PackageAdminItem>(response);
+    const pkg = await handleResponse<PackageAdminItem>(response);
+    trackEvent('package_created', { carrier: payload.carrier });
+    return pkg;
   },
 
   update: async (id: number, payload: UpdatePackagePayload): Promise<PackageAdminItem> => {
@@ -153,7 +156,9 @@ export const packagesService = {
       method: "PATCH",
       body: JSON.stringify(payload),
     });
-    return handleResponse<PackageAdminItem>(response);
+    const pkg = await handleResponse<PackageAdminItem>(response);
+    trackEvent('package_updated', { package_id: id, status: payload.status });
+    return pkg;
   },
 
   delete: async (id: number): Promise<void> => {
@@ -165,6 +170,7 @@ export const packagesService = {
       const body = await response.json().catch(() => ({}));
       throw new Error((body as { detail?: string }).detail || `Error ${response.status}`);
     }
+    trackEvent('package_deleted', { package_id: id });
   },
 
   deliverByQr: async (id: number, qrToken: string): Promise<PackageAdminItem> => {
@@ -172,7 +178,9 @@ export const packagesService = {
       method: "POST",
       body: JSON.stringify({ qr_token: qrToken }),
     });
-    return handleResponse<PackageAdminItem>(response);
+    const pkg = await handleResponse<PackageAdminItem>(response);
+    trackEvent('package_delivered_by_qr', { package_id: id });
+    return pkg;
   },
 
   previewLabel: async (file: File): Promise<PackageLabelPreview> => {
@@ -183,7 +191,9 @@ export const packagesService = {
       method: "POST",
       body: formData,
     });
-    return handleResponse<PackageLabelPreview>(response);
+    const preview = await handleResponse<PackageLabelPreview>(response);
+    trackEvent('package_label_scanned');
+    return preview;
   },
 
   getMyPackages: async (): Promise<SimplePackage[]> => {

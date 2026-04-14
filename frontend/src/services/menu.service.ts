@@ -112,8 +112,12 @@ class MenuService {
     return this.request<any[]>('/menu/special-requests/');
   }
 
+  async listSpecialRequests(): Promise<any[]> {
+    return this.request<any[]>('/menu/special-requests/list_requests/');
+  }
+
   async updateSpecialRequestStatus(requestId: string | number, status: 'approved' | 'rejected'): Promise<any> {
-    return this.patch(`/menu/special-requests/${requestId}/`, { status });
+    return this.patch(`/menu/special-requests/${requestId}/update_status/`, { status });
   }
 }
 
