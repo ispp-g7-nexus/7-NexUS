@@ -1,5 +1,5 @@
 import json
-from datetime import timedelta
+from datetime import time, timedelta
 
 from django.contrib.auth import get_user_model
 from django.db.utils import ProgrammingError
@@ -261,6 +261,42 @@ class GuestPassesApiTests(TenantTestCase):
     def test_non_resident_user_is_forbidden(self):
         response = self.admin_client.get("/api/guest-passes/me/active/")
         self.assertEqual(response.status_code, 403)
+
+    def test_unauthenticated_user_is_forbidden_for_resident_endpoints(self):
+        now = timezone.now()
+        guest_pass = self._create_pass(
+            resident=self.resident_membership,
+            pass_code="PASS-UNAUTH-CANCEL-1",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now - timedelta(hours=1),
+            valid_until=now + timedelta(hours=2),
+        )
+        anonymous_client = TenantClient(self.tenant)
+        create_payload = self._build_create_payload(
+            valid_from=now + timedelta(hours=1),
+            valid_until=now + timedelta(hours=2),
+        )
+
+        endpoints = [
+            ("GET", "/api/guest-passes/me/active/", None),
+            ("GET", "/api/guest-passes/me/upcoming/", None),
+            ("GET", "/api/guest-passes/me/history/", None),
+            ("GET", self.resident_policy_url, None),
+            ("POST", self.create_url, create_payload),
+            ("POST", self._cancel_url(guest_pass.id), {}),
+        ]
+
+        for method, url, payload in endpoints:
+            with self.subTest(method=method, url=url):
+                if method == "GET":
+                    response = anonymous_client.get(url)
+                else:
+                    response = anonymous_client.post(
+                        url,
+                        data=json.dumps(payload),
+                        content_type="application/json",
+                    )
+                self.assertEqual(response.status_code, 403)
 
     def test_resident_lists_only_own_upcoming_passes(self):
         now = timezone.now()
@@ -733,6 +769,26 @@ class GuestPassesApiTests(TenantTestCase):
         self.assertEqual(policy.max_duration_hours, 12)
         self.assertEqual(policy.max_concurrent_passes, 5)
 
+    def test_admin_policy_patch_requires_at_least_one_field(self):
+        response = self.admin_client.patch(
+            self.admin_policy_url,
+            data=json.dumps({}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("detail", response.json())
+
+    def test_admin_policy_patch_rejects_invalid_visit_window(self):
+        response = self.admin_client.patch(
+            self.admin_policy_url,
+            data=json.dumps({"visit_start_time": "22:00", "visit_end_time": "08:00"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("visit_start_time", response.json())
+
     def test_resident_cannot_update_admin_policy(self):
         response = self.resident_client.patch(
             self.admin_policy_url,
@@ -759,6 +815,56 @@ class GuestPassesApiTests(TenantTestCase):
             data=json.dumps(payload),
             content_type="application/json",
         )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("valid_until", response.json())
+
+    def test_create_rejects_when_start_is_before_visit_start_time_policy(self):
+        GuestPassPolicy.objects.update_or_create(
+            residence=self.residence,
+            defaults={
+                "max_duration_hours": 24,
+                "max_concurrent_passes": 3,
+                "visit_start_time": time(9, 0),
+                "visit_end_time": time(22, 0),
+            },
+        )
+
+        local_now = timezone.localtime(timezone.now())
+        valid_from = local_now.replace(hour=8, minute=30, second=0, microsecond=0) + timedelta(days=1)
+        valid_until = valid_from + timedelta(hours=2)
+
+        payload = self._build_create_payload(valid_from=valid_from, valid_until=valid_until)
+        response = self.resident_client.post(
+            self.create_url,
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("valid_from", response.json())
+
+    def test_create_rejects_when_end_is_after_visit_end_time_policy(self):
+        GuestPassPolicy.objects.update_or_create(
+            residence=self.residence,
+            defaults={
+                "max_duration_hours": 24,
+                "max_concurrent_passes": 3,
+                "visit_start_time": time(9, 0),
+                "visit_end_time": time(22, 0),
+            },
+        )
+
+        local_now = timezone.localtime(timezone.now())
+        valid_from = local_now.replace(hour=20, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        valid_until = local_now.replace(hour=22, minute=30, second=0, microsecond=0) + timedelta(days=1)
+
+        payload = self._build_create_payload(valid_from=valid_from, valid_until=valid_until)
+        response = self.resident_client.post(
+            self.create_url,
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+
         self.assertEqual(response.status_code, 400)
         self.assertIn("valid_until", response.json())
 
