@@ -136,6 +136,7 @@ function ObjectCard({
   const visibleSlots = availableSlots.slice(0, 3);
   const remainingSlots = availableSlots.length - visibleSlots.length;
   const hasSlots = availableSlots.length > 0;
+  const isOutOfStock = !object.can_rent && object.current_available_stock === 0;
 
   return (
     <Card className="border-border/80 shadow-sm">
@@ -166,6 +167,12 @@ function ObjectCard({
             {object.can_rent ? 'Disponible' : 'No disponible'}
           </span>
         </div>
+
+        {isOutOfStock && (
+          <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            Todo el stock está en uso para esta fecha, pero puedes reservarlo para más adelante.
+          </p>
+        )}
 
         <div className="grid grid-cols-1 gap-2 text-sm text-gray-500 sm:grid-cols-2">
           {object.location && (

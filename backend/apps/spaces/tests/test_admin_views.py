@@ -8,6 +8,7 @@ from django_tenants.test.client import TenantClient
 from django.contrib.auth import get_user_model
 from apps.residences.models import Residence, ResidenceDomain
 from apps.spaces.models import CommonSpace, SpaceReservation
+from apps.spaces.tests import ensure_tenant_domain, make_tenant_client
 
 
 class AdminSpaceViewsTests(FastTenantTestCase):
@@ -29,6 +30,7 @@ class AdminSpaceViewsTests(FastTenantTestCase):
 
     def setUp(self):
         super().setUp()
+        ensure_tenant_domain(self.tenant, self.get_test_tenant_domain())
         User = get_user_model()
 
         domain = self.get_test_tenant_domain()
@@ -87,13 +89,13 @@ class AdminSpaceViewsTests(FastTenantTestCase):
             residence=self.other_residence,
         )
 
-        self.admin_client = TenantClient(self.tenant, SERVER_NAME=domain, HTTP_HOST=domain)
+        self.admin_client = make_tenant_client(self.tenant, domain)
         self.admin_client.force_login(self.admin_user)
 
-        self.non_staff_client = TenantClient(self.tenant, SERVER_NAME=domain, HTTP_HOST=domain)
+        self.non_staff_client = make_tenant_client(self.tenant, domain)
         self.non_staff_client.force_login(self.non_staff_user)
 
-        self.anon_client = TenantClient(self.tenant, SERVER_NAME=domain, HTTP_HOST=domain)
+        self.anon_client = make_tenant_client(self.tenant, domain)
 
     def _create_reservation(self, user, space, start_offset_minutes=60, duration_minutes=60):
         start = timezone.now() + timedelta(minutes=start_offset_minutes)
