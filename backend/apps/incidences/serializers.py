@@ -4,6 +4,10 @@ from apps.membership.permissions import (
     has_screen_permission,
 )
 
+
+from apps.bedrooms.serializers import BedroomSerializer
+from apps.membership.models import Membership
+from apps.bedrooms.models import Bedroom
 from .models import Incidence, IncidenceUpdate
 
 
@@ -18,34 +22,21 @@ class IncidenceUpdateSerializer(serializers.ModelSerializer):
 class IncidenceSerializer(serializers.ModelSerializer):
     updates = IncidenceUpdateSerializer(many=True, read_only=True)
     student_name = serializers.SerializerMethodField()
+    room_number_detail = BedroomSerializer(source='room_number', read_only=True)
     is_mine = serializers.SerializerMethodField()
-    assigned_staff_name = serializers.CharField(
-        source="assigned_staff.user.get_full_name", read_only=True, default=None
-    )
-    assigned_staff_job = serializers.CharField(
-        source="assigned_staff.job_title", read_only=True, default=None
-    )
+    assigned_staff_name = serializers.CharField(source='assigned_staff.user.get_full_name', read_only=True, default=None)
+    assigned_staff_job = serializers.CharField(source='assigned_staff.job_title', read_only=True, default=None)
+    room_number = serializers.PrimaryKeyRelatedField(
+        queryset=Bedroom.objects.all(), 
+        required=False, 
+        allow_null=True)
 
     class Meta:
         model = Incidence
         fields = [
-            "id",
-            "title",
-            "description",
-            "location_type",
-            "room_number",
-            "status",
-            "priority",
-            "updates",
-            "admin_notes",
-            "img",
-            "created_at",
-            "is_mine",
-            "student_name",
-            "assigned_staff",
-            "assigned_staff_name",
-            "assigned_staff_job",
-            "assigned_external_name",
+            'id', 'title', 'description', 'location_type', 'room_number', 'room_number_detail',
+            'status', 'priority', 'updates', 'admin_notes', 'img', 'created_at', 'is_mine', 'student_name', 'assigned_staff',
+            'assigned_staff_name', 'assigned_staff_job', 'assigned_external_name'
         ]
         read_only_fields = ["id", "created_at", "is_mine"]
 
@@ -69,6 +60,22 @@ class IncidenceSerializer(serializers.ModelSerializer):
         if self.instance:
             is_admin = has_screen_permission(user, residence, "incidences")
             is_owner = self.instance.student_id == user.id
+
+            # Si no es admin y la incidencia ya tiene asignación o ya fue tocada por un administrador, no permitir edición
+            if not is_admin and is_owner:
+                has_staff_assignment = self.instance.assigned_staff is not None
+                has_external_assignment = self.instance.assigned_external_name and self.instance.assigned_external_name.strip()
+                has_admin_updates = self.instance.updates.exists()
+                has_non_pending_status = self.instance.status != 'pending'
+
+                if has_staff_assignment or has_external_assignment:
+                    raise serializers.ValidationError(
+                        {"detail": "No puedes editar una incidencia que ya ha sido asignada a personal."}
+                    )
+                if has_admin_updates or has_non_pending_status:
+                    raise serializers.ValidationError(
+                        {"detail": "No puedes editar una incidencia que ya ha sido gestionada por un administrador."}
+                    )
 
             if not is_admin:
                 if not is_owner:

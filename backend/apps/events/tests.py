@@ -1284,7 +1284,7 @@ class UrlsTests(FastTenantTestCase):
         )
 
 
-from apps.residences.models import StudentProfile
+from apps.residents.models import StudentProfile
 
 
 class EventRecommendationTests(ViewTestsBase):

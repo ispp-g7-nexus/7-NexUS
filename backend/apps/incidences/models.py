@@ -26,7 +26,9 @@ class Incidence(models.Model):
     title = models.CharField(max_length=150)
     description = models.TextField()
     location_type = models.CharField(max_length=20, choices=LOCATION_CHOICES)
-    room_number = models.CharField(max_length=20, blank=True, null=True)
+    room_number = models.ForeignKey(
+        'bedrooms.Bedroom',on_delete=models.SET_NULL, null=True, blank=True, related_name='incidences')
+    #room_number = models.CharField(max_length=20, blank=True, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='low')
     

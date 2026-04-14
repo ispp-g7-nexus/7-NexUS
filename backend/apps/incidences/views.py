@@ -2,6 +2,7 @@ from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError
 from .models import Incidence, IncidenceUpdate
 from .serializers import IncidenceSerializer, AdminIncidenceSerializer
 from .permissions import IsAdminOrReadOnly
@@ -149,21 +150,39 @@ class IncidenceViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
+        residence = getattr(self.request, "residence", None)
+        location_type = self.request.data.get('location_type')
+        assigned_room = None
+
+    # Logic for students: Auto-detect room
+        if not user.is_staff and location_type == 'habitacion':
+            membership = user.memberships.filter(
+                residence=residence, 
+                is_active=True,
+                role__name__iexact="Student"
+            ).first()
         
-        if user.is_staff:
-            serializer.save(student=user)
-        else:
-            location_type = self.request.data.get('location_type')
-            room_number = self.request.data.get('room_number')
-            
-            # Si el estudiante reporta en habitación y no puso número, 
-            # le ponemos el de su perfil (o el "3º A" por ahora)
-            if location_type == 'habitacion' and not room_number:
-                room_number = "3º A"
-            
-            serializer.save(student=user, room_number=room_number)
-        
+            if membership and membership.bedroom:
+                assigned_room = membership.bedroom
+            else:
+                raise ValidationError({"location_type": "No tienes una habitación asignada para reportar incidencias en 'Mi Habitación'."})
+
+        # Single save point to prevent double creation
+        serializer.save(student=user, room_number=assigned_room)
+
     def perform_update(self, serializer):
+        request = self.get_serializer_context()['request']
+        if serializer.validated_data.get('location_type') == 'habitacion':
+            membership = serializer.instance.student.memberships.filter(
+                residence=getattr(request, "residence", None),
+                is_active=True,
+                role__name__iexact="Student"
+            ).first()
+            if membership and membership.bedroom:
+                serializer.validated_data['room_number'] = membership.bedroom
+            else:
+                raise ValidationError({"location_type": "No tienes una habitación asignada para reportar incidencias en 'Mi Habitación'."})
+
         instance = self.get_object()
         old_status = instance.status
         

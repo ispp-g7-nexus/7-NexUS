@@ -4,7 +4,7 @@ import { authService } from "../services/auth";
 import type { AnnouncementList } from "../types/announcement.types";
 import { API_URL, API_URL_INCIDENCES, fetchWithAuth } from "../utils/api";
 
-export type AdminNotificationSource = "incidences" | "reservations" | "events" | "announcements";
+export type AdminNotificationSource = "incidences" | "reservations" | "events" | "announcements" | "visitors";
 
 export type AdminNotification = {
     id: string;
@@ -30,6 +30,14 @@ type ReservationNotificationItem = {
 };
 
 type ObjectReservationNotificationItem = {
+    id: number;
+    title: string;
+    message: string;
+    created_at: string;
+    end_time: string;
+};
+
+type VisitorNotificationItem = {
     id: number;
     title: string;
     message: string;
@@ -172,11 +180,12 @@ export function useAdminNotifications() {
                 setNotificationsLoading(true);
             }
 
-            const [announcementsResult, incidencesResult, reservationsResult, objectReservationsResult, eventsResult] = await Promise.allSettled([
+            const [announcementsResult, incidencesResult, reservationsResult, objectReservationsResult, visitorNotificationsResult, eventsResult] = await Promise.allSettled([
                 announcementService.getAnnouncements(),
                 fetchWithAuth(`${API_URL_INCIDENCES}notifications/`),
                 fetchWithAuth("/api/admin/spaces/notifications/"),
                 fetchWithAuth("/api/admin/objects/notifications/"),
+                fetchWithAuth("/api/admin/guest-passes/notifications/"),
                 fetchWithAuth(API_URL),
             ]);
 
@@ -227,6 +236,21 @@ export function useAdminNotifications() {
                         timestamp: item.created_at,
                     }))
                     .filter((item) => !dismissedReservationIds.includes(item.id))
+                    .forEach((item) => merged.push(item));
+            }
+
+            if (visitorNotificationsResult.status === "fulfilled" && visitorNotificationsResult.value.ok) {
+                const data = await visitorNotificationsResult.value.json();
+                const visitorItems = Array.isArray(data) ? (data as VisitorNotificationItem[]) : [];
+
+                visitorItems
+                    .map((item) => ({
+                        id: `visitors-${item.id}`,
+                        source: "visitors" as const,
+                        title: `[Visitantes] ${item.title}`,
+                        message: item.message,
+                        timestamp: item.created_at,
+                    }))
                     .forEach((item) => merged.push(item));
             }
 

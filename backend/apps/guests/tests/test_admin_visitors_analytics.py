@@ -27,6 +27,7 @@ class AdminVisitorsAnalyticsTests(TenantTestCase):
         tenant.slug = "tenant-admin-visitors-analytics"
         tenant.is_active = True
         tenant.on_trial = True
+        tenant.schema_name = f"test_schema_{cls.__name__.lower()}"
 
     @classmethod
     def setup_domain(cls, domain):

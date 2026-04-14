@@ -5,8 +5,10 @@ const BASE = '/api/bedrooms/';
 
 export interface BedroomResident {
     id: number;
+    user_id: number;
     full_name: string;
     email: string | null;
+    residence_id?: number | null;
 }
 
 export interface Bedroom {
@@ -79,14 +81,6 @@ export async function deleteBedroom(id: number) {
     });
     if (res.ok) trackEvent('bedroom_deleted', { bedroom_id: id });
     return res;
-}
-
-export interface BedroomResident {
-    id: number;
-    user_id: number;
-    full_name: string;
-    email: string | null;
-    residence_id: number | null;
 }
 
 export async function getBedroomResidents(id: number): Promise<BedroomResident[]> {

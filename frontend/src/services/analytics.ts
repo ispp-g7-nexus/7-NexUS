@@ -1,4 +1,5 @@
 import posthog from 'posthog-js';
+import { fetchWithAuth, BASE_URL } from "../utils/api";
 
 const POSTHOG_KEY = import.meta.env.VITE_PUBLIC_POSTHOG_KEY;
 const POSTHOG_HOST = import.meta.env.VITE_PUBLIC_POSTHOG_HOST;
@@ -56,3 +57,27 @@ export function trackEvent(event: string, properties?: Record<string, unknown>) 
   if (!analyticsEnabled) return;
   posthog.capture(event, properties);
 }
+
+export const getMembershipAnalytics = async (startDate?: string, endDate?: string) => {
+  let url = `${BASE_URL}/membership/analytics/summary/`;
+  const params = new URLSearchParams();
+  if (startDate) {
+    params.append('start_date', startDate);
+  }
+  if (endDate) {
+    params.append('end_date', endDate);
+  }
+  if (params.toString()) {
+    url += `?${params.toString()}`;
+  }
+  const response = await fetchWithAuth(url, {
+    method: 'GET',
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.detail || err.message || `HTTP ${response.status}`);
+  }
+
+  return response.json();
+};

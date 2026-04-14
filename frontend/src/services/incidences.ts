@@ -9,7 +9,8 @@ export interface Incidence {
   title: string;
   description: string;
   location_type: LocationType;
-  room_number: string | null;
+  room_number: number | null;
+  room_number_detail?: BedroomDetail | null;
   status: IncidenceStatus;
   priority: PriorityLevel;
   student: number;
@@ -24,6 +25,7 @@ export interface Incidence {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  is_mine?: boolean;
 }
 
 export interface IncidenceUpdate {
@@ -34,11 +36,22 @@ export interface IncidenceUpdate {
   created_at: string;
 }
 
+export interface BedroomDetail {
+  id: number;
+  numero: string;
+  planta?: number;
+  edificio?: string;
+  tipo?: string;
+  capacidad_maxima?: number;
+}
+
+// --- DTOs PARA PETICIONES ---
+
 export interface CreateIncidenceDTO {
   title: string;
   description: string;
   location_type: LocationType;
-  room_number?: string | null;
+  room_number?: number | null;
   priority?: PriorityLevel;
 }
 
@@ -53,7 +66,8 @@ export interface UpdateIncidenceDTO {
   assigned_external_name?: string;
   admin_notes?: string;
   quick_comment?: string;
-  room_number?: string | null;
+  room_number?: number | null;
+
 }
 
 
@@ -78,6 +92,9 @@ export const IncidenceService = {
    * Actualizar estado, personal asignado o notas
    */
   update: async (id: number, data: UpdateIncidenceDTO): Promise<Incidence> => {
+    console.log("-------------------------------");
+    console.log("📦 PAYLOAD QUE SALE AL BACKEND:", data);
+    console.log("-------------------------------");
     const response = await fetchWithAuth(`/api/incidences/${id}/`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
