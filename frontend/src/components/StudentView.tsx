@@ -670,7 +670,7 @@ export function StudentView({ onLogout }: StudentViewProps) {
         let tabContent;
         switch (activeTab) {
             case "incidences":
-                tabContent = <StudentIncidences onGoToProfile={handleGoToProfile} onLogout={onLogout} />;
+                tabContent = <StudentIncidences onGoToProfile={handleGoToProfile} onLogout={onLogout} onNavigate={handleNavigation} />;
                 break;
             case "reservations":
                 tabContent = (
@@ -684,6 +684,7 @@ export function StudentView({ onLogout }: StudentViewProps) {
             case "community":
                 tabContent = (
                     <SocialHub
+                        onNavigate={handleNavigation}
                         onLogout={onLogout}
                         chatRealtimeTick={chatRealtimeTick}
                         chatRealtimeEvent={chatRealtimeEvent}
@@ -700,7 +701,7 @@ export function StudentView({ onLogout }: StudentViewProps) {
                 );
                 break;
             case "events":
-                tabContent = <SocialHub initialTab="eventos" />;
+                tabContent = <SocialHub initialTab="eventos" onNavigate={handleNavigation} />;
                 break;
             case "matches":
                 tabContent = <MyMatchesPage />;
@@ -710,6 +711,7 @@ export function StudentView({ onLogout }: StudentViewProps) {
                     <StudentAnnouncements
                         onGoToProfile={handleGoToProfile}
                         onLogout={onLogout}
+                        onNavigate={handleNavigation}
                         onAnnouncementsLoaded={() => {
                             globalThis.localStorage.setItem(HOME_ANNOUNCEMENTS_SEEN_AT_KEY, new Date().toISOString());
                             setUnreadAnnouncements(0);
@@ -721,10 +723,10 @@ export function StudentView({ onLogout }: StudentViewProps) {
                 tabContent = <PackagesPage onGoToProfile={handleGoToProfile} onLogout={onLogout} />;
                 break;
             case "visitors":
-                tabContent = <ActiveGuestPassesPage onGoToProfile={handleGoToProfile} onLogout={onLogout} />;
+                tabContent = <ActiveGuestPassesPage onGoToProfile={handleGoToProfile} onLogout={onLogout} onNavigate={handleNavigation} />;
                 break;
             case "menu":
-                tabContent = <ResidentMenuView onGoToProfile={handleGoToProfile} onLogout={onLogout} />;
+                tabContent = <ResidentMenuView onGoToProfile={handleGoToProfile} onLogout={onLogout} onNavigate={handleNavigation} />;
                 break;
             default:
                 tabContent = <div className="p-8 text-center text-gray-500">Módulo en construcción</div>;

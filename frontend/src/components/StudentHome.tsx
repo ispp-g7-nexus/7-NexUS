@@ -43,6 +43,7 @@ const HOME_NOTIFICATIONS_DISMISSED_IDS_KEY = "home-notifications-dismissed-ids";
 const HOME_INCIDENCES_DISMISSED_IDS_KEY = "home-incidences-dismissed-ids";
 const HOME_INCIDENCES_SEEN_AT_KEY = "home-incidences-seen-at";
 const HOME_ANNOUNCEMENTS_SEEN_AT_KEY = "home-announcements-seen-at";
+const HOME_NOTIFICATIONS_CACHE_KEY = "home-notifications-cache";
 const VISIT_URGENT_NOTIFICATION_KEY_BASE = "visit-urgent-shared-notifications";
 const NOTIFICATIONS_POLL = 5000;
 const NOTIFICATIONS_LIMIT = 12;
@@ -240,6 +241,53 @@ type EventItem = {
 
 type ReservationNotificationItem = ReservationReminderNotification;
 
+const getCachedNotifications = (): HomeNotification[] => {
+    if (typeof window === "undefined") {
+        return [];
+    }
+
+    const raw = globalThis.localStorage.getItem(HOME_NOTIFICATIONS_CACHE_KEY);
+    if (!raw) {
+        return [];
+    }
+
+    try {
+        const parsed = JSON.parse(raw) as HomeNotification[];
+        if (!Array.isArray(parsed)) {
+            return [];
+        }
+
+        const dismissedNotificationIds = parseSeenIds(globalThis.localStorage.getItem(HOME_NOTIFICATIONS_DISMISSED_IDS_KEY));
+        const dismissedIncidenceIds = parseSeenIds(globalThis.localStorage.getItem(HOME_INCIDENCES_DISMISSED_IDS_KEY));
+        const announcementsSeenAtMs = getAnnouncementsSeenAtMs();
+        const incidencesSeenAtMs = getIncidencesSeenAtMs();
+
+        return parsed.filter((notification) => {
+            if (notification.source === "announcements") {
+                return Date.parse(notification.createdAt) > announcementsSeenAtMs;
+            }
+
+            if (notification.source === "incidences") {
+                return !dismissedIncidenceIds.includes(notification.id) && Date.parse(notification.createdAt) > incidencesSeenAtMs;
+            }
+
+            if (notification.source === "visitors") {
+                return true;
+            }
+
+            return !dismissedNotificationIds.includes(notification.id);
+        });
+    } catch {
+        return [];
+    }
+};
+
+const saveCachedNotifications = (notifications: HomeNotification[]) => {
+    if (typeof window !== "undefined") {
+        globalThis.localStorage.setItem(HOME_NOTIFICATIONS_CACHE_KEY, JSON.stringify(notifications));
+    }
+};
+
 const parseUserId = (raw: unknown) => {
     if (typeof raw === "number" && Number.isFinite(raw)) {
         return raw;
@@ -398,16 +446,18 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
         status: "Cargando"
     });
 
-    const [notifications, setNotifications] = useState<HomeNotification[]>([]);
-    const [isNotificationsLoading, setIsNotificationsLoading] = useState(false);
+    const initialCachedNotificationsRef = useRef<HomeNotification[]>(getCachedNotifications());
+    const initialCachedNotifications = initialCachedNotificationsRef.current;
+    const [notifications, setNotifications] = useState<HomeNotification[]>(initialCachedNotifications);
+    const [isNotificationsLoading, setIsNotificationsLoading] = useState(initialCachedNotifications.length === 0);
     const [seenNotificationIds, setSeenNotificationIds] = useState<string[]>(getInitialSeenIds);
-    const [dismissedIncidenceIds, setDismissedIncidenceIds] = useState<string[]>(getInitialDismissedIncidenceIds);
     const [pendingPackages, setPendingPackages] = useState<number>(0);
     const [currentUserId, setCurrentUserId] = useState<number | null>(null);
     const [currentUserEmail, setCurrentUserEmail] = useState("");
     const [isSessionUserResolved, setIsSessionUserResolved] = useState(false);
     const notificationsRequestIdRef = useRef(0);
     const dismissedNotificationIdsRef = useRef<string[]>(getInitialDismissedNotificationIds());
+    const dismissedIncidenceIdsRef = useRef<string[]>(getInitialDismissedIncidenceIds());
 
     const wifiPassword = "NexUS2026@Residence";
     const unreadCount = notifications.filter((notification) => !seenNotificationIds.includes(notification.id)).length;
@@ -480,11 +530,9 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
     };
 
     const appendDismissedIncidenceIds = (notificationIds: string[]) => {
-        setDismissedIncidenceIds((previousIds) => {
-            const nextIds = Array.from(new Set([...previousIds, ...notificationIds]));
-            saveStoredIds(HOME_INCIDENCES_DISMISSED_IDS_KEY, nextIds);
-            return nextIds;
-        });
+        const nextIds = Array.from(new Set([...dismissedIncidenceIdsRef.current, ...notificationIds]));
+        dismissedIncidenceIdsRef.current = nextIds;
+        saveStoredIds(HOME_INCIDENCES_DISMISSED_IDS_KEY, nextIds);
     };
 
     const buildAnnouncementItems = useCallback((announcements: AnnouncementItem[]): HomeNotification[] => {
@@ -511,7 +559,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
         const incidencesSeenAtMs = getIncidencesSeenAtMs();
 
         return incidenceItems
-            .filter((item) => !dismissedIncidenceIds.includes(item.id))
+            .filter((item) => !dismissedIncidenceIdsRef.current.includes(item.id))
             .filter((item) => Date.parse(item.created_at) > incidencesSeenAtMs)
             .map((item) => ({
                 id: item.id,
@@ -522,7 +570,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                 source: "incidences" as const,
                 createdAt: item.created_at,
             }));
-    }, [dismissedIncidenceIds]);
+    }, []);
 
     const buildEventItems = useCallback((events: EventItem[]): HomeNotification[] => {
         if (!isSessionUserResolved) {
@@ -615,30 +663,40 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
 
     const loadHomeNotifications = useCallback(async (silent = false) => {
         const requestId = ++notificationsRequestIdRef.current;
+        const shouldShowLoadingState = !silent;
         
         // 1. Gestión de estado inicial
         if (!silent) setIsNotificationsLoading(true);
 
         try {
+            const withTimeout = <T,>(promise: Promise<T>, fallback: T, ms = 7000): Promise<T> => {
+                return Promise.race([
+                    promise.catch(() => fallback),
+                    new Promise<T>((resolve) => {
+                        globalThis.setTimeout(() => resolve(fallback), ms);
+                    }),
+                ]);
+            };
+
             // 2. Ejecución paralela de peticiones
             const [
-                announcementsRes, 
-                incidencesRes, 
-                eventsRes, 
+                announcementsRes,
+                incidencesRes,
+                eventsRes,
                 packagesRes,
                 objectRemindersRes,
                 objectStockAlertsRes,
                 spaceReservationsRes,
                 objectReservationsRes,
-            ] = await Promise.allSettled([
-                announcementService.getAnnouncements(),
-                fetchWithAuth(`${API_URL_INCIDENCES}notifications/`),
-                fetchWithAuth(`${API_URL}events/`),
-                packagesService.getPendingCount(),
-                objectsService.getPendingRemindersCount(),
-                objectsService.getUserObjectNotifications(),
-                listMyReservationReminders(),
-                objectsService.getUserObjectReservationReminders(),
+            ] = await Promise.all([
+                withTimeout(announcementService.getAnnouncements(), [] as AnnouncementItem[]),
+                withTimeout(fetchWithAuth(`${API_URL_INCIDENCES}notifications/`), null as Response | null),
+                withTimeout(fetchWithAuth(API_URL), null as Response | null),
+                withTimeout(packagesService.getPendingCount(), 0),
+                withTimeout(objectsService.getPendingRemindersCount(), 0),
+                withTimeout(objectsService.getUserObjectNotifications(), [] as Awaited<ReturnType<typeof objectsService.getUserObjectNotifications>>),
+                withTimeout(listMyReservationReminders(), [] as ReservationNotificationItem[]),
+                withTimeout(objectsService.getUserObjectReservationReminders(), [] as ReservationNotificationItem[]),
             ]);
 
             // Evitar actualizaciones si el componente cambió de estado o hubo una petición nueva
@@ -646,23 +704,23 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
 
             // 3. Procesamiento individual (Funciones puras de mapeo)
             const mergedNotifications: HomeNotification[] = [
-                ...(announcementsRes.status === "fulfilled" ? buildAnnouncementItems(announcementsRes.value) : []),
-                ...(packagesRes.status === "fulfilled" ? buildPackageItems(packagesRes.value || 0) : []),
-                ...(objectRemindersRes.status === "fulfilled" ? buildObjectReminderItems(objectRemindersRes.value || 0) : []),
-                ...(objectStockAlertsRes.status === "fulfilled" ? buildObjectStockAlertItems(objectStockAlertsRes.value || []) : []),
+                ...buildAnnouncementItems(announcementsRes || []),
+                ...buildPackageItems(packagesRes || 0),
+                ...buildObjectReminderItems(objectRemindersRes || 0),
+                ...buildObjectStockAlertItems(objectStockAlertsRes || []),
                 ...buildVisitUrgentItems(),
-                ...(spaceReservationsRes.status === "fulfilled" ? buildReservationReminderItems(spaceReservationsRes.value) : []),
-                ...(objectReservationsRes.status === "fulfilled" ? buildReservationReminderItems(objectReservationsRes.value) : []),
+                ...buildReservationReminderItems(spaceReservationsRes || []),
+                ...buildReservationReminderItems(objectReservationsRes || []),
             ];
 
             // 4. Procesamiento de respuestas tipo Fetch (Incidencias y Eventos)
-            if (incidencesRes.status === "fulfilled" && incidencesRes.value.ok) {
-                const data = await incidencesRes.value.json();
+            if (incidencesRes && incidencesRes.ok) {
+                const data = await incidencesRes.json();
                 mergedNotifications.push(...buildIncidenceItems(data.results || []));
             }
 
-            if (eventsRes.status === "fulfilled" && eventsRes.value.ok) {
-                const eventsData = await eventsRes.value.json();
+            if (eventsRes && eventsRes.ok) {
+                const eventsData = await eventsRes.json();
                 mergedNotifications.push(...buildEventItems(Array.isArray(eventsData) ? eventsData : []));
             }
 
@@ -687,21 +745,22 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
             const sorted = sortedNotifications.slice(0, NOTIFICATIONS_LIMIT);
 
             setNotifications(sorted);
+            saveCachedNotifications(sorted);
 
         } catch (error) {
             console.error("Error cargando notificaciones:", error);
         } finally {
-            if (requestId === notificationsRequestIdRef.current && !silent) {
+            if (shouldShowLoadingState) {
                 setIsNotificationsLoading(false);
             }
         }
     }, [buildAnnouncementItems, buildIncidenceItems, buildEventItems, buildPackageItems, buildObjectReminderItems, buildObjectStockAlertItems, buildReservationReminderItems, buildVisitUrgentItems]);
     useEffect(() => {
-        loadHomeNotifications();
+        loadHomeNotifications(initialCachedNotifications.length > 0);
         const intervalId = globalThis.setInterval(() => loadHomeNotifications(true), NOTIFICATIONS_POLL);
 
         return () => globalThis.clearInterval(intervalId);
-    }, [loadHomeNotifications]);
+    }, [initialCachedNotifications.length, loadHomeNotifications]);
 
     // Paquetes: contador pendientes de recoger
     useEffect(() => {
@@ -748,7 +807,11 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
             appendDismissedIncidenceIds([notification.id]);
         }
 
-        setNotifications((previous) => previous.filter((item) => item.id !== notification.id));
+        setNotifications((previous) => {
+            const next = previous.filter((item) => item.id !== notification.id);
+            saveCachedNotifications(next);
+            return next;
+        });
     };
 
     const handleCopyPassword = () => {
@@ -817,7 +880,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                                     </div>
 
                                     <div className="space-y-3">
-                                        {isNotificationsLoading ? (
+                                        {isNotificationsLoading && notifications.length === 0 ? (
                                             <p className="py-4 text-sm text-gray-500">Cargando notificaciones...</p>
                                         ) : notifications.length === 0 ? (
                                             <p className="py-4 text-sm text-gray-500">No tienes notificaciones pendientes.</p>

@@ -6,15 +6,17 @@ import { NotificationBell } from "../../components/announcement/NotificationBell
 import { Button } from "../../components/ui/button";
 import announcementService from "../../services/announcement.service";
 import { AnnouncementList } from "../../types/announcement.types";
+import type { StudentTab } from "../../components/StudentHome";
 
 
 interface StudentAnnouncementsProps {
   onGoToProfile?: () => void;
   onLogout?: () => void;
   onAnnouncementsLoaded?: () => void;
+  onNavigate?: (view: StudentTab) => void;
 }
 
-export function StudentAnnouncements({ onGoToProfile, onLogout, onAnnouncementsLoaded }: StudentAnnouncementsProps) {
+export function StudentAnnouncements({ onGoToProfile, onLogout, onAnnouncementsLoaded, onNavigate }: StudentAnnouncementsProps) {
   const [announcements, setAnnouncements] = useState<AnnouncementList[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -62,7 +64,7 @@ export function StudentAnnouncements({ onGoToProfile, onLogout, onAnnouncementsL
       <header className="bg-primary  p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg sticky top-0 z-20">
         <h1 className="text-primary-foreground text-2xl font-bold">Avisos</h1>
         <div className="flex items-center gap-2">
-          <NotificationBell mode="announcements" onMarkAsRead={loadAnnouncements} />
+          <NotificationBell mode="announcements" onMarkAsRead={loadAnnouncements} onNavigate={onNavigate} />
           <Button
             size="icon"
             variant="ghost"

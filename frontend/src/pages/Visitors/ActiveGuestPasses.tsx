@@ -10,6 +10,7 @@ import { Label } from "../../components/ui/label";
 import { Select1, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { Textarea } from "../../components/ui/textarea";
 import { NotificationBell } from "../../components/announcement/NotificationBell";
+import type { StudentTab } from "../../components/StudentHome";
 import {
   cancelMyGuestPass,
   createMyGuestPass,
@@ -782,6 +783,7 @@ function CreateGuestPassForm({
 interface ActiveGuestPassesPageProps {
   onGoToProfile?: () => void;
   onLogout?: () => void;
+  onNavigate?: (view: StudentTab) => void;
 }
 
 function toErrorMessage(unknownError: unknown): string {
@@ -878,7 +880,7 @@ async function submitGuestPass({
   }
 }
 
-export function ActiveGuestPassesPage({ onGoToProfile, onLogout }: ActiveGuestPassesPageProps) {
+export function ActiveGuestPassesPage({ onGoToProfile, onLogout, onNavigate }: ActiveGuestPassesPageProps) {
   const [activePasses, setActivePasses] = useState<GuestPass[]>([]);
   const [upcomingPasses, setUpcomingPasses] = useState<GuestPass[]>([]);
   const [historyPasses, setHistoryPasses] = useState<GuestPass[]>([]);
@@ -953,7 +955,7 @@ export function ActiveGuestPassesPage({ onGoToProfile, onLogout }: ActiveGuestPa
       <header className="bg-primary p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg sticky top-0 z-20">
         <h1 className="text-primary-foreground text-2xl font-bold">Pases de Invitados</h1>
         <div className="flex items-center gap-2">
-          <NotificationBell />
+          <NotificationBell onNavigate={onNavigate} />
           <Button
             size="icon"
             variant="ghost"
