@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test'
+import type { Page, Route } from '@playwright/test'
 
 const ADMIN_ME = {
   authenticated: true,
@@ -47,9 +47,9 @@ export const MOCK_PASSES = [
     full_name: 'Juan Pérez',
     pass_code: 'GP-0001',
     resident_name: 'Ana García',
-    valid_from: '2024-06-01T10:00:00Z',
-    valid_until: '2024-06-01T12:00:00Z',
-    created_at: '2024-05-30T09:00:00Z',
+    valid_from: '2099-06-01T10:00:00Z',
+    valid_until: '2099-06-01T12:00:00Z',
+    created_at: '2099-05-30T09:00:00Z',
     status: 'ACTIVE',
     comment: 'Visita familiar',
   },
@@ -73,12 +73,105 @@ function json(data: unknown) {
 /**
  * Intercepts only /api/** requests — no interference with Vite HMR or JS bundles.
  */
-export async function mockAdminApi(page: Page, overrides: {
+export const MOCK_BEDROOM_ANALYTICS = {
+  summary: {
+    total_rooms: 9,
+    total_capacity: 14,
+    total_occupants: 6,
+    overall_occupation_rate: 43,
+  },
+  occupation_by_building: [
+    { edificio: 'Edificio A', total_rooms: 5, total_capacity: 7, occupied_rooms: 4, occupants: 4, occupation_rate: 57 },
+    { edificio: 'Edificio B', total_rooms: 4, total_capacity: 7, occupied_rooms: 2, occupants: 2, occupation_rate: 29 },
+  ],
+  occupation_by_type: [
+    { tipo: 'Individual', total_rooms: 5, capacity: 5, occupants: 3, occupation_rate: 60 },
+    { tipo: 'Doble', total_rooms: 2, capacity: 4, occupants: 2, occupation_rate: 50 },
+    { tipo: 'Triple', total_rooms: 2, capacity: 6, occupants: 1, occupation_rate: 17 },
+  ],
+  occupation_by_year: [
+    { year: 2024, assignments: 3 },
+    { year: 2025, assignments: 3 },
+    { year: 2026, assignments: 3 },
+  ],
+}
+
+export const MOCK_PACKAGE_ANALYTICS = {
+  summary: {
+    total_received_in_period: 12,
+    total_delivered_in_period: 8,
+    currently_pending: 4,
+  },
+  daily_activity: [
+    { date: '2026-03-15', received: 3, delivered: 1, cumulative_pending: 2 },
+    { date: '2026-03-16', received: 2, delivered: 2, cumulative_pending: 2 },
+    { date: '2026-03-17', received: 1, delivered: 1, cumulative_pending: 2 },
+  ],
+  by_resident: [
+    { resident_name: 'Ana García', received_count: 5, delivered_count: 3 },
+    { resident_name: 'Luis Martínez', received_count: 4, delivered_count: 3 },
+    { resident_name: 'Sofía Rodríguez', received_count: 3, delivered_count: 2 },
+  ],
+  meta: { from: '2026-03-15', to: '2026-03-17' },
+}
+
+export const MOCK_INCIDENCE_ANALYTICS = {
+  summary: {
+    total_created_in_period: 10,
+    total_resolved_in_period: 7,
+    currently_open: 3,
+    avg_resolution_hours: 48.5,
+  },
+  open_by_day: [
+    { date: '2026-03-15', open_count: 1 },
+    { date: '2026-03-16', open_count: 3 },
+    { date: '2026-03-17', open_count: 3 },
+  ],
+  resolved_by_staff: [
+    { staff_name: 'María García', resolved_count: 4 },
+    { staff_name: 'Carlos López', resolved_count: 3 },
+  ],
+  meta: { from: '2026-03-15', to: '2026-03-17' },
+}
+
+type Overrides = {
   bedrooms?: unknown[]
   guestPasses?: unknown[]
   auditLog?: unknown[]
-} = {}) {
-  const bedrooms = overrides.bedrooms ?? [MOCK_BEDROOM]
+  bedroomAnalytics?: unknown
+  packageAnalytics?: unknown
+  incidenceAnalytics?: unknown
+}
+
+async function handleBedroomsRoute(route: Route, path: string, overrides: Overrides) {
+  if (path === '/api/bedrooms/') {
+    await route.fulfill(json(overrides.bedrooms ?? [MOCK_BEDROOM]))
+  } else if (path === '/api/bedrooms/analytics/') {
+    await route.fulfill(json(overrides.bedroomAnalytics ?? MOCK_BEDROOM_ANALYTICS))
+  } else if (path.endsWith('/audit/')) {
+    await route.fulfill(json(overrides.auditLog ?? []))
+  } else {
+    await route.fulfill(json([]))
+  }
+}
+
+async function handlePackagesRoute(route: Route, path: string, overrides: Overrides) {
+  if (path === '/api/packages/analytics/') {
+    await route.fulfill(json(overrides.packageAnalytics ?? MOCK_PACKAGE_ANALYTICS))
+  } else {
+    await route.fulfill(json([]))
+  }
+}
+
+async function handleIncidencesRoute(route: Route, path: string, overrides: Overrides) {
+  if (path === '/api/incidences/analytics/') {
+    await route.fulfill(json(overrides.incidenceAnalytics ?? MOCK_INCIDENCE_ANALYTICS))
+  } else {
+    await route.fulfill(json([]))
+  }
+}
+
+export async function mockAdminApi(page: Page, overrides: Overrides = {}) {
   const guestPasses = overrides.guestPasses ?? []
 
   await page.route('**/api/**', async (route) => {
@@ -89,45 +182,20 @@ export async function mockAdminApi(page: Page, overrides: {
     } else if (path === '/api/residences/branding/') {
       await route.fulfill(json({ logo_url: null, primary_color: '#4A8F5D', secondary_color: '#0F4C81', accent_color: '#2E7D32', custom_css: '', favicon_url: '' }))
     } else if (path.startsWith('/api/bedrooms/')) {
-      if (path === '/api/bedrooms/') {
-        await route.fulfill(json(bedrooms))
-      } else if (path.endsWith('/audit/')) {
-        const auditLog = overrides.auditLog ?? []
-        await route.fulfill(json(auditLog))
-      } else {
-        await route.fulfill(json([]))
-      }
+      await handleBedroomsRoute(route, path, overrides)
     } else if (path === '/api/admin/guest-passes/') {
       await route.fulfill(json(guestPasses))
     } else if (path === '/api/admin/guest-passes/policy/') {
       await route.fulfill(json({ max_duration_hours: 24, max_concurrent_passes: 3 }))
-    } else if (path === '/api/admin/guest-passes/notifications/') {
-      await route.fulfill(json([]))
-    } else if (path === '/api/chats/groups/') {
-      await route.fulfill(json([]))
-    } else if (path.startsWith('/api/announcements/')) {
+    } else if (path.startsWith('/api/admin/guest-passes/')) {
       await route.fulfill(json([]))
     } else if (path.startsWith('/api/incidences/')) {
-      await route.fulfill(json([]))
-    } else if (path.startsWith('/api/residents/')) {
-      await route.fulfill(json([]))
-    } else if (path.startsWith('/api/staff/')) {
-      await route.fulfill(json([]))
-    } else if (path === '/api/admin/spaces/notifications/') {
-      await route.fulfill(json([]))
-    } else if (path === '/api/admin/objects/notifications/') {
-      await route.fulfill(json([]))
-    } else if (path.startsWith('/api/events/')) {
-      await route.fulfill(json([]))
+      await handleIncidencesRoute(route, path, overrides)
     } else if (path.startsWith('/api/packages/')) {
+      await handlePackagesRoute(route, path, overrides)
+    } else if (path.startsWith('/api/announcements/') || path.startsWith('/api/events/') || path.startsWith('/api/residents/') || path.startsWith('/api/staff/') || path.startsWith('/api/membership/')) {
       await route.fulfill(json([]))
-    } else if (path.startsWith('/api/spaces/') || path.startsWith('/api/admin/spaces/')) {
-      await route.fulfill(json([]))
-    } else if (path.startsWith('/api/objects/') || path.startsWith('/api/admin/objects/')) {
-      await route.fulfill(json([]))
-    } else if (path.startsWith('/api/chats/')) {
-      await route.fulfill(json([]))
-    } else if (path.startsWith('/api/membership/')) {
+    } else if (path.startsWith('/api/spaces/') || path.startsWith('/api/admin/spaces/') || path.startsWith('/api/objects/') || path.startsWith('/api/admin/objects/') || path.startsWith('/api/chats/')) {
       await route.fulfill(json([]))
     } else {
       throw new Error(`Unmocked API route: ${route.request().url()}`)

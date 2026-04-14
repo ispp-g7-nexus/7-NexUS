@@ -1,4 +1,5 @@
 // src/services/preferences.ts
+import { trackEvent } from "./analytics";
 import { API_URL } from "./api";
 
 const PREFERENCES_URL = `${API_URL}/preferences`;
@@ -61,6 +62,7 @@ export const preferencesService = {
             const errorData = await response.json();
             throw new Error(errorData.detail || 'Error al guardar preferencias');
         }
+        trackEvent('preferences_saved');
         return response.json();
     },
 

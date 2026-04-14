@@ -1,5 +1,6 @@
 import { ArrowLeft, LogOut, MessageSquare, Plus, Search, Send, Tag, Users } from "lucide-react";
 import { type ReactElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
@@ -435,6 +436,29 @@ export function StudentChats({
         if (subTab === "privados") loadConversations();
     }, [subTab, loadConversations]);
 
+    const location = useLocation();
+    const pendingConvIdRef = useRef<number | null>(null);
+    useEffect(() => {
+        const state = location.state as { openConversationId?: number } | null;
+        if (state?.openConversationId) {
+            pendingConvIdRef.current = state.openConversationId;
+            setSubTab("privados");
+            loadConversations().catch(() => { });
+            // limpiar state para que no se reabra al navegar
+            window.history.replaceState({}, "");
+        }
+    }, [location.state, loadConversations]);
+
+    useEffect(() => {
+        const pendingId = pendingConvIdRef.current;
+        if (pendingId == null || conversations.length === 0) return;
+        const conv = conversations.find((c) => c.id === pendingId);
+        if (conv) {
+            pendingConvIdRef.current = null;
+            setActiveConv(conv);
+        }
+    }, [conversations]);
+
     useEffect(() => {
         onSubTabActiveChange?.(subTab);
     }, [onSubTabActiveChange, subTab]);
@@ -746,6 +770,7 @@ export function StudentChats({
                 group={editingGroup}
                 onBack={() => setEditingGroup(null)}
                 onGroupUpdated={handleGroupUpdatedFromManagement}
+                enforceCurrentMemberAdmin
             />
         );
     }

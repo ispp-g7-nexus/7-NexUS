@@ -1,4 +1,5 @@
 import { fetchWithAuth } from '../utils/api';
+import { trackEvent } from './analytics';
 export type IncidenceStatus = 'pending' | 'reviewing' | 'in_progress' | 'resolved';
 export type PriorityLevel = 'low' | 'high';
 export type LocationType = 'habitacion' | 'baño' | 'cocina' | 'comedor' | 'exterior' | 'salas_comunes';
@@ -110,7 +111,9 @@ export const IncidenceService = {
 
       throw new Error(details || 'Error al actualizar');
     }
-    return response.json();
+    const incidence = await response.json();
+    trackEvent('incidence_updated', { incidence_id: id, status: data.status });
+    return incidence;
   },
 
   /**
@@ -123,7 +126,9 @@ export const IncidenceService = {
       body: JSON.stringify(data),
     });
     if (!response.ok) throw new Error('Error al crear la incidencia');
-    return response.json();
+    const incidence = await response.json();
+    trackEvent('incidence_created', { priority: data.priority, location: data.location_type });
+    return incidence;
   },
 
   /**
@@ -140,5 +145,45 @@ export const IncidenceService = {
       method: 'DELETE',
     });
     if (!response.ok) throw new Error('Error al eliminar la incidencia');
+    trackEvent('incidence_deleted', { incidence_id: id });
   },
 };
+
+// ── Incidence Analytics ───────────────────────────────────────────────────────
+
+export interface IncidenceAnalyticsSummary {
+  total_created_in_period: number;
+  total_resolved_in_period: number;
+  currently_open: number;
+  avg_resolution_hours: number | null;
+}
+
+export interface IncidenceOpenByDay {
+  date: string;
+  open_count: number;
+}
+
+export interface IncidenceResolvedByStaff {
+  staff_name: string;
+  resolved_count: number;
+}
+
+export interface IncidenceAnalyticsResponse {
+  summary: IncidenceAnalyticsSummary;
+  open_by_day: IncidenceOpenByDay[];
+  resolved_by_staff: IncidenceResolvedByStaff[];
+  meta: { from: string; to: string };
+}
+
+export async function getIncidenceAnalytics(params: {
+  from: string;
+  to: string;
+}): Promise<IncidenceAnalyticsResponse> {
+  const qs = new URLSearchParams({ from: params.from, to: params.to }).toString();
+  const response = await fetchWithAuth(`/api/incidences/analytics/?${qs}`);
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error((body as { detail?: string }).detail ?? `Error ${response.status}`);
+  }
+  return response.json() as Promise<IncidenceAnalyticsResponse>;
+}

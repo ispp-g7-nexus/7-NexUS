@@ -5,6 +5,8 @@ import jwt
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.tokens import default_token_generator
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import DataError
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.utils import timezone
@@ -215,7 +217,7 @@ class CustomJWTAuthentication(authentication.BaseAuthentication):
 
         try:
             user = UserModel.objects.get(pk=payload.get("user_id"))
-        except UserModel.DoesNotExist:
+        except (UserModel.DoesNotExist, ValueError, TypeError, OverflowError, DjangoValidationError, DataError):
             raise AuthenticationFailed("El usuario del token no existe.")
 
         if not user.is_active:
@@ -234,7 +236,7 @@ class CustomJWTAuthentication(authentication.BaseAuthentication):
                 tenant = Client.objects.get(pk=tenant_id)
                 request.tenant = tenant
                 connection.set_tenant(tenant)
-            except Client.DoesNotExist:
+            except (Client.DoesNotExist, ValueError, TypeError, OverflowError, DjangoValidationError, DataError):
                 pass
 
         residence_id = payload.get("residence_id")
@@ -243,7 +245,7 @@ class CustomJWTAuthentication(authentication.BaseAuthentication):
 
             try:
                 request.residence = Residence.objects.get(pk=residence_id)
-            except Residence.DoesNotExist:
+            except (Residence.DoesNotExist, ValueError, TypeError, OverflowError, DjangoValidationError, DataError):
                 pass
 
         return (user, token)

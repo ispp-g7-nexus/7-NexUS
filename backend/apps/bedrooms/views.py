@@ -256,3 +256,117 @@ class BedroomAuditLogView(AdminRequiredView):
         logs = bedroom.audit_logs.select_related("user").all()
         serializer = BedroomAuditLogSerializer(logs, many=True)
         return JsonResponse(serializer.data, safe=False)
+
+
+class BedroomAnalyticsView(AdminRequiredView):
+    def get(self, request):
+        from django.db.models import Count
+        from django.db.models.functions import ExtractYear
+        from apps.membership.models import Membership
+
+        if not hasattr(request, "residence") or not request.residence:
+            return JsonResponse({"detail": "No residence context."}, status=400)
+
+        residence = request.residence
+
+        # Active student memberships with bedroom assigned
+        active_students = Membership.objects.filter(
+            residence=residence,
+            role__name__iexact="Student",
+            is_active=True,
+            bedroom__isnull=False,
+        )
+
+        # Map bedroom_id -> occupant count
+        bedroom_occupant_map = {
+            item["bedroom_id"]: item["occupants"]
+            for item in active_students.values("bedroom_id").annotate(occupants=Count("id"))
+        }
+
+        # All bedrooms for this residence
+        all_bedrooms = list(Bedroom.objects.filter(residence=residence).values("id", "edificio", "tipo", "capacidad_maxima"))
+
+        # --- Occupation by building ---
+        buildings: dict = {}
+        for b in all_bedrooms:
+            key = b["edificio"] or "Sin edificio"
+            if key not in buildings:
+                buildings[key] = {"total_rooms": 0, "total_capacity": 0, "occupied_rooms": 0, "occupants": 0}
+            buildings[key]["total_rooms"] += 1
+            buildings[key]["total_capacity"] += b["capacidad_maxima"]
+            occ = bedroom_occupant_map.get(b["id"], 0)
+            buildings[key]["occupants"] += occ
+            if occ > 0:
+                buildings[key]["occupied_rooms"] += 1
+
+        occupation_by_building = sorted(
+            [
+                {
+                    "edificio": key,
+                    "total_rooms": data["total_rooms"],
+                    "total_capacity": data["total_capacity"],
+                    "occupied_rooms": data["occupied_rooms"],
+                    "occupants": data["occupants"],
+                    "occupation_rate": round(data["occupants"] / data["total_capacity"] * 100, 1) if data["total_capacity"] > 0 else 0.0,
+                }
+                for key, data in buildings.items()
+            ],
+            key=lambda x: x["edificio"],
+        )
+
+        # --- Occupation by room type ---
+        tipos: dict = {}
+        for b in all_bedrooms:
+            key = b["tipo"]
+            if key not in tipos:
+                tipos[key] = {"total_rooms": 0, "total_capacity": 0, "occupants": 0}
+            tipos[key]["total_rooms"] += 1
+            tipos[key]["total_capacity"] += b["capacidad_maxima"]
+            tipos[key]["occupants"] += bedroom_occupant_map.get(b["id"], 0)
+
+        occupation_by_type = [
+            {
+                "tipo": key,
+                "total_rooms": data["total_rooms"],
+                "total_capacity": data["total_capacity"],
+                "occupants": data["occupants"],
+                "occupation_rate": round(data["occupants"] / data["total_capacity"] * 100, 1) if data["total_capacity"] > 0 else 0.0,
+            }
+            for key, data in tipos.items()
+        ]
+
+        # --- Occupation index by year (student assignments per year) ---
+        yearly_qs = (
+            Membership.objects.filter(
+                residence=residence,
+                role__name__iexact="Student",
+                bedroom__isnull=False,
+            )
+            .annotate(year=ExtractYear("created_at"))
+            .values("year")
+            .annotate(assignments=Count("id"))
+            .order_by("year")
+        )
+
+        occupation_by_year = [
+            {"year": item["year"], "assignments": item["assignments"]}
+            for item in yearly_qs
+            if item["year"] is not None
+        ]
+
+        # --- Summary ---
+        total_rooms = len(all_bedrooms)
+        total_capacity = sum(b["capacidad_maxima"] for b in all_bedrooms)
+        total_occupants = active_students.count()
+
+        return JsonResponse({
+            "summary": {
+                "total_rooms": total_rooms,
+                "total_capacity": total_capacity,
+                "total_occupants": total_occupants,
+                "overall_occupation_rate": round(total_occupants / total_capacity * 100, 1) if total_capacity > 0 else 0.0,
+            },
+            "occupation_by_building": occupation_by_building,
+            "occupation_by_type": occupation_by_type,
+            "occupation_by_year": occupation_by_year,
+        })
