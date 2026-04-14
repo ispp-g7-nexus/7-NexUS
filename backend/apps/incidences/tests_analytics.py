@@ -28,6 +28,7 @@ class IncidenceAnalyticsViewTests(TenantTestCase):
     def setup_tenant(cls, tenant):
         tenant.name = "Tenant Incidence Analytics"
         tenant.slug = "tenant-incidence-analytics"
+        tenant.schema_name = f"test_schema_{cls.__name__.lower()}"
         tenant.is_active = True
         tenant.on_trial = True
 
@@ -251,7 +252,6 @@ class IncidenceAnalyticsViewTests(TenantTestCase):
 
         url = self._url_with_range(self.yesterday, self.today)
         summary = self.admin_client.get(url).json()["summary"]
-        # The old open one must appear even though it's outside the range
         self.assertEqual(summary["currently_open"], 1)
 
     def test_avg_resolution_hours_none_when_no_resolved(self):
@@ -260,7 +260,6 @@ class IncidenceAnalyticsViewTests(TenantTestCase):
         self.assertIsNone(summary["avg_resolution_hours"])
 
     def test_avg_resolution_hours_computed(self):
-        # Created at 10:00, resolved at 18:00 → 8 hours
         with schema_context(self.tenant.schema_name):
             inc = Incidence.objects.create(
                 title="Timed",
@@ -275,7 +274,10 @@ class IncidenceAnalyticsViewTests(TenantTestCase):
                 created_at=created_dt, updated_at=resolved_dt
             )
 
-        summary = self.admin_client.get(ANALYTICS_URL).json()["summary"]
+        url = f"{ANALYTICS_URL}?from=2024-01-01&to=2024-01-02"
+        response = self.admin_client.get(url)
+        summary = response.json()["summary"]
+        
         self.assertEqual(summary["avg_resolution_hours"], 8.0)
 
     # ── Invalid date range ────────────────────────────────────────────────────
