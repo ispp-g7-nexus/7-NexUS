@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
-import { ImageIcon, Loader2, Palette } from "lucide-react";
+import { FileText, ImageIcon, Loader2, Palette } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -8,12 +8,25 @@ import {
   type UpdateResidenceBrandingPayload,
 } from "../../services/branding";
 
+// 🟢 CREAMOS EL TEXTO POR DEFECTO PARA RELLENAR EL INPUT
+const DEFAULT_LEGAL_TEXT = `Bienvenido/a a nuestra comunidad. Para garantizar una convivencia armoniosa y respetuosa, te pedimos que leas y aceptes las siguientes normas básicas:
+
+1. Respeto y Silencio: Mantén un nivel de ruido moderado, especialmente entre las 23:00 y las 8:00 horas.
+2. Espacios Comunes: Deja los espacios compartidos limpios y ordenados después de usarlos.
+3. Cuidado de las Instalaciones: Reporta cualquier daño o desperfecto inmediatamente a través de la app.
+4. Seguridad: No compartas las claves de acceso. Utiliza el sistema de invitados para visitas.
+5. Reservas: Respeta los horarios de reserva de espacios comunes y cancela si no vas a asistir.
+6. Normativa General: Cumple con el reglamento interno de la residencia en todo momento.
+
+Importante: El incumplimiento reiterado de estas normas puede resultar en sanciones según el reglamento interno de la residencia.`;
+
 type BrandingFormState = {
   primary_color: string;
   secondary_color: string;
   accent_color: string;
   logo_url: string;
   favicon_url: string;
+  legal_terms: string;
 };
 
 const URL_MAX_LENGTH = 200;
@@ -25,6 +38,7 @@ const INITIAL_FORM: BrandingFormState = {
   accent_color: "#2E7D32",
   logo_url: "",
   favicon_url: "",
+  legal_terms: DEFAULT_LEGAL_TEXT, // 🟢 Inicializado con el texto por defecto
 };
 
 function mapBrandingToForm(branding: ResidenceBranding): BrandingFormState {
@@ -34,6 +48,8 @@ function mapBrandingToForm(branding: ResidenceBranding): BrandingFormState {
     accent_color: branding.accent_color || INITIAL_FORM.accent_color,
     logo_url: branding.logo_url || "",
     favicon_url: branding.favicon_url || "",
+    // 🟢 Si el admin borra el texto, le volvemos a cargar el de por defecto
+    legal_terms: branding.legal_terms || DEFAULT_LEGAL_TEXT,
   };
 }
 
@@ -50,11 +66,10 @@ export function AdminBrandingPage() {
   const [updatedAt, setUpdatedAt] = useState<string>("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  // Apply live preview styles
   useEffect(() => {
     const styleId = "branding-preview-styles";
     let style = document.getElementById(styleId) as HTMLStyleElement | null;
-    
+
     if (!style) {
       style = document.createElement("style");
       style.id = styleId;
@@ -144,7 +159,7 @@ export function AdminBrandingPage() {
 
   const handleInputChange = (field: keyof BrandingFormState, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
-    
+
     if (field === "logo_url" || field === "favicon_url") {
       const error = validateUrl(value);
       if (error) {
@@ -185,6 +200,7 @@ export function AdminBrandingPage() {
     accent_color: normalizeHexColorOrFallback(form.accent_color),
     logo_url: form.logo_url.trim(),
     favicon_url: form.favicon_url.trim(),
+    legal_terms: form.legal_terms.trim(),
   });
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -282,11 +298,10 @@ export function AdminBrandingPage() {
               <label className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="block text-sm font-medium text-gray-700">URL del logo</span>
-                  <span className={`text-xs ${
-                    form.logo_url.length > URL_MAX_LENGTH
-                      ? "text-red-600 font-medium"
-                      : "text-gray-500"
-                  }`}>
+                  <span className={`text-xs ${form.logo_url.length > URL_MAX_LENGTH
+                    ? "text-red-600 font-medium"
+                    : "text-gray-500"
+                    }`}>
                     {form.logo_url.length} / {URL_MAX_LENGTH}
                   </span>
                 </div>
@@ -295,11 +310,10 @@ export function AdminBrandingPage() {
                   value={form.logo_url}
                   onChange={(event) => handleInputChange("logo_url", event.target.value)}
                   maxLength={URL_MAX_LENGTH}
-                  className={`h-10 w-full rounded-lg border px-3 text-sm outline-none transition-colors ${
-                    fieldErrors.logo_url
-                      ? "border-red-500 bg-red-50 focus:border-red-600"
-                      : "border-gray-300 focus:border-green-500"
-                  }`}
+                  className={`h-10 w-full rounded-lg border px-3 text-sm outline-none transition-colors ${fieldErrors.logo_url
+                    ? "border-red-500 bg-red-50 focus:border-red-600"
+                    : "border-gray-300 focus:border-primary"
+                    }`}
                   placeholder="https://mi-residencia.com/logo.png"
                 />
                 {fieldErrors.logo_url && (
@@ -309,11 +323,10 @@ export function AdminBrandingPage() {
               <label className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="block text-sm font-medium text-gray-700">URL del favicon</span>
-                  <span className={`text-xs ${
-                    form.favicon_url.length > URL_MAX_LENGTH
-                      ? "text-red-600 font-medium"
-                      : "text-gray-500"
-                  }`}>
+                  <span className={`text-xs ${form.favicon_url.length > URL_MAX_LENGTH
+                    ? "text-red-600 font-medium"
+                    : "text-gray-500"
+                    }`}>
                     {form.favicon_url.length} / {URL_MAX_LENGTH}
                   </span>
                 </div>
@@ -322,16 +335,36 @@ export function AdminBrandingPage() {
                   value={form.favicon_url}
                   onChange={(event) => handleInputChange("favicon_url", event.target.value)}
                   maxLength={URL_MAX_LENGTH}
-                  className={`h-10 w-full rounded-lg border px-3 text-sm outline-none transition-colors ${
-                    fieldErrors.favicon_url
-                      ? "border-red-500 bg-red-50 focus:border-red-600"
-                      : "border-gray-300 focus:border-green-500"
-                  }`}
+                  className={`h-10 w-full rounded-lg border px-3 text-sm outline-none transition-colors ${fieldErrors.favicon_url
+                    ? "border-red-500 bg-red-50 focus:border-red-600"
+                    : "border-gray-300 focus:border-primary"
+                    }`}
                   placeholder="https://mi-residencia.com/favicon.ico"
                 />
                 {fieldErrors.favicon_url && (
                   <p className="text-xs text-red-600 font-medium mt-1">{fieldErrors.favicon_url}</p>
                 )}
+              </label>
+            </div>
+          </section>
+
+          <section>
+            <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-900">
+              <FileText className="h-4 w-4 text-primary" />
+              Términos Legales y Convivencia
+            </div>
+            <div className="grid grid-cols-1 gap-4">
+              <label className="space-y-2">
+                <span className="block text-sm font-medium text-gray-700">Normas de la Residencia (Opcional)</span>
+                <textarea
+                  value={form.legal_terms}
+                  onChange={(event) => handleInputChange("legal_terms", event.target.value)}
+                  className="min-h-[200px] w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition-colors focus:border-primary"
+                  placeholder="Pega aquí el texto completo con las normas de la residencia..."
+                />
+                <p className="text-xs text-gray-500">
+                  Si borras este texto, se restaurarán las normas visuales por defecto con iconos.
+                </p>
               </label>
             </div>
           </section>
@@ -351,7 +384,7 @@ export function AdminBrandingPage() {
                 </div>
 
                 <div className="flex flex-col justify-center gap-3">
-                  <button className="preview-btn-primary rounded-lg px-4 py-2 text-sm font-medium text-white transition-all">
+                  <button type="button" className="preview-btn-primary rounded-lg px-4 py-2 text-sm font-medium text-white transition-all w-fit">
                     Botón principal
                   </button>
                   <div className="flex items-center gap-2">

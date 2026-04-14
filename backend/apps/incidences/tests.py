@@ -86,6 +86,12 @@ class IncidenceViewSetTests(TenantTestCase):
                 password="password123",
             )
 
+            bedroom = Bedroom.objects.create(
+                numero="101",
+                residence=self.residence_obj,
+                capacidad_maxima=1,
+            )
+
             Membership.objects.create(
                 user=self.admin_user,
                 role=self.role_admin,
@@ -108,6 +114,7 @@ class IncidenceViewSetTests(TenantTestCase):
                 user=self.student_a,
                 role=self.role_student,
                 residence=self.residence_obj,
+                bedroom=bedroom,
                 is_active=True,
                 bedroom=self.bedroom_3a,
             )
@@ -331,13 +338,16 @@ class IncidenceSerializersTests(TestCase):
         self.incidence.id = 10
         self.incidence.student_id = 1
         self.incidence.student = self.user
-        self.incidence.status = "pending"
+        self.incidence.status = "pending" 
         self.incidence.priority = "high"
         self.incidence.assigned_staff_id = None
         self.incidence.assigned_staff = None
         self.incidence.assigned_external_name = ""
         self.incidence.updates.exists.return_value = False
         self.incidence.location_type = "habitacion"
+        
+        self.incidence.updates = MagicMock()
+        self.incidence.updates.exists.return_value = False
 
     def test_incidence_update_serializer_fields(self):
         class FakeAuthor:
