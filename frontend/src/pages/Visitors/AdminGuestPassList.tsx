@@ -28,6 +28,7 @@ const SORT_OPTIONS = [
 
 const STATUS_BADGE: Record<string, string> = {
   ACTIVE:    "bg-green-100 text-green-700 border-0",
+  UPCOMING:  "bg-sky-100 text-sky-700 border-0",
   USED:      "bg-blue-100 text-blue-700 border-0",
   CANCELLED: "bg-gray-100 text-gray-500 border-0",
   REVOKED:   "bg-red-100 text-red-700 border-0",
@@ -37,12 +38,34 @@ const STATUS_BADGE: Record<string, string> = {
 
 const STATUS_LABEL: Record<string, string> = {
   ACTIVE:    "Activo",
+  UPCOMING:  "Programado",
   USED:      "Usado",
   CANCELLED: "Cancelado",
   REVOKED:   "Revocado",
   REJECTED:  "Rechazado",
   INACTIVE:  "Inactivo",
 };
+
+function getDisplayStatus(pass: AdminGuestPass): string {
+  const rawStatus = (pass.status || "").trim().toUpperCase();
+  if (rawStatus !== "ACTIVE") {
+    return rawStatus;
+  }
+
+  const nowMs = Date.now();
+  const validFromMs = Date.parse(pass.valid_from);
+  const validUntilMs = Date.parse(pass.valid_until);
+
+  if (Number.isFinite(validFromMs) && validFromMs > nowMs) {
+    return "UPCOMING";
+  }
+
+  if (Number.isFinite(validUntilMs) && validUntilMs < nowMs) {
+    return "INACTIVE";
+  }
+
+  return rawStatus;
+}
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString("es-ES", {
@@ -63,6 +86,7 @@ interface GuestPassDetailDialogProps {
 function GuestPassDetailDialog({ pass, onClose, onRefresh }: GuestPassDetailDialogProps) {
   const [revoking, setRevoking] = useState(false);
   const [unrevoking, setUnrevoking] = useState(false);
+  const displayStatus = pass ? getDisplayStatus(pass) : "";
 
   async function handleRevoke() {
     if (!pass) return;
@@ -102,8 +126,8 @@ function GuestPassDetailDialog({ pass, onClose, onRefresh }: GuestPassDetailDial
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 flex-wrap text-xl">
                 {pass.full_name}
-                <Badge className={STATUS_BADGE[pass.status ?? ""] ?? "border-0"}>
-                  {STATUS_LABEL[pass.status ?? ""] ?? pass.status}
+                <Badge className={STATUS_BADGE[displayStatus] ?? "border-0"}>
+                  {STATUS_LABEL[displayStatus] ?? displayStatus}
                 </Badge>
               </DialogTitle>
             </DialogHeader>
@@ -243,6 +267,9 @@ export function AdminGuestPassListPage() {
     content = (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {processedPasses.map((pass) => (
+          (() => {
+            const displayStatus = getDisplayStatus(pass);
+            return (
           <Card
             key={pass.id}
             className={`hover:shadow-md transition-all cursor-pointer group ${
@@ -278,8 +305,8 @@ export function AdminGuestPassListPage() {
                 >
                   {pass.full_name}
                 </span>
-                <Badge className={`${STATUS_BADGE[pass.status ?? ""]} whitespace-nowrap shrink-0`}>
-                  {STATUS_LABEL[pass.status ?? ""] ?? pass.status}
+                <Badge className={`${STATUS_BADGE[displayStatus] ?? "border-0"} whitespace-nowrap shrink-0`}>
+                  {STATUS_LABEL[displayStatus] ?? displayStatus}
                 </Badge>
               </div>
 
@@ -314,6 +341,8 @@ export function AdminGuestPassListPage() {
               </div>
             </CardContent>
           </Card>
+            );
+          })()
         ))}
       </div>
     );

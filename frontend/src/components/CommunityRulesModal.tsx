@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle, Clock, FileText, Home, Shield, Users, Volume2 } from "lucide-react";
 import { useState } from "react";
+import { trackEvent } from "../services/analytics";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
 
@@ -60,6 +61,7 @@ export function CommunityRulesModal({ isOpen, onAccept }: CommunityRulesModalPro
         }
       } catch {}
 
+      trackEvent('community_rules_accepted', { dont_show_again: dontShowAgain });
       onAccept(dontShowAgain);
     }
   };

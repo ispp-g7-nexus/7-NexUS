@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { trackEvent } from "../../../services/analytics";
 import { fetchWithAuth, API_URL } from "../../../utils/api";
 import { listCommonSpaces, isApiError, type CommonSpace } from "../../../services/reservations";
 import { EventForm } from "./components/EventForm";
@@ -114,6 +115,7 @@ export function Events({
         try {
             const response = await fetchWithAuth(`${API_URL}${eventId}/join/`, { method: 'POST' });
             if (response.ok) {
+                trackEvent('event_joined', { event_id: eventId });
                 toast.success("¡Te has apuntado al evento!");
                 fetchEvents();
             } else {
@@ -129,6 +131,7 @@ export function Events({
         try {
             const response = await fetchWithAuth(`${API_URL}${eventId}/leave/`, { method: 'POST' });
             if (response.ok) {
+                trackEvent('event_left', { event_id: eventId });
                 toast.success("Te has desapuntado del evento.");
                 fetchEvents();
             }
@@ -176,7 +179,8 @@ export function Events({
             });
 
             if (response.ok) {
-                toast.success(isEditingEvent ? "Evento actualizado." : "Evento creado.");
+                trackEvent(isEditingEvent ? 'event_updated' : 'event_created');
+                toast.success(isEditingEvent ? "Evento guardado con éxito." : "Evento creado con éxito.");
                 setIsCreateEventOpen(false);
                 setIsEditingEvent(false);
                 setEditingEventId(null);
@@ -192,22 +196,40 @@ export function Events({
     };
 
     const handleDeleteEvent = async (eventId: number) => {
-        try {
-            const response = await fetchWithAuth(`${API_URL}${eventId}/`, {
-                method: 'DELETE',
-            });
+        toast("¿Estás seguro de que quieres eliminar este evento?", {
+            action: {
+                label: "Eliminar",
+                onClick: async () => {
+                    try {
+                        const response = await fetchWithAuth(`${API_URL}${eventId}/`, {
+                            method: 'DELETE',
+                        });
 
-            if (response.ok || response.status === 204) {
-                toast.success("Evento eliminado con éxito.");
-                fetchEvents();
-                setSelectedEvent(null);
-            } else {
-                toast.error("No se pudo eliminar el evento.");
-            }
-        } catch (error) {
-            console.error("Error deleting event:", error);
-            toast.error("Error de conexión");
-        }
+                        if (response.status === 401 || response.status === 403) {
+                            setIsUnauthorized(true);
+                            return;
+                        }
+
+                        if (response.ok || response.status === 204) {
+                            trackEvent('event_deleted', { event_id: eventId });
+                            toast.success("Evento eliminado con éxito.");
+                            fetchEvents();
+                            setSelectedEvent(null);
+                        } else {
+                            const data = await response.json();
+                            toast.error(`Error al eliminar: ${JSON.stringify(data.detail || data)}`);
+                        }
+                    } catch (error) {
+                        console.error("Error deleting event:", error);
+                        toast.error("Error de conexión al eliminar el evento");
+                    }
+                },
+            },
+            cancel: {
+                label: "Cancelar",
+                onClick: () => {},
+            },
+        });
     };
 
     const now = new Date();
