@@ -220,6 +220,34 @@ describe('AdminSpaces', () => {
       expect(screen.getByText(/permisos de administrador/i)).toBeInTheDocument()
     })
   })
+
+  it('muestra estado vacio cuando no hay espacios creados', async () => {
+    mockedListAdminSpaces.mockResolvedValue([])
+
+    render(<AdminSpaces />)
+
+    await waitFor(() => {
+      expect(screen.getByText(/No hay espacios registrados aún/i)).toBeInTheDocument()
+    })
+  })
+
+  it('recarga reservas al cambiar el filtro del drawer', async () => {
+    const user = userEvent.setup()
+    render(<AdminSpaces />)
+
+    await waitFor(() => screen.getByText('Sala A'))
+
+    await user.click(screen.getByRole('button', { name: /Ver reservas/i }))
+    await waitFor(() => {
+      expect(mockedListSpaceReservations).toHaveBeenCalledWith(1, 'active')
+    })
+
+    await user.click(screen.getByRole('button', { name: /filtro-cancelled/i }))
+
+    await waitFor(() => {
+      expect(mockedListSpaceReservations).toHaveBeenLastCalledWith(1, 'cancelled')
+    })
+  })
 })
 
 describe('AdminSpaces — [T12]', () => {

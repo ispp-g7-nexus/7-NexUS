@@ -159,4 +159,37 @@ describe('Reservations page', () => {
       expect(screen.getByText(/Debes iniciar sesión/i)).toBeInTheDocument()
     })
   })
+
+  it('muestra estado vacio cuando no hay espacios activos', async () => {
+    mockedListCommonSpaces.mockResolvedValue([])
+    mockedListMyReservations.mockResolvedValue([])
+
+    render(<Reservations />)
+
+    await waitFor(() => {
+      expect(screen.getByText(/No hay espacios activos/i)).toBeInTheDocument()
+      expect(screen.getByText('my-reservations:0')).toBeInTheDocument()
+    })
+  })
+
+  it('permite reintentar cuando falla la carga inicial por un error no autorizado', async () => {
+    const user = userEvent.setup()
+    mockedListCommonSpaces
+      .mockRejectedValueOnce(new ApiError('Servicio temporalmente no disponible', 500))
+      .mockResolvedValue(spaces)
+    mockedListMyReservations.mockResolvedValue(myReservations)
+
+    render(<Reservations />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Servicio temporalmente no disponible')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('button', { name: /Reintentar/i }))
+
+    await waitFor(() => {
+      expect(mockedListCommonSpaces).toHaveBeenCalledTimes(2)
+      expect(screen.getByText('Sala A')).toBeInTheDocument()
+    })
+  })
 })

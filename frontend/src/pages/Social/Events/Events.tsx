@@ -11,6 +11,22 @@ import "./Events.css";
 
 type EventType = "internal" | "external";
 
+const EVENT_NAME_MAX_LENGTH = 20;
+const EVENT_DESCRIPTION_MAX_LENGTH = 255;
+const EVENT_LOCATION_MAX_LENGTH = 100;
+const EVENT_IMAGE_URL_MAX_LENGTH = 300;
+const EVENT_TAG_MAX_LENGTH = 10;
+const EVENT_TAGS_MAX_LENGTH = 50;
+
+function isValidHttpUrl(value: string): boolean {
+    try {
+        const parsed = new URL(value);
+        return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    } catch {
+        return false;
+    }
+}
+
 type EventFormState = {
     name: string;
     description: string;
@@ -158,6 +174,58 @@ export function Events({
 
     const handleSaveEvent = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        const normalizedName = newEvent.name.trim();
+        const normalizedDescription = newEvent.description.trim();
+        const normalizedLocation = newEvent.location.trim();
+        const normalizedPhoto = newEvent.photo.trim();
+        const rawTags = newEvent.labels.trim();
+        const normalizedTags = rawTags
+            ? rawTags
+                .split(',')
+                .map((tag) => tag.trim())
+                .filter(Boolean)
+                .join(',')
+            : "";
+
+        if (!normalizedTags) {
+            toast.error("Debes indicar al menos una etiqueta válida para el evento.");
+            return;
+        }
+
+        if (normalizedName.length > EVENT_NAME_MAX_LENGTH) {
+            toast.error(`El nombre del evento no puede superar ${EVENT_NAME_MAX_LENGTH} caracteres.`);
+            return;
+        }
+        if (normalizedDescription.length > EVENT_DESCRIPTION_MAX_LENGTH) {
+            toast.error(`La descripción no puede superar ${EVENT_DESCRIPTION_MAX_LENGTH} caracteres.`);
+            return;
+        }
+        if (newEvent.eventType === 'external' && normalizedLocation.length > EVENT_LOCATION_MAX_LENGTH) {
+            toast.error(`El lugar no puede superar ${EVENT_LOCATION_MAX_LENGTH} caracteres.`);
+            return;
+        }
+        if (normalizedPhoto.length > EVENT_IMAGE_URL_MAX_LENGTH) {
+            toast.error(`La URL de la foto no puede superar ${EVENT_IMAGE_URL_MAX_LENGTH} caracteres.`);
+            return;
+        }
+        if (normalizedPhoto && !isValidHttpUrl(normalizedPhoto)) {
+            toast.error("La imagen del evento debe ser una URL válida (http/https).");
+            return;
+        }
+        if (normalizedTags.length > EVENT_TAGS_MAX_LENGTH) {
+            toast.error(`Las etiquetas no pueden superar ${EVENT_TAGS_MAX_LENGTH} caracteres en total.`);
+            return;
+        }
+        const oversizedTag = normalizedTags
+            .split(',')
+            .map((tag) => tag.trim())
+            .find((tag) => tag.length > EVENT_TAG_MAX_LENGTH);
+        if (oversizedTag) {
+            toast.error(`Cada etiqueta debe tener como máximo ${EVENT_TAG_MAX_LENGTH} caracteres.`);
+            return;
+        }
+
         try {
             const method = isEditingEvent ? 'PUT' : 'POST';
             const url = isEditingEvent ? `${API_URL}${editingEventId}/` : API_URL;
@@ -165,16 +233,16 @@ export function Events({
             const response = await fetchWithAuth(url, {
                 method: method,
                 body: JSON.stringify({
-                    title: newEvent.name,
-                    description: newEvent.description,
+                    title: normalizedName,
+                    description: normalizedDescription,
                     start_time: new Date(`${newEvent.date}T${newEvent.startTime}`).toISOString(),
                     end_time: new Date(`${newEvent.date}T${newEvent.endTime}`).toISOString(),
                     event_type: newEvent.eventType,
-                    location: newEvent.eventType === 'external' ? newEvent.location.trim() : "",
+                    location: newEvent.eventType === 'external' ? normalizedLocation : "",
                     space_id: newEvent.eventType === 'internal' ? Number(newEvent.spaceId) : null,
-                    tags: newEvent.labels || null,
+                    tags: normalizedTags || null,
                     max_participants: newEvent.limit ? parseInt(newEvent.limit) : null,
-                    image_url: newEvent.photo || null,
+                    image_url: normalizedPhoto || null,
                 })
             });
 
