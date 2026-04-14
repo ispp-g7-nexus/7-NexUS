@@ -236,12 +236,32 @@ const parseSeenIds = (raw: string | null): string[] => {
     }
 };
 
-const getInitialSeenIds = (): string[] => typeof globalThis.window !== "undefined" ? parseSeenIds(globalThis.localStorage.getItem(HOME_NOTIFICATIONS_SEEN_IDS_KEY)) : [];
-const getInitialDismissedNotificationIds = (): string[] => typeof globalThis.window !== "undefined" ? parseSeenIds(globalThis.localStorage.getItem(HOME_NOTIFICATIONS_DISMISSED_IDS_KEY)) : [];
-const getInitialDismissedIncidenceIds = (): string[] => typeof globalThis.window !== "undefined" ? parseSeenIds(globalThis.localStorage.getItem(HOME_INCIDENCES_DISMISSED_IDS_KEY)) : [];
+const getInitialSeenIds = (): string[] => {
+    if (globalThis.window === undefined) {
+        return [];
+    }
+
+    return parseSeenIds(globalThis.localStorage.getItem(HOME_NOTIFICATIONS_SEEN_IDS_KEY));
+};
+
+const getInitialDismissedNotificationIds = (): string[] => {
+    if (globalThis.window === undefined) {
+        return [];
+    }
+
+    return parseSeenIds(globalThis.localStorage.getItem(HOME_NOTIFICATIONS_DISMISSED_IDS_KEY));
+};
+
+const getInitialDismissedIncidenceIds = (): string[] => {
+    if (globalThis.window === undefined) {
+        return [];
+    }
+
+    return parseSeenIds(globalThis.localStorage.getItem(HOME_INCIDENCES_DISMISSED_IDS_KEY));
+};
 
 const getIncidencesSeenAtMs = (): number => {
-    if (typeof window === "undefined") return 0;
+    if (globalThis.window === undefined) return 0;
     const raw = globalThis.localStorage.getItem(HOME_INCIDENCES_SEEN_AT_KEY);
     if (!raw) return 0;
     const parsedMs = Date.parse(raw);
@@ -249,7 +269,7 @@ const getIncidencesSeenAtMs = (): number => {
 };
 
 const getAnnouncementsSeenAtMs = (): number => {
-    if (typeof window === "undefined") return 0;
+    if (globalThis.window === undefined) return 0;
     const raw = globalThis.localStorage.getItem(HOME_ANNOUNCEMENTS_SEEN_AT_KEY);
     if (!raw) return 0;
     const parsedMs = Date.parse(raw);
@@ -257,7 +277,7 @@ const getAnnouncementsSeenAtMs = (): number => {
 };
 
 const getReservationsSeenAtMs = (): number => {
-    if (typeof window === "undefined") return 0;
+    if (globalThis.window === undefined) return 0;
     const raw = globalThis.localStorage.getItem(HOME_RESERVATIONS_SEEN_AT_KEY);
     if (!raw) return 0;
     const parsedMs = Date.parse(raw);
@@ -309,7 +329,7 @@ const getActiveVisitUrgentNotifications = (storageKey: string | null): VisitUrge
 };
 
 const getCachedNotifications = (): HomeNotification[] => {
-    if (typeof globalThis.window === "undefined") {
+    if (globalThis.window === undefined) {
         return [];
     }
 
@@ -350,15 +370,19 @@ const getCachedNotifications = (): HomeNotification[] => {
 };
 
 const saveCachedNotifications = (notifications: HomeNotification[]) => {
-    if (typeof globalThis.window !== "undefined") {
-        globalThis.localStorage.setItem(HOME_NOTIFICATIONS_CACHE_KEY, JSON.stringify(notifications));
+    if (globalThis.window === undefined) {
+        return;
     }
+
+    globalThis.localStorage.setItem(HOME_NOTIFICATIONS_CACHE_KEY, JSON.stringify(notifications));
 };
 
 const saveStoredIds = (key: string, ids: string[]) => {
-    if (typeof globalThis.window !== "undefined") {
-        globalThis.localStorage.setItem(key, JSON.stringify(ids));
+    if (globalThis.window === undefined) {
+        return;
     }
+
+    globalThis.localStorage.setItem(key, JSON.stringify(ids));
 };
 
 const formatRelativeTime = (isoDate: string) => {

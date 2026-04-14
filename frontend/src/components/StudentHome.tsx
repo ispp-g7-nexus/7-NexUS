@@ -113,7 +113,7 @@ const formatRelativeFuture = (isoDate: string) => {
 };
 
 const getInitialSeenIds = (): string[] => {
-    if (typeof globalThis.window === "undefined") {
+    if (globalThis.window === undefined) {
         return [];
     }
 
@@ -121,7 +121,7 @@ const getInitialSeenIds = (): string[] => {
 };
 
 const getInitialDismissedNotificationIds = (): string[] => {
-    if (typeof globalThis.window === "undefined") {
+    if (globalThis.window === undefined) {
         return [];
     }
 
@@ -129,7 +129,7 @@ const getInitialDismissedNotificationIds = (): string[] => {
 };
 
 const getInitialDismissedIncidenceIds = (): string[] => {
-    if (typeof globalThis.window === "undefined") {
+    if (globalThis.window === undefined) {
         return [];
     }
 
@@ -137,13 +137,15 @@ const getInitialDismissedIncidenceIds = (): string[] => {
 };
 
 const saveStoredIds = (key: string, ids: string[]) => {
-    if (typeof globalThis.window !== "undefined") {
-        globalThis.localStorage.setItem(key, JSON.stringify(ids));
+    if (globalThis.window === undefined) {
+        return;
     }
+
+    globalThis.localStorage.setItem(key, JSON.stringify(ids));
 };
 
 const getAnnouncementsSeenAtMs = (): number => {
-    if (typeof globalThis.window === "undefined") {
+    if (globalThis.window === undefined) {
         return 0;
     }
 
@@ -157,7 +159,7 @@ const getAnnouncementsSeenAtMs = (): number => {
 };
 
 const getIncidencesSeenAtMs = (): number => {
-    if (typeof globalThis.window === "undefined") {
+    if (globalThis.window === undefined) {
         return 0;
     }
 
@@ -252,7 +254,7 @@ type EventItem = {
 type ReservationNotificationItem = ReservationReminderNotification;
 
 const getCachedNotifications = (): HomeNotification[] => {
-    if (typeof globalThis.window === "undefined") {
+    if (globalThis.window === undefined) {
         return [];
     }
 
@@ -293,9 +295,11 @@ const getCachedNotifications = (): HomeNotification[] => {
 };
 
 const saveCachedNotifications = (notifications: HomeNotification[]) => {
-    if (typeof globalThis.window !== "undefined") {
-        globalThis.localStorage.setItem(HOME_NOTIFICATIONS_CACHE_KEY, JSON.stringify(notifications));
+    if (globalThis.window === undefined) {
+        return;
     }
+
+    globalThis.localStorage.setItem(HOME_NOTIFICATIONS_CACHE_KEY, JSON.stringify(notifications));
 };
 
 const parseUserId = (raw: unknown) => {

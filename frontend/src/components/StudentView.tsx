@@ -597,7 +597,7 @@ export function StudentView({ onLogout }: StudentViewProps) {
                 const notifications = Array.isArray(payload?.results) ? payload.results : [];
                 const seenAt = getSeenTimestamp(HOME_INCIDENCES_SEEN_AT_KEY);
                 const count = notifications.filter((item: { created_at?: string }) => {
-                    const createdAt = item?.created_at ? Date.parse(item.created_at) : NaN;
+                    const createdAt = item?.created_at ? Date.parse(item.created_at) : Number.NaN;
                     return Number.isFinite(createdAt) && createdAt > seenAt;
                 }).length;
 
@@ -631,7 +631,7 @@ export function StudentView({ onLogout }: StudentViewProps) {
                 ];
                 const seenAt = getSeenTimestamp(HOME_RESERVATIONS_SEEN_AT_KEY);
                 const count = notifications.filter((item) => {
-                    const createdAt = item?.created_at ? Date.parse(item.created_at) : NaN;
+                    const createdAt = item?.created_at ? Date.parse(item.created_at) : Number.NaN;
                     return Number.isFinite(createdAt) && createdAt > seenAt;
                 }).length;
 
