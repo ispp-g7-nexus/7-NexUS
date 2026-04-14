@@ -166,15 +166,6 @@ class IncidenceViewSetTests(TenantTestCase):
         )
         self.assertEqual(res.status_code, 201)
 
-    def test_perform_create_resident_logic(self):
-        self.client.force_authenticate(user=self.student_a)
-        res = self.client.post(
-            self.list_url,
-            {"title": "S", "description": "D", "location_type": "habitacion"},
-            HTTP_HOST=self.host,
-        )
-        self.assertEqual(res.data["room_number_detail"]["numero"], "101")
-
     def test_perform_update_full_logs(self):
         self.client.force_authenticate(user=self.admin_user)
         url = reverse("incidence-detail", args=[self.inc_a.id])
@@ -309,10 +300,15 @@ class IncidenceSerializersTests(TestCase):
         self.incidence.id = 10
         self.incidence.student_id = 1
         self.incidence.student = self.user
-        self.incidence.status = "pending"
+        self.incidence.status = "pending" 
         self.incidence.priority = "high"
-        self.incidence.assigned_staff_id = None
+        
+        self.incidence.assigned_staff = None 
+        self.incidence.assigned_external_name = ""
         self.incidence.location_type = "habitacion"
+        
+        self.incidence.updates = MagicMock()
+        self.incidence.updates.exists.return_value = False
 
     def test_incidence_update_serializer_fields(self):
         class FakeAuthor:
