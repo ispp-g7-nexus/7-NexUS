@@ -25,6 +25,7 @@ from apps.spaces.views import (
     AdminSpaceNotificationsView,
 )
 from apps.spaces.models import CommonSpace, SpaceReservation
+from apps.spaces.tests import ensure_tenant_domain
 from apps.membership.models import Membership, Role
 
 
@@ -46,6 +47,7 @@ class PermissionsAndUtilsTests(FastTenantTestCase):
 
     def setUp(self):
         super().setUp()
+        ensure_tenant_domain(self.tenant, self.get_test_tenant_domain())
         self.factory = RequestFactory()
         User = get_user_model()
         self.user = User.objects.create_user(username="permuser", email="p@t.local")
