@@ -256,16 +256,17 @@ class ObjectAvailabilityApiTests(FastTenantTestCase):
         self.assertEqual(created.stock_total, 1)
 
     def test_create_object_rejects_non_positive_stock_total(self):
+        import json as _json
         response = self.client.post(
             "/api/objects/",
-            data={
+            data=_json.dumps({
                 "name": "Casco",
                 "stock_total": 0,
-            },
+            }),
             content_type="application/json",
         )
 
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 400, response.content)
         self.assertIn("stock_total", response.json()["detail"])
 
     def test_create_object_rejects_non_integer_stock_total(self):

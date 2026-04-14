@@ -74,7 +74,11 @@ def _parse_object_payload(body, residence):
 
     try:
         raw_stock_total = body.get("stock_total", 1)
-        stock_total = int(raw_stock_total or 1)
+        # Importante: no usar ``or 1`` porque 0 es falsy y convertiría un
+        # stock_total inválido (0) en 1 de forma silenciosa.
+        if raw_stock_total is None:
+            raw_stock_total = 1
+        stock_total = int(raw_stock_total)
         if stock_total < 1:
             raise ValueError("stock_total debe ser positivo")
 

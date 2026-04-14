@@ -114,9 +114,8 @@ class IncidenceViewSetTests(TenantTestCase):
                 user=self.student_a,
                 role=self.role_student,
                 residence=self.residence_obj,
-                bedroom=bedroom,
-                is_active=True,
                 bedroom=self.bedroom_3a,
+                is_active=True,
             )
             self.inc_a = Incidence.objects.create(
                 title="Incidencia A",

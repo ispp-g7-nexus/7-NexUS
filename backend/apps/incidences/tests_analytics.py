@@ -265,10 +265,10 @@ class IncidenceAnalyticsViewTests(TenantTestCase):
 
     def test_avg_resolution_hours_computed(self):
         # Created at 10:00, resolved at 18:00 (mismo día) → 8 horas.
-        # La analytics filtra por los últimos N días, así que fijamos las
-        # fechas en el rango default usando una URL explícita con `from`/`to`.
-        from django.utils.timezone import localdate
-
+        # Usamos una URL con ``from``/``to`` explícitos en el mismo día en
+        # el que fijamos ``created_at``/``updated_at`` para evitar depender
+        # del rango default de la analytics.
+        base_day = date(2024, 1, 1)
         with schema_context(self.tenant.schema_name):
             inc = Incidence.objects.create(
                 title="Timed",
@@ -277,7 +277,6 @@ class IncidenceAnalyticsViewTests(TenantTestCase):
                 student=self.admin_user,
                 status="resolved",
             )
-            base_day = localdate()
             created_dt = make_aware(
                 datetime(base_day.year, base_day.month, base_day.day, 10, 0, 0)
             )
@@ -288,10 +287,13 @@ class IncidenceAnalyticsViewTests(TenantTestCase):
                 created_at=created_dt, updated_at=resolved_dt
             )
 
-        url = f"{ANALYTICS_URL}?from=2024-01-01&to=2024-01-02"
+        url = (
+            f"{ANALYTICS_URL}?from={base_day.isoformat()}"
+            f"&to={(base_day + timedelta(days=1)).isoformat()}"
+        )
         response = self.admin_client.get(url)
         summary = response.json()["summary"]
-        
+
         self.assertEqual(summary["avg_resolution_hours"], 8.0)
 
     # ── Invalid date range ────────────────────────────────────────────────────
