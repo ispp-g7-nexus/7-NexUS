@@ -85,4 +85,69 @@ describe('SpaceDetailModal', () => {
     expect(onEdit).toHaveBeenCalledTimes(1)
     expect(onDeactivate).toHaveBeenCalledTimes(1)
   })
+
+  it('muestra loading y permite cerrar el modal', async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    let resolveSpace: ((value: Awaited<ReturnType<typeof getSpace>>) => void) | undefined
+
+    mockedGetSpace.mockReturnValue(
+      new Promise((resolve) => {
+        resolveSpace = resolve
+      }),
+    )
+
+    render(<SpaceDetailModal open spaceId={1} onClose={onClose} />)
+
+    expect(screen.getByText('Cargando...')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button'))
+    expect(onClose).toHaveBeenCalledTimes(1)
+
+    resolveSpace?.({
+      id: 1,
+      name: 'Sala Demo',
+      description: '',
+      img: null,
+      capacity: 8,
+      is_active: true,
+      open_time: '08:00:00',
+      close_time: '22:00:00',
+      reservation_interval_minutes: 60,
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Sala Demo')).toBeInTheDocument()
+    })
+  })
+
+  it('muestra error cuando no se encuentra el espacio', async () => {
+    mockedGetSpace.mockRejectedValue(new Error('404'))
+
+    render(<SpaceDetailModal open spaceId={99} onClose={vi.fn()} />)
+
+    await waitFor(() => {
+      expect(screen.getByText(/No se encontró el espacio/i)).toBeInTheDocument()
+    })
+  })
+
+  it('muestra el boton inactivo deshabilitado cuando el espacio ya esta desactivado', async () => {
+    mockedGetSpace.mockResolvedValue({
+      id: 1,
+      name: 'Sala Archivo',
+      description: '',
+      img: null,
+      capacity: 4,
+      is_active: false,
+      open_time: '09:00:00',
+      close_time: '18:00:00',
+      reservation_interval_minutes: 30,
+    })
+
+    render(<SpaceDetailModal open spaceId={1} onClose={vi.fn()} onDeactivate={vi.fn()} />)
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Ya inactivo/i })).toBeDisabled()
+    })
+  })
 })
