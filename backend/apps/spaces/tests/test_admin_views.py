@@ -445,3 +445,14 @@ class AdminSpaceViewsTests(FastTenantTestCase):
         self.space.refresh_from_db()
         self.assertEqual(self.space.description, new_desc)
         self.assertEqual(self.space.img, new_img)
+
+    def test_admin_patch_space_updates_reservation_interval_minutes(self):
+        payload = {"reservation_interval_minutes": 45}
+        resp = self.admin_client.patch(
+            f"/api/admin/spaces/{self.space.id}/",
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.space.refresh_from_db()
+        self.assertEqual(self.space.reservation_interval_minutes, 45)
