@@ -21,13 +21,13 @@ test.describe('Analíticas — Incidencias: carga', () => {
 
   test('muestra la sección de analíticas de incidencias', async ({ page }) => {
     await goToIncidencesAnalytics(page)
-    await expect(page.getByText('Filtros de analítica')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Filtros de analítica', { exact: true })).toBeVisible({ timeout: 10000 })
   })
 
   test('muestra los filtros de fecha Desde y Hasta', async ({ page }) => {
     await goToIncidencesAnalytics(page)
-    await expect(page.getByText('Desde')).toBeVisible({ timeout: 10000 })
-    await expect(page.getByText('Hasta')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Desde', { exact: true })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Hasta', { exact: true })).toBeVisible({ timeout: 10000 })
   })
 })
 
@@ -38,22 +38,24 @@ test.describe('Analíticas — Incidencias: resumen', () => {
   })
 
   test('muestra el total de incidencias creadas en el periodo', async ({ page }) => {
-    await expect(page.getByText('Creadas en el periodo')).toBeVisible({ timeout: 10000 })
-    await expect(page.getByText('10')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Creadas en el periodo', { exact: true })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('10', { exact: true })).toBeVisible({ timeout: 10000 })
   })
 
   test('muestra el total de incidencias resueltas en el periodo', async ({ page }) => {
-    await expect(page.getByText('Resueltas en el periodo')).toBeVisible({ timeout: 10000 })
-    await expect(page.getByText('7')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Resueltas en el periodo', { exact: true })).toBeVisible({ timeout: 10000 })
+    // Use heading role to avoid matching '7' inside chart tspan labels like '17/03'
+    await expect(page.getByRole('heading', { name: '7' })).toBeVisible({ timeout: 10000 })
   })
 
   test('muestra el total de incidencias abiertas actualmente', async ({ page }) => {
-    await expect(page.getByText('Abiertas actualmente')).toBeVisible({ timeout: 10000 })
-    await expect(page.getByText('3')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Abiertas actualmente', { exact: true })).toBeVisible({ timeout: 10000 })
+    // Use heading role to avoid matching '3' inside chart date tspans
+    await expect(page.getByRole('heading', { name: '3' })).toBeVisible({ timeout: 10000 })
   })
 
   test('muestra el tiempo medio de resolución', async ({ page }) => {
-    await expect(page.getByText('Tiempo medio de resolución')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Tiempo medio de resolución', { exact: true })).toBeVisible({ timeout: 10000 })
     await expect(page.getByText(/48\.5\s*h/)).toBeVisible({ timeout: 10000 })
   })
 
@@ -65,7 +67,7 @@ test.describe('Analíticas — Incidencias: resumen', () => {
       },
     })
     await goToIncidencesAnalytics(page)
-    await expect(page.getByText('—')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('—', { exact: true })).toBeVisible({ timeout: 10000 })
   })
 })
 
@@ -76,16 +78,17 @@ test.describe('Analíticas — Incidencias: gráficos', () => {
   })
 
   test('muestra el gráfico de incidencias abiertas por día', async ({ page }) => {
-    await expect(page.getByText('Incidencias abiertas por día')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Incidencias abiertas por día', { exact: true })).toBeVisible({ timeout: 10000 })
   })
 
   test('muestra el gráfico de incidencias resueltas por staff', async ({ page }) => {
-    await expect(page.getByText('Incidencias resueltas por staff')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Incidencias resueltas por staff', { exact: true })).toBeVisible({ timeout: 10000 })
   })
 
   test('muestra los nombres del staff en el gráfico', async ({ page }) => {
-    await expect(page.getByText('María García')).toBeVisible({ timeout: 10000 })
-    await expect(page.getByText('Carlos López')).toBeVisible({ timeout: 10000 })
+    // Recharts creates an aria-hidden measurement span — use first() to get the visible one
+    await expect(page.getByText('María García').first()).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Carlos López').first()).toBeVisible({ timeout: 10000 })
   })
 
   test('muestra botones de exportar CSV', async ({ page }) => {
@@ -124,9 +127,6 @@ test.describe('Analíticas — Incidencias: rango inválido', () => {
   test('muestra advertencia cuando la fecha inicial es posterior a la final', async ({ page }) => {
     await mockAdminApi(page, { incidenceAnalytics: MOCK_INCIDENCE_ANALYTICS })
     await goToIncidencesAnalytics(page)
-    // Set from > to via inputs
-    const inputs = page.getByLabel(/Desde|Hasta/i)
-    // Use direct fill on date inputs
     const fromInput = page.locator('input[type="date"]').first()
     const toInput = page.locator('input[type="date"]').last()
     await fromInput.fill('2026-04-10')

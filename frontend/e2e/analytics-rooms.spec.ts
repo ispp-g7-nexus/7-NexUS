@@ -14,19 +14,19 @@ async function goToRoomsAnalytics(page: Parameters<typeof mockAdminApi>[0]) {
   await page.getByRole('button', { name: /^Habitaciones$/i }).click()
 }
 
-test.describe('Analíticas — Habitaciones: permisos y carga', () => {
+test.describe('Analíticas — Habitaciones: carga', () => {
   test.beforeEach(async ({ page }) => {
     await mockAdminApi(page)
   })
 
   test('muestra el panel de analíticas al navegar a Habitaciones', async ({ page }) => {
     await goToRoomsAnalytics(page)
-    await expect(page.getByText('Analíticas de Habitaciones')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('heading', { name: 'Analíticas de Habitaciones' })).toBeVisible({ timeout: 10000 })
   })
 
   test('muestra la tarjeta de total de habitaciones', async ({ page }) => {
     await goToRoomsAnalytics(page)
-    await expect(page.getByText('Total habitaciones')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Total habitaciones', { exact: true })).toBeVisible({ timeout: 10000 })
   })
 })
 
@@ -37,19 +37,20 @@ test.describe('Analíticas — Habitaciones: resumen', () => {
   })
 
   test('muestra el número total de habitaciones', async ({ page }) => {
-    await expect(page.getByText('9')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('9', { exact: true })).toBeVisible({ timeout: 10000 })
   })
 
   test('muestra la capacidad total', async ({ page }) => {
-    await expect(page.getByText('14')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('14', { exact: true })).toBeVisible({ timeout: 10000 })
   })
 
   test('muestra el total de ocupantes', async ({ page }) => {
-    await expect(page.getByText('6')).toBeVisible({ timeout: 10000 })
+    // Use heading role to avoid matching '6' inside chart labels like '60%' or '2026'
+    await expect(page.getByRole('heading', { name: '6' })).toBeVisible({ timeout: 10000 })
   })
 
   test('muestra la tasa de ocupación', async ({ page }) => {
-    await expect(page.getByText(/43\s*%/)).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('43%', { exact: true })).toBeVisible({ timeout: 10000 })
   })
 })
 
@@ -60,46 +61,47 @@ test.describe('Analíticas — Habitaciones: gráficos', () => {
   })
 
   test('muestra el gráfico de ocupación por edificio', async ({ page }) => {
-    await expect(page.getByText('Ocupación por edificio')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Ocupación por edificio', { exact: true })).toBeVisible({ timeout: 10000 })
   })
 
   test('muestra los edificios en el gráfico', async ({ page }) => {
-    await expect(page.getByText('Edificio A')).toBeVisible({ timeout: 10000 })
-    await expect(page.getByText('Edificio B')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Edificio A').first()).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Edificio B').first()).toBeVisible({ timeout: 10000 })
   })
 
   test('muestra el gráfico de ocupación por tipo de habitación', async ({ page }) => {
-    await expect(page.getByText('Ocupación por tipo de habitación')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Ocupación por tipo de habitación', { exact: true })).toBeVisible({ timeout: 10000 })
   })
 
-  test('muestra los tipos de habitación', async ({ page }) => {
-    await expect(page.getByText('Individual')).toBeVisible({ timeout: 10000 })
-    await expect(page.getByText('Doble')).toBeVisible({ timeout: 10000 })
-    await expect(page.getByText('Triple')).toBeVisible({ timeout: 10000 })
+  test('muestra los tipos de habitación en el gráfico', async ({ page }) => {
+    await expect(page.getByText('Individual').first()).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Doble').first()).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Triple').first()).toBeVisible({ timeout: 10000 })
   })
 
   test('muestra el gráfico de índice de ocupación por años', async ({ page }) => {
-    await expect(page.getByText('Índice de ocupación por años')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Índice de ocupación por años', { exact: true })).toBeVisible({ timeout: 10000 })
   })
 })
 
 test.describe('Analíticas — Habitaciones: estado vacío', () => {
-  test('muestra mensaje de sin datos cuando no hay habitaciones', async ({ page }) => {
+  test('muestra 0 cuando no hay habitaciones', async ({ page }) => {
     await mockAdminApi(page, {
       bedroomAnalytics: {
-        summary: { total_rooms: 0, total_capacity: 0, total_occupants: 0, occupation_rate: 0 },
+        summary: { total_rooms: 0, total_capacity: 0, total_occupants: 0, overall_occupation_rate: 0 },
         occupation_by_building: [],
         occupation_by_type: [],
         occupation_by_year: [],
       },
     })
     await goToRoomsAnalytics(page)
-    await expect(page.getByText('0').first()).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Total habitaciones', { exact: true })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('No hay habitaciones registradas en esta residencia.').first()).toBeVisible({ timeout: 10000 })
   })
 })
 
 test.describe('Analíticas — Habitaciones: error de servicio', () => {
-  test('muestra mensaje de error cuando el servicio falla', async ({ page }) => {
+  test('muestra botón reintentar cuando el servicio falla', async ({ page }) => {
     await page.route('**/api/**', async (route) => {
       const path = new URL(route.request().url()).pathname
       if (path === '/api/auth/me/') {

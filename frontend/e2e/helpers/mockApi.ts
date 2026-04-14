@@ -78,7 +78,7 @@ export const MOCK_BEDROOM_ANALYTICS = {
     total_rooms: 9,
     total_capacity: 14,
     total_occupants: 6,
-    occupation_rate: 43,
+    overall_occupation_rate: 43,
   },
   occupation_by_building: [
     { edificio: 'Edificio A', total_rooms: 5, total_capacity: 7, occupied_rooms: 4, occupants: 4, occupation_rate: 57 },

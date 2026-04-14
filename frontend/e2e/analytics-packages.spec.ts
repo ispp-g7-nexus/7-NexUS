@@ -21,13 +21,13 @@ test.describe('Analíticas — Paquetería: carga', () => {
 
   test('muestra la sección de analíticas de paquetería', async ({ page }) => {
     await goToPackagesAnalytics(page)
-    await expect(page.getByText('Filtros de analítica')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Filtros de analítica', { exact: true })).toBeVisible({ timeout: 10000 })
   })
 
   test('muestra los filtros de fecha', async ({ page }) => {
     await goToPackagesAnalytics(page)
-    await expect(page.getByText('Desde')).toBeVisible({ timeout: 10000 })
-    await expect(page.getByText('Hasta')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Desde', { exact: true })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Hasta', { exact: true })).toBeVisible({ timeout: 10000 })
   })
 })
 
@@ -38,18 +38,18 @@ test.describe('Analíticas — Paquetería: resumen', () => {
   })
 
   test('muestra el total de paquetes recibidos', async ({ page }) => {
-    await expect(page.getByText('Recibidos en el periodo')).toBeVisible({ timeout: 10000 })
-    await expect(page.getByText('12')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Paquetes recibidos en el periodo', { exact: true })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('12', { exact: true })).toBeVisible({ timeout: 10000 })
   })
 
-  test('muestra el total de paquetes entregados', async ({ page }) => {
-    await expect(page.getByText('Entregados en el periodo')).toBeVisible({ timeout: 10000 })
-    await expect(page.getByText('8')).toBeVisible({ timeout: 10000 })
+  test('muestra el total de paquetes recogidos', async ({ page }) => {
+    await expect(page.getByText('Paquetes recogidos en el periodo', { exact: true })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('8', { exact: true })).toBeVisible({ timeout: 10000 })
   })
 
   test('muestra los paquetes pendientes en conserjería', async ({ page }) => {
-    await expect(page.getByText('En conserjería ahora')).toBeVisible({ timeout: 10000 })
-    await expect(page.getByText('4')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Pendientes ahora en conserjería', { exact: true })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('4', { exact: true })).toBeVisible({ timeout: 10000 })
   })
 })
 
@@ -60,17 +60,18 @@ test.describe('Analíticas — Paquetería: gráficos', () => {
   })
 
   test('muestra el gráfico de actividad diaria', async ({ page }) => {
-    await expect(page.getByText('Actividad diaria de paquetes')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Paquetes recogidos por día y acumulados en conserjería', { exact: true })).toBeVisible({ timeout: 10000 })
   })
 
-  test('muestra el gráfico de paquetes por residente', async ({ page }) => {
-    await expect(page.getByText('Paquetes por residente')).toBeVisible({ timeout: 10000 })
+  test('muestra el gráfico de paquetes por persona', async ({ page }) => {
+    await expect(page.getByText('Número de paquetes por persona', { exact: true })).toBeVisible({ timeout: 10000 })
   })
 
   test('muestra los nombres de residentes en el gráfico', async ({ page }) => {
-    await expect(page.getByText('Ana García')).toBeVisible({ timeout: 10000 })
-    await expect(page.getByText('Luis Martínez')).toBeVisible({ timeout: 10000 })
-    await expect(page.getByText('Sofía Rodríguez')).toBeVisible({ timeout: 10000 })
+    // Recharts creates an aria-hidden measurement span — use first() to get the visible one
+    await expect(page.getByText('Ana García').first()).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Luis Martínez').first()).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Sofía Rodríguez').first()).toBeVisible({ timeout: 10000 })
   })
 
   test('muestra botones de exportar CSV', async ({ page }) => {
@@ -107,7 +108,7 @@ test.describe('Analíticas — Paquetería: estado vacío', () => {
 })
 
 test.describe('Analíticas — Paquetería: error de servicio', () => {
-  test('muestra mensaje de error y botón reintentar cuando el servicio falla', async ({ page }) => {
+  test('muestra botón reintentar cuando el servicio falla', async ({ page }) => {
     await page.route('**/api/**', async (route) => {
       const path = new URL(route.request().url()).pathname
       if (path === '/api/auth/me/') {
