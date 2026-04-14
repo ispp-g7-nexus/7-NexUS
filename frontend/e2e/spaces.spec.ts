@@ -61,7 +61,9 @@ test.describe('Espacios admin', () => {
 
   test('muestra los espacios disponibles en gestión', async ({ page }) => {
     await expect(page.getByText('Gestión de espacios')).toBeVisible()
-    await expect(page.getByText('Sala Estudio')).toBeVisible()
+    await expect(
+      page.getByRole('heading', { name: 'Sala Estudio' })
+    ).toBeVisible()
     await expect(page.getByText('12')).toBeVisible()
     await expect(page.getByText('60m')).toBeVisible()
   })
@@ -70,7 +72,7 @@ test.describe('Espacios admin', () => {
     await page.getByRole('button', { name: /Ver detalles de Sala Estudio/i }).click()
 
     await expect(page.getByText('Detalle del espacio')).toBeVisible()
-    await expect(page.getByText('Sala Estudio')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Sala Estudio' })).toBeVisible()
     await expect(page.getByText('12 personas')).toBeVisible()
     await expect(page.getByRole('button', { name: /Editar información/i })).toBeVisible()
   })
@@ -85,7 +87,9 @@ test.describe('Espacios admin', () => {
     await page.getByRole('button', { name: 'Canceladas' }).click()
 
     await expect(page.getByText('Luis Pardo')).toBeVisible()
-    await expect(page.getByText('Cancelada')).toBeVisible()
+    await expect(
+      page.getByText('Cancelada', { exact: true })
+    ).toBeVisible() 
   })
 })
 
