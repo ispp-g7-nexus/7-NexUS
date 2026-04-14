@@ -82,7 +82,9 @@ function ReservationCard({
 }) {
   const [showReasonDetailModal, setShowReasonDetailModal] = useState(false);
   const isCancelled = rental.status === "CANCELLED";
-  const isCancelledByAdmin = Boolean(rental.admin_cancelled_by);
+  const isCancelledByAdmin = Boolean(
+    rental.admin_cancelled_by || rental.admin_cancelled_reason || rental.admin_cancelled_at,
+  );
   const normalizedCancelReason = rental.admin_cancelled_reason
     ? normalizeReasonText(rental.admin_cancelled_reason)
     : "";
