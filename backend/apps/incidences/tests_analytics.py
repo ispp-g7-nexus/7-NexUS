@@ -21,6 +21,10 @@ TEST_PASSWORD = "demo1234"  # NOSONAR
 class IncidenceAnalyticsViewTests(TenantTestCase):
 
     @classmethod
+    def get_test_schema_name(cls):
+        return "test_incidence_analytics"
+
+    @classmethod
     def get_test_tenant_domain(cls):
         return "incidence-analytics.test.local"
 
@@ -260,7 +264,11 @@ class IncidenceAnalyticsViewTests(TenantTestCase):
         self.assertIsNone(summary["avg_resolution_hours"])
 
     def test_avg_resolution_hours_computed(self):
-        # Created at 10:00, resolved at 18:00 → 8 hours
+        # Created at 10:00, resolved at 18:00 (mismo día) → 8 horas.
+        # La analytics filtra por los últimos N días, así que fijamos las
+        # fechas en el rango default usando una URL explícita con `from`/`to`.
+        from django.utils.timezone import localdate
+
         with schema_context(self.tenant.schema_name):
             inc = Incidence.objects.create(
                 title="Timed",
@@ -269,8 +277,13 @@ class IncidenceAnalyticsViewTests(TenantTestCase):
                 student=self.admin_user,
                 status="resolved",
             )
-            created_dt = make_aware(datetime(2024, 1, 1, 10, 0, 0))
-            resolved_dt = make_aware(datetime(2024, 1, 1, 18, 0, 0))
+            base_day = localdate()
+            created_dt = make_aware(
+                datetime(base_day.year, base_day.month, base_day.day, 10, 0, 0)
+            )
+            resolved_dt = make_aware(
+                datetime(base_day.year, base_day.month, base_day.day, 18, 0, 0)
+            )
             Incidence.objects.filter(id=inc.id).update(
                 created_at=created_dt, updated_at=resolved_dt
             )

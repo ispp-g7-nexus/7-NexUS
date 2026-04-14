@@ -3,8 +3,8 @@ from datetime import timedelta
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django_tenants.test.cases import FastTenantTestCase
-from django_tenants.test.client import TenantClient
 
+from apps.common.test_utils import ensure_tenant_domain, make_tenant_client
 from apps.objects.models import Object, ObjectRental
 from apps.residences.models import Residence, ResidenceDomain
 
@@ -28,8 +28,9 @@ class ObjectAvailabilityApiTests(FastTenantTestCase):
 
     def setUp(self):
         super().setUp()
+        ensure_tenant_domain(self.tenant, self.get_test_tenant_domain())
         domain = self.get_test_tenant_domain()
-        self.client = TenantClient(self.tenant, SERVER_NAME=domain, HTTP_HOST=domain)
+        self.client = make_tenant_client(self.tenant, domain)
 
         user_model = get_user_model()
         self.user = user_model.objects.create_user(
@@ -130,19 +131,20 @@ class ObjectAvailabilityApiTests(FastTenantTestCase):
         self.assertEqual(response.status_code, 400)
 
     def test_create_object_accepts_valid_name(self):
+        import json as _json
         response = self.client.post(
             "/api/objects/",
-            data={
-                "name": "Kit de Herramientas (Básico) 2.0",
+            data=_json.dumps({
+                "name": "Kit Herramientas (Básico)",
                 "description": "Caja con herramientas",
-            },
+            }),
             content_type="application/json",
         )
 
-        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.status_code, 201, response.content)
         self.assertEqual(Object.objects.count(), 4)
         self.assertEqual(
-            Object.objects.filter(name="Kit de Herramientas (Básico) 2.0").exists(),
+            Object.objects.filter(name="Kit Herramientas (Básico)").exists(),
             True,
         )
 

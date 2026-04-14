@@ -1,9 +1,11 @@
 from django.contrib.auth import get_user_model
 from django_tenants.test.cases import FastTenantTestCase
-from django_tenants.test.client import TenantClient
 
+from apps.common.services import build_access_token
+from apps.common.test_utils import ensure_tenant_domain, make_tenant_client
 from apps.membership.models import Membership, Role
-from apps.residences.models import Residence, ResidenceDomain, StudentProfile
+from apps.residences.models import Residence, ResidenceDomain
+from apps.residents.models import StudentProfile
 
 
 class AdminStudentProfileViewTests(FastTenantTestCase):
@@ -25,6 +27,7 @@ class AdminStudentProfileViewTests(FastTenantTestCase):
 
     def setUp(self):
         super().setUp()
+        ensure_tenant_domain(self.tenant, self.get_test_tenant_domain())
         user_model = get_user_model()
 
         self.admin_user = user_model.objects.create_user(
@@ -89,13 +92,17 @@ class AdminStudentProfileViewTests(FastTenantTestCase):
             is_active=True,
         )
 
-        self.client = TenantClient(self.tenant)
-        self.client.force_login(self.admin_user)
+        domain = self.get_test_tenant_domain()
 
-        self.non_staff_client = TenantClient(self.tenant)
-        self.non_staff_client.force_login(self.student_user)
+        def _auth_client(user):
+            c = make_tenant_client(self.tenant, domain)
+            token, _ = build_access_token(user, self.tenant, self.residence)
+            c.defaults["HTTP_AUTHORIZATION"] = f"Bearer {token}"
+            return c
 
-        self.anon_client = TenantClient(self.tenant)
+        self.client = _auth_client(self.admin_user)
+        self.non_staff_client = _auth_client(self.student_user)
+        self.anon_client = make_tenant_client(self.tenant, domain)
 
     def _url(self, user_id):
         return f"/api/admin/students/{user_id}/profile/"

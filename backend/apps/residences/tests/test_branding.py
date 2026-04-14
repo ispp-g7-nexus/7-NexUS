@@ -227,8 +227,10 @@ class ResidenceBrandingTests(FastTenantTestCase):
 
     def test_patch_branding_invalid_primary_color_format(self):
         """Invalid hex color for primary should fallback to black."""
+        # El campo tiene max_length=7, usamos un hex con caracteres inválidos
+        # para que pase el max_length y dispare el fallback del validador.
         payload = {
-            "primary_color": "invalid-color",
+            "primary_color": "#GGGGGG",
         }
         response = self._patch_json(self.admin_client, payload)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
