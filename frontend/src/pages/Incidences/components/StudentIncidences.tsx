@@ -477,7 +477,7 @@ export default function StudentIncidences({ onGoToProfile, onLogout }: StudentIn
                             </div>
                             <div className="flex flex-col items-end gap-2">
                               <span className={`${UI_CLASSES.statusBadge} ${style.colorClass}`}>{config.label}</span>
-                              {inc.is_mine && inc.status === 'pending' && (
+                              {inc.is_mine && inc.status === 'pending' && !inc.assigned_staff && !(inc.assigned_external_name && inc.assigned_external_name.trim()) && (!inc.updates || inc.updates.length === 0) && (
                                 <div className="flex gap-1">
                                   <button onClick={() => setIncidenceToEdit(inc)} className={UI_CLASSES.actionBtnSmall} title="Editar"><Pencil size={12} className="text-blue-500" /></button>
                                   <button onClick={() => setIncidenceToDelete(inc)} className={UI_CLASSES.actionBtnSmall} title="Eliminar"><Trash2 size={12} className="text-red-500" /></button>

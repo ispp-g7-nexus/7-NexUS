@@ -5,6 +5,8 @@ import '@testing-library/jest-dom/vitest'
 import { AdminGuestPassListPage } from '../AdminGuestPassList'
 
 vi.mock('../../../services/guestPasses', () => ({
+  rejectAdminGuestPass: vi.fn().mockResolvedValue({}),
+  unrejectAdminGuestPass: vi.fn().mockResolvedValue({}),
   listAdminGuestPasses: vi.fn().mockResolvedValue([
     {
       id: 1,
@@ -83,7 +85,7 @@ describe('AdminGuestPassListPage — [NX-S2.39 / NX-S2.40]', () => {
 
     await user.type(screen.getByPlaceholderText(/Buscar/), 'xyz-inexistente')
 
-    expect(screen.getByText('No se han encontrado pases que coincidan')).toBeInTheDocument()
+    expect(screen.getByText('No hay pases que coincidan.')).toBeInTheDocument()
   })
 
   it('abre el diálogo de detalle al hacer clic en un pase', async () => {

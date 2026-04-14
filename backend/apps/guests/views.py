@@ -26,7 +26,8 @@ from .services import (
     get_or_create_guest_pass_policy,
     get_resident_membership_for_user,
     get_upcoming_guest_passes_queryset,
-    revoke_guest_pass_admin,
+    reject_guest_pass_admin,
+    unreject_guest_pass_admin,
 )
 
 ERROR_NO_RESIDENCE = "No se ha determinado la residencia."
@@ -136,9 +137,15 @@ class AdminGuestPassBaseView(APIView):
         return residence
 
 
-class AdminGuestPassRevokeView(AdminGuestPassBaseView):
+class AdminGuestPassRejectView(AdminGuestPassBaseView):
     def post(self, request, pass_id: int):
-        guest_pass = revoke_guest_pass_admin(pass_id, self._get_residence(request))
+        guest_pass = reject_guest_pass_admin(pass_id, self._get_residence(request))
+        return Response(GuestPassAdminReadSerializer(guest_pass).data)
+
+
+class AdminGuestPassUnrejectView(AdminGuestPassBaseView):
+    def post(self, request, pass_id: int):
+        guest_pass = unreject_guest_pass_admin(pass_id, self._get_residence(request))
         return Response(GuestPassAdminReadSerializer(guest_pass).data)
 
 

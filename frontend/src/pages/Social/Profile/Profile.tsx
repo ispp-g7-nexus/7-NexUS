@@ -1,11 +1,9 @@
 import "./Profile.css";
 import { useState, useEffect } from "react";
-import { User, Sparkles, Home, Edit, Music, Heart, LogOut } from "lucide-react";
+import { User, Sparkles, Home, Edit, Music, Heart } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { ProfileEditForm, type ProfileFormData } from "./components/ProfileEditForm";
 import { getStudentProfile } from "../../../services/api";
-import { authService } from "../../../services/auth";
-import { toast } from "sonner";
 
 
 const emptyProfileData: ProfileFormData = {
@@ -135,18 +133,6 @@ export function Profile() {
     );
   }
 
-  const handleLogout = async () => {
-  try {
-    await authService.logout();
-  } catch (error) {
-    console.error("Error en logout remoto:", error);
-    toast.error("No se pudo cerrar sesión en servidor; se cerrará sesión local.");
-  } finally {
-    localStorage.clear();
-    sessionStorage.clear();
-    globalThis.location.assign("/");
-  }
-};
 
   return (
     <div className="profile-container">
@@ -283,17 +269,6 @@ export function Profile() {
         )}
       </div>
 
-      <div className="mt-12 pt-8 border-t border-gray-200">
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-3 px-6 py-3.5 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-xl hover:shadow-lg hover:from-red-700 hover:to-red-600 transition-all font-bold tracking-wide"
-          >
-            <LogOut size={20} />
-            CERRAR SESIÓN
-          </button>
-        </div>
-      
       {/* Edit Modal - PASAMOS handleSaveSuccess en onSaveSuccess */}
       {isEditModalOpen && (
         <ProfileEditForm
