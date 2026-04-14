@@ -5,10 +5,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.chats.models import PrivateConversation
 from apps.membership.models import Membership
 from apps.onboarding.models import ResidentPreference
 
-from .models import ResidenceCompatibility
+from .models import MatchLike, ResidenceCompatibility
 
 
 def _masked_display_name(first_name: str, last_name: str, email: str) -> str:
@@ -58,7 +59,21 @@ class MyMatchesView(APIView):
             )
 
         limit = self._get_limit(request)
-        matches = [self._format_match(row) for row in rows.order_by("-score")[:limit]]
+        selected_rows = list(rows.order_by("-score")[:limit])
+        target_ids = [row.target_membership_id for row in selected_rows]
+        my_likes = set(
+            MatchLike.objects.filter(
+                source=membership, target_id__in=target_ids
+            ).values_list("target_id", flat=True)
+        )
+        likes_to_me = set(
+            MatchLike.objects.filter(
+                target=membership, source_id__in=target_ids
+            ).values_list("source_id", flat=True)
+        )
+        matches = [
+            self._format_match(row, my_likes, likes_to_me) for row in selected_rows
+        ]
 
         return Response(
             {
@@ -117,9 +132,13 @@ class MyMatchesView(APIView):
             limit = 10
         return max(1, min(limit, 50))
 
-    def _format_match(self, row):
+    def _format_match(self, row, my_likes=None, likes_to_me=None):
         user = row.target_membership.user
         prefs = getattr(row.target_membership, "resident_preferences", None)
+        my_likes = my_likes or set()
+        likes_to_me = likes_to_me or set()
+        liked = row.target_membership_id in my_likes
+        mutual = liked and row.target_membership_id in likes_to_me
         return {
             "membership_id": row.target_membership_id,
             "display_name": _masked_display_name(
@@ -127,6 +146,8 @@ class MyMatchesView(APIView):
             ),
             "score": row.score,
             "updated_at": row.updated_at,
+            "liked_by_me": liked,
+            "is_mutual": mutual,
             "horario_ritmo": getattr(prefs, "schedule", None),
             "nivel_sociabilidad": getattr(prefs, "social_level", None),
             "habito_fumar_vapear": getattr(prefs, "smoking_vaping", None),
@@ -144,3 +165,113 @@ class MyMatchesView(APIView):
             "basic_items_preference": getattr(prefs, "basic_items_preference", None),
             "temperature_preference": getattr(prefs, "temperature_preference", None),
         }
+
+
+def _get_active_student_membership(request):
+    residence = getattr(request, "residence", None)
+    qs = Membership.objects.filter(
+        user=request.user,
+        role__name__iexact="Student",
+        is_active=True,
+    ).select_related("residence")
+    if residence:
+        qs = qs.filter(residence_id=residence.id)
+    return qs.order_by("id").first()
+
+
+class MatchLikeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        me = _get_active_student_membership(request)
+        if me is None:
+            return Response(
+                {"detail": "No active membership."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        target_id = request.data.get("membership_id")
+        if not target_id:
+            return Response(
+                {"detail": "membership_id required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            target_id = int(target_id)
+        except (TypeError, ValueError):
+            return Response(
+                {"detail": "Invalid membership_id."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if target_id == me.id:
+            return Response(
+                {"detail": "Cannot like yourself."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        target = Membership.objects.filter(
+            id=target_id, residence=me.residence, is_active=True
+        ).first()
+        if target is None:
+            return Response(
+                {"detail": "Target not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+        MatchLike.objects.get_or_create(
+            residence=me.residence, source=me, target=target
+        )
+        is_mutual = MatchLike.objects.filter(source=target, target=me).exists()
+        return Response({"is_mutual": is_mutual}, status=status.HTTP_201_CREATED)
+
+
+class MatchLikeDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, membership_id: int):
+        me = _get_active_student_membership(request)
+        if me is None:
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        MatchLike.objects.filter(source=me, target_id=membership_id).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class StartMatchChatView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        me = _get_active_student_membership(request)
+        if me is None:
+            return Response(
+                {"detail": "No active membership."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        target_id = request.data.get("membership_id")
+        if not target_id:
+            return Response(
+                {"detail": "membership_id required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            target_id = int(target_id)
+        except (TypeError, ValueError):
+            return Response(
+                {"detail": "Invalid membership_id."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        target = Membership.objects.filter(
+            id=target_id, residence=me.residence, is_active=True
+        ).first()
+        if target is None:
+            return Response(
+                {"detail": "Target not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        i_liked = MatchLike.objects.filter(source=me, target=target).exists()
+        they_liked = MatchLike.objects.filter(source=target, target=me).exists()
+        if not (i_liked and they_liked):
+            return Response(
+                {"detail": "Mutual like required to start chat."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        conv, _ = PrivateConversation.get_or_create_conversation(
+            residence=me.residence, member_a=me, member_b=target
+        )
+        return Response({"conversation_id": conv.id}, status=status.HTTP_200_OK)
