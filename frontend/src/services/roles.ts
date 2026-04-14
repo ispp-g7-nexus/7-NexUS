@@ -1,4 +1,5 @@
 // src/services/roles.ts
+import { trackEvent } from "./analytics";
 import { API_URL } from "./api";
 
 const ROLES_URL = `${API_URL}/membership/roles`;
@@ -47,6 +48,7 @@ export const roleService = {
             const errorData = await response.json().catch(() => ({}));
             throw new Error(errorData.detail || 'Error al crear el rol');
         }
+        trackEvent('role_created', { role_name: data.name });
         return response.json();
     },
 
@@ -61,6 +63,7 @@ export const roleService = {
             const errorData = await response.json().catch(() => ({}));
             throw new Error(errorData.detail || 'Error al actualizar el rol');
         }
+        trackEvent('role_updated', { role_id: id });
         return response.json();
     },
 
@@ -74,6 +77,7 @@ export const roleService = {
             const errorData = await response.json().catch(() => ({}));
             throw new Error(errorData.detail || 'Error al eliminar el rol');
         }
+        trackEvent('role_deleted', { role_id: id });
         if (response.status !== 204) {
             return response.json();
         }

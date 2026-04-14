@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import { AlertTriangle, Camera, X } from "lucide-react"
 import { Button } from "../../../components/ui/button"
 import { Input } from "../../../components/ui/input"
@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectTrigger, SelectItem, SelectValue } from ".
 import { DialogDescription } from "../../../components/ui/dialog"
 import { IncidenceService } from "../../../services/incidences"
 import { BaseIncidence } from "./IncidenceShared"
+import { fetchWithAuth } from "../../../utils/api"
 
 interface IncidenceFormProps {
   onSuccess: () => void
@@ -20,10 +21,30 @@ interface IncidenceFormProps {
 
 export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData }: IncidenceFormProps) {
   const [loading, setLoading] = useState(false)
-  const [locationType, setLocationType] = useState<string>(initialData?.location_type || "")
-  const [urgent, setUrgent] = useState<boolean>(initialData?.priority === 'high')
-  const [base64Image, setBase64Image] = useState<string | null>(initialData?.img || null)
+  const [locationType, setLocationType] = useState<string>(initialData?.location_type ?? "")
+  const [urgent, setUrgent] = useState<boolean>(initialData?.priority === "high")
+  const [staffId] = useState("")
+  const [externalName] = useState("")
   const [areaError, setAreaError] = useState(false)
+  const [base64Image, setBase64Image] = useState<string | null>(null)
+  const [, setRooms] = useState<any[]>([])
+  
+  useEffect(() => {
+    if (isAdmin) {
+      fetchWithAuth('/api/bedrooms/').then(res => res.json()).then(data => setRooms(data));
+    }
+  }, [isAdmin]);
+
+  /* const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setBase64Image(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  } */
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -41,14 +62,13 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
       title: formData.get("title") as string,
       description: formData.get("description") as string,
       location_type: locationType,
-      priority: urgent ? "high" : "low"
+      priority: (urgent ? "high" : "low") as 'low' | 'high',
+      room_number: locationType === "habitacion"
+        ? (initialData?.room_number_detail?.id || initialData?.room_number || null)
+        : null, assigned_staff: isAdmin && staffId && !["external", "none"].includes(staffId) ? Number(staffId) : null,
+      assigned_external_name: isAdmin && staffId === "external" ? externalName : "",
+      img: base64Image,
     };
-
-    if (locationType === 'habitacion') {
-      payload.room_number = initialData?.room_number || "Pendiente";
-    } else {
-      payload.room_number = "";
-    }
 
     if (base64Image && base64Image.startsWith("data:image")) {
       payload.img = base64Image;
@@ -90,7 +110,7 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
         {/* Campo Área */}
         <div className="space-y-1.5 text-left">
           <Label className={UI_CLASSES.label}>Área</Label>
-          <Select onValueChange={setLocationType} defaultValue={locationType} required>
+          <Select onValueChange={setLocationType} value={locationType} required>
             <SelectTrigger
               className={`${UI_CLASSES.selectTrigger} ${areaError && !locationType ? 'border-2 border-red-500 bg-red-50' : ''}`}
             >

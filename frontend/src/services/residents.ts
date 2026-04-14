@@ -1,5 +1,6 @@
 // src/services/residents.ts
 import { fetchWithAuth } from "../utils/api";
+import { trackEvent } from "./analytics";
 
 const RESIDENTS_URL = "/api/residents/";
 
@@ -92,7 +93,9 @@ export const residentsService = {
       method: "POST",
       body: JSON.stringify(payload),
     });
-    return handleResponse(res);
+    const result = await handleResponse<{ ok: boolean; created: boolean; email: string }>(res);
+    trackEvent('resident_created');
+    return result;
   },
 
   /**
@@ -104,6 +107,7 @@ export const residentsService = {
       body: JSON.stringify(payload),
     });
     const data = await handleResponse<Record<string, unknown>>(res);
+    trackEvent('resident_updated', { resident_id: id });
     return normalise(data);
   },
 
@@ -118,5 +122,6 @@ export const residentsService = {
       const body = await res.json().catch(() => ({}));
       throw new Error((body as { detail?: string }).detail || `Error ${res.status}`);
     }
+    trackEvent('resident_deleted', { resident_id: id });
   },
 };

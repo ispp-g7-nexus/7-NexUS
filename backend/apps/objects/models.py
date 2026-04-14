@@ -30,24 +30,32 @@ class Object(models.Model):
         # An object is rentable when at least one unit is free right now.
         now = timezone.now()
         active_rentals_now = self.rentals.filter(
-            Q(status='IN_PROGRESS') | Q(status='ACTIVE', start_date__lt=now, end_date__gt=now)
+            Q(status=ObjectRental.Status.IN_PROGRESS)
+            | Q(
+                status=ObjectRental.Status.ACTIVE,
+                start_date__lt=now,
+                end_date__gt=now,
+            )
         ).count()
         return active_rentals_now < self.stock_total
 
 
 class ObjectRental(models.Model):
-    STATUS_CHOICES = (
-        ('ACTIVE', 'Activa'),
-        ('IN_PROGRESS', 'En curso'),
-        ('CANCELLED', 'Cancelada'),
-        ('COMPLETED', 'Completada'),
-    )
+    class Status(models.TextChoices):
+        ACTIVE = 'ACTIVE', 'Activa'
+        IN_PROGRESS = 'IN_PROGRESS', 'En curso'
+        CANCELLED = 'CANCELLED', 'Cancelada'
+        COMPLETED = 'COMPLETED', 'Completada'
     
     object = models.ForeignKey(Object, on_delete=models.CASCADE, related_name='rentals')
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='object_rentals')
     start_date = models.DateTimeField()
     end_date = models.DateTimeField()
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ACTIVE')
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.ACTIVE,
+    )
     reminder_viewed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -1,257 +1,38 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { Plus, Bell, MapPin, User, Wrench, MessageSquare, Loader2, Clock, Pencil, Trash2, LogOut, X, AlertCircle, AlertTriangle } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Plus, MapPin, User, Wrench, MessageSquare, Clock, Pencil, Trash2, LogOut } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent } from "../../../components/ui/card";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "../../../components/ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "../../../components/ui/popover";
 import { fetchWithAuth, API_URL_INCIDENCES } from "../../../utils/api";
 import { authService } from "../../../services/auth";
 import { IncidenceForm } from "./IncidenceForm";
 import { IncidenceService } from "../../../services/incidences";
+import { CentralNotificationBell, type StudentTab } from "../../../components/CentralNotificationBell";
 
 import {
   IncidenceSelect, LOCATION_LABELS, PRIORITY_LABELS, STATUS_CONFIG,
-  formatUpdateText, applyIncidenceFilters, formatNotificationTime,
-  getLastReadNotificationsAt, saveLastReadNotificationsAt,
+  formatUpdateText, applyIncidenceFilters,
   COMMON_UI_CLASSES, BaseIncidence
 } from "./IncidenceShared";
 import "../Incidences.css";
 
 interface StudentIncidencesProps {
-  onGoToProfile?: () => void;
-  onLogout?: () => void;
+  readonly onGoToProfile?: () => void;
+  readonly onLogout?: () => void;
+  readonly onNavigate?: (view: StudentTab) => void;
 }
+const LIVE_REFRESH_MS = 5000;
 
-type IncidenceNotification = {
-  id: string;
-  kind?: string;
-  incidence_id?: number;
-  title: string;
-  message: string;
-  created_at: string;
-};
-
-const INCIDENCE_NOTIFICATIONS_DISMISSED_KEY = "incidences-notifications-dismissed-ids";
-const HOME_INCIDENCES_SEEN_AT_KEY = "home-incidences-seen-at";
-const VISIT_URGENT_NOTIFICATION_KEY_BASE = "visit-urgent-shared-notifications";
-const LIVE_REFRESH_MS = 3000;
-
-type VisitUrgentSharedNotification = {
-  id: string;
-  title: string;
-  message: string;
-  created_at: string;
-  expires_at: string;
-  source: "visitors";
-};
-
-interface IncidenceNotificationCardProps {
-  readonly notification: IncidenceNotification;
-  readonly onDismiss: (notificationId: string) => void;
-}
-
-function IncidenceNotificationCard({ notification, onDismiss }: IncidenceNotificationCardProps) {
-  const normalizedKind = (notification.kind || "").trim().toLowerCase();
-  const isVisitUrgent = notification.kind === "visit_limit_warning";
-  const hasKnownKind = normalizedKind.length > 0 && normalizedKind !== "unknown";
-  const statusUpdateKinds = new Set(["admin_update", "status_update", "incidence_update", "estado", "update"]);
-  const fallbackStatusUpdate = /estado|status/i.test(`${notification.title} ${notification.message}`);
-  const isStatusUpdate = hasKnownKind ? statusUpdateKinds.has(normalizedKind) : fallbackStatusUpdate;
-  const isRedundantStatusTitle = isStatusUpdate && /cambio de estado|status update/i.test(notification.title);
-  const stateChangedMatch = isStatusUpdate ? notification.message.match(/Estado cambiado/i) : null;
-
-  const containerClasses = isVisitUrgent
-    ? "border-amber-300 bg-gradient-to-br from-amber-50 via-white to-orange-50 shadow-[0_8px_24px_rgba(245,158,11,0.16)]"
-    : isStatusUpdate
-      ? "border-slate-200 bg-gradient-to-br from-white via-slate-50 to-slate-100"
-      : "border-red-200 bg-gradient-to-br from-red-50 via-white to-rose-50 shadow-[0_3px_10px_rgba(239,68,68,0.08)]";
-
-  const accentClass = isVisitUrgent
-    ? "bg-gradient-to-b from-amber-400 to-orange-600"
-    : isStatusUpdate
-      ? "bg-gradient-to-b from-slate-300 to-slate-500"
-      : "bg-gradient-to-b from-red-400 to-rose-600";
-
-  const badgeClass = isVisitUrgent
-    ? "bg-amber-100 text-amber-700"
-    : isStatusUpdate
-      ? "bg-slate-200 text-slate-700"
-      : "bg-red-100 text-red-700";
-
-  const iconWrapClass = isVisitUrgent
-    ? "bg-amber-100 ring-1 ring-amber-200"
-    : isStatusUpdate
-      ? "bg-slate-100 ring-1 ring-slate-200"
-      : "bg-red-100 ring-1 ring-red-200";
-
-  const timeClass = isVisitUrgent
-    ? "text-amber-700"
-    : isStatusUpdate
-      ? "text-slate-500"
-      : "text-red-700";
-
-  const badgeLabel = isVisitUrgent ? "Urgente" : isStatusUpdate ? "Actualización" : "Incidencia";
-
-  const renderNotificationMessage = () => {
-    if (!stateChangedMatch || stateChangedMatch.index === undefined) {
-      return notification.message;
-    }
-
-    const start = stateChangedMatch.index;
-    const highlightedText = stateChangedMatch[0];
-    const end = start + highlightedText.length;
-
-    return (
-      <>
-        {notification.message.slice(0, start)}
-        <strong className="font-semibold text-gray-700">{highlightedText}</strong>
-        {notification.message.slice(end)}
-      </>
-    );
-  };
-
-  return (
-    <div className={`relative w-full overflow-hidden rounded-xl border ${containerClasses} transition-all hover:shadow-sm`}>
-      <span className={`absolute left-0 top-0 h-full ${isVisitUrgent ? "w-1.5" : "w-1"} ${accentClass}`} />
-      {isVisitUrgent ? null : (
-        <button
-          type="button"
-          aria-label="Descartar notificación"
-          className="absolute right-1 top-1 h-7 w-7 rounded-lg text-slate-400 transition-all hover:bg-red-50 hover:text-red-600"
-          onClick={() => onDismiss(notification.id)}
-        >
-          <X className="h-3.5 w-3.5" />
-        </button>
-      )}
-
-      <div className={`flex gap-2 py-1.5 pl-2.5 text-left ${isVisitUrgent ? "pr-2.5" : "pr-8"}`}>
-        <div className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full shadow-sm ${iconWrapClass}`}>
-          {isVisitUrgent ? (
-            <AlertTriangle className="h-3 w-3 text-amber-700" />
-          ) : isStatusUpdate ? (
-            <Clock className="h-3 w-3 text-slate-600" />
-          ) : (
-            <AlertCircle className="h-3 w-3 text-red-600" />
-          )}
-        </div>
-        <div className="min-w-0 flex-1">
-          {badgeLabel ? (
-            <span className={`mb-0.5 inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${badgeClass}`}>
-              {badgeLabel}
-            </span>
-          ) : null}
-          {isRedundantStatusTitle ? null : (
-            <p className="mb-0.5 text-[13px] font-semibold leading-tight text-gray-900">{notification.title}</p>
-          )}
-          <p className={`line-clamp-1 text-[12px] leading-tight text-gray-600 ${isRedundantStatusTitle ? "mb-0" : "mb-0.5"}`}>{renderNotificationMessage()}</p>
-          <span className={`text-[11px] font-medium ${timeClass}`}>{formatNotificationTime(notification.created_at)}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-const getDismissedNotificationIds = (): string[] => {
-  if (globalThis.window === undefined) return [];
-  const raw = globalThis.localStorage.getItem(INCIDENCE_NOTIFICATIONS_DISMISSED_KEY);
-  if (!raw) return [];
-
-  try {
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-};
-
-const saveDismissedNotificationIds = (ids: string[]) => {
-  if (globalThis.window === undefined) return;
-  globalThis.localStorage.setItem(INCIDENCE_NOTIFICATIONS_DISMISSED_KEY, JSON.stringify(ids));
-};
-
-const saveHomeIncidencesSeenAt = (timestamp?: string) => {
-  if (globalThis.window === undefined || !timestamp) return;
-  globalThis.localStorage.setItem(HOME_INCIDENCES_SEEN_AT_KEY, timestamp);
-};
-
-const buildVisitUrgentNotificationStorageKey = (email: string): string | null => {
-  const normalized = email.trim().toLowerCase();
-  if (!normalized) {
-    return null;
-  }
-  return `${VISIT_URGENT_NOTIFICATION_KEY_BASE}:${normalized}`;
-};
-
-const mergeAndSortNotifications = (
-  baseItems: IncidenceNotification[],
-  urgentItems: IncidenceNotification[],
-  dismissedIds: string[]
-): IncidenceNotification[] => {
-  return [...urgentItems, ...baseItems]
-    .filter((item) => item.kind === "visit_limit_warning" || !dismissedIds.includes(item.id))
-    .sort((a, b) => {
-      const aPinned = a.kind === "visit_limit_warning" ? 1 : 0;
-      const bPinned = b.kind === "visit_limit_warning" ? 1 : 0;
-      if (aPinned !== bPinned) {
-        return bPinned - aPinned;
-      }
-      return Date.parse(b.created_at) - Date.parse(a.created_at);
-    });
-};
-
-const getActiveVisitUrgentNotifications = (storageKey: string | null): IncidenceNotification[] => {
-  if (globalThis.window === undefined || !storageKey) return [];
-
-  const raw = globalThis.localStorage.getItem(storageKey);
-  if (!raw) return [];
-
-  try {
-    const parsed = JSON.parse(raw) as VisitUrgentSharedNotification | VisitUrgentSharedNotification[];
-    const items = Array.isArray(parsed) ? parsed : [parsed];
-    const nowMs = Date.now();
-
-    const active = items.filter((item) => {
-      const expiresAtMs = Date.parse(item.expires_at);
-      return Number.isFinite(expiresAtMs) && expiresAtMs > nowMs;
-    });
-
-    if (active.length !== items.length) {
-      if (active.length === 0) {
-        globalThis.localStorage.removeItem(storageKey);
-      } else {
-        globalThis.localStorage.setItem(storageKey, JSON.stringify(active));
-      }
-    }
-
-    const sortedActive = [...active].sort((a, b) => Date.parse(a.expires_at) - Date.parse(b.expires_at));
-
-    return sortedActive
-      .map((item) => ({
-        id: item.id,
-        kind: "visit_limit_warning",
-        title: item.title,
-        message: item.message,
-        created_at: item.created_at,
-      }));
-  } catch {
-    globalThis.localStorage.removeItem(storageKey);
-    return [];
-  }
-};
-
-export default function StudentIncidences({ onGoToProfile, onLogout }: StudentIncidencesProps) {
+export default function StudentIncidences(props: Readonly<StudentIncidencesProps>) {
+  const { onGoToProfile, onLogout, onNavigate } = props;
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [incidences, setIncidences] = useState<BaseIncidence[]>([]);
   const [selectedDetails, setSelectedDetails] = useState<BaseIncidence | null>(null);
   const [isNotesOpen, setIsNotesOpen] = useState(false);
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [notifications, setNotifications] = useState<IncidenceNotification[]>([]);
-  const [notificationsLoading, setNotificationsLoading] = useState(false);
-  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [currentUserEmail, setCurrentUserEmail] = useState("");
-  const dismissedNotificationIdsRef = useRef<string[]>(getDismissedNotificationIds());
-  const visitUrgentStorageKey = buildVisitUrgentNotificationStorageKey(currentUserEmail);
+  const [isSessionUserResolved, setIsSessionUserResolved] = useState(false);
 
   const [incidenceToDelete, setIncidenceToDelete] = useState<BaseIncidence | null>(null);
   const [incidenceToEdit, setIncidenceToEdit] = useState<BaseIncidence | null>(null);
@@ -262,81 +43,21 @@ export default function StudentIncidences({ onGoToProfile, onLogout }: StudentIn
   const [filterPriority, setFilterPriority] = useState('all');
   const [showOnlyMine, setShowOnlyMine] = useState(false);
 
-  const appendDismissedNotificationIds = useCallback((ids: string[]) => {
-    if (ids.length === 0) return;
-
-    const next = Array.from(new Set([...dismissedNotificationIdsRef.current, ...ids]));
-    dismissedNotificationIdsRef.current = next;
-    saveDismissedNotificationIds(next);
-  }, []);
-
-  const recalculateUnreadNotifications = useCallback((items: IncidenceNotification[]) => {
-    const lastReadAt = getLastReadNotificationsAt();
-    setUnreadNotifications(items.filter((item) => Date.parse(item.created_at) > lastReadAt).length);
-  }, []);
-
-  const dismissNotification = useCallback((notificationId: string) => {
-    appendDismissedNotificationIds([notificationId]);
-    setNotifications((prev) => {
-      const next = prev.filter((item) => item.id !== notificationId);
-      recalculateUnreadNotifications(next);
-      return next;
-    });
-  }, [appendDismissedNotificationIds, recalculateUnreadNotifications]);
-
   useEffect(() => {
     authService.me()
       .then((session) => {
+        const parsedId = Number(session.user?.id);
+        setCurrentUserId(Number.isFinite(parsedId) ? parsedId : null);
         setCurrentUserEmail((session.user?.email || "").trim().toLowerCase());
       })
       .catch(() => {
+        setCurrentUserId(null);
         setCurrentUserEmail("");
+      })
+      .finally(() => {
+        setIsSessionUserResolved(true);
       });
   }, []);
-
-  const loadNotifications = useCallback(async (markAsRead = false, silent = false) => {
-    try {
-      if (!silent) setNotificationsLoading(true);
-      const res = await fetchWithAuth(`${API_URL_INCIDENCES}notifications/`);
-      if (!res.ok) return;
-
-      const data = await res.json();
-      const baseItems = Array.isArray(data.results) ? (data.results as IncidenceNotification[]) : [];
-      const visitWarnings = getActiveVisitUrgentNotifications(visitUrgentStorageKey);
-
-      if (markAsRead && baseItems.length > 0) {
-        saveHomeIncidencesSeenAt(baseItems[0].created_at);
-      }
-
-      const latestNotifications = mergeAndSortNotifications(
-        baseItems,
-        visitWarnings,
-        dismissedNotificationIdsRef.current
-      );
-
-      const lastReadAt = getLastReadNotificationsAt();
-
-      if (markAsRead && latestNotifications.length > 0) {
-        saveLastReadNotificationsAt(latestNotifications[0].created_at);
-        setUnreadNotifications(0);
-      } else {
-        const count = latestNotifications.filter((n) => Date.parse(n.created_at) > lastReadAt).length;
-        setUnreadNotifications(count);
-      }
-      setNotifications(latestNotifications);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      if (!silent) setNotificationsLoading(false);
-    }
-  }, [visitUrgentStorageKey]);
-
-  const handleNotificationsOpenChange = useCallback((open: boolean) => {
-    setIsNotificationsOpen(open);
-    if (open) {
-      loadNotifications(true);
-    }
-  }, [loadNotifications]);
 
   const loadIncidences = useCallback(async (silent = false) => {
     try {
@@ -347,14 +68,12 @@ export default function StudentIncidences({ onGoToProfile, onLogout }: StudentIn
   }, []);
 
   useEffect(() => {
-    loadIncidences(); loadNotifications();
-    const notificationsInterval = setInterval(() => loadNotifications(false, true), LIVE_REFRESH_MS);
+    loadIncidences();
     const incidencesInterval = setInterval(() => loadIncidences(true), LIVE_REFRESH_MS);
     return () => {
-      clearInterval(notificationsInterval);
       clearInterval(incidencesInterval);
     };
-  }, [loadIncidences, loadNotifications]);
+  }, [loadIncidences]);
 
   const handleDelete = async () => {
     if (!incidenceToDelete) return;
@@ -366,18 +85,11 @@ export default function StudentIncidences({ onGoToProfile, onLogout }: StudentIn
   };
 
   const filteredIncidences = incidences.filter((inc) => {
-    if (showOnlyMine && !inc.is_mine) {
+    if (inc.location_type === 'habitacion' && inc.is_mine === false) {
       return false;
     }
-    if (!inc.is_mine && inc.location_type === 'habitacion') {
-      return false;
-    }
-    return applyIncidenceFilters(inc, {
-      search,
-      location: filterLocation,
-      status: filterStatus,
-      priority: filterPriority
-    });
+    if (showOnlyMine && inc.is_mine === false) return false;
+    return applyIncidenceFilters(inc, { search, location: filterLocation, status: filterStatus, priority: filterPriority });
   });
 
   return (
@@ -385,37 +97,12 @@ export default function StudentIncidences({ onGoToProfile, onLogout }: StudentIn
       <header className={UI_CLASSES.header}>
         <h1 className={UI_CLASSES.headerTitle}>Incidencias</h1>
         <div className="flex items-center gap-2">
-          <Popover open={isNotificationsOpen} onOpenChange={handleNotificationsOpenChange}>
-            <PopoverTrigger asChild>
-              <Button type="button" size="icon" variant="ghost" className={`${UI_CLASSES.topIconButton} hover:scale-100`} aria-label="Notificaciones">
-                <Bell className="w-5 h-5" />
-                {unreadNotifications > 0 && <span className={UI_CLASSES.bellBadge}>{unreadNotifications}</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent align="end" sideOffset={10} avoidCollisions={false} className="w-[min(26rem,calc(100vw-2rem))] p-0">
-              <div className="max-h-[70vh] overflow-y-auto rounded-md bg-white p-4">
-                <div className="mb-3 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <Bell className="h-5 w-5 text-primary" />
-                    <h3 className="font-semibold text-gray-900">Notificaciones</h3>
-                  </div>
-                  {notificationsLoading && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
-                </div>
-
-                <div className="space-y-3">
-                  {notifications.length > 0
-                    ? notifications.map((notification) => (
-                        <IncidenceNotificationCard
-                          key={notification.id}
-                          notification={notification}
-                          onDismiss={dismissNotification}
-                        />
-                      ))
-                    : <p className="py-4 text-sm text-gray-500 text-center">Sin notificaciones</p>}
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
+          <CentralNotificationBell
+            onNavigate={(tab) => onNavigate?.(tab)}
+            currentUserId={currentUserId}
+            currentUserEmail={currentUserEmail}
+            isSessionUserResolved={isSessionUserResolved}
+          />
           <Button
             type="button"
             size="icon"
@@ -484,7 +171,7 @@ export default function StudentIncidences({ onGoToProfile, onLogout }: StudentIn
                             </div>
                             <div className="flex flex-col items-end gap-2">
                               <span className={`${UI_CLASSES.statusBadge} ${style.colorClass}`}>{config.label}</span>
-                              {inc.is_mine && inc.status === 'pending' && (
+                              {inc.is_mine && inc.status === 'pending' && !inc.assigned_staff && !(inc.assigned_external_name && inc.assigned_external_name.trim()) && (!inc.updates || inc.updates.length === 0) && (
                                 <div className="flex gap-1">
                                   <button onClick={() => setIncidenceToEdit(inc)} className={UI_CLASSES.actionBtnSmall} title="Editar"><Pencil size={12} className="text-blue-500" /></button>
                                   <button onClick={() => setIncidenceToDelete(inc)} className={UI_CLASSES.actionBtnSmall} title="Eliminar"><Trash2 size={12} className="text-red-500" /></button>
@@ -493,20 +180,35 @@ export default function StudentIncidences({ onGoToProfile, onLogout }: StudentIn
                             </div>
 
                           </div>
-                          <div className={UI_CLASSES.cardLocationRow}>
+                          <div className={COMMON_UI_CLASSES.cardLocationRow}>
                             <MapPin size={14} className="text-slate-400" />
                             <span className="text-[11px] font-semibold text-slate-500 truncate">
                               {LOCATION_LABELS[inc.location_type]}
-                              {inc.location_type === 'habitacion' && inc.room_number ? ` • Hab. ${inc.room_number}` : ''}
+                              {inc.location_type === 'habitacion' && inc.room_number_detail && (
+                                <>
+                                  {` • Hab. ${inc.room_number_detail.numero}`}
+                                  {inc.room_number_detail.planta && ` Planta ${inc.room_number_detail.planta}` }
+                                  {inc.room_number_detail.edificio && ` Edificio ${inc.room_number_detail.edificio}`}
+                                </>
+                              )}
                             </span>
-                          </div>                        </div>
-
-                        <div className="mt-4 pt-3 border-t border-slate-50">
-                          <div className="flex items-center justify-between mb-2.5">
-                            <div className="flex items-center gap-1.5 text-slate-600 truncate text-[11px] font-bold"><Wrench size={13} />{inc.assigned_staff_name || inc.assigned_external_name || 'Sin asignar'}</div>
-                            <div className="flex items-center gap-1 text-slate-400 font-bold text-[10px]"><Clock size={10} />{new Date(inc.created_at).toLocaleDateString()}</div>
                           </div>
-                          <div className="flex justify-end"><Button variant="outline" onClick={async () => { const res = await fetchWithAuth(`${API_URL_INCIDENCES}${inc.id}/`); if (res.ok) { setSelectedDetails(await res.json()); setIsNotesOpen(true); } }} className={UI_CLASSES.btnNotes}>VER DETALLES</Button></div>
+                        </div>
+                        <div className="mt-4 pt-3 border-t">
+                          <div className="flex items-center justify-between mb-2.5">
+                            <div className="flex items-center gap-1.5 text-slate-600 truncate text-[11px] font-bold">
+                              <Wrench size={13} />{inc.assigned_staff_name || inc.assigned_external_name || 'Sin asignar'}</div>
+                            <div className="flex items-center gap-1 text-slate-400 font-bold text-[10px]">
+                              <Clock size={10} />{new Date(inc.created_at).toLocaleDateString()}</div>
+                          </div>
+                          <div className="flex justify-end">
+                            <Button variant="outline" onClick={async () => {
+                              const res = await fetchWithAuth(`${API_URL_INCIDENCES}${inc.id}/`);
+                              if (res.ok) { setSelectedDetails(await res.json()); setIsNotesOpen(true); }
+                            }}
+                              className={COMMON_UI_CLASSES.btnNotes}>VER DETALLES
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </CardContent>
@@ -593,7 +295,7 @@ const UI_CLASSES = {
   header: "bg-primary p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg",
   headerTitle: "text-primary-foreground text-2xl font-bold",
   topIconButton: "relative text-primary-foreground hover:bg-primary-foreground/20 hover:scale-110 rounded-full transition-all",
-  bellBadge: "absolute -right-1 -top-1 min-w-5 h-5 flex items-center justify-center rounded-full bg-[#82D14C] text-[10px] font-bold text-[#123313]",
+  bellBadge: "absolute top-1 right-1 w-2.5 h-2.5 bg-destructive rounded-full border-2 border-primary",
   mainContent: "flex-1 overflow-y-auto p-4 md:p-6 pb-32 w-full",
   incidencesGrid: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5",
   card: "border-none shadow-sm rounded-[24px] overflow-hidden bg-white h-full flex flex-col hover:shadow-md transition-shadow",

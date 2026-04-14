@@ -1,4 +1,5 @@
 import { fetchWithAuth } from "../utils/api";
+import { trackEvent } from "./analytics";
 
 const SPACES_API_BASE = "/api/spaces";
 
@@ -125,10 +126,12 @@ export async function createReservation(
   spaceId: number,
   payload: CreateReservationPayload,
 ): Promise<SpaceReservation> {
-  return requestJson<SpaceReservation>(`${SPACES_API_BASE}/${spaceId}/reservations/`, {
+  const reservation = await requestJson<SpaceReservation>(`${SPACES_API_BASE}/${spaceId}/reservations/`, {
     method: "POST",
     body: JSON.stringify(payload),
   });
+  trackEvent('space_reserved', { space_id: spaceId });
+  return reservation;
 }
 
 export async function listMyReservations(): Promise<SpaceReservation[]> {
@@ -143,4 +146,5 @@ export async function cancelReservation(reservationId: number): Promise<void> {
   await requestJson<{ detail: string }>(`${SPACES_API_BASE}/reservations/${reservationId}/cancel/`, {
     method: "POST",
   });
+  trackEvent('space_reservation_cancelled', { reservation_id: reservationId });
 }
