@@ -37,6 +37,7 @@ OBJECT_RESERVATION_INTERVAL_MINUTES = 60
 ACTIVE_RENTAL_STATUSES = ["ACTIVE", "IN_PROGRESS"]
 ADMIN_CANCELLATION_REASON_MAX_LENGTH = 200
 RESERVATION_REMINDER_WINDOW = timedelta(hours=1)
+JSON_INVALID_DETAIL = "JSON inválido."
 OBJECT_NAME_MAX_LENGTH = 30
 OBJECT_DESCRIPTION_MAX_LENGTH = 255
 OBJECT_LOCATION_MAX_LENGTH = 100
@@ -66,6 +67,50 @@ def _validate_object_name(raw_name) -> tuple[str, str | None]:
     return name, None
 
 
+def _parse_object_payload(body, residence):
+    name, name_error = _validate_object_name(body.get("name"))
+    if name_error:
+        return None, JsonResponse({"detail": name_error}, status=400)
+
+    try:
+        raw_stock_total = body.get("stock_total", 1)
+        stock_total = int(raw_stock_total or 1)
+        if stock_total < 1:
+            raise ValueError("stock_total debe ser positivo")
+
+        label_ids_raw = body.get("label_ids", [])
+        if label_ids_raw is None:
+            label_ids_raw = []
+        if not isinstance(label_ids_raw, list):
+            raise ValueError("label_ids debe ser una lista")
+
+        label_ids = [int(item) for item in label_ids_raw]
+        labels = list(
+            ObjectLabel.objects.filter(
+                residence=residence,
+                id__in=label_ids,
+            )
+        )
+        if len(labels) != len(set(label_ids)):
+            return None, JsonResponse(
+                {"detail": "Alguna etiqueta no existe o no pertenece a la residencia."},
+                status=400,
+            )
+
+        return {
+            "name": name,
+            "description": body.get("description", ""),
+            "location": body.get("location", ""),
+            "stock_total": stock_total,
+            "image_url": body.get("image_url", None),
+            "labels": labels,
+            "tags": ", ".join(sorted({label.name for label in labels})),
+        }, None
+    except ValueError:
+        return None, JsonResponse(
+            {"detail": "stock_total debe ser un entero positivo y label_ids debe ser una lista de enteros."},
+            status=400,
+        )
 def _validate_optional_text(raw_value, *, field_name: str, max_length: int) -> tuple[str, str | None]:
     value = str(raw_value or "").strip()
     if len(value) > max_length:
@@ -368,11 +413,11 @@ class ObjectListView(AuthenticatedView):
         try:
             body = json.loads(request.body)
         except json.JSONDecodeError:
-            return JsonResponse({"detail": "JSON inválido."}, status=400)
+            return JsonResponse({"detail": JSON_INVALID_DETAIL}, status=400)
 
-        name, name_error = _validate_object_name(body.get("name"))
-        if name_error:
-            return JsonResponse({"detail": name_error}, status=400)
+        payload, error_response = _parse_object_payload(body, request.residence)
+        if error_response:
+            return error_response
 
         description, description_error = _validate_optional_text(
             body.get("description"),
@@ -399,41 +444,18 @@ class ObjectListView(AuthenticatedView):
             return JsonResponse({"detail": image_url_error}, status=400)
 
         try:
-            raw_stock_total = body.get('stock_total', 1)
-            stock_total = int(1 if raw_stock_total is None else raw_stock_total)
-            if stock_total < 1:
-                raise ValueError("stock_total debe ser positivo")
-            label_ids_raw = body.get('label_ids', [])
-            if label_ids_raw is None:
-                label_ids_raw = []
-            if not isinstance(label_ids_raw, list):
-                raise ValueError("label_ids debe ser una lista")
-            label_ids = [int(item) for item in label_ids_raw]
-            labels = list(
-                ObjectLabel.objects.filter(
-                    residence=request.residence,
-                    id__in=label_ids,
-                )
-            )
-            if len(labels) != len(set(label_ids)):
-                return JsonResponse({"detail": "Alguna etiqueta no existe o no pertenece a la residencia."}, status=400)
-            computed_tags = ", ".join(sorted({label.name for label in labels}))
-            if len(computed_tags) > 255:
-                return JsonResponse({"detail": "La combinación de etiquetas supera 255 caracteres."}, status=400)
             obj = Object.objects.create(
-                name=name,
-                description=description,
-                location=location,
-                stock_total=stock_total,
-                image_url=image_url or None,
-                tags=computed_tags,
+                name=payload["name"],
+                description=payload["description"],
+                location=payload["location"],
+                stock_total=payload["stock_total"],
+                image_url=payload["image_url"],
+                tags=payload["tags"],
                 residence=request.residence,
             )
-            if labels:
-                obj.labels.set(labels)
+            if payload["labels"]:
+                obj.labels.set(payload["labels"])
             return JsonResponse({'id': obj.id, 'detail': 'Object created successfully'}, status=201)
-        except ValueError:
-            return JsonResponse({"detail": "stock_total debe ser un entero positivo y label_ids debe ser una lista de enteros."}, status=400)
         except Exception as e:
             return JsonResponse({"detail": str(e)}, status=400)
 
@@ -461,7 +483,7 @@ class ObjectLabelListCreateView(AuthenticatedView):
         try:
             body = json.loads(request.body or "{}")
         except json.JSONDecodeError:
-            return JsonResponse({"detail": "JSON inválido."}, status=400)
+            return JsonResponse({"detail": JSON_INVALID_DETAIL}, status=400)
 
         name = str(body.get('name', '')).strip()
         if not name:
@@ -519,6 +541,39 @@ class ObjectDetailView(AuthenticatedView):
         if error_response:
             return error_response
         return JsonResponse(_serialize_object(obj))
+
+    def put(self, request, object_id):
+        if not hasattr(request, "residence") or not request.residence:
+            return JsonResponse({"detail": "No residence context."}, status=400)
+
+        if not is_reservations_admin(request.user, request.residence):
+            return JsonResponse({"detail": "No tienes permisos para actualizar objetos."}, status=403)
+
+        try:
+            body = json.loads(request.body or "{}")
+        except json.JSONDecodeError:
+            return JsonResponse({"detail": JSON_INVALID_DETAIL}, status=400)
+
+        obj, error_response = get_residence_object(request, object_id)
+        if error_response:
+            return error_response
+
+        payload, error_response = _parse_object_payload(body, request.residence)
+        if error_response:
+            return error_response
+
+        try:
+            obj.name = payload["name"]
+            obj.description = payload["description"]
+            obj.location = payload["location"]
+            obj.stock_total = payload["stock_total"]
+            obj.image_url = payload["image_url"]
+            obj.tags = payload["tags"]
+            obj.save()
+            obj.labels.set(payload["labels"])
+            return JsonResponse({"id": obj.id, "detail": "Object updated successfully"})
+        except Exception as e:
+            return JsonResponse({"detail": str(e)}, status=400)
 
     def delete(self, request, object_id):
         if not hasattr(request, "residence") or not request.residence:
