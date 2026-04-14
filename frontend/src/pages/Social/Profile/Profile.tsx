@@ -4,7 +4,7 @@ import { User, Sparkles, Home, Edit, Music, Heart } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { ProfileEditForm, type ProfileFormData } from "./components/ProfileEditForm";
 import { getStudentProfile } from "../../../services/api";
-import { preferencesService } from "../../../services/preferences"; // <-- AÑADIDA ESTA LÍNEA
+import { preferencesService } from "../../../services/preferences";
 
 const emptyProfileData: ProfileFormData = {
   name: "", 
@@ -37,29 +37,22 @@ export function Profile() {
   useEffect(() => {
     const loadProfile = async () => {
       try {
-        // Hacemos ambas peticiones en paralelo para que sea más rápido
         const [apiData, prefData] = await Promise.all([
           getStudentProfile().catch(() => null),
           preferencesService.getMyPreferences().catch(() => null)
         ]);
-
+        // Map API data to frontend format
         if (apiData || prefData) {
-          // Map API data to frontend format combinando ambos resultados
           setProfileData(prev => ({
             ...prev,
             nickname: apiData?.nickname || prev.nickname,
             bio: apiData?.bio || prev.bio,
             birthplace: apiData?.birthplace || prev.birthplace,
             profileImage: apiData?.profile_image || prev.profileImage,
-            
-            // Damos prioridad a prefData (preferences), si no está, usamos apiData (profile)
             chronotype: mapChronotypeFromApi(prefData?.schedule || apiData?.chronotype) || prev.chronotype,
             temperaturePreference: mapTemperatureFromApi(prefData?.temperature_preference || apiData?.temperature_preference) || prev.temperaturePreference,
             orderLevel: mapOrderLevelFromApi(prefData?.order_importance || apiData?.order_level) || prev.orderLevel,
-            
-            // Adaptamos el nivel de ruido (en preferences viene sobre 10, en tu UI lo muestras sobre 5, así que lo dividimos entre 2 y redondeamos)
             noiseSensitivity: prefData?.noise_tolerance ? Math.round(prefData.noise_tolerance / 2) : (apiData?.noise_sensitivity || prev.noiseSensitivity),
-            
             studyLevel: apiData?.study_level || prev.studyLevel,
             interests: apiData?.interests || prev.interests,
             customInterests: apiData?.custom_interests || prev.customInterests,
