@@ -524,7 +524,7 @@ class AdminStudentProfileView(APIView):
                 {"detail": "Perfil no encontrado."}, status=status.HTTP_404_NOT_FOUND
             )
 
-        from apps.residences.models import StudentProfile
+        from apps.residents.models import StudentProfile
 
         profile = StudentProfile.objects.filter(
             user_id=user_id, residence=residence

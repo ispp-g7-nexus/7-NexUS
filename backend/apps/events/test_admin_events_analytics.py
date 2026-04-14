@@ -3,8 +3,8 @@ from datetime import timedelta
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django_tenants.test.cases import FastTenantTestCase
-from django_tenants.test.client import TenantClient
 
+from apps.common.test_utils import ensure_tenant_domain, make_tenant_client
 from apps.membership.models import Membership, Role
 from apps.residences.models import Residence, ResidenceDomain
 
@@ -32,6 +32,7 @@ class AdminEventsAnalyticsTests(FastTenantTestCase):
 
     def setUp(self):
         super().setUp()
+        ensure_tenant_domain(self.tenant, self.get_test_tenant_domain())
         user_model = get_user_model()
         domain = self.get_test_tenant_domain()
 
@@ -108,14 +109,10 @@ class AdminEventsAnalyticsTests(FastTenantTestCase):
             defaults={"is_active": True},
         )
 
-        self.admin_client = TenantClient(
-            self.tenant, SERVER_NAME=domain, HTTP_HOST=domain
-        )
+        self.admin_client = make_tenant_client(self.tenant, domain)
         self.admin_client.force_login(self.admin_user)
 
-        self.student_client = TenantClient(
-            self.tenant, SERVER_NAME=domain, HTTP_HOST=domain
-        )
+        self.student_client = make_tenant_client(self.tenant, domain)
         self.student_client.force_login(self.student_c)
 
         self.current_start = timezone.now().replace(minute=0, second=0, microsecond=0) - timedelta(days=5)

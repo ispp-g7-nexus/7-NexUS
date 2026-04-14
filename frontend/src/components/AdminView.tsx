@@ -439,7 +439,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
         { id: "incidences", label: "Incidencias", icon: <AlertCircle className="w-5 h-5" />, permission: "incidences" },
         { id: "kitchen", label: "Menú Comedor", icon: <Utensils className="w-5 h-5" />, permission: "kitchen" },
         { id: "events", label: "Eventos & Comunidad", icon: <Calendar className="w-5 h-5" />, permission: "events" },
-        { id: "reservations", label: "Recursos & Reservas", icon: <BookOpen className="w-5 h-5" />, permission: "reservations" },
+        { id: "reservations", label: "Objetos & Espacios", icon: <BookOpen className="w-5 h-5" />, permission: "reservations" },
         { id: "roles", label: "Roles", icon: <Shield className="w-5 h-5" />, permission: "roles" },
         { id: "branding", label: "Personalización", icon: <Palette className="w-5 h-5" /> },
         { id: "announcements", label: "Avisos", icon: <Bell className="w-5 h-5" />, permission: "announcements" },
@@ -478,7 +478,8 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
         },
         { id: 'packages', label: 'Paquetería', value: 'Ver', icon: Package, theme: 'orange' as const, onClick: () => goToTab('packages') },
         { id: 'kitchen', label: 'Menú Comedor', value: 'Ver', icon: Utensils, theme: 'blue' as const, onClick: () => goToTab('kitchen') },
-        { id: 'reservations', label: 'Recursos & Reservas', value: 'Ver', icon: BookOpen, theme: 'green' as const, onClick: () => goToTab('reservations') },
+        { id: 'reservations', label: 'Objetos & Reservas', value: 'Ver', icon: BookOpen, theme: 'green' as const, onClick: () => goToTab('reservations') },
+        { id: 'branding', label: 'Personalización', value: 'Ver', icon: Palette, theme: 'purple' as const, onClick: () => goToTab('branding') },
         { id: 'analytics', label: 'Analíticas', value: 'Ver', icon: AreaChart, theme: 'green' as const, onClick: () => goToTab('analytics') },
     ];
 
