@@ -1,4 +1,5 @@
 import { fetchWithAuth } from '../utils/api';
+import { trackEvent } from './analytics';
 export type IncidenceStatus = 'pending' | 'reviewing' | 'in_progress' | 'resolved';
 export type PriorityLevel = 'low' | 'high';
 export type LocationType = 'habitacion' | 'baño' | 'cocina' | 'comedor' | 'exterior' | 'salas_comunes';
@@ -110,7 +111,9 @@ export const IncidenceService = {
 
       throw new Error(details || 'Error al actualizar');
     }
-    return response.json();
+    const incidence = await response.json();
+    trackEvent('incidence_updated', { incidence_id: id, status: data.status });
+    return incidence;
   },
 
   /**
@@ -123,7 +126,9 @@ export const IncidenceService = {
       body: JSON.stringify(data),
     });
     if (!response.ok) throw new Error('Error al crear la incidencia');
-    return response.json();
+    const incidence = await response.json();
+    trackEvent('incidence_created', { priority: data.priority, location: data.location_type });
+    return incidence;
   },
 
   /**
@@ -140,5 +145,6 @@ export const IncidenceService = {
       method: 'DELETE',
     });
     if (!response.ok) throw new Error('Error al eliminar la incidencia');
+    trackEvent('incidence_deleted', { incidence_id: id });
   },
 };

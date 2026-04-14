@@ -1,3 +1,5 @@
+// src/services/auth.ts
+import { trackEvent } from "./analytics";
 import { API_URL } from "./api";
 
 const AUTH_URL = `${API_URL}/auth`;
@@ -83,12 +85,15 @@ export const authService = {
         });
         if (!response.ok) {
             const errorData = await response.json();
+            trackEvent('login_failed', { portal: data.portal });
             throw new Error(errorData.detail || 'Error al iniciar sesión');
         }
+        trackEvent('login_success', { portal: data.portal });
         return response.json();
     },
 
     logout: async () => {
+        trackEvent('logout');
         const response = await fetch(`${AUTH_URL}/logout/`, {
             method: 'POST',
             credentials: 'include',
@@ -138,6 +143,7 @@ export const authService = {
             const errorData = await response.json();
             throw new Error(errorData.detail || 'Error al solicitar recuperación');
         }
+        trackEvent('password_reset_requested');
         return response.json();
     },
 
@@ -151,6 +157,7 @@ export const authService = {
             const errorData = await response.json();
             throw new Error(errorData.detail || 'Enlace inválido o expirado');
         }
+        trackEvent('password_reset_confirmed');
         return response.json();
     },
 
@@ -172,6 +179,7 @@ export const authService = {
             throw new Error(errorData.detail || 'Error al actualizar el perfil');
         }
 
+        trackEvent('profile_updated');
         return response.json();
     }
 };

@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
 import { AdminSpaces } from '../AdminSpaces'
 import {
   createSpace,
@@ -21,7 +22,7 @@ vi.mock('../../../services/adminSpaces', () => ({
 }))
 
 vi.mock('../components/SpaceFormSheet', () => ({
-  SpaceFormSheet: ({ open, space, onSubmit }: any) => {
+  SpaceFormSheet: ({ open, space, onSubmit }: { open: boolean; space: { name: string } | null; onSubmit: (payload: unknown) => Promise<void> }) => {
     if (!open) return null
     const payload = {
       name: space ? `${space.name} Editada` : 'Sala Nueva',
@@ -42,13 +43,24 @@ vi.mock('../components/SpaceFormSheet', () => ({
 }))
 
 vi.mock('../components/SpaceReservationsDrawer', () => ({
-  SpaceReservationsDrawer: ({ open, reservations, onStatusFilterChange }: any) => {
+  SpaceReservationsDrawer: ({
+    open,
+    reservations = [],
+    onStatusFilterChange,
+    space,
+  }: {
+    open: boolean
+    reservations?: Array<unknown>
+    onStatusFilterChange?: (status: 'all' | 'active' | 'cancelled') => void
+    space?: { name: string } | null
+  }) => {
     if (!open) return null
     return (
-      <div>
+      <div data-testid="space-reservations-drawer">
         <p>drawer-open</p>
         <p>reservas: {reservations.length}</p>
-        <button type="button" onClick={() => onStatusFilterChange('cancelled')}>
+        {space ? <p>Reservas de {space.name}</p> : null}
+        <button type="button" onClick={() => onStatusFilterChange?.('cancelled')}>
           filtro-cancelled
         </button>
       </div>
@@ -58,7 +70,15 @@ vi.mock('../components/SpaceReservationsDrawer', () => ({
 
 vi.mock('../components/SpaceDetailModal', () => ({
   __esModule: true,
-  default: ({ open, onEdit, onDeactivate }: any) => {
+  default: ({
+    open,
+    onEdit,
+    onDeactivate,
+  }: {
+    open: boolean
+    onEdit?: (space: unknown) => void
+    onDeactivate?: (space: unknown) => void
+  }) => {
     if (!open) return null
     const mockSpace = {
       id: 1,
@@ -72,7 +92,7 @@ vi.mock('../components/SpaceDetailModal', () => ({
       img: null,
     }
     return (
-      <div>
+      <div data-testid="space-detail-modal">
         <button type="button" onClick={() => onEdit?.(mockSpace)}>
           mock-detail-edit
         </button>
@@ -199,5 +219,50 @@ describe('AdminSpaces', () => {
       expect(screen.getByText('Acceso no autorizado')).toBeInTheDocument()
       expect(screen.getByText(/permisos de administrador/i)).toBeInTheDocument()
     })
+  })
+})
+
+describe('AdminSpaces — [T12]', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockedListAdminSpaces.mockResolvedValue([
+      {
+        id: 7,
+        name: 'Sala Estudio',
+        description: 'Sala para trabajo colaborativo',
+        img: null,
+        capacity: 12,
+        is_active: true,
+        open_time: '08:00:00',
+        close_time: '22:00:00',
+        reservation_interval_minutes: 60,
+      },
+    ])
+    mockedListSpaceReservations.mockResolvedValue([])
+  })
+
+  it('mantiene la fila de acciones por encima del overlay de detalle', async () => {
+    render(<AdminSpaces />)
+
+    const viewReservationsButton = await screen.findByRole('button', { name: 'Ver reservas' })
+    const actionsRow = viewReservationsButton.parentElement
+
+    expect(actionsRow).not.toBeNull()
+    expect(actionsRow).toHaveClass('relative')
+    expect(actionsRow).toHaveClass('z-20')
+  })
+
+  it("abre reservas al pulsar 'Ver reservas' y no el detalle", async () => {
+    const user = userEvent.setup()
+    render(<AdminSpaces />)
+
+    const viewReservationsButton = await screen.findByRole('button', { name: 'Ver reservas' })
+    await user.click(viewReservationsButton)
+
+    await waitFor(() => {
+      expect(mockedListSpaceReservations).toHaveBeenCalledWith(7, 'active')
+    })
+    expect(screen.getByTestId('space-reservations-drawer')).toBeInTheDocument()
+    expect(screen.queryByTestId('space-detail-modal')).toBeNull()
   })
 })

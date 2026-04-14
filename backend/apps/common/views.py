@@ -4,7 +4,9 @@ import logging
 import uuid
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.files.base import ContentFile
+from django.db import DataError
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -82,10 +84,16 @@ class TenantContextView(APIView):
 
 class AuthMeView(APIView):
     permission_classes = [AllowAny]
+    authentication_classes = []
 
     def get(self, request):
-        user_data = resolve_user_from_request(request)
-        if user_data:
+        try:
+            user_data = resolve_user_from_request(request)
+        except Exception:
+            logger.exception("AuthMeView: unexpected error resolving session user")
+            user_data = None
+
+        if isinstance(user_data, dict):
             user_pk = (
                 user_data.get("user_id") or user_data.get("id") or user_data.get("sub")
             )
@@ -93,8 +101,10 @@ class AuthMeView(APIView):
                 user_obj = UserModel.objects.get(pk=user_pk)
                 user_data["first_name"] = user_obj.first_name
                 user_data["last_name"] = user_obj.last_name
-            except UserModel.DoesNotExist:
-                pass
+            except (UserModel.DoesNotExist, ValueError, TypeError, OverflowError, DjangoValidationError, DataError):
+                user_data = None
+        else:
+            user_data = None
 
         return Response(
             {
