@@ -17,6 +17,7 @@ import announcementService from "../services/announcement.service";
 import { StudentReservations } from "./StudentReservations";
 import { chatsService, type ChatRealtimeEvent } from "../services/chats";
 import { authService } from "../services/auth";
+import { trackFeature } from "../services/analytics";
 import { ActiveGuestPassesPage } from "../pages/Visitors/ActiveGuestPasses";
 import type { ResidenceBranding } from "../services/branding";
 import {
@@ -563,6 +564,7 @@ export function StudentView({ onLogout }: StudentViewProps) {
 
     const handleNavigation = (tab: StudentTab) => {
         setActiveTab(tab);
+        trackFeature(tab, { portal: 'student' });
     };
 
     const handleGoToProfile = () => {
