@@ -244,25 +244,24 @@ export function ProfileEditForm({
 
             {/* Apodo */}
             <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <Label htmlFor="nickname" className="text-sm font-medium text-gray-500">
-                    Apodo
-                  </Label>
-                  <span className={`text-xs ${
-                    formData.nickname.length >= 30 ? "text-red-500 font-medium" : "text-gray-400"
+              <div className="flex justify-between items-center">
+                <Label htmlFor="nickname" className="text-sm font-medium text-gray-500">
+                  Apodo
+                </Label>
+                <span className={`text-xs ${formData.nickname.length >= 30 ? "text-red-500 font-medium" : "text-gray-400"
                   }`}>
-                    ({formData.nickname.length}/30)
-                  </span>
-                </div>
-                <Input
-                  id="nickname"
-                  type="text"
-                  name="nickname"
-                  value={formData.nickname}
-                  onChange={handleInputChange}
-                  maxLength={30}
-                  placeholder="Carlos"
-                />
+                  ({formData.nickname.length}/30)
+                </span>
+              </div>
+              <Input
+                id="nickname"
+                type="text"
+                name="nickname"
+                value={formData.nickname}
+                onChange={handleInputChange}
+                maxLength={30}
+                placeholder={formData.name ? formData.name.split(" ")[1] : "Tu apodo"}
+              />
             </div>
 
             {/* Sobre mí */}
