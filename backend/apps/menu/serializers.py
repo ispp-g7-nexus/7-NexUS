@@ -214,4 +214,4 @@ class SpecialMenuRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = SpecialMenuRequest
         fields = ['id', 'user', 'user_name', 'date', 'description', 'status', 'created_at']
-        read_only_fields = ['user', 'created_at']
+        read_only_fields = ['user', 'created_at', 'residence']
