@@ -13,6 +13,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 
 from apps.membership.models import Membership
+from apps.membership.permissions import has_screen_permission
 
 from .models import ChatGroup, ChatGroupMember, ChatGroupLabel, GroupMessage, PrivateConversation, PrivateMessage
 from .permissions import IsAuthenticatedResident, IsChatGroupManager, IsResidenceAdmin
@@ -72,17 +73,14 @@ class ChatGroupViewSet(viewsets.ModelViewSet):
 		).select_related("role").first()
 
 	def _actor_is_residence_admin(self, membership) -> bool:
-		if not membership or not getattr(membership, "role", None):
+		residence = getattr(self.request, "residence", None)
+		if not residence:
 			return False
-		return membership.role.name.lower() == "admin"
+		return has_screen_permission(self.request.user, residence, "chats")
 
 	def get_queryset(self):
 		residence = getattr(self.request, "residence", None)
 		if not residence:
-			return ChatGroup.objects.none()
-
-		membership = self._get_actor_membership()
-		if not membership:
 			return ChatGroup.objects.none()
 
 		members_qs = ChatGroupMember.objects.select_related("membership__user")
@@ -92,8 +90,12 @@ class ChatGroupViewSet(viewsets.ModelViewSet):
 			.order_by("name")
 		)
 
-		if self._actor_is_residence_admin(membership):
+		if self._actor_is_residence_admin(None):
 			return base_qs
+
+		membership = self._get_actor_membership()
+		if not membership:
+			return ChatGroup.objects.none()
 
 		return base_qs.filter(
 			memberships__membership=membership,
@@ -141,10 +143,7 @@ class ChatGroupViewSet(viewsets.ModelViewSet):
 
 	def update(self, request, *args, **kwargs):
 		partial = kwargs.pop("partial", False)
-		actor_membership = self._get_actor_membership()
-		if not self._actor_is_residence_admin(actor_membership):
-			raise PermissionDenied("No tienes permisos para gestionar este grupo.")
-		
+
 		instance = self.get_object()
 		write_serializer = self.get_serializer(instance, data=request.data, partial=partial)
 		write_serializer.is_valid(raise_exception=True)
@@ -184,10 +183,6 @@ class ChatGroupViewSet(viewsets.ModelViewSet):
 
 	@action(detail=True, methods=["post"], url_path="members")
 	def add_member(self, request, pk=None):
-		actor_membership = self._get_actor_membership()
-		if not self._actor_is_residence_admin(actor_membership):
-			raise PermissionDenied("No tienes permisos para gestionar este grupo.")
-		
 		group = self.get_object()
 		serializer = AddChatMemberSerializer(data=request.data, context={"request": request})
 		serializer.is_valid(raise_exception=True)
@@ -222,10 +217,6 @@ class ChatGroupViewSet(viewsets.ModelViewSet):
 
 	@action(detail=True, methods=["patch"], url_path=r"members/(?P<member_id>[^/.]+)")
 	def update_member(self, request, pk=None, member_id=None):
-		actor_membership = self._get_actor_membership()
-		if not self._actor_is_residence_admin(actor_membership):
-			raise PermissionDenied("No tienes permisos para gestionar este grupo.")
-		
 		group = self.get_object()
 		serializer = UpdateChatMemberSerializer(data=request.data)
 		serializer.is_valid(raise_exception=True)
@@ -260,10 +251,6 @@ class ChatGroupViewSet(viewsets.ModelViewSet):
 
 	@update_member.mapping.delete
 	def remove_member(self, request, pk=None, member_id=None):
-		actor_membership = self._get_actor_membership()
-		if not self._actor_is_residence_admin(actor_membership):
-			raise PermissionDenied("No tienes permisos para gestionar este grupo.")
-		
 		group = self.get_object()
 		member = group.memberships.select_related("membership__user").filter(id=member_id).first()
 		if not member:
