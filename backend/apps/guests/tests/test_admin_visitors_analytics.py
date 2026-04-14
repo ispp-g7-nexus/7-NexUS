@@ -337,6 +337,23 @@ class AdminVisitorsAnalyticsTests(TenantTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("granularity", response.json())
 
+    def test_invalid_compare_returns_400(self):
+        response = self.admin_client.get(ANALYTICS_URL, {"compare": "month_over_month"})
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("compare", response.json())
+
+    def test_invalid_date_format_returns_400(self):
+        response = self.admin_client.get(ANALYTICS_URL, {"from": "2026/01/20"})
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("from", response.json())
+
+    def test_from_after_to_returns_400(self):
+        tomorrow = (self.anchor + timedelta(days=1)).date().isoformat()
+        yesterday = (self.anchor - timedelta(days=1)).date().isoformat()
+        response = self.admin_client.get(ANALYTICS_URL, {"from": tomorrow, "to": yesterday})
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("detail", response.json())
+
     def test_student_user_cannot_access_admin_analytics(self):
         response = self.host_client.get(ANALYTICS_URL)
         self.assertEqual(response.status_code, 403)
