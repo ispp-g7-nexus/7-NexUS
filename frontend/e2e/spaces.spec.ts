@@ -72,7 +72,7 @@ test.describe('Espacios admin', () => {
     await page.getByRole('button', { name: /Ver detalles de Sala Estudio/i }).click()
 
     await expect(page.getByText('Detalle del espacio')).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Sala Estudio' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Sala Estudio' }).last()).toBeVisible()
     await expect(page.getByText('12 personas')).toBeVisible()
     await expect(page.getByRole('button', { name: /Editar información/i })).toBeVisible()
   })
