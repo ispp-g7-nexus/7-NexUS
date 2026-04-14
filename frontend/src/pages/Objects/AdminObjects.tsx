@@ -997,7 +997,7 @@ export function AdminObjects() {
                   required
                   placeholder="Ej: Bicicleta de montaña"
                 />
-                <p className="text-xs text-gray-500">
+                <p className="text-right text-xs text-gray-500">
                   {formData.name.length}/{OBJECT_NAME_MAX_LENGTH}
                 </p>
               </div>
@@ -1012,7 +1012,7 @@ export function AdminObjects() {
                   maxLength={OBJECT_DESCRIPTION_MAX_LENGTH}
                   rows={3}
                 />
-                <p className="text-xs text-gray-500">
+                <p className="text-right text-xs text-gray-500">
                   {formData.description.length}/{OBJECT_DESCRIPTION_MAX_LENGTH}
                 </p>
               </div>
@@ -1026,7 +1026,7 @@ export function AdminObjects() {
                   maxLength={OBJECT_LOCATION_MAX_LENGTH}
                   placeholder="Ej: Almacén principal"
                 />
-                <p className="text-xs text-gray-500">
+                <p className="text-right text-xs text-gray-500">
                   {formData.location.length}/{OBJECT_LOCATION_MAX_LENGTH}
                 </p>
               </div>
@@ -1041,7 +1041,7 @@ export function AdminObjects() {
                   maxLength={OBJECT_IMAGE_URL_MAX_LENGTH}
                   placeholder="https://ejemplo.com/imagen.jpg"
                 />
-                <p className="text-xs text-gray-500">
+                <p className="text-right text-xs text-gray-500">
                   {formData.image_url.length}/{OBJECT_IMAGE_URL_MAX_LENGTH}
                 </p>
               </div>
