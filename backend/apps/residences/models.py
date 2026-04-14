@@ -1,5 +1,4 @@
 from django.db import models
-from django.conf import settings
 
 
 class Residence(models.Model):
@@ -28,6 +27,7 @@ class ResidenceBranding(models.Model):
     logo_url = models.URLField(blank=True)
     favicon_url = models.URLField(blank=True)
     custom_css = models.TextField(blank=True)
+    legal_terms = models.TextField(blank=True, default="")
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self) -> str:

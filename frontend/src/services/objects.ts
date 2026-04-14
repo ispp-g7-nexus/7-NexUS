@@ -1,4 +1,5 @@
 // src/services/objects.ts
+import { trackEvent } from "./analytics";
 import { API_URL } from "./api";
 import type { ReservationReminderNotification } from "./reservations";
 
@@ -257,11 +258,28 @@ export const objectsService = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(objectData)
     });
-    
+
     if (!response.ok) {
       throw await buildApiError(response, 'Error al crear objeto');
     }
-    
+
+    trackEvent('object_created', { object_name: objectData.name });
+    return response.json();
+  },
+
+  // Update object (admin only)
+  updateObject: async (objectId: number, objectData: CreateObjectRequest): Promise<{ id: number; detail: string }> => {
+    const response = await fetch(`${OBJECTS_URL}/${objectId}/`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(objectData)
+    });
+
+    if (!response.ok) {
+      throw await buildApiError(response, 'Error al actualizar objeto');
+    }
+
     return response.json();
   },
 
@@ -272,10 +290,11 @@ export const objectsService = {
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' }
     });
-    
+
     if (!response.ok) {
       throw await buildApiError(response, 'Error al eliminar objeto');
     }
+    trackEvent('object_deleted', { object_id: objectId });
   },
 
   // Reserve object
@@ -286,11 +305,12 @@ export const objectsService = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(reservationData)
     });
-    
+
     if (!response.ok) {
       throw await buildApiError(response, 'Error al reservar objeto');
     }
-    
+
+    trackEvent('object_reserved', { object_id: objectId });
     return response.json();
   },
 
@@ -302,11 +322,12 @@ export const objectsService = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(cancelData || {})
     });
-    
+
     if (!response.ok) {
       throw await buildApiError(response, 'Error al cancelar reserva');
     }
-    
+
+    trackEvent('object_reservation_cancelled', { object_id: objectId });
     return response.json();
   },
 

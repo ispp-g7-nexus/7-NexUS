@@ -22,6 +22,12 @@ type CommonSpaceOption = {
     name: string;
 };
 
+const EVENT_NAME_MAX_LENGTH = 20;
+const EVENT_DESCRIPTION_MAX_LENGTH = 255;
+const EVENT_LOCATION_MAX_LENGTH = 100;
+const EVENT_IMAGE_URL_MAX_LENGTH = 300;
+const EVENT_LABELS_MAX_LENGTH = 50;
+
 export function EventForm({
     isEditingEvent,
     newEvent,
@@ -76,8 +82,12 @@ export function EventForm({
                             placeholder="Ej: Tarde de Juegos"
                             value={newEvent.name}
                             onChange={(e) => setNewEvent({ ...newEvent, name: e.target.value })}
+                            maxLength={EVENT_NAME_MAX_LENGTH}
                             required
                         />
+                        <p className="text-xs text-gray-500 text-right">
+                            {newEvent.name.length}/{EVENT_NAME_MAX_LENGTH}
+                        </p>
                     </div>
                     <div className="space-y-2">
                         <label htmlFor="description" className="text-sm font-medium leading-none">Descripción *</label>
@@ -87,8 +97,12 @@ export function EventForm({
                             placeholder="Explica de qué trata el evento..."
                             value={newEvent.description}
                             onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
+                            maxLength={EVENT_DESCRIPTION_MAX_LENGTH}
                             required
                         />
+                        <p className="text-xs text-gray-500 text-right">
+                            {newEvent.description.length}/{EVENT_DESCRIPTION_MAX_LENGTH}
+                        </p>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         <div className="space-y-2">
@@ -201,9 +215,13 @@ export function EventForm({
                                     placeholder="Ej: Polideportivo municipal"
                                     value={newEvent.location}
                                     onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
+                                    maxLength={EVENT_LOCATION_MAX_LENGTH}
                                     required
                                 />
                             </div>
+                            <p className="text-xs text-gray-500 text-right">
+                                {newEvent.location.length}/{EVENT_LOCATION_MAX_LENGTH}
+                            </p>
                         </div>
                     )}
                     <div className="space-y-2">
@@ -212,12 +230,17 @@ export function EventForm({
                             <span className="absolute left-3 top-2.5 text-gray-500 text-sm">🖼️</span>
                             <input
                                 id="photo"
+                                type="url"
                                 className="flex h-10 w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                                 placeholder="https://..."
                                 value={newEvent.photo}
                                 onChange={(e) => setNewEvent({ ...newEvent, photo: e.target.value })}
+                                maxLength={EVENT_IMAGE_URL_MAX_LENGTH}
                             />
                         </div>
+                        <p className="text-xs text-gray-500 text-right">
+                            {newEvent.photo.length}/{EVENT_IMAGE_URL_MAX_LENGTH}
+                        </p>
                     </div>
                     <div className="space-y-2">
                         <label htmlFor="labels" className="text-sm font-medium leading-none">Etiquetas (separadas por comas)</label>
@@ -229,8 +252,13 @@ export function EventForm({
                                 placeholder="Ej: Juegos, Relax, Social"
                                 value={newEvent.labels}
                                 onChange={(e) => setNewEvent({ ...newEvent, labels: e.target.value })}
+                                maxLength={EVENT_LABELS_MAX_LENGTH}
+                                required
                             />
                         </div>
+                        <p className="text-xs text-gray-500 text-right">
+                            {newEvent.labels.length}/{EVENT_LABELS_MAX_LENGTH}
+                        </p>
                     </div>
                     <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 mt-6">
                         <button

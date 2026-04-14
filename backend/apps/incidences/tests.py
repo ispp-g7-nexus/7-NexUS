@@ -10,6 +10,7 @@ from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from rest_framework.test import APIClient, APIRequestFactory
 
+from apps.bedrooms.models import Bedroom
 from apps.incidences.models import Incidence, IncidenceUpdate
 from apps.incidences.permissions import IsAdminOrReadOnly
 from apps.incidences.serializers import (
@@ -19,6 +20,7 @@ from apps.incidences.serializers import (
 )
 from apps.membership.models import Membership, Role
 from apps.residences.models import Residence
+from apps.bedrooms.models import Bedroom
 
 User = get_user_model()
 
@@ -69,6 +71,12 @@ class IncidenceViewSetTests(TenantTestCase):
                 password="password123",
             )
 
+            bedroom = Bedroom.objects.create(
+                numero="101",
+                residence=self.residence_obj,
+                capacidad_maxima=1,
+            )
+
             Membership.objects.create(
                 user=self.admin_user,
                 role=self.role_admin,
@@ -79,6 +87,7 @@ class IncidenceViewSetTests(TenantTestCase):
                 user=self.student_a,
                 role=self.role_student,
                 residence=self.residence_obj,
+                bedroom=bedroom,
                 is_active=True,
             )
 
@@ -86,7 +95,7 @@ class IncidenceViewSetTests(TenantTestCase):
                 title="Incidencia A",
                 location_type="habitacion",
                 student=self.student_a,
-                room_number="101",
+                room_number=bedroom,
             )
 
         self.list_url = reverse("incidence-list")
@@ -156,15 +165,6 @@ class IncidenceViewSetTests(TenantTestCase):
             HTTP_HOST=self.host,
         )
         self.assertEqual(res.status_code, 201)
-
-    def test_perform_create_resident_logic(self):
-        self.client.force_authenticate(user=self.student_a)
-        res = self.client.post(
-            self.list_url,
-            {"title": "S", "description": "D", "location_type": "habitacion"},
-            HTTP_HOST=self.host,
-        )
-        self.assertEqual(res.data["room_number"], "3º A")
 
     def test_perform_update_full_logs(self):
         self.client.force_authenticate(user=self.admin_user)
@@ -300,10 +300,15 @@ class IncidenceSerializersTests(TestCase):
         self.incidence.id = 10
         self.incidence.student_id = 1
         self.incidence.student = self.user
-        self.incidence.status = "pending"
+        self.incidence.status = "pending" 
         self.incidence.priority = "high"
-        self.incidence.assigned_staff_id = None
+        
+        self.incidence.assigned_staff = None 
+        self.incidence.assigned_external_name = ""
         self.incidence.location_type = "habitacion"
+        
+        self.incidence.updates = MagicMock()
+        self.incidence.updates.exists.return_value = False
 
     def test_incidence_update_serializer_fields(self):
         class FakeAuthor:

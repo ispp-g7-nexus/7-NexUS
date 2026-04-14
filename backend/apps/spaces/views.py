@@ -15,6 +15,10 @@ from django.views.decorators.csrf import csrf_exempt
 from apps.common.utils.jwt_auth import resolve_user_from_request
 from apps.residences.models import Residence
 
+from .analytics import (
+    ReservationsAnalyticsValidationError,
+    get_admin_reservations_analytics,
+)
 from .models import CommonSpace, SpaceReservation
 from .permissions import is_reservations_admin
 
@@ -746,3 +750,24 @@ class AdminSpaceNotificationsView(AdminRequiredMixin, AuthenticatedView):
         ]
 
         return JsonResponse(data, safe=False)
+
+
+class AdminReservationsAnalyticsView(AdminRequiredMixin, AuthenticatedView):
+    def get(self, request):
+        residence = _validate_residence(request)
+        if not residence:
+            return JsonResponse({"detail": "No residence context."}, status=400)
+
+        try:
+            payload = get_admin_reservations_analytics(
+                residence=residence,
+                from_value=request.GET.get("from"),
+                to_value=request.GET.get("to"),
+                compare_value=request.GET.get("compare"),
+                resource_type_value=request.GET.get("resource_type"),
+                zone_id_value=request.GET.get("zone_id"),
+            )
+        except ReservationsAnalyticsValidationError as exc:
+            return JsonResponse(exc.detail, status=400)
+
+        return JsonResponse(payload)

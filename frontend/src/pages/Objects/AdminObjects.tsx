@@ -1,4 +1,4 @@
-import { Filter, Plus, RefreshCw, Package, Search, Tag, X } from "lucide-react";
+import { Eye, Filter, Plus, RefreshCw, Package, Search, Tag, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -14,6 +14,57 @@ import { RentalHistoryView } from "../../components/RentalHistoryView";
 
 const OBJECT_NAME_REGEX = /^[\p{L}\p{N} _().,-]+$/u;
 const ADMIN_CANCELLATION_REASON_MAX_LENGTH = 200;
+const OBJECT_NAME_MAX_LENGTH = 30;
+const OBJECT_DESCRIPTION_MAX_LENGTH = 255;
+const OBJECT_LOCATION_MAX_LENGTH = 100;
+const OBJECT_IMAGE_URL_MAX_LENGTH = 300;
+const OBJECT_LABEL_MAX_LENGTH = 15;
+type GlobalStatusFilter = "ALL" | "ACTIVE" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+
+function filterGlobalRentals(
+  rentals: AdminObjectRental[],
+  search: string,
+  statusFilter: GlobalStatusFilter,
+  onlyOverdue: boolean,
+  dateFilter: string,
+): AdminObjectRental[] {
+  const query = search.trim().toLowerCase();
+
+  return rentals.filter((rental) => {
+    const fields = [
+      rental.object.name,
+      rental.object.location ?? "",
+      `${rental.user.first_name ?? ""} ${rental.user.last_name ?? ""}`,
+      getGlobalRentalStatusLabel(rental),
+    ];
+
+    const matchesQuery = !query || fields.some((field) => field.toLowerCase().includes(query));
+    const matchesStatus = statusFilter === "ALL" || getGlobalEffectiveStatus(rental) === statusFilter;
+    const matchesOverdue = !onlyOverdue || isGlobalRentalOverdue(rental);
+    const matchesDate = !dateFilter || rental.start_date.slice(0, 10) === dateFilter || rental.end_date.slice(0, 10) === dateFilter;
+
+    return matchesQuery && matchesStatus && matchesOverdue && matchesDate;
+  });
+}
+
+function countGlobalRentals(rentals: AdminObjectRental[]) {
+  return {
+    total: rentals.length,
+    active: rentals.filter((r) => getGlobalEffectiveStatus(r) === "ACTIVE").length,
+    inProgress: rentals.filter((r) => getGlobalEffectiveStatus(r) === "IN_PROGRESS").length,
+    completed: rentals.filter((r) => getGlobalEffectiveStatus(r) === "COMPLETED").length,
+    cancelled: rentals.filter((r) => r.status === "CANCELLED").length,
+  };
+}
+
+function isValidHttpUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
 
 function formatDateTime(date: string): string {
   return new Intl.DateTimeFormat("es-ES", {
@@ -79,7 +130,7 @@ function GlobalRentalHistory({
   onCancelRental: (objectId: number, rentalId: number, reason: string) => Promise<void>;
 }) {
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED">("ALL");
+  const [statusFilter, setStatusFilter] = useState<GlobalStatusFilter>("ALL");
   const [onlyOverdue, setOnlyOverdue] = useState(false);
   const [dateFilter, setDateFilter] = useState("");
   const [cancelTarget, setCancelTarget] = useState<AdminObjectRental | null>(null);
@@ -87,30 +138,12 @@ function GlobalRentalHistory({
   const [cancelError, setCancelError] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
 
-  const filteredRentals = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return rentals.filter((rental) => {
-      const fields = [
-        rental.object.name,
-        rental.object.location ?? "",
-        `${rental.user.first_name ?? ""} ${rental.user.last_name ?? ""}`,
-        getGlobalRentalStatusLabel(rental),
-      ];
-      const matchesQuery = !query || fields.some((field) => field.toLowerCase().includes(query));
-      const matchesStatus = statusFilter === "ALL" || getGlobalEffectiveStatus(rental) === statusFilter;
-      const matchesOverdue = !onlyOverdue || isGlobalRentalOverdue(rental);
-      const matchesDate = !dateFilter || rental.start_date.slice(0, 10) === dateFilter || rental.end_date.slice(0, 10) === dateFilter;
-      return matchesQuery && matchesStatus && matchesOverdue && matchesDate;
-    });
-  }, [rentals, search, statusFilter, onlyOverdue, dateFilter]);
+  const filteredRentals = useMemo(
+    () => filterGlobalRentals(rentals, search, statusFilter, onlyOverdue, dateFilter),
+    [rentals, search, statusFilter, onlyOverdue, dateFilter],
+  );
 
-  const counts = useMemo(() => ({
-    total: rentals.length,
-    active: rentals.filter((r) => getGlobalEffectiveStatus(r) === "ACTIVE").length,
-    inProgress: rentals.filter((r) => getGlobalEffectiveStatus(r) === "IN_PROGRESS").length,
-    completed: rentals.filter((r) => getGlobalEffectiveStatus(r) === "COMPLETED").length,
-    cancelled: rentals.filter((r) => r.status === "CANCELLED").length,
-  }), [rentals]);
+  const counts = useMemo(() => countGlobalRentals(rentals), [rentals]);
 
   const handleCancelSubmit = async () => {
     if (!cancelTarget) {
@@ -365,10 +398,12 @@ function GlobalRentalHistory({
 
 function ObjectCard({
   object,
+  onViewDetails,
   onDelete,
   onViewRentals,
 }: {
   object: ObjectItem;
+  onViewDetails: (object: ObjectItem) => void;
   onDelete: (object: ObjectItem) => void;
   onViewRentals: (object: ObjectItem) => void;
 }) {
@@ -409,17 +444,11 @@ function ObjectCard({
         </div>
       </div>
 
-      {object.tags && (
-        <div className="flex flex-wrap gap-1">
-          {object.tags.split(",").map((tag, idx) => (
-            <span key={idx} className="rounded-md bg-blue-100 px-2 py-1 text-xs text-blue-700">
-              {tag.trim()}
-            </span>
-          ))}
-        </div>
-      )}
-
       <div className="flex gap-2 flex-wrap">
+        <Button type="button" variant="outline" onClick={() => onViewDetails(object)}>
+          <Eye className="mr-2 h-4 w-4" />
+          Ver detalles
+        </Button>
         <Button variant="outline" size="sm" onClick={() => onViewRentals(object)}>
           Ver préstamos
         </Button>
@@ -432,6 +461,16 @@ function ObjectCard({
           Eliminar
         </Button>
       </div>
+
+      {object.tags && (
+        <div className="flex flex-wrap gap-1">
+          {object.tags.split(",").map((tag, idx) => (
+            <span key={idx} className="rounded-md bg-blue-100 px-2 py-1 text-xs text-blue-700">
+              {tag.trim()}
+            </span>
+          ))}
+        </div>
+      )}
     </article>
   );
 }
@@ -451,6 +490,8 @@ export function AdminObjects() {
   // Create form
   const [formOpen, setFormOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [formMode, setFormMode] = useState<"create" | "edit">("create");
+  const [editingObject, setEditingObject] = useState<ObjectItem | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -477,6 +518,34 @@ export function AdminObjects() {
   const [cancellingRentalIds, setCancellingRentalIds] = useState<number[]>([]);
   const getErrorMessage = (err: unknown, fallback: string) =>
     err instanceof Error && err.message ? err.message : fallback;
+  const isEditMode = formMode === "edit";
+  const dialogTitle = isEditMode ? "Ver detalles del objeto" : "Crear nuevo objeto";
+  const dialogDescription = isEditMode
+    ? "Revisa la información del objeto y guarda los cambios cuando termines."
+    : "Añade un nuevo objeto para que los residentes puedan reservarlo";
+
+  let submitButtonLabel = isEditMode ? "Actualizar" : "Crear objeto";
+  if (submitting) {
+    submitButtonLabel = isEditMode ? "Actualizando..." : "Creando...";
+  }
+
+  const getEmptyFormData = () => ({
+    name: "",
+    description: "",
+    location: "",
+    stock_total: "1",
+    label_ids: [] as number[],
+    image_url: "",
+  });
+
+  const getFormDataFromObject = (object: ObjectItem) => ({
+    name: object.name ?? "",
+    description: object.description ?? "",
+    location: object.location ?? "",
+    stock_total: String(object.stock_total ?? 1),
+    label_ids: object.labels?.map((label) => label.id) ?? [],
+    image_url: object.image_url ?? "",
+  });
 
   const filteredObjects = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -575,13 +644,24 @@ export function AdminObjects() {
   }, [globalRentalsOpen, globalRentals.length]);
 
   const handleOpenForm = () => {
-    setFormData({ name: "", description: "", location: "", stock_total: "1", label_ids: [], image_url: "" });
+    setFormMode("create");
+    setEditingObject(null);
+    setFormData(getEmptyFormData());
+    setFormOpen(true);
+  };
+
+  const handleViewDetails = (object: ObjectItem) => {
+    setFormMode("edit");
+    setEditingObject(object);
+    setFormData(getFormDataFromObject(object));
     setFormOpen(true);
   };
 
   const handleCloseForm = () => {
     setFormOpen(false);
-    setFormData({ name: "", description: "", location: "", stock_total: "1", label_ids: [], image_url: "" });
+    setFormMode("create");
+    setEditingObject(null);
+    setFormData(getEmptyFormData());
   };
 
   const toggleLabelSelection = (labelId: number) => {
@@ -598,6 +678,10 @@ export function AdminObjects() {
     const trimmed = newLabelName.trim();
     if (!trimmed) {
       toast.error("El nombre de la etiqueta es obligatorio");
+      return;
+    }
+    if (trimmed.length > OBJECT_LABEL_MAX_LENGTH) {
+      toast.error(`La etiqueta no puede superar ${OBJECT_LABEL_MAX_LENGTH} caracteres`);
       return;
     }
 
@@ -648,31 +732,77 @@ export function AdminObjects() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedName = formData.name.trim();
+    const descriptionLength = formData.description.length;
+    const locationLength = formData.location.length;
+    const imageUrlLength = formData.image_url.length;
+    const trimmedDescription = formData.description.trim();
+    const trimmedLocation = formData.location.trim();
+    const trimmedImageUrl = formData.image_url.trim();
+
     if (!trimmedName) {
       toast.error("El nombre del objeto es obligatorio");
+      return;
+    }
+    if (trimmedName.length > OBJECT_NAME_MAX_LENGTH) {
+      toast.error(`El nombre no puede superar ${OBJECT_NAME_MAX_LENGTH} caracteres`);
       return;
     }
     if (!OBJECT_NAME_REGEX.test(trimmedName)) {
       toast.error("El nombre contiene caracteres no válidos");
       return;
     }
+    if (descriptionLength > OBJECT_DESCRIPTION_MAX_LENGTH) {
+      toast.error(`La descripción no puede superar ${OBJECT_DESCRIPTION_MAX_LENGTH} caracteres`);
+      return;
+    }
+    if (locationLength > OBJECT_LOCATION_MAX_LENGTH) {
+      toast.error(`La ubicación no puede superar ${OBJECT_LOCATION_MAX_LENGTH} caracteres`);
+      return;
+    }
+    if (imageUrlLength > OBJECT_IMAGE_URL_MAX_LENGTH) {
+      toast.error(`La URL de imagen no puede superar ${OBJECT_IMAGE_URL_MAX_LENGTH} caracteres`);
+        return;
+      }
+    if (trimmedDescription.length > OBJECT_DESCRIPTION_MAX_LENGTH) {
+      toast.error(`La descripción no puede superar ${OBJECT_DESCRIPTION_MAX_LENGTH} caracteres`);
+      return;
+    }
+    if (trimmedLocation.length > OBJECT_LOCATION_MAX_LENGTH) {
+      toast.error(`La ubicación no puede superar ${OBJECT_LOCATION_MAX_LENGTH} caracteres`);
+      return;
+    }
+    if (trimmedImageUrl.length > OBJECT_IMAGE_URL_MAX_LENGTH) {
+      toast.error(`La URL no puede superar ${OBJECT_IMAGE_URL_MAX_LENGTH} caracteres`);
+      return;
+    }
+    if (trimmedImageUrl && !isValidHttpUrl(trimmedImageUrl)) {
+      toast.error("La imagen del objeto debe ser una URL válida (http/https)");
+      return;
+    }
 
     setSubmitting(true);
 
     try {
-      await objectsService.createObject({
+      const payload = {
         name: trimmedName,
-        description: formData.description || undefined,
-        location: formData.location || undefined,
+        description: trimmedDescription || undefined,
+        location: trimmedLocation || undefined,
         stock_total: Number.parseInt(formData.stock_total, 10) || 1,
         label_ids: formData.label_ids,
         image_url: formData.image_url || undefined,
-      });
-      toast.success("Objeto creado exitosamente");
+      };
+
+      if (formMode === "edit" && editingObject) {
+        await objectsService.updateObject(editingObject.id, payload);
+        toast.success("Objeto actualizado exitosamente");
+      } else {
+        await objectsService.createObject(payload);
+        toast.success("Objeto creado exitosamente");
+      }
       handleCloseForm();
       await loadObjects();
     } catch (err: unknown) {
-      toast.error(getErrorMessage(err, "Error al crear objeto"));
+      toast.error(getErrorMessage(err, formMode === "edit" ? "Error al actualizar objeto" : "Error al crear objeto"));
     } finally {
       setSubmitting(false);
     }
@@ -769,6 +899,65 @@ export function AdminObjects() {
     await handleCancelRentalForObject(selectedObject.id, rentalId, reason);
   };
 
+  const objectsContent = (() => {
+    if (loading) {
+      return (
+        <Card>
+          <CardContent className="p-4 text-sm text-gray-500">Cargando objetos...</CardContent>
+        </Card>
+      );
+    }
+
+    if (objects.length === 0) {
+      return (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center p-12 text-center">
+            <Package className="mb-3 h-12 w-12 text-gray-500" />
+            <h3 className="mb-2 text-lg font-semibold">No hay objetos</h3>
+            <p className="mb-4 text-sm text-gray-500">
+              Comienza creando el primer objeto disponible para préstamo
+            </p>
+            <Button onClick={handleOpenForm}>
+              <Plus className="mr-2 h-4 w-4" />
+              Crear objeto
+            </Button>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    if (filteredObjects.length === 0) {
+      return (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center p-12 text-center">
+            <Search className="mb-3 h-12 w-12 text-gray-500" />
+            <h3 className="mb-2 text-lg font-semibold">Sin coincidencias</h3>
+            <p className="mb-4 text-sm text-gray-500">
+              No hay objetos que coincidan con la búsqueda actual.
+            </p>
+            <Button variant="outline" onClick={() => setSearch("")}>
+              Limpiar búsqueda
+            </Button>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    return (
+      <div className="grid gap-4 sm:grid-cols-2">
+        {filteredObjects.map((object) => (
+          <ObjectCard
+            key={object.id}
+            object={object}
+            onViewDetails={handleViewDetails}
+            onDelete={handleDelete}
+            onViewRentals={handleViewRentals}
+          />
+        ))}
+      </div>
+    );
+  })();
+
   return (
     <section className="mx-auto flex w-full max-w-5xl flex-col gap-6">
       <header className="rounded-xl border border-border/80 bg-white p-4 shadow-sm sm:p-6">
@@ -814,59 +1003,15 @@ export function AdminObjects() {
         </div>
       </header>
 
-      {loading ? (
-        <Card>
-          <CardContent className="p-4 text-sm text-gray-500">Cargando objetos...</CardContent>
-        </Card>
-      ) : objects.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center p-12 text-center">
-            <Package className="mb-3 h-12 w-12 text-gray-500" />
-            <h3 className="mb-2 text-lg font-semibold">No hay objetos</h3>
-            <p className="mb-4 text-sm text-gray-500">
-              Comienza creando el primer objeto disponible para préstamo
-            </p>
-            <Button onClick={handleOpenForm}>
-              <Plus className="mr-2 h-4 w-4" />
-              Crear objeto
-            </Button>
-          </CardContent>
-        </Card>
-      ) : filteredObjects.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center p-12 text-center">
-            <Search className="mb-3 h-12 w-12 text-gray-500" />
-            <h3 className="mb-2 text-lg font-semibold">Sin coincidencias</h3>
-            <p className="mb-4 text-sm text-gray-500">
-              No hay objetos que coincidan con la búsqueda actual.
-            </p>
-            <Button variant="outline" onClick={() => setSearch("")}>
-              Limpiar búsqueda
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {filteredObjects.map((object) => (
-            <ObjectCard
-              key={object.id}
-              object={object}
-              onDelete={handleDelete}
-              onViewRentals={handleViewRentals}
-            />
-          ))}
-        </div>
-      )}
+      {objectsContent}
 
-      {/* Create Object Dialog */}
-      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+      {/* Create / Edit Object Dialog */}
+      <Dialog open={formOpen} onOpenChange={(open) => (open ? setFormOpen(true) : handleCloseForm())}>
         <DialogContent className="sm:max-w-[500px]">
           <form onSubmit={handleSubmit}>
             <DialogHeader>
-              <DialogTitle>Crear nuevo objeto</DialogTitle>
-              <DialogDescription>
-                Añade un nuevo objeto para que los residentes puedan reservarlo
-              </DialogDescription>
+              <DialogTitle>{dialogTitle}</DialogTitle>
+              <DialogDescription>{dialogDescription}</DialogDescription>
             </DialogHeader>
 
             <div className="grid gap-4 py-4">
@@ -876,9 +1021,13 @@ export function AdminObjects() {
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  maxLength={OBJECT_NAME_MAX_LENGTH}
                   required
                   placeholder="Ej: Bicicleta de montaña"
                 />
+                <p className="text-right text-xs text-gray-500">
+                  {formData.name.length}/{OBJECT_NAME_MAX_LENGTH}
+                </p>
               </div>
 
               <div className="grid gap-2">
@@ -888,8 +1037,12 @@ export function AdminObjects() {
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Describe el objeto..."
+                  maxLength={OBJECT_DESCRIPTION_MAX_LENGTH}
                   rows={3}
                 />
+                <p className="text-right text-xs text-gray-500">
+                  {formData.description.length}/{OBJECT_DESCRIPTION_MAX_LENGTH}
+                </p>
               </div>
 
               <div className="grid gap-2">
@@ -898,8 +1051,27 @@ export function AdminObjects() {
                   id="location"
                   value={formData.location}
                   onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  maxLength={OBJECT_LOCATION_MAX_LENGTH}
                   placeholder="Ej: Almacén principal"
                 />
+                <p className="text-right text-xs text-gray-500">
+                  {formData.location.length}/{OBJECT_LOCATION_MAX_LENGTH}
+                </p>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="image_url">URL de imagen</Label>
+                <Input
+                  id="image_url"
+                  type="url"
+                  value={formData.image_url}
+                  onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                  maxLength={OBJECT_IMAGE_URL_MAX_LENGTH}
+                  placeholder="https://ejemplo.com/imagen.jpg"
+                />
+                <p className="text-right text-xs text-gray-500">
+                  {formData.image_url.length}/{OBJECT_IMAGE_URL_MAX_LENGTH}
+                </p>
               </div>
 
               <div className="grid gap-2">
@@ -948,10 +1120,10 @@ export function AdminObjects() {
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={handleCloseForm}>
-                Cancelar
+                Volver
               </Button>
               <Button type="submit" disabled={submitting}>
-                {submitting ? "Creando..." : "Crear objeto"}
+                {submitButtonLabel}
               </Button>
             </DialogFooter>
           </form>
@@ -1017,7 +1189,7 @@ export function AdminObjects() {
                 onChange={(e) => setNewLabelName(e.target.value)}
                 placeholder="Nombre de la etiqueta..."
                 className="flex-1"
-                maxLength={30}
+                maxLength={OBJECT_LABEL_MAX_LENGTH}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
@@ -1034,6 +1206,9 @@ export function AdminObjects() {
                 Añadir
               </Button>
             </div>
+            <p className="text-xs text-gray-500 text-right -mt-3">
+              {newLabelName.length}/15
+            </p>
 
             {loadingLabels ? (
               <p className="text-sm text-gray-500">Cargando etiquetas...</p>
@@ -1075,3 +1250,4 @@ export function AdminObjects() {
     </section>
   );
 }
+

@@ -1,21 +1,21 @@
 import React from "react";
-import { Sparkles, Heart } from "lucide-react";
+import { Sparkles, Heart, MessageCircle } from "lucide-react";
 import type { MatchItem } from "../../../services/matching";
 import { getInitials, getTags } from "../utils";
 
 interface MatchCardProps {
     match: MatchItem;
     index: number;
-    isSaved: boolean;
-    onToggleSave: (membershipId: number, e?: React.MouseEvent) => void;
+    onToggleLike: (match: MatchItem, e?: React.MouseEvent) => void;
+    onOpenChat: (match: MatchItem, e?: React.MouseEvent) => void;
     onClick: () => void;
 }
 
 export function MatchCard({
     match,
     index,
-    isSaved,
-    onToggleSave,
+    onToggleLike,
+    onOpenChat,
     onClick,
 }: Readonly<MatchCardProps>) {
     const scorePercent = Math.round(match.score * 100);
@@ -69,17 +69,17 @@ export function MatchCard({
                                 <span className="text-sm font-bold">{scorePercent}% Match</span>
                             </div>
                             <button
-                                onClick={(e) => onToggleSave(match.membership_id, e)}
+                                onClick={(e) => onToggleLike(match, e)}
                                 className={`p-2 rounded-full transition-colors flex-shrink-0 ${
-                                    isSaved
+                                    match.liked_by_me
                                         ? "bg-pink-50 text-pink-500"
                                         : "bg-gray-50 text-slate-400 hover:bg-gray-50 hover:text-pink-400"
                                 }`}
-                                aria-label="Guardar Match"
+                                aria-label={match.liked_by_me ? "Quitar like" : "Dar like"}
                             >
                                 <Heart
                                     className="w-5 h-5 pointer-events-none"
-                                    fill={isSaved ? "currentColor" : "none"}
+                                    fill={match.liked_by_me ? "currentColor" : "none"}
                                     strokeWidth={2.5}
                                 />
                             </button>
@@ -101,6 +101,15 @@ export function MatchCard({
                             </span>
                         )}
                     </div>
+
+                    {match.is_mutual && (
+                        <button
+                            onClick={(e) => onOpenChat(match, e)}
+                            className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-medium shadow-sm"
+                        >
+                            <MessageCircle className="w-4 h-4" /> Abrir chat
+                        </button>
+                    )}
                 </div>
             </div>
         </div>

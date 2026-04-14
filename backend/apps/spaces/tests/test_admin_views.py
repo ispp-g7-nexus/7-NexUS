@@ -288,6 +288,20 @@ class AdminSpaceViewsTests(FastTenantTestCase):
         self.assertEqual(resp.status_code, 400)
         self.assertIn("capacity", resp.json()["detail"])
 
+    def test_admin_create_space_empty_name_returns_400(self):
+        payload = {
+            "name": "   ",
+            "open_time": "09:00",
+            "close_time": "18:00",
+        }
+        resp = self.admin_client.post(
+            "/api/admin/spaces/",
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("obligatorios", resp.json()["detail"])
+
     def test_admin_create_space_negative_capacity_returns_400(self):
         payload = {
             "name": "Sala Y",
@@ -338,6 +352,14 @@ class AdminSpaceViewsTests(FastTenantTestCase):
             content_type="application/json",
         )
         self.assertEqual(resp.status_code, 400)
+
+    def test_admin_patch_space_nonexistent_returns_404(self):
+        resp = self.admin_client.patch(
+            "/api/admin/spaces/999999/",
+            data=json.dumps({"name": "Nueva Sala"}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 404)
 
     def test_admin_patch_space_empty_name_returns_400(self):
         payload = {"name": ""}
@@ -445,3 +467,18 @@ class AdminSpaceViewsTests(FastTenantTestCase):
         self.space.refresh_from_db()
         self.assertEqual(self.space.description, new_desc)
         self.assertEqual(self.space.img, new_img)
+
+    def test_admin_patch_space_updates_reservation_interval_minutes(self):
+        payload = {"reservation_interval_minutes": 45}
+        resp = self.admin_client.patch(
+            f"/api/admin/spaces/{self.space.id}/",
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.space.refresh_from_db()
+        self.assertEqual(self.space.reservation_interval_minutes, 45)
+
+    def test_admin_delete_nonexistent_space_returns_404(self):
+        resp = self.admin_client.delete("/api/admin/spaces/999999/")
+        self.assertEqual(resp.status_code, 404)
