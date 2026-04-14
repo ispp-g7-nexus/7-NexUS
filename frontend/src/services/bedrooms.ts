@@ -1,4 +1,5 @@
 import { fetchWithAuth } from '../utils/api';
+import { trackEvent } from './analytics';
 
 const BASE = '/api/bedrooms/';
 
@@ -57,23 +58,29 @@ export async function listAvailableBedrooms(excludeResidentId?: number): Promise
 }
 
 export async function createBedroom(payload: Record<string, unknown>) {
-    return fetchWithAuth(`${BASE}create/`, {
+    const res = await fetchWithAuth(`${BASE}create/`, {
         method: 'POST',
         body: JSON.stringify(payload),
     });
+    if (res.ok) trackEvent('bedroom_created', { building: payload.edificio as string });
+    return res;
 }
 
 export async function updateBedroom(id: number, payload: Record<string, unknown>) {
-    return fetchWithAuth(`${BASE}${id}/update/`, {
+    const res = await fetchWithAuth(`${BASE}${id}/update/`, {
         method: 'PUT',
         body: JSON.stringify(payload),
     });
+    if (res.ok) trackEvent('bedroom_updated', { bedroom_id: id });
+    return res;
 }
 
 export async function deleteBedroom(id: number) {
-    return fetchWithAuth(`${BASE}${id}/delete/`, {
+    const res = await fetchWithAuth(`${BASE}${id}/delete/`, {
         method: 'DELETE',
     });
+    if (res.ok) trackEvent('bedroom_deleted', { bedroom_id: id });
+    return res;
 }
 
 export async function getBedroomResidents(id: number): Promise<BedroomResident[]> {

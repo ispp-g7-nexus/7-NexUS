@@ -1,4 +1,5 @@
 import { fetchWithAuth } from "../utils/api";
+import { trackEvent } from "./analytics";
 
 const CHAT_GROUPS_URL = "/api/chats/groups/";
 const CHAT_LABELS_URL = "/api/chats/labels/";
@@ -118,7 +119,9 @@ export const chatsService = {
       method: "POST",
       body: JSON.stringify(payload),
     });
-    return handleResponse<ChatGroup>(res);
+    const group = await handleResponse<ChatGroup>(res);
+    trackEvent('chat_group_created', { group_id: group.id, label: payload.label });
+    return group;
   },
 
   updateGroup: async (id: number, payload: Partial<UpsertChatGroupPayload>): Promise<ChatGroup> => {
@@ -126,7 +129,9 @@ export const chatsService = {
       method: "PATCH",
       body: JSON.stringify(payload),
     });
-    return handleResponse<ChatGroup>(res);
+    const group = await handleResponse<ChatGroup>(res);
+    trackEvent('chat_group_updated', { group_id: id });
+    return group;
   },
 
   deleteGroup: async (id: number): Promise<void> => {
@@ -134,6 +139,7 @@ export const chatsService = {
       method: "DELETE",
     });
     await handleResponse<void>(res);
+    trackEvent('chat_group_deleted', { group_id: id });
   },
 
   addMember: async (groupId: number, payload: AddMemberPayload): Promise<ChatGroup> => {
@@ -141,7 +147,9 @@ export const chatsService = {
       method: "POST",
       body: JSON.stringify(payload),
     });
-    return handleResponse<ChatGroup>(res);
+    const group = await handleResponse<ChatGroup>(res);
+    trackEvent('chat_member_added', { group_id: groupId });
+    return group;
   },
 
   updateMemberRole: async (groupId: number, memberId: number, is_admin: boolean): Promise<ChatGroup> => {
@@ -157,6 +165,7 @@ export const chatsService = {
       method: "DELETE",
     });
     await handleResponse<void>(res);
+    trackEvent('chat_member_removed', { group_id: groupId });
   },
 
   // ── Endpoints para residentes ──
@@ -171,6 +180,7 @@ export const chatsService = {
       method: "POST",
     });
     await handleResponse<void>(res);
+    trackEvent('chat_group_left', { group_id: groupId });
   },
 
   // ── Mensajes de Grupo ──
@@ -185,7 +195,9 @@ export const chatsService = {
       method: "POST",
       body: JSON.stringify({ content }),
     });
-    return handleResponse<GroupMessage>(res);
+    const msg = await handleResponse<GroupMessage>(res);
+    trackEvent('group_message_sent', { group_id: groupId });
+    return msg;
   },
 
   // ── Chats privados ──
@@ -200,7 +212,9 @@ export const chatsService = {
       method: "POST",
       body: JSON.stringify({ membership_id: membershipId }),
     });
-    return handleResponse<PrivateConversation>(res);
+    const conv = await handleResponse<PrivateConversation>(res);
+    trackEvent('private_conversation_started');
+    return conv;
   },
 
   listMessages: async (conversationId: number): Promise<PrivateMessage[]> => {
@@ -213,7 +227,9 @@ export const chatsService = {
       method: "POST",
       body: JSON.stringify({ content }),
     });
-    return handleResponse<PrivateMessage>(res);
+    const msg = await handleResponse<PrivateMessage>(res);
+    trackEvent('private_message_sent');
+    return msg;
   },
 
   listChatResidents: async (): Promise<ChatResident[]> => {
@@ -233,7 +249,9 @@ export const chatsService = {
       method: "POST",
       body: JSON.stringify({ name }),
     });
-    return handleResponse<ChatGroupLabelItem>(res);
+    const label = await handleResponse<ChatGroupLabelItem>(res);
+    trackEvent('chat_label_created');
+    return label;
   },
 
   deleteLabel: async (id: number): Promise<void> => {
@@ -241,6 +259,7 @@ export const chatsService = {
       method: "DELETE",
     });
     await handleResponse<void>(res);
+    trackEvent('chat_label_deleted');
   },
 };
 
