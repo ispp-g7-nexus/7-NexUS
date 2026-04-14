@@ -55,6 +55,7 @@ function countGlobalRentals(rentals: AdminObjectRental[]) {
     completed: rentals.filter((r) => getGlobalEffectiveStatus(r) === "COMPLETED").length,
     cancelled: rentals.filter((r) => r.status === "CANCELLED").length,
   };
+}
 
 function isValidHttpUrl(value: string): boolean {
   try {
@@ -760,6 +761,8 @@ export function AdminObjects() {
     }
     if (imageUrlLength > OBJECT_IMAGE_URL_MAX_LENGTH) {
       toast.error(`La URL de imagen no puede superar ${OBJECT_IMAGE_URL_MAX_LENGTH} caracteres`);
+        return;
+      }
     if (trimmedDescription.length > OBJECT_DESCRIPTION_MAX_LENGTH) {
       toast.error(`La descripción no puede superar ${OBJECT_DESCRIPTION_MAX_LENGTH} caracteres`);
       return;
@@ -1021,7 +1024,6 @@ export function AdminObjects() {
                   maxLength={OBJECT_NAME_MAX_LENGTH}
                   required
                   placeholder="Ej: Bicicleta de montaña"
-                  maxLength={30}
                 />
                 <p className="text-right text-xs text-gray-500">
                   {formData.name.length}/{OBJECT_NAME_MAX_LENGTH}
@@ -1037,7 +1039,6 @@ export function AdminObjects() {
                   placeholder="Describe el objeto..."
                   maxLength={OBJECT_DESCRIPTION_MAX_LENGTH}
                   rows={3}
-                  maxLength={255}
                 />
                 <p className="text-right text-xs text-gray-500">
                   {formData.description.length}/{OBJECT_DESCRIPTION_MAX_LENGTH}
@@ -1052,7 +1053,6 @@ export function AdminObjects() {
                   onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                   maxLength={OBJECT_LOCATION_MAX_LENGTH}
                   placeholder="Ej: Almacén principal"
-                  maxLength={100}
                 />
                 <p className="text-right text-xs text-gray-500">
                   {formData.location.length}/{OBJECT_LOCATION_MAX_LENGTH}
@@ -1250,3 +1250,4 @@ export function AdminObjects() {
     </section>
   );
 }
+
