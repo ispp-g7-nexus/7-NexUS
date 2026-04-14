@@ -14,6 +14,11 @@ import { RentalHistoryView } from "../../components/RentalHistoryView";
 
 const OBJECT_NAME_REGEX = /^[\p{L}\p{N} _().,-]+$/u;
 const ADMIN_CANCELLATION_REASON_MAX_LENGTH = 200;
+const OBJECT_NAME_MAX_LENGTH = 20;
+const OBJECT_DESCRIPTION_MAX_LENGTH = 255;
+const OBJECT_LOCATION_MAX_LENGTH = 100;
+const OBJECT_IMAGE_URL_MAX_LENGTH = 300;
+const OBJECT_LABEL_MAX_LENGTH = 15;
 type GlobalStatusFilter = "ALL" | "ACTIVE" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
 
 function filterGlobalRentals(
@@ -666,6 +671,10 @@ export function AdminObjects() {
       toast.error("El nombre de la etiqueta es obligatorio");
       return;
     }
+    if (trimmed.length > OBJECT_LABEL_MAX_LENGTH) {
+      toast.error(`La etiqueta no puede superar ${OBJECT_LABEL_MAX_LENGTH} caracteres`);
+      return;
+    }
 
     setCreatingLabel(true);
     try {
@@ -714,12 +723,32 @@ export function AdminObjects() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedName = formData.name.trim();
+    const descriptionLength = formData.description.length;
+    const locationLength = formData.location.length;
+    const imageUrlLength = formData.image_url.length;
+
     if (!trimmedName) {
       toast.error("El nombre del objeto es obligatorio");
       return;
     }
+    if (trimmedName.length > OBJECT_NAME_MAX_LENGTH) {
+      toast.error(`El nombre no puede superar ${OBJECT_NAME_MAX_LENGTH} caracteres`);
+      return;
+    }
     if (!OBJECT_NAME_REGEX.test(trimmedName)) {
       toast.error("El nombre contiene caracteres no válidos");
+      return;
+    }
+    if (descriptionLength > OBJECT_DESCRIPTION_MAX_LENGTH) {
+      toast.error(`La descripción no puede superar ${OBJECT_DESCRIPTION_MAX_LENGTH} caracteres`);
+      return;
+    }
+    if (locationLength > OBJECT_LOCATION_MAX_LENGTH) {
+      toast.error(`La ubicación no puede superar ${OBJECT_LOCATION_MAX_LENGTH} caracteres`);
+      return;
+    }
+    if (imageUrlLength > OBJECT_IMAGE_URL_MAX_LENGTH) {
+      toast.error(`La URL de imagen no puede superar ${OBJECT_IMAGE_URL_MAX_LENGTH} caracteres`);
       return;
     }
 
@@ -964,9 +993,13 @@ export function AdminObjects() {
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  maxLength={OBJECT_NAME_MAX_LENGTH}
                   required
                   placeholder="Ej: Bicicleta de montaña"
                 />
+                <p className="text-xs text-gray-500">
+                  {formData.name.length}/{OBJECT_NAME_MAX_LENGTH}
+                </p>
               </div>
 
               <div className="grid gap-2">
@@ -976,8 +1009,12 @@ export function AdminObjects() {
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Describe el objeto..."
+                  maxLength={OBJECT_DESCRIPTION_MAX_LENGTH}
                   rows={3}
                 />
+                <p className="text-xs text-gray-500">
+                  {formData.description.length}/{OBJECT_DESCRIPTION_MAX_LENGTH}
+                </p>
               </div>
 
               <div className="grid gap-2">
@@ -986,8 +1023,27 @@ export function AdminObjects() {
                   id="location"
                   value={formData.location}
                   onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  maxLength={OBJECT_LOCATION_MAX_LENGTH}
                   placeholder="Ej: Almacén principal"
                 />
+                <p className="text-xs text-gray-500">
+                  {formData.location.length}/{OBJECT_LOCATION_MAX_LENGTH}
+                </p>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="image_url">URL de imagen</Label>
+                <Input
+                  id="image_url"
+                  type="url"
+                  value={formData.image_url}
+                  onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                  maxLength={OBJECT_IMAGE_URL_MAX_LENGTH}
+                  placeholder="https://ejemplo.com/imagen.jpg"
+                />
+                <p className="text-xs text-gray-500">
+                  {formData.image_url.length}/{OBJECT_IMAGE_URL_MAX_LENGTH}
+                </p>
               </div>
 
               <div className="grid gap-2">
@@ -1105,7 +1161,7 @@ export function AdminObjects() {
                 onChange={(e) => setNewLabelName(e.target.value)}
                 placeholder="Nombre de la etiqueta..."
                 className="flex-1"
-                maxLength={30}
+                maxLength={OBJECT_LABEL_MAX_LENGTH}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();

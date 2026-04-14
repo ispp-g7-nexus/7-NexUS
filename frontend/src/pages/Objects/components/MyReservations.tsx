@@ -82,6 +82,7 @@ function ReservationCard({
 }) {
   const [showReasonDetailModal, setShowReasonDetailModal] = useState(false);
   const isCancelled = rental.status === "CANCELLED";
+  const isCancelledByAdmin = Boolean(rental.admin_cancelled_by);
   const normalizedCancelReason = rental.admin_cancelled_reason
     ? normalizeReasonText(rental.admin_cancelled_reason)
     : "";
@@ -105,6 +106,14 @@ function ReservationCard({
     if (isInProgress) return 'En curso';
     if (isActive) return 'Próxima';
     return rental.status || 'Reserva';
+  };
+
+  const getCancellationMessage = () => {
+    if (isCancelledByAdmin) {
+      return "Reserva cancelada por administración";
+    }
+
+    return "Reserva cancelada por ti";
   };
 
   return (
@@ -140,8 +149,8 @@ function ReservationCard({
             </div>
             {isCancelled && (
               <div className="mt-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-red-700 min-w-0 overflow-hidden">
-                <p className="text-xs font-semibold">Reserva cancelada por administración</p>
-                {normalizedCancelReason && (
+                <p className="text-xs font-semibold">{getCancellationMessage()}</p>
+                {isCancelledByAdmin && normalizedCancelReason && (
                   <div className="text-xs mt-1 min-w-0">
                     <p className="whitespace-pre-wrap break-all">
                       Motivo: {previewCancelReason}
@@ -162,7 +171,7 @@ function ReservationCard({
                     )}
                   </div>
                 )}
-                {rental.admin_cancelled_at && (
+                {isCancelledByAdmin && rental.admin_cancelled_at && (
                   <p className="text-xs mt-1">Fecha: {formatDateTime(rental.admin_cancelled_at)}</p>
                 )}
               </div>
