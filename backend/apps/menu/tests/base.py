@@ -13,7 +13,6 @@ class MenuTestBase(FastTenantTestCase):
 
     @classmethod
     def setup_tenant(cls, tenant):
-        # CAMBIA ESTOS TEXTOS:
         tenant.name = "Menu Unit System" 
         tenant.slug = "menu-unit-sys"
         tenant.is_active = True
@@ -21,7 +20,7 @@ class MenuTestBase(FastTenantTestCase):
 
     @classmethod
     def setup_domain(cls, domain):
-        domain.domain = "menu-unit.test.local" # Dominio distinto
+        domain.domain = "menu-unit.test.local"
         domain.is_primary = True
 
     def _auth_client(self, user, residence):
@@ -34,7 +33,6 @@ class MenuTestBase(FastTenantTestCase):
         super().setUp()
         user_model = get_user_model()
 
-        # CAMBIA LOS VALORES DE LOS STRINGS:
         self.residence = Residence.objects.create(
             name="Menu-Resi", 
             slug="m-res",
@@ -51,7 +49,6 @@ class MenuTestBase(FastTenantTestCase):
         )
 
         with tenant_context(self.tenant):
-            # Cambia ligeramente los nombres o descripciones
             self.admin_role = Role.objects.create(
                 name="admin",
                 description="Menu Admin Role",
@@ -66,13 +63,13 @@ class MenuTestBase(FastTenantTestCase):
             )
 
             self.admin_user = user_model.objects.create_user(
-                username="chef_admin", # Nombre distinto
-                email="chef@test.com", # Email distinto
+                username="chef_admin",
+                email="chef@test.com",
                 password=PASSWORD,
                 is_staff=True,
             )
             self.resident_user = user_model.objects.create_user(
-                username="student_menu", # Nombre distinto
+                username="student_menu",
                 email="student_m@test.com", 
                 password=PASSWORD,
             )
