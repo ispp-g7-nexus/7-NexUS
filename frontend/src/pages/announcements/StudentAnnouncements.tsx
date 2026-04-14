@@ -10,13 +10,14 @@ import type { StudentTab } from "../../components/StudentHome";
 
 
 interface StudentAnnouncementsProps {
-  onGoToProfile?: () => void;
-  onLogout?: () => void;
-  onAnnouncementsLoaded?: () => void;
-  onNavigate?: (view: StudentTab) => void;
+  readonly onGoToProfile?: () => void;
+  readonly onLogout?: () => void;
+  readonly onAnnouncementsLoaded?: () => void;
+  readonly onNavigate?: (view: StudentTab) => void;
 }
 
-export function StudentAnnouncements({ onGoToProfile, onLogout, onAnnouncementsLoaded, onNavigate }: StudentAnnouncementsProps) {
+export function StudentAnnouncements(props: Readonly<StudentAnnouncementsProps>) {
+  const { onGoToProfile, onLogout, onAnnouncementsLoaded, onNavigate } = props;
   const [announcements, setAnnouncements] = useState<AnnouncementList[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("all");

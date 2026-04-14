@@ -17,13 +17,14 @@ import {
 import "../Incidences.css";
 
 interface StudentIncidencesProps {
-  onGoToProfile?: () => void;
-  onLogout?: () => void;
-  onNavigate?: (view: StudentTab) => void;
+  readonly onGoToProfile?: () => void;
+  readonly onLogout?: () => void;
+  readonly onNavigate?: (view: StudentTab) => void;
 }
 const LIVE_REFRESH_MS = 5000;
 
-export default function StudentIncidences({ onGoToProfile, onLogout, onNavigate }: StudentIncidencesProps) {
+export default function StudentIncidences(props: Readonly<StudentIncidencesProps>) {
+  const { onGoToProfile, onLogout, onNavigate } = props;
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [incidences, setIncidences] = useState<BaseIncidence[]>([]);
   const [selectedDetails, setSelectedDetails] = useState<BaseIncidence | null>(null);

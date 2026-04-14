@@ -44,18 +44,19 @@ interface EventItem {
 }
 
 interface NotificationCardProps {
-    icon: ReactNode;
-    title: string;
-    description: string;
-    time: string;
-    type: NotificationType;
-    source: StudentTab;
-    dismissible?: boolean;
-    onDismiss: () => void;
-    onOpenSource: () => void;
+    readonly icon: ReactNode;
+    readonly title: string;
+    readonly description: string;
+    readonly time: string;
+    readonly type: NotificationType;
+    readonly source: StudentTab;
+    readonly dismissible?: boolean;
+    readonly onDismiss: () => void;
+    readonly onOpenSource: () => void;
 }
 
-function NotificationCard({ icon, title, description, time, type, source, dismissible = true, onDismiss, onOpenSource }: NotificationCardProps) {
+function NotificationCard(props: Readonly<NotificationCardProps>) {
+    const { icon, title, description, time, type, source, dismissible = true, onDismiss, onOpenSource } = props;
     const sourceStyles: Partial<Record<StudentTab, {
         container: string;
         accent: string;
@@ -235,9 +236,9 @@ const parseSeenIds = (raw: string | null): string[] => {
     }
 };
 
-const getInitialSeenIds = (): string[] => typeof window !== "undefined" ? parseSeenIds(globalThis.localStorage.getItem(HOME_NOTIFICATIONS_SEEN_IDS_KEY)) : [];
-const getInitialDismissedNotificationIds = (): string[] => typeof window !== "undefined" ? parseSeenIds(globalThis.localStorage.getItem(HOME_NOTIFICATIONS_DISMISSED_IDS_KEY)) : [];
-const getInitialDismissedIncidenceIds = (): string[] => typeof window !== "undefined" ? parseSeenIds(globalThis.localStorage.getItem(HOME_INCIDENCES_DISMISSED_IDS_KEY)) : [];
+const getInitialSeenIds = (): string[] => typeof globalThis.window !== "undefined" ? parseSeenIds(globalThis.localStorage.getItem(HOME_NOTIFICATIONS_SEEN_IDS_KEY)) : [];
+const getInitialDismissedNotificationIds = (): string[] => typeof globalThis.window !== "undefined" ? parseSeenIds(globalThis.localStorage.getItem(HOME_NOTIFICATIONS_DISMISSED_IDS_KEY)) : [];
+const getInitialDismissedIncidenceIds = (): string[] => typeof globalThis.window !== "undefined" ? parseSeenIds(globalThis.localStorage.getItem(HOME_INCIDENCES_DISMISSED_IDS_KEY)) : [];
 
 const getIncidencesSeenAtMs = (): number => {
     if (typeof window === "undefined") return 0;
@@ -308,7 +309,7 @@ const getActiveVisitUrgentNotifications = (storageKey: string | null): VisitUrge
 };
 
 const getCachedNotifications = (): HomeNotification[] => {
-    if (typeof window === "undefined") {
+    if (typeof globalThis.window === "undefined") {
         return [];
     }
 
@@ -349,13 +350,13 @@ const getCachedNotifications = (): HomeNotification[] => {
 };
 
 const saveCachedNotifications = (notifications: HomeNotification[]) => {
-    if (typeof window !== "undefined") {
+    if (typeof globalThis.window !== "undefined") {
         globalThis.localStorage.setItem(HOME_NOTIFICATIONS_CACHE_KEY, JSON.stringify(notifications));
     }
 };
 
 const saveStoredIds = (key: string, ids: string[]) => {
-    if (typeof window !== "undefined") {
+    if (typeof globalThis.window !== "undefined") {
         globalThis.localStorage.setItem(key, JSON.stringify(ids));
     }
 };
@@ -400,14 +401,25 @@ const isNotificationDismissible = (notification: HomeNotification): boolean => {
     return notification.source !== "visitors";
 };
 
+const withTimeout = <T,>(promise: Promise<T>, fallback: T, ms = 7000): Promise<T> => {
+    const timeoutPromise = new Promise<T>((resolve) => {
+        globalThis.setTimeout(() => resolve(fallback), ms);
+    });
+    return Promise.race([
+        promise.catch(() => fallback),
+        timeoutPromise,
+    ]);
+};
+
 interface CentralNotificationBellProps {
-    onNavigate: (view: StudentTab) => void;
-    currentUserId: number | null;
-    currentUserEmail?: string;
-    isSessionUserResolved: boolean;
+    readonly onNavigate: (view: StudentTab) => void;
+    readonly currentUserId: number | null;
+    readonly currentUserEmail?: string;
+    readonly isSessionUserResolved: boolean;
 }
 
-export function CentralNotificationBell({ onNavigate, currentUserId, currentUserEmail = "", isSessionUserResolved }: CentralNotificationBellProps) {
+export function CentralNotificationBell(props: Readonly<CentralNotificationBellProps>) {
+    const { onNavigate, currentUserId, currentUserEmail = "", isSessionUserResolved } = props;
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
     const initialCachedNotificationsRef = useRef<HomeNotification[]>(getCachedNotifications());
     const initialCachedNotifications = initialCachedNotificationsRef.current;
@@ -441,6 +453,39 @@ export function CentralNotificationBell({ onNavigate, currentUserId, currentUser
         dismissedNotificationIdsRef.current = nextIds;
         saveStoredIds(HOME_NOTIFICATIONS_DISMISSED_IDS_KEY, nextIds);
     };
+
+    const handleNotificationCardDismiss = useCallback((notification: HomeNotification) => {
+        if (!isNotificationDismissible(notification)) {
+            return;
+        }
+        appendSeenNotificationIds([notification.id]);
+        appendDismissedNotificationIds([notification.id]);
+        if (notification.source === "incidences") {
+            appendDismissedIncidenceIds([notification.id]);
+        }
+        setNotifications((previous) => {
+            const next = previous.filter((item) => item.id !== notification.id);
+            saveCachedNotifications(next);
+            return next;
+        });
+    }, []);
+
+    const handleNotificationCardOpenSource = useCallback((notification: HomeNotification) => {
+        if (notification.source === "incidences") {
+            const incidenceIds = notifications
+                .filter((item) => item.source === "incidences")
+                .map((item) => item.id);
+            appendDismissedNotificationIds(incidenceIds);
+            appendDismissedIncidenceIds(incidenceIds);
+            setNotifications((previous) => {
+                const next = previous.filter((item) => item.source !== "incidences");
+                saveCachedNotifications(next);
+                return next;
+            });
+        }
+        setIsNotificationsOpen(false);
+        onNavigate(notification.source);
+    }, [notifications, onNavigate]);
 
     const buildAnnouncementItems = useCallback((announcements: AnnouncementList[]): HomeNotification[] => {
         const announcementsSeenAtMs = getAnnouncementsSeenAtMs();
@@ -575,15 +620,6 @@ export function CentralNotificationBell({ onNavigate, currentUserId, currentUser
         if (!silent) setIsNotificationsLoading(true);
 
         try {
-            const withTimeout = <T,>(promise: Promise<T>, fallback: T, ms = 7000): Promise<T> => {
-                return Promise.race([
-                    promise.catch(() => fallback),
-                    new Promise<T>((resolve) => {
-                        globalThis.setTimeout(() => resolve(fallback), ms);
-                    }),
-                ]);
-            };
-
             const [
                 announcementsRes,
                 unviewedRes,
@@ -618,12 +654,12 @@ export function CentralNotificationBell({ onNavigate, currentUserId, currentUser
                 ...buildReservationReminderItems(objectReservationsRes || []),
             ];
 
-            if (incidencesRes && incidencesRes.ok) {
+            if (incidencesRes?.ok) {
                 const data = await incidencesRes.json();
                 mergedNotifications.push(...buildIncidenceItems(data.results || []));
             }
 
-            if (eventsRes && eventsRes.ok) {
+            if (eventsRes?.ok) {
                 const eventsData = await eventsRes.json();
                 mergedNotifications.push(...buildEventItems(Array.isArray(eventsData) ? eventsData : []));
             }
@@ -686,6 +722,31 @@ export function CentralNotificationBell({ onNavigate, currentUserId, currentUser
         }
     };
 
+    const renderNotificationsContent = () => {
+        if (isNotificationsLoading && notifications.length === 0) {
+            return <p className="py-4 text-sm text-gray-500 text-center">Cargando notificaciones...</p>;
+        }
+
+        if (notifications.length === 0) {
+            return <p className="py-4 text-sm text-gray-500 text-center">No tienes notificaciones pendientes.</p>;
+        }
+
+        return notifications.map((notification) => (
+            <NotificationCard
+                key={notification.id}
+                icon={getNotificationIcon(notification.source)}
+                title={notification.title}
+                description={notification.description}
+                time={notification.time}
+                type={notification.type}
+                source={notification.source}
+                dismissible={isNotificationDismissible(notification)}
+                onDismiss={() => handleNotificationCardDismiss(notification)}
+                onOpenSource={() => handleNotificationCardOpenSource(notification)}
+            />
+        ));
+    };
+
     return (
         <Popover open={isNotificationsOpen} onOpenChange={handleNotificationsOpenChange}>
             <PopoverTrigger asChild>
@@ -708,57 +769,7 @@ export function CentralNotificationBell({ onNavigate, currentUserId, currentUser
                         <h3 className="font-semibold text-gray-900">Notificaciones</h3>
                     </div>
                     <div className="space-y-3">
-                        {isNotificationsLoading && notifications.length === 0 ? (
-                            <p className="py-4 text-sm text-gray-500 text-center">Cargando notificaciones...</p>
-                        ) : notifications.length === 0 ? (
-                            <p className="py-4 text-sm text-gray-500 text-center">No tienes notificaciones pendientes.</p>
-                        ) : (
-                            notifications.map((notification) => {
-                                return (
-                                    <NotificationCard
-                                        key={notification.id}
-                                        icon={getNotificationIcon(notification.source)}
-                                        title={notification.title}
-                                        description={notification.description}
-                                        time={notification.time}
-                                        type={notification.type}
-                                        source={notification.source}
-                                        dismissible={isNotificationDismissible(notification)}
-                                        onDismiss={() => {
-                                            if (!isNotificationDismissible(notification)) {
-                                                return;
-                                            }
-                                            appendSeenNotificationIds([notification.id]);
-                                            appendDismissedNotificationIds([notification.id]);
-                                            if (notification.source === "incidences") {
-                                                appendDismissedIncidenceIds([notification.id]);
-                                            }
-                                            setNotifications((previous) => {
-                                                const next = previous.filter((item) => item.id !== notification.id);
-                                                saveCachedNotifications(next);
-                                                return next;
-                                            });
-                                        }}
-                                        onOpenSource={() => {
-                                            if (notification.source === "incidences") {
-                                                const incidenceIds = notifications
-                                                    .filter((item) => item.source === "incidences")
-                                                    .map((item) => item.id);
-                                                appendDismissedNotificationIds(incidenceIds);
-                                                appendDismissedIncidenceIds(incidenceIds);
-                                                setNotifications((previous) => {
-                                                    const next = previous.filter((item) => item.source !== "incidences");
-                                                    saveCachedNotifications(next);
-                                                    return next;
-                                                });
-                                            }
-                                            setIsNotificationsOpen(false);
-                                            onNavigate(notification.source);
-                                        }}
-                                    />
-                                );
-                            })
-                        )}
+                        {renderNotificationsContent()}
                     </div>
                 </div>
             </PopoverContent>

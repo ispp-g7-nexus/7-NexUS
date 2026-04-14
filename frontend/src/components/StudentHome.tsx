@@ -48,6 +48,16 @@ const VISIT_URGENT_NOTIFICATION_KEY_BASE = "visit-urgent-shared-notifications";
 const NOTIFICATIONS_POLL = 5000;
 const NOTIFICATIONS_LIMIT = 12;
 
+const withTimeout = <T,>(promise: Promise<T>, fallback: T, ms = 7000): Promise<T> => {
+    const timeoutPromise = new Promise<T>((resolve) => {
+        globalThis.setTimeout(() => resolve(fallback), ms);
+    });
+    return Promise.race([
+        promise.catch(() => fallback),
+        timeoutPromise,
+    ]);
+};
+
 type VisitUrgentSharedNotification = {
     id: string;
     title: string;
@@ -103,7 +113,7 @@ const formatRelativeFuture = (isoDate: string) => {
 };
 
 const getInitialSeenIds = (): string[] => {
-    if (typeof window === "undefined") {
+    if (typeof globalThis.window === "undefined") {
         return [];
     }
 
@@ -111,7 +121,7 @@ const getInitialSeenIds = (): string[] => {
 };
 
 const getInitialDismissedNotificationIds = (): string[] => {
-    if (typeof window === "undefined") {
+    if (typeof globalThis.window === "undefined") {
         return [];
     }
 
@@ -119,7 +129,7 @@ const getInitialDismissedNotificationIds = (): string[] => {
 };
 
 const getInitialDismissedIncidenceIds = (): string[] => {
-    if (typeof window === "undefined") {
+    if (typeof globalThis.window === "undefined") {
         return [];
     }
 
@@ -127,13 +137,13 @@ const getInitialDismissedIncidenceIds = (): string[] => {
 };
 
 const saveStoredIds = (key: string, ids: string[]) => {
-    if (typeof window !== "undefined") {
+    if (typeof globalThis.window !== "undefined") {
         globalThis.localStorage.setItem(key, JSON.stringify(ids));
     }
 };
 
 const getAnnouncementsSeenAtMs = (): number => {
-    if (typeof window === "undefined") {
+    if (typeof globalThis.window === "undefined") {
         return 0;
     }
 
@@ -147,7 +157,7 @@ const getAnnouncementsSeenAtMs = (): number => {
 };
 
 const getIncidencesSeenAtMs = (): number => {
-    if (typeof window === "undefined") {
+    if (typeof globalThis.window === "undefined") {
         return 0;
     }
 
@@ -242,7 +252,7 @@ type EventItem = {
 type ReservationNotificationItem = ReservationReminderNotification;
 
 const getCachedNotifications = (): HomeNotification[] => {
-    if (typeof window === "undefined") {
+    if (typeof globalThis.window === "undefined") {
         return [];
     }
 
@@ -283,7 +293,7 @@ const getCachedNotifications = (): HomeNotification[] => {
 };
 
 const saveCachedNotifications = (notifications: HomeNotification[]) => {
-    if (typeof window !== "undefined") {
+    if (typeof globalThis.window !== "undefined") {
         globalThis.localStorage.setItem(HOME_NOTIFICATIONS_CACHE_KEY, JSON.stringify(notifications));
     }
 };
@@ -669,15 +679,6 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
         if (!silent) setIsNotificationsLoading(true);
 
         try {
-            const withTimeout = <T,>(promise: Promise<T>, fallback: T, ms = 7000): Promise<T> => {
-                return Promise.race([
-                    promise.catch(() => fallback),
-                    new Promise<T>((resolve) => {
-                        globalThis.setTimeout(() => resolve(fallback), ms);
-                    }),
-                ]);
-            };
-
             // 2. Ejecución paralela de peticiones
             const [
                 announcementsRes,
@@ -713,13 +714,12 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                 ...buildReservationReminderItems(objectReservationsRes || []),
             ];
 
-            // 4. Procesamiento de respuestas tipo Fetch (Incidencias y Eventos)
-            if (incidencesRes && incidencesRes.ok) {
+            if (incidencesRes?.ok) {
                 const data = await incidencesRes.json();
                 mergedNotifications.push(...buildIncidenceItems(data.results || []));
             }
 
-            if (eventsRes && eventsRes.ok) {
+            if (eventsRes?.ok) {
                 const eventsData = await eventsRes.json();
                 mergedNotifications.push(...buildEventItems(Array.isArray(eventsData) ? eventsData : []));
             }

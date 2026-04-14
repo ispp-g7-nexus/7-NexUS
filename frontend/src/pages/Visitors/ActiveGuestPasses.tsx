@@ -781,9 +781,9 @@ function CreateGuestPassForm({
 }
 
 interface ActiveGuestPassesPageProps {
-  onGoToProfile?: () => void;
-  onLogout?: () => void;
-  onNavigate?: (view: StudentTab) => void;
+  readonly onGoToProfile?: () => void;
+  readonly onLogout?: () => void;
+  readonly onNavigate?: (view: StudentTab) => void;
 }
 
 function toErrorMessage(unknownError: unknown): string {
@@ -880,7 +880,8 @@ async function submitGuestPass({
   }
 }
 
-export function ActiveGuestPassesPage({ onGoToProfile, onLogout, onNavigate }: ActiveGuestPassesPageProps) {
+export function ActiveGuestPassesPage(props: Readonly<ActiveGuestPassesPageProps>) {
+  const { onGoToProfile, onLogout, onNavigate } = props;
   const [activePasses, setActivePasses] = useState<GuestPass[]>([]);
   const [upcomingPasses, setUpcomingPasses] = useState<GuestPass[]>([]);
   const [historyPasses, setHistoryPasses] = useState<GuestPass[]>([]);

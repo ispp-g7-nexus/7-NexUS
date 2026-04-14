@@ -3,12 +3,13 @@ import { CentralNotificationBell, type StudentTab } from "../CentralNotification
 import { authService } from "../../services/auth";
 
 interface NotificationBellProps {
-  onMarkAsRead?: () => void;
-  className?: string;
-  mode?: "notifications" | "announcements";
-  onNavigate?: (view: StudentTab) => void;
+  readonly onMarkAsRead?: () => void;
+  readonly className?: string;
+  readonly mode?: "notifications" | "announcements";
+  readonly onNavigate?: (view: StudentTab) => void;
 }
-export function NotificationBell({ onMarkAsRead, className, mode = "notifications", onNavigate }: NotificationBellProps) {
+export function NotificationBell(props: Readonly<NotificationBellProps>) {
+  const { onMarkAsRead, className, mode = "notifications", onNavigate } = props;
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [currentUserEmail, setCurrentUserEmail] = useState("");
   const [isSessionUserResolved, setIsSessionUserResolved] = useState(false);
