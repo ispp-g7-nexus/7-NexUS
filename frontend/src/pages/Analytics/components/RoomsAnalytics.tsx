@@ -33,10 +33,10 @@ import {
 function BuildingTooltip({
   active,
   payload,
-}: {
+}: Readonly<{
   active?: boolean;
   payload?: Array<{ payload: OccupationByBuilding }>;
-}) {
+}>) {
   if (!active || !payload || payload.length === 0) return null;
   const d = payload[0].payload;
   return (
@@ -56,10 +56,10 @@ function BuildingTooltip({
 function TypeTooltip({
   active,
   payload,
-}: {
+}: Readonly<{
   active?: boolean;
   payload?: Array<{ payload: OccupationByType }>;
-}) {
+}>) {
   if (!active || !payload || payload.length === 0) return null;
   const d = payload[0].payload;
   return (
@@ -78,10 +78,10 @@ function TypeTooltip({
 function YearTooltip({
   active,
   payload,
-}: {
+}: Readonly<{
   active?: boolean;
   payload?: Array<{ payload: OccupationByYear }>;
-}) {
+}>) {
   if (!active || !payload || payload.length === 0) return null;
   const d = payload[0].payload;
   return (
@@ -319,8 +319,8 @@ export function RoomsAnalytics() {
                   )}
                   <div className="mt-3 flex flex-wrap gap-3 text-xs text-gray-500">
                     <span className="inline-flex items-center gap-1.5">
-                      <span className="inline-block h-3 w-3 rounded-sm bg-slate-200" />
-                      Capacidad total
+                      <span className="inline-block h-3 w-3 rounded-sm bg-slate-200"></span>
+                      {" "}Capacidad total
                     </span>
                     {analytics.occupation_by_type.map((item) => (
                       <span key={item.tipo} className="inline-flex items-center gap-1.5">

@@ -49,7 +49,7 @@ test.describe('Analíticas — Paquetería: resumen', () => {
 
   test('muestra los paquetes pendientes en conserjería', async ({ page }) => {
     await expect(page.getByText('Pendientes ahora en conserjería', { exact: true })).toBeVisible({ timeout: 10000 })
-    await expect(page.getByText('4', { exact: true })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('heading', { name: '4' })).toBeVisible({ timeout: 10000 })
   })
 })
 

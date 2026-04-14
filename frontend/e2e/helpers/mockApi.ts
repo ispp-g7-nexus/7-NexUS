@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test'
+import type { Page, Route } from '@playwright/test'
 
 const ADMIN_ME = {
   authenticated: true,
@@ -134,15 +134,44 @@ export const MOCK_INCIDENCE_ANALYTICS = {
   meta: { from: '2026-03-15', to: '2026-03-17' },
 }
 
-export async function mockAdminApi(page: Page, overrides: {
+type Overrides = {
   bedrooms?: unknown[]
   guestPasses?: unknown[]
   auditLog?: unknown[]
   bedroomAnalytics?: unknown
   packageAnalytics?: unknown
   incidenceAnalytics?: unknown
-} = {}) {
-  const bedrooms = overrides.bedrooms ?? [MOCK_BEDROOM]
+}
+
+async function handleBedroomsRoute(route: Route, path: string, overrides: Overrides) {
+  if (path === '/api/bedrooms/') {
+    await route.fulfill(json(overrides.bedrooms ?? [MOCK_BEDROOM]))
+  } else if (path === '/api/bedrooms/analytics/') {
+    await route.fulfill(json(overrides.bedroomAnalytics ?? MOCK_BEDROOM_ANALYTICS))
+  } else if (path.endsWith('/audit/')) {
+    await route.fulfill(json(overrides.auditLog ?? []))
+  } else {
+    await route.fulfill(json([]))
+  }
+}
+
+async function handlePackagesRoute(route: Route, path: string, overrides: Overrides) {
+  if (path === '/api/packages/analytics/') {
+    await route.fulfill(json(overrides.packageAnalytics ?? MOCK_PACKAGE_ANALYTICS))
+  } else {
+    await route.fulfill(json([]))
+  }
+}
+
+async function handleIncidencesRoute(route: Route, path: string, overrides: Overrides) {
+  if (path === '/api/incidences/analytics/') {
+    await route.fulfill(json(overrides.incidenceAnalytics ?? MOCK_INCIDENCE_ANALYTICS))
+  } else {
+    await route.fulfill(json([]))
+  }
+}
+
+export async function mockAdminApi(page: Page, overrides: Overrides = {}) {
   const guestPasses = overrides.guestPasses ?? []
 
   await page.route('**/api/**', async (route) => {
@@ -153,55 +182,20 @@ export async function mockAdminApi(page: Page, overrides: {
     } else if (path === '/api/residences/branding/') {
       await route.fulfill(json({ logo_url: null, primary_color: '#4A8F5D', secondary_color: '#0F4C81', accent_color: '#2E7D32', custom_css: '', favicon_url: '' }))
     } else if (path.startsWith('/api/bedrooms/')) {
-      if (path === '/api/bedrooms/') {
-        await route.fulfill(json(bedrooms))
-      } else if (path === '/api/bedrooms/analytics/') {
-        await route.fulfill(json(overrides.bedroomAnalytics ?? MOCK_BEDROOM_ANALYTICS))
-      } else if (path.endsWith('/audit/')) {
-        const auditLog = overrides.auditLog ?? []
-        await route.fulfill(json(auditLog))
-      } else {
-        await route.fulfill(json([]))
-      }
+      await handleBedroomsRoute(route, path, overrides)
     } else if (path === '/api/admin/guest-passes/') {
       await route.fulfill(json(guestPasses))
     } else if (path === '/api/admin/guest-passes/policy/') {
       await route.fulfill(json({ max_duration_hours: 24, max_concurrent_passes: 3 }))
-    } else if (path === '/api/admin/guest-passes/notifications/') {
-      await route.fulfill(json([]))
-    } else if (path === '/api/chats/groups/') {
-      await route.fulfill(json([]))
-    } else if (path.startsWith('/api/announcements/')) {
+    } else if (path.startsWith('/api/admin/guest-passes/')) {
       await route.fulfill(json([]))
     } else if (path.startsWith('/api/incidences/')) {
-      if (path === '/api/incidences/analytics/') {
-        await route.fulfill(json(overrides.incidenceAnalytics ?? MOCK_INCIDENCE_ANALYTICS))
-      } else {
-        await route.fulfill(json([]))
-      }
-    } else if (path.startsWith('/api/residents/')) {
-      await route.fulfill(json([]))
-    } else if (path.startsWith('/api/staff/')) {
-      await route.fulfill(json([]))
-    } else if (path === '/api/admin/spaces/notifications/') {
-      await route.fulfill(json([]))
-    } else if (path === '/api/admin/objects/notifications/') {
-      await route.fulfill(json([]))
-    } else if (path.startsWith('/api/events/')) {
-      await route.fulfill(json([]))
+      await handleIncidencesRoute(route, path, overrides)
     } else if (path.startsWith('/api/packages/')) {
-      if (path === '/api/packages/analytics/') {
-        await route.fulfill(json(overrides.packageAnalytics ?? MOCK_PACKAGE_ANALYTICS))
-      } else {
-        await route.fulfill(json([]))
-      }
-    } else if (path.startsWith('/api/spaces/') || path.startsWith('/api/admin/spaces/')) {
+      await handlePackagesRoute(route, path, overrides)
+    } else if (path.startsWith('/api/announcements/') || path.startsWith('/api/events/') || path.startsWith('/api/residents/') || path.startsWith('/api/staff/') || path.startsWith('/api/membership/')) {
       await route.fulfill(json([]))
-    } else if (path.startsWith('/api/objects/') || path.startsWith('/api/admin/objects/')) {
-      await route.fulfill(json([]))
-    } else if (path.startsWith('/api/chats/')) {
-      await route.fulfill(json([]))
-    } else if (path.startsWith('/api/membership/')) {
+    } else if (path.startsWith('/api/spaces/') || path.startsWith('/api/admin/spaces/') || path.startsWith('/api/objects/') || path.startsWith('/api/admin/objects/') || path.startsWith('/api/chats/')) {
       await route.fulfill(json([]))
     } else {
       throw new Error(`Unmocked API route: ${route.request().url()}`)

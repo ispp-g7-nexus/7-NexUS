@@ -253,6 +253,22 @@ class IncidenceAnalyticsView(APIView):
 
     _OPEN_STATUSES = {"pending", "reviewing", "in_progress"}
 
+    @staticmethod
+    def _resolved_by_staff(resolved_qs):
+        staff_counts: dict = {}
+        for inc in resolved_qs:
+            if inc.assigned_staff:
+                name = inc.assigned_staff.user.get_full_name() or inc.assigned_staff.user.username
+            elif inc.assigned_external_name:
+                name = inc.assigned_external_name
+            else:
+                name = "Sin asignar"
+            staff_counts[name] = staff_counts.get(name, 0) + 1
+        return sorted(
+            [{"staff_name": n, "resolved_count": c} for n, c in staff_counts.items()],
+            key=lambda x: -x["resolved_count"],
+        )
+
     def get(self, request):
         from_str = (request.query_params.get("from") or "").strip()
         to_str = (request.query_params.get("to") or "").strip()
@@ -283,7 +299,11 @@ class IncidenceAnalyticsView(APIView):
         currently_open = base_qs.filter(status__in=self._OPEN_STATUSES).count()
 
         avg_result = (
-            base_qs.filter(status="resolved")
+            base_qs.filter(
+                status="resolved",
+                updated_at__date__gte=from_date,
+                updated_at__date__lte=to_date,
+            )
             .annotate(
                 duration=ExpressionWrapper(
                     F("updated_at") - F("created_at"), output_field=DurationField()
@@ -323,23 +343,7 @@ class IncidenceAnalyticsView(APIView):
             updated_at__date__lte=to_date,
         ).select_related("assigned_staff__user")
 
-        staff_counts: dict = {}
-        for inc in resolved_in_period:
-            if inc.assigned_staff:
-                name = (
-                    inc.assigned_staff.user.get_full_name()
-                    or inc.assigned_staff.user.username
-                )
-            elif inc.assigned_external_name:
-                name = inc.assigned_external_name
-            else:
-                name = "Sin asignar"
-            staff_counts[name] = staff_counts.get(name, 0) + 1
-
-        resolved_by_staff = sorted(
-            [{"staff_name": n, "resolved_count": c} for n, c in staff_counts.items()],
-            key=lambda x: -x["resolved_count"],
-        )
+        resolved_by_staff = self._resolved_by_staff(resolved_in_period)
 
         return Response({
             "summary": {

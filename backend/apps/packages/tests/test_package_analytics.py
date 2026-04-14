@@ -45,7 +45,7 @@ class PackageAnalyticsViewTests(TenantTestCase):
 
     def setUp(self):
         super().setUp()
-        User = get_user_model()
+        user_model = get_user_model()
 
         self.residence = Residence.objects.create(
             name="Residencia Packages",
@@ -81,24 +81,24 @@ class PackageAnalyticsViewTests(TenantTestCase):
             residence=self.residence,
         )
 
-        self.admin_user = User.objects.create_user(
+        self.admin_user = user_model.objects.create_user(
             username="pkg-admin",
             email="pkg-admin@test.local",
             password=TEST_PASSWORD,
         )
-        self.student_user = User.objects.create_user(
+        self.student_user = user_model.objects.create_user(
             username="pkg-student",
             email="pkg-student@test.local",
             password=TEST_PASSWORD,
         )
-        self.resident_a_user = User.objects.create_user(
+        self.resident_a_user = user_model.objects.create_user(
             username="resident-a",
             email="resident-a@test.local",
             password=TEST_PASSWORD,
             first_name="Ana",
             last_name="García",
         )
-        self.resident_b_user = User.objects.create_user(
+        self.resident_b_user = user_model.objects.create_user(
             username="resident-b",
             email="resident-b@test.local",
             password=TEST_PASSWORD,
@@ -148,7 +148,7 @@ class PackageAnalyticsViewTests(TenantTestCase):
             is_active=True,
             bedroom=self.bedroom,
         )
-        other_user = User.objects.create_user(username="other-res", email="other@test.local", password="x")
+        other_user = user_model.objects.create_user(username="other-res", email="other@test.local", password="x")  # NOSONAR
         self.other_resident = Membership.objects.create(
             user=other_user,
             role=self.student_role,

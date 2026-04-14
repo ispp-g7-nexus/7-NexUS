@@ -81,11 +81,11 @@ function OpenByDayTooltip({
   active,
   payload,
   label,
-}: {
+}: Readonly<{
   active?: boolean;
   payload?: Array<{ value: number }>;
   label?: string;
-}) {
+}>) {
   if (!active || !payload || payload.length === 0) return null;
   return (
     <div className="rounded-md border bg-white p-2 shadow-sm text-xs">
@@ -98,10 +98,10 @@ function OpenByDayTooltip({
 function StaffTooltip({
   active,
   payload,
-}: {
+}: Readonly<{
   active?: boolean;
   payload?: Array<{ payload: IncidenceResolvedByStaff }>;
-}) {
+}>) {
   if (!active || !payload || payload.length === 0) return null;
   const d = payload[0].payload;
   return (
@@ -154,7 +154,7 @@ export function IncidencesAnalytics() {
   }, []);
 
   useEffect(() => {
-    void load(from, to);
+    load(from, to);
   }, [from, to, load]);
 
   const openByDayData = useMemo<(IncidenceOpenByDay & { label: string })[]>(
@@ -211,7 +211,7 @@ export function IncidencesAnalytics() {
               type="button"
               variant="outline"
               className="w-full md:w-auto"
-              onClick={() => void load(from, to)}
+              onClick={() => { load(from, to); }}
               disabled={loading}
             >
               <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
@@ -246,7 +246,7 @@ export function IncidencesAnalytics() {
               <AlertCircle className="h-4 w-4" />
               {error}
             </div>
-            <Button type="button" variant="outline" onClick={() => void load(from, to)}>
+            <Button type="button" variant="outline" onClick={() => { load(from, to); }}>
               Reintentar
             </Button>
           </CardContent>
@@ -289,9 +289,9 @@ export function IncidencesAnalytics() {
                 <CardDescription>Tiempo medio de resolución</CardDescription>
                 <CardTitle className="flex items-center gap-2 text-3xl font-semibold">
                   <Clock className="h-5 w-5 text-indigo-500" />
-                  {analytics.summary.avg_resolution_hours !== null
-                    ? `${analytics.summary.avg_resolution_hours}h`
-                    : "—"}
+                  {analytics.summary.avg_resolution_hours === null
+                    ? "—"
+                    : `${analytics.summary.avg_resolution_hours}h`}
                 </CardTitle>
               </CardHeader>
             </Card>

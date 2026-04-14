@@ -46,7 +46,7 @@ class IncidenceAnalyticsViewTests(TenantTestCase):
 
     def setUp(self):
         super().setUp()
-        User = get_user_model()
+        user_model = get_user_model()
 
         with schema_context(self.tenant.schema_name):
             self.residence = Residence.objects.create(
@@ -76,7 +76,7 @@ class IncidenceAnalyticsViewTests(TenantTestCase):
                 residence=self.residence,
             )
 
-            self.admin_user = User.objects.create_user(
+            self.admin_user = user_model.objects.create_user(
                 username="inc-admin",
                 email="inc-admin@test.local",
                 password=TEST_PASSWORD,
@@ -84,19 +84,19 @@ class IncidenceAnalyticsViewTests(TenantTestCase):
                 last_name="User",
                 is_staff=True,
             )
-            self.student_user = User.objects.create_user(
+            self.student_user = user_model.objects.create_user(
                 username="inc-student",
                 email="inc-student@test.local",
                 password=TEST_PASSWORD,
             )
-            self.staff_user_a = User.objects.create_user(
+            self.staff_user_a = user_model.objects.create_user(
                 username="staff-a",
                 email="staff-a@test.local",
                 password=TEST_PASSWORD,
                 first_name="María",
                 last_name="García",
             )
-            self.staff_user_b = User.objects.create_user(
+            self.staff_user_b = user_model.objects.create_user(
                 username="staff-b",
                 email="staff-b@test.local",
                 password=TEST_PASSWORD,

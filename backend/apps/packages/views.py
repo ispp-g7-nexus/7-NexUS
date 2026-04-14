@@ -237,8 +237,8 @@ class PackageAnalyticsView(APIView):
         try:
             from_date = date.fromisoformat(from_str) if from_str else date.today() - timedelta(days=29)
             to_date = date.fromisoformat(to_str) if to_str else date.today()
-        except ValueError:
-            raise ValidationError({"detail": "Formato de fecha inválido. Usa YYYY-MM-DD."})
+        except ValueError as err:
+            raise ValidationError({"detail": "Formato de fecha inválido. Usa YYYY-MM-DD."}) from err
 
         if from_date > to_date:
             raise ValidationError({"detail": "La fecha inicial debe ser anterior o igual a la final."})

@@ -36,7 +36,7 @@ class BedroomAnalyticsViewTests(FastTenantTestCase):
 
     def setUp(self):
         super().setUp()
-        User = get_user_model()
+        user_model = get_user_model()
 
         self.residence = Residence.objects.create(
             name="Residencia Analytics",
@@ -67,13 +67,13 @@ class BedroomAnalyticsViewTests(FastTenantTestCase):
         )
 
         # Admin user: is_staff=True grants access via has_screen_permission
-        self.admin_user = User.objects.create_user(
+        self.admin_user = user_model.objects.create_user(
             username="analytics-admin",
             email="analytics-admin@test.local",
             password="demo1234",  # NOSONAR
             is_staff=True,
         )
-        self.student_user = User.objects.create_user(
+        self.student_user = user_model.objects.create_user(
             username="analytics-student",
             email="analytics-student@test.local",
             password="demo1234",  # NOSONAR
@@ -99,8 +99,8 @@ class BedroomAnalyticsViewTests(FastTenantTestCase):
         )
 
     def _student(self, username, bedroom=None, is_active=True, residence=None):
-        User = get_user_model()
-        user = User.objects.create_user(username=username, email=f"{username}@test.local", password="x")
+        user_model = get_user_model()
+        user = user_model.objects.create_user(username=username, email=f"{username}@test.local", password="x")  # NOSONAR
         return Membership.objects.create(
             user=user,
             role=self.student_role,
@@ -186,7 +186,7 @@ class BedroomAnalyticsViewTests(FastTenantTestCase):
     def test_occupation_by_building_groups_correctly(self):
         room_a1 = self._bedroom("A101", Bedroom.Tipo.INDIVIDUAL, 1, edificio="A")
         room_a2 = self._bedroom("A102", Bedroom.Tipo.DOBLE, 2, edificio="A")
-        room_b1 = self._bedroom("B101", Bedroom.Tipo.INDIVIDUAL, 1, edificio="B")
+        self._bedroom("B101", Bedroom.Tipo.INDIVIDUAL, 1, edificio="B")
 
         self._student("sa1", bedroom=room_a1)
         self._student("sa2", bedroom=room_a2)
@@ -217,7 +217,7 @@ class BedroomAnalyticsViewTests(FastTenantTestCase):
 
     def test_occupation_by_type_groups_correctly(self):
         ind_room = self._bedroom("101", Bedroom.Tipo.INDIVIDUAL, 1)
-        dbl_room = self._bedroom("102", Bedroom.Tipo.DOBLE, 2)
+        self._bedroom("102", Bedroom.Tipo.DOBLE, 2)
         self._student("s1", bedroom=ind_room)
         # dbl_room left empty
 

@@ -82,11 +82,11 @@ function DailyTooltip({
   active,
   payload,
   label,
-}: {
+}: Readonly<{
   active?: boolean;
   payload?: Array<{ name: string; value: number; color: string }>;
   label?: string;
-}) {
+}>) {
   if (!active || !payload || payload.length === 0) return null;
   return (
     <div className="rounded-md border bg-white p-2 shadow-sm text-xs space-y-0.5">
@@ -103,10 +103,10 @@ function DailyTooltip({
 function ResidentTooltip({
   active,
   payload,
-}: {
+}: Readonly<{
   active?: boolean;
   payload?: Array<{ payload: PackageByResident }>;
-}) {
+}>) {
   if (!active || !payload || payload.length === 0) return null;
   const d = payload[0].payload;
   return (
@@ -163,7 +163,7 @@ export function PackagesAnalytics() {
   );
 
   useEffect(() => {
-    void load(from, to);
+    load(from, to);
   }, [from, to, load]);
 
   // Thin out X-axis labels when many days
@@ -243,7 +243,7 @@ export function PackagesAnalytics() {
               type="button"
               variant="outline"
               className="w-full md:w-auto"
-              onClick={() => void load(from, to)}
+              onClick={() => { load(from, to); }}
               disabled={loading}
             >
               <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
@@ -278,7 +278,7 @@ export function PackagesAnalytics() {
               <AlertCircle className="h-4 w-4" />
               {error}
             </div>
-            <Button type="button" variant="outline" onClick={() => void load(from, to)}>
+            <Button type="button" variant="outline" onClick={() => { load(from, to); }}>
               Reintentar
             </Button>
           </CardContent>
