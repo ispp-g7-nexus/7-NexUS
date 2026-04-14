@@ -260,7 +260,7 @@ export function ProfileEditForm({
                 value={formData.nickname}
                 onChange={handleInputChange}
                 maxLength={30}
-                placeholder={formData.name ? formData.name.split(" ")[1] : "Tu apodo"}
+                placeholder={formData.name ? formData.name.split(" ")[0] : "Tu apodo"}
               />
             </div>
 
