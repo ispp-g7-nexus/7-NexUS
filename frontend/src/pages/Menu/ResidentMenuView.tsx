@@ -3,10 +3,12 @@ import { useState, useEffect, JSX, useCallback } from "react";
 import { MenuWeek, MenuDay, Meal } from "../../types/menu.types";
 import { NotificationBell } from "../../components/announcement/NotificationBell";
 import { Button } from "../../components/ui/button";
+import type { StudentTab } from "../../components/StudentHome";
 
 interface ResidentMenuViewProps {
   readonly onGoToProfile?: () => void;
   readonly onLogout?: () => void;
+  readonly onNavigate?: (view: StudentTab) => void;
 }
 import menuService from "../../services/menu.service";
 import { toast } from "sonner";
@@ -135,7 +137,7 @@ const DayMenuCard = ({ day }: { day: MenuDay }) => {
   );
 };
 
-export function ResidentMenuView({ onGoToProfile, onLogout }: ResidentMenuViewProps) {
+export function ResidentMenuView({ onGoToProfile, onLogout, onNavigate }: ResidentMenuViewProps) {
   const [menuWeek, setMenuWeek] = useState<MenuWeek | null>(null);
   const [allWeeks, setAllWeeks] = useState<MenuWeek[]>([]);
   const [selectedWeekId, setSelectedWeekId] = useState<string | null>(null);
@@ -296,7 +298,7 @@ export function ResidentMenuView({ onGoToProfile, onLogout }: ResidentMenuViewPr
       <header className="bg-primary p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg sticky top-0 z-20">
         <h1 className="text-primary-foreground text-2xl font-bold">Menú</h1>
         <div className="flex items-center gap-2">
-          <NotificationBell />
+          <NotificationBell onNavigate={onNavigate} />
           <Button
             className="text-primary-foreground hover:bg-primary-foreground/20 hover:scale-110 rounded-full transition-all"
             onClick={() => onGoToProfile?.()}

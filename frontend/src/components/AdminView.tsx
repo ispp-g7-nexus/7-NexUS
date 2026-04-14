@@ -94,6 +94,15 @@ const formatRelativeTime = (isoDate: string) => {
     return `Hace ${diffInDays} d`;
 };
 
+const isOpenIncidenceStatus = (status: unknown): boolean => {
+    if (typeof status !== "string") {
+        return false;
+    }
+
+    const normalized = status.trim().toLowerCase();
+    return normalized !== "resolved" && normalized !== "closed" && normalized !== "cancelled";
+};
+
 const getCardClassesBySource = (source: AdminNotificationSource) => {
     if (source === "incidences") return "bg-red-50 border-red-200";
     if (source === "announcements") return "bg-blue-50 border-blue-200";
@@ -406,7 +415,9 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
         }
 
         if (hasScreenPermission(activeUser, 'incidences')) {
-            IncidenceService.getAll().then((d) => setPendingIncidences(d.filter(i => i.status === 'pending').length)).catch(() => setPendingIncidences(0));
+            IncidenceService.getAll()
+                .then((d) => setPendingIncidences(d.filter((i) => i.is_active !== false && isOpenIncidenceStatus(i.status)).length))
+                .catch(() => setPendingIncidences(0));
         }
 
         if (hasScreenPermission(activeUser, 'roles')) {
@@ -777,6 +788,11 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
                                                 {item.id === "announcements" && unreadAnnouncementsCount > 0 && (
                                                     <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-500 px-1.5 text-[10px] font-semibold text-white">
                                                         {unreadAnnouncementsCount > 9 ? "9+" : unreadAnnouncementsCount}
+                                                    </span>
+                                                )}
+                                                {item.id === "chats" && unreadChatsCount > 0 && (
+                                                    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-indigo-500 px-1.5 text-[10px] font-semibold text-white">
+                                                        {unreadChatsCount > 9 ? "9+" : unreadChatsCount}
                                                     </span>
                                                 )}
                                             </button>

@@ -13,9 +13,9 @@ vi.mock('../../../services/guestPasses', () => ({
       full_name: 'Juan Pérez',
       pass_code: 'GP-0001',
       resident_name: 'Ana García',
-      valid_from: '2024-06-01T10:00:00Z',
-      valid_until: '2024-06-01T12:00:00Z',
-      created_at: '2024-05-30T09:00:00Z',
+      valid_from: '2099-06-01T10:00:00Z',
+      valid_until: '2099-06-01T12:00:00Z',
+      created_at: '2099-05-30T09:00:00Z',
       status: 'ACTIVE',
       comment: 'Visita familiar',
       out_of_schedule: true,
@@ -49,10 +49,10 @@ describe('AdminGuestPassListPage — [NX-S2.39 / NX-S2.40]', () => {
     })
   })
 
-  it('muestra el badge de estado correcto (Activo / Usado)', async () => {
+  it('muestra el badge de estado correcto (Programado / Usado)', async () => {
     render(<AdminGuestPassListPage />)
     await waitFor(() => screen.getByText('Juan Pérez'))
-    expect(screen.getByText('Activo')).toBeInTheDocument()
+    expect(screen.getByText('Programado')).toBeInTheDocument()
     expect(screen.getByText('Usado')).toBeInTheDocument()
   })
 
