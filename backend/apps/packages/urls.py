@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 
 from .views import (
     PackageAdminViewSet,
+    PackageAnalyticsView,
     PackageLabelPreviewView,
     ResidentPackageDeliveryQrView,
     ResidentPackageListView,
@@ -14,6 +15,7 @@ router = DefaultRouter()
 router.register(r"packages", PackageAdminViewSet, basename="package")
 
 urlpatterns = [
+    path("packages/analytics/", PackageAnalyticsView.as_view(), name="package-analytics"),
     path("packages/label-preview/", PackageLabelPreviewView.as_view(), name="package-label-preview"),
     path("packages/me/", ResidentPackageListView.as_view(), name="package-me-list"),
     path(
