@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Plus, MapPin, User, Wrench, MessageSquare, Clock, Pencil, Trash2, LogOut } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent } from "../../../components/ui/card";
@@ -84,10 +84,10 @@ export default function StudentIncidences({ onGoToProfile, onLogout, onNavigate 
   };
 
   const filteredIncidences = incidences.filter((inc) => {
-    if (inc.location_type === 'habitacion' && (inc as any).is_mine === false) {
+    if (inc.location_type === 'habitacion' && inc.is_mine === false) {
       return false;
     }
-    if (showOnlyMine && (inc as any).is_mine === false) return false;
+    if (showOnlyMine && inc.is_mine === false) return false;
     return applyIncidenceFilters(inc, { search, location: filterLocation, status: filterStatus, priority: filterPriority });
   });
 
