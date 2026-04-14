@@ -99,7 +99,6 @@ class MenuModuleTests(FastTenantTestCase):
         self.resident_client = self._auth_client(self.resident_user, self.residence)
         self.anon_client = TenantClient(self.tenant)
 
-        # Fechas de semana reutilizables
         self.week_start = datetime.date(2025, 1, 6)   # lunes
         self.week_end = datetime.date(2025, 1, 12)    # domingo
 
@@ -116,7 +115,6 @@ class MenuModuleTests(FastTenantTestCase):
                 created_by=self.admin_user,
                 is_published=published,
             )
-            # Crear días para la semana
             day_names = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
             current = self.week_start
             while current <= self.week_end:
@@ -136,6 +134,23 @@ class MenuModuleTests(FastTenantTestCase):
                 description="Con chorizo",
                 type=meal_type,
             )
+
+    def _create_special_request(self, user=None, description="Petición de prueba", status="pending"):
+        with tenant_context(self.tenant):
+            return SpecialMenuRequest.objects.create(
+                residence=self.tenant,
+                user=user or self.resident_user,
+                date=datetime.date(2025, 2, 14),
+                description=description,
+                status=status,
+            )
+
+    def _patch_status(self, client, req_id, new_status):
+        return client.patch(
+            f"/api/menu/special-requests/{req_id}/update_status/",
+            data=json.dumps({"status": new_status}),
+            content_type="application/json",
+        )
 
     # ------------------------------------------------------------------ #
     # MenuWeek – CRUD
@@ -380,6 +395,7 @@ class MenuModuleTests(FastTenantTestCase):
         data = {
             "date": "2025-02-14",
             "description": "Intolerancia a la lactosa",
+            "residence": self.tenant.id,
         }
         response = self.resident_client.post(
             "/api/menu/special-requests/",
@@ -409,106 +425,43 @@ class MenuModuleTests(FastTenantTestCase):
 
     def test_resident_only_sees_own_requests(self):
         """Residente solo ve sus propias peticiones"""
-        with tenant_context(self.tenant):
-            SpecialMenuRequest.objects.create(
-                residence=self.tenant,
-                user=self.resident_user,
-                date=datetime.date(2025, 2, 14),
-                description="Mi petición",
-            )
-            SpecialMenuRequest.objects.create(
-                residence=self.tenant,
-                user=self.admin_user,
-                date=datetime.date(2025, 2, 15),
-                description="Petición del admin",
-            )
+        self._create_special_request(user=self.resident_user, description="Mi petición")
+        self._create_special_request(user=self.admin_user, description="Petición del admin")
         response = self.resident_client.get("/api/menu/special-requests/")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.json()), 1)
 
     def test_admin_can_list_all_requests(self):
         """Admin puede listar todas las peticiones especiales"""
-        with tenant_context(self.tenant):
-            SpecialMenuRequest.objects.create(
-                residence=self.tenant,
-                user=self.resident_user,
-                date=datetime.date(2025, 2, 14),
-                description="Petición residente",
-            )
+        self._create_special_request(description="Petición residente")
         response = self.admin_client.get("/api/menu/special-requests/list_requests/")
         self.assertEqual(response.status_code, 200)
         self.assertGreaterEqual(len(response.json()), 1)
 
     def test_admin_can_approve_special_request(self):
         """Admin puede aprobar una petición especial"""
-        with tenant_context(self.tenant):
-            req = SpecialMenuRequest.objects.create(
-                residence=self.tenant,
-                user=self.resident_user,
-                date=datetime.date(2025, 2, 14),
-                description="Alergia",
-                status="pending",
-            )
-        data = {"status": "approved"}
-        response = self.admin_client.patch(
-            f"/api/menu/special-requests/{req.id}/update_status/",
-            data=json.dumps(data),
-            content_type="application/json",
-        )
+        req = self._create_special_request(description="Alergia")
+        response = self._patch_status(self.admin_client, req.id, "approved")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "approved")
 
     def test_admin_can_reject_special_request(self):
         """Admin puede rechazar una petición especial"""
-        with tenant_context(self.tenant):
-            req = SpecialMenuRequest.objects.create(
-                residence=self.tenant,
-                user=self.resident_user,
-                date=datetime.date(2025, 2, 14),
-                description="Vegano",
-                status="pending",
-            )
-        data = {"status": "rejected"}
-        response = self.admin_client.patch(
-            f"/api/menu/special-requests/{req.id}/update_status/",
-            data=json.dumps(data),
-            content_type="application/json",
-        )
+        req = self._create_special_request(description="Vegano")
+        response = self._patch_status(self.admin_client, req.id, "rejected")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "rejected")
 
     def test_update_status_invalid_value(self):
         """Actualizar con un estado inválido devuelve error"""
-        with tenant_context(self.tenant):
-            req = SpecialMenuRequest.objects.create(
-                residence=self.tenant,
-                user=self.resident_user,
-                date=datetime.date(2025, 2, 14),
-                description="Test",
-            )
-        data = {"status": "invalido"}
-        response = self.admin_client.patch(
-            f"/api/menu/special-requests/{req.id}/update_status/",
-            data=json.dumps(data),
-            content_type="application/json",
-        )
+        req = self._create_special_request(description="Test")
+        response = self._patch_status(self.admin_client, req.id, "invalido")
         self.assertIn(response.status_code, [400, 422])
 
     def test_resident_cannot_update_request_status(self):
         """Residente no puede cambiar el estado de una petición"""
-        with tenant_context(self.tenant):
-            req = SpecialMenuRequest.objects.create(
-                residence=self.tenant,
-                user=self.resident_user,
-                date=datetime.date(2025, 2, 14),
-                description="Test",
-            )
-        data = {"status": "approved"}
-        response = self.resident_client.patch(
-            f"/api/menu/special-requests/{req.id}/update_status/",
-            data=json.dumps(data),
-            content_type="application/json",
-        )
+        req = self._create_special_request(description="Test")
+        response = self._patch_status(self.resident_client, req.id, "approved")
         self.assertEqual(response.status_code, 403)
 
     def test_unauthenticated_cannot_create_special_request(self):
