@@ -14,6 +14,20 @@ import { RentalHistoryView } from "../../components/RentalHistoryView";
 
 const OBJECT_NAME_REGEX = /^[\p{L}\p{N} _().,-]+$/u;
 const ADMIN_CANCELLATION_REASON_MAX_LENGTH = 200;
+const OBJECT_NAME_MAX_LENGTH = 30;
+const OBJECT_DESCRIPTION_MAX_LENGTH = 255;
+const OBJECT_LOCATION_MAX_LENGTH = 100;
+const OBJECT_IMAGE_URL_MAX_LENGTH = 300;
+const OBJECT_LABEL_MAX_LENGTH = 15;
+
+function isValidHttpUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
 
 function formatDateTime(date: string): string {
   return new Intl.DateTimeFormat("es-ES", {
@@ -600,6 +614,10 @@ export function AdminObjects() {
       toast.error("El nombre de la etiqueta es obligatorio");
       return;
     }
+    if (trimmed.length > OBJECT_LABEL_MAX_LENGTH) {
+      toast.error(`La etiqueta no puede superar ${OBJECT_LABEL_MAX_LENGTH} caracteres`);
+      return;
+    }
 
     setCreatingLabel(true);
     try {
@@ -648,12 +666,36 @@ export function AdminObjects() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedName = formData.name.trim();
+    const trimmedDescription = formData.description.trim();
+    const trimmedLocation = formData.location.trim();
+    const trimmedImageUrl = formData.image_url.trim();
+
     if (!trimmedName) {
       toast.error("El nombre del objeto es obligatorio");
       return;
     }
+    if (trimmedName.length > OBJECT_NAME_MAX_LENGTH) {
+      toast.error(`El nombre del objeto no puede superar ${OBJECT_NAME_MAX_LENGTH} caracteres`);
+      return;
+    }
     if (!OBJECT_NAME_REGEX.test(trimmedName)) {
       toast.error("El nombre contiene caracteres no válidos");
+      return;
+    }
+    if (trimmedDescription.length > OBJECT_DESCRIPTION_MAX_LENGTH) {
+      toast.error(`La descripción no puede superar ${OBJECT_DESCRIPTION_MAX_LENGTH} caracteres`);
+      return;
+    }
+    if (trimmedLocation.length > OBJECT_LOCATION_MAX_LENGTH) {
+      toast.error(`La ubicación no puede superar ${OBJECT_LOCATION_MAX_LENGTH} caracteres`);
+      return;
+    }
+    if (trimmedImageUrl.length > OBJECT_IMAGE_URL_MAX_LENGTH) {
+      toast.error(`La URL no puede superar ${OBJECT_IMAGE_URL_MAX_LENGTH} caracteres`);
+      return;
+    }
+    if (trimmedImageUrl && !isValidHttpUrl(trimmedImageUrl)) {
+      toast.error("La imagen del objeto debe ser una URL válida (http/https)");
       return;
     }
 
@@ -662,11 +704,11 @@ export function AdminObjects() {
     try {
       await objectsService.createObject({
         name: trimmedName,
-        description: formData.description || undefined,
-        location: formData.location || undefined,
+        description: trimmedDescription || undefined,
+        location: trimmedLocation || undefined,
         stock_total: Number.parseInt(formData.stock_total, 10) || 1,
         label_ids: formData.label_ids,
-        image_url: formData.image_url || undefined,
+        image_url: trimmedImageUrl || undefined,
       });
       toast.success("Objeto creado exitosamente");
       handleCloseForm();
@@ -878,7 +920,11 @@ export function AdminObjects() {
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
                   placeholder="Ej: Bicicleta de montaña"
+                  maxLength={30}
                 />
+                <p className="text-xs text-gray-500 text-right">
+                  {formData.name.length}/30
+                </p>
               </div>
 
               <div className="grid gap-2">
@@ -889,7 +935,11 @@ export function AdminObjects() {
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Describe el objeto..."
                   rows={3}
+                  maxLength={255}
                 />
+                <p className="text-xs text-gray-500 text-right">
+                  {formData.description.length}/255
+                </p>
               </div>
 
               <div className="grid gap-2">
@@ -899,7 +949,11 @@ export function AdminObjects() {
                   value={formData.location}
                   onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                   placeholder="Ej: Almacén principal"
+                  maxLength={100}
                 />
+                <p className="text-xs text-gray-500 text-right">
+                  {formData.location.length}/100
+                </p>
               </div>
 
               <div className="grid gap-2">
@@ -1017,7 +1071,7 @@ export function AdminObjects() {
                 onChange={(e) => setNewLabelName(e.target.value)}
                 placeholder="Nombre de la etiqueta..."
                 className="flex-1"
-                maxLength={30}
+                maxLength={15}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
@@ -1034,6 +1088,9 @@ export function AdminObjects() {
                 Añadir
               </Button>
             </div>
+            <p className="text-xs text-gray-500 text-right -mt-3">
+              {newLabelName.length}/15
+            </p>
 
             {loadingLabels ? (
               <p className="text-sm text-gray-500">Cargando etiquetas...</p>
