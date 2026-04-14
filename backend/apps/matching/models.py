@@ -5,6 +5,46 @@ from apps.membership.models import Membership
 from apps.residences.models import Residence
 
 
+class MatchLike(models.Model):
+    """Like unidireccional de un residente a otro; el chat requiere reciprocidad."""
+
+    residence = models.ForeignKey(
+        Residence,
+        on_delete=models.CASCADE,
+        related_name="match_likes",
+    )
+    source = models.ForeignKey(
+        Membership,
+        on_delete=models.CASCADE,
+        related_name="match_likes_given",
+    )
+    target = models.ForeignKey(
+        Membership,
+        on_delete=models.CASCADE,
+        related_name="match_likes_received",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["source", "target"],
+                name="match_like_unique_source_target",
+            ),
+            models.CheckConstraint(
+                condition=~Q(source=F("target")),
+                name="match_like_no_self",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["residence", "source"]),
+            models.Index(fields=["residence", "target"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"MatchLike({self.source_id} -> {self.target_id})"
+
+
 class ResidenceCompatibility(models.Model):
     residence = models.ForeignKey(
         Residence,

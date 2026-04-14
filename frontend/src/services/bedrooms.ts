@@ -106,3 +106,45 @@ export async function getBedroomAuditLog(id: number, options?: { signal?: AbortS
     if (!res.ok) throw new Error(`Error ${res.status}`);
     return res.json();
 }
+
+export interface BedroomAnalyticsSummary {
+    total_rooms: number;
+    total_capacity: number;
+    total_occupants: number;
+    overall_occupation_rate: number;
+}
+
+export interface OccupationByBuilding {
+    edificio: string;
+    total_rooms: number;
+    total_capacity: number;
+    occupied_rooms: number;
+    occupants: number;
+    occupation_rate: number;
+}
+
+export interface OccupationByType {
+    tipo: string;
+    total_rooms: number;
+    total_capacity: number;
+    occupants: number;
+    occupation_rate: number;
+}
+
+export interface OccupationByYear {
+    year: number;
+    assignments: number;
+}
+
+export interface BedroomAnalyticsResponse {
+    summary: BedroomAnalyticsSummary;
+    occupation_by_building: OccupationByBuilding[];
+    occupation_by_type: OccupationByType[];
+    occupation_by_year: OccupationByYear[];
+}
+
+export async function getBedroomAnalytics(): Promise<BedroomAnalyticsResponse> {
+    const res = await fetchWithAuth(`${BASE}analytics/`);
+    if (!res.ok) throw new Error(`Error ${res.status}`);
+    return res.json() as Promise<BedroomAnalyticsResponse>;
+}

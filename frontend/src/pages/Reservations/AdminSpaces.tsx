@@ -89,7 +89,7 @@ function SpaceCard({
         </div>
       </div>
 
-      <div className="flex gap-2 flex-wrap">
+      <div className="relative z-20 flex gap-2 flex-wrap">
         <Button className="pointer-events-auto" variant="outline" size="sm" onClick={() => onViewReservations(space)}>
           Ver reservas
         </Button>

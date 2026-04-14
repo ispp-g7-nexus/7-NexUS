@@ -3,6 +3,20 @@ from rest_framework import permissions
 from apps.membership.permissions import has_screen_permission
 
 
+class IsIncidenceAdmin(permissions.BasePermission):
+    """Permite el acceso solo a administradores o usuarios con permiso de incidencias."""
+
+    message = "No tienes permisos para ver las analíticas de incidencias."
+
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        if getattr(request.user, "is_staff", False):
+            return True
+        residence = getattr(request, "residence", None)
+        return has_screen_permission(request.user, residence, "incidences")
+
+
 class IsAdminOrReadOnly(permissions.BasePermission):
     def has_permission(self, request, view):
         return bool(request.user and request.user.is_authenticated)
