@@ -71,6 +71,11 @@ describe('AdminPackages Actions Coverage', () => {
     fireEvent.click(addBtn);
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument());
 
+    const residentBtn = await screen.findByText('Selecciona un residente');
+    fireEvent.click(residentBtn);
+    const aliceOptions = await screen.findAllByText(/Alice/);
+    fireEvent.click(aliceOptions[0]);
+
     const trackingInput = screen.getByPlaceholderText(/seguimiento/i);
     fireEvent.change(trackingInput, { target: { value: 'NEWTRACK' } });
 
