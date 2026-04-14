@@ -14,6 +14,43 @@ import { RentalHistoryView } from "../../components/RentalHistoryView";
 
 const OBJECT_NAME_REGEX = /^[\p{L}\p{N} _().,-]+$/u;
 const ADMIN_CANCELLATION_REASON_MAX_LENGTH = 200;
+type GlobalStatusFilter = "ALL" | "ACTIVE" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+
+function filterGlobalRentals(
+  rentals: AdminObjectRental[],
+  search: string,
+  statusFilter: GlobalStatusFilter,
+  onlyOverdue: boolean,
+  dateFilter: string,
+): AdminObjectRental[] {
+  const query = search.trim().toLowerCase();
+
+  return rentals.filter((rental) => {
+    const fields = [
+      rental.object.name,
+      rental.object.location ?? "",
+      `${rental.user.first_name ?? ""} ${rental.user.last_name ?? ""}`,
+      getGlobalRentalStatusLabel(rental),
+    ];
+
+    const matchesQuery = !query || fields.some((field) => field.toLowerCase().includes(query));
+    const matchesStatus = statusFilter === "ALL" || getGlobalEffectiveStatus(rental) === statusFilter;
+    const matchesOverdue = !onlyOverdue || isGlobalRentalOverdue(rental);
+    const matchesDate = !dateFilter || rental.start_date.slice(0, 10) === dateFilter || rental.end_date.slice(0, 10) === dateFilter;
+
+    return matchesQuery && matchesStatus && matchesOverdue && matchesDate;
+  });
+}
+
+function countGlobalRentals(rentals: AdminObjectRental[]) {
+  return {
+    total: rentals.length,
+    active: rentals.filter((r) => getGlobalEffectiveStatus(r) === "ACTIVE").length,
+    inProgress: rentals.filter((r) => getGlobalEffectiveStatus(r) === "IN_PROGRESS").length,
+    completed: rentals.filter((r) => getGlobalEffectiveStatus(r) === "COMPLETED").length,
+    cancelled: rentals.filter((r) => r.status === "CANCELLED").length,
+  };
+}
 
 function formatDateTime(date: string): string {
   return new Intl.DateTimeFormat("es-ES", {
@@ -79,7 +116,7 @@ function GlobalRentalHistory({
   onCancelRental: (objectId: number, rentalId: number, reason: string) => Promise<void>;
 }) {
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED">("ALL");
+  const [statusFilter, setStatusFilter] = useState<GlobalStatusFilter>("ALL");
   const [onlyOverdue, setOnlyOverdue] = useState(false);
   const [dateFilter, setDateFilter] = useState("");
   const [cancelTarget, setCancelTarget] = useState<AdminObjectRental | null>(null);
@@ -87,30 +124,12 @@ function GlobalRentalHistory({
   const [cancelError, setCancelError] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
 
-  const filteredRentals = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return rentals.filter((rental) => {
-      const fields = [
-        rental.object.name,
-        rental.object.location ?? "",
-        `${rental.user.first_name ?? ""} ${rental.user.last_name ?? ""}`,
-        getGlobalRentalStatusLabel(rental),
-      ];
-      const matchesQuery = !query || fields.some((field) => field.toLowerCase().includes(query));
-      const matchesStatus = statusFilter === "ALL" || getGlobalEffectiveStatus(rental) === statusFilter;
-      const matchesOverdue = !onlyOverdue || isGlobalRentalOverdue(rental);
-      const matchesDate = !dateFilter || rental.start_date.slice(0, 10) === dateFilter || rental.end_date.slice(0, 10) === dateFilter;
-      return matchesQuery && matchesStatus && matchesOverdue && matchesDate;
-    });
-  }, [rentals, search, statusFilter, onlyOverdue, dateFilter]);
+  const filteredRentals = useMemo(
+    () => filterGlobalRentals(rentals, search, statusFilter, onlyOverdue, dateFilter),
+    [rentals, search, statusFilter, onlyOverdue, dateFilter],
+  );
 
-  const counts = useMemo(() => ({
-    total: rentals.length,
-    active: rentals.filter((r) => getGlobalEffectiveStatus(r) === "ACTIVE").length,
-    inProgress: rentals.filter((r) => getGlobalEffectiveStatus(r) === "IN_PROGRESS").length,
-    completed: rentals.filter((r) => getGlobalEffectiveStatus(r) === "COMPLETED").length,
-    cancelled: rentals.filter((r) => r.status === "CANCELLED").length,
-  }), [rentals]);
+  const counts = useMemo(() => countGlobalRentals(rentals), [rentals]);
 
   const handleCancelSubmit = async () => {
     if (!cancelTarget) {
@@ -485,6 +504,16 @@ export function AdminObjects() {
   const [cancellingRentalIds, setCancellingRentalIds] = useState<number[]>([]);
   const getErrorMessage = (err: unknown, fallback: string) =>
     err instanceof Error && err.message ? err.message : fallback;
+  const isEditMode = formMode === "edit";
+  const dialogTitle = isEditMode ? "Ver detalles del objeto" : "Crear nuevo objeto";
+  const dialogDescription = isEditMode
+    ? "Revisa la información del objeto y guarda los cambios cuando termines."
+    : "Añade un nuevo objeto para que los residentes puedan reservarlo";
+
+  let submitButtonLabel = isEditMode ? "Actualizar" : "Crear objeto";
+  if (submitting) {
+    submitButtonLabel = isEditMode ? "Actualizando..." : "Creando...";
+  }
 
   const getEmptyFormData = () => ({
     name: "",
@@ -813,6 +842,65 @@ export function AdminObjects() {
     await handleCancelRentalForObject(selectedObject.id, rentalId, reason);
   };
 
+  const objectsContent = (() => {
+    if (loading) {
+      return (
+        <Card>
+          <CardContent className="p-4 text-sm text-gray-500">Cargando objetos...</CardContent>
+        </Card>
+      );
+    }
+
+    if (objects.length === 0) {
+      return (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center p-12 text-center">
+            <Package className="mb-3 h-12 w-12 text-gray-500" />
+            <h3 className="mb-2 text-lg font-semibold">No hay objetos</h3>
+            <p className="mb-4 text-sm text-gray-500">
+              Comienza creando el primer objeto disponible para préstamo
+            </p>
+            <Button onClick={handleOpenForm}>
+              <Plus className="mr-2 h-4 w-4" />
+              Crear objeto
+            </Button>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    if (filteredObjects.length === 0) {
+      return (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center p-12 text-center">
+            <Search className="mb-3 h-12 w-12 text-gray-500" />
+            <h3 className="mb-2 text-lg font-semibold">Sin coincidencias</h3>
+            <p className="mb-4 text-sm text-gray-500">
+              No hay objetos que coincidan con la búsqueda actual.
+            </p>
+            <Button variant="outline" onClick={() => setSearch("")}>
+              Limpiar búsqueda
+            </Button>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    return (
+      <div className="grid gap-4 sm:grid-cols-2">
+        {filteredObjects.map((object) => (
+          <ObjectCard
+            key={object.id}
+            object={object}
+            onViewDetails={handleViewDetails}
+            onDelete={handleDelete}
+            onViewRentals={handleViewRentals}
+          />
+        ))}
+      </div>
+    );
+  })();
+
   return (
     <section className="mx-auto flex w-full max-w-5xl flex-col gap-6">
       <header className="rounded-xl border border-border/80 bg-white p-4 shadow-sm sm:p-6">
@@ -858,62 +946,15 @@ export function AdminObjects() {
         </div>
       </header>
 
-      {loading ? (
-        <Card>
-          <CardContent className="p-4 text-sm text-gray-500">Cargando objetos...</CardContent>
-        </Card>
-      ) : objects.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center p-12 text-center">
-            <Package className="mb-3 h-12 w-12 text-gray-500" />
-            <h3 className="mb-2 text-lg font-semibold">No hay objetos</h3>
-            <p className="mb-4 text-sm text-gray-500">
-              Comienza creando el primer objeto disponible para préstamo
-            </p>
-            <Button onClick={handleOpenForm}>
-              <Plus className="mr-2 h-4 w-4" />
-              Crear objeto
-            </Button>
-          </CardContent>
-        </Card>
-      ) : filteredObjects.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center p-12 text-center">
-            <Search className="mb-3 h-12 w-12 text-gray-500" />
-            <h3 className="mb-2 text-lg font-semibold">Sin coincidencias</h3>
-            <p className="mb-4 text-sm text-gray-500">
-              No hay objetos que coincidan con la búsqueda actual.
-            </p>
-            <Button variant="outline" onClick={() => setSearch("")}>
-              Limpiar búsqueda
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {filteredObjects.map((object) => (
-            <ObjectCard
-              key={object.id}
-              object={object}
-              onViewDetails={handleViewDetails}
-              onDelete={handleDelete}
-              onViewRentals={handleViewRentals}
-            />
-          ))}
-        </div>
-      )}
+      {objectsContent}
 
       {/* Create / Edit Object Dialog */}
       <Dialog open={formOpen} onOpenChange={(open) => (open ? setFormOpen(true) : handleCloseForm())}>
         <DialogContent className="sm:max-w-[500px]">
           <form onSubmit={handleSubmit}>
             <DialogHeader>
-              <DialogTitle>{formMode === "edit" ? "Ver detalles del objeto" : "Crear nuevo objeto"}</DialogTitle>
-              <DialogDescription>
-                {formMode === "edit"
-                  ? "Revisa la información del objeto y guarda los cambios cuando termines."
-                  : "Añade un nuevo objeto para que los residentes puedan reservarlo"}
-              </DialogDescription>
+              <DialogTitle>{dialogTitle}</DialogTitle>
+              <DialogDescription>{dialogDescription}</DialogDescription>
             </DialogHeader>
 
             <div className="grid gap-4 py-4">
@@ -998,7 +1039,7 @@ export function AdminObjects() {
                 Volver
               </Button>
               <Button type="submit" disabled={submitting}>
-                {submitting ? (formMode === "edit" ? "Actualizando..." : "Creando...") : formMode === "edit" ? "Actualizar" : "Crear objeto"}
+                {submitButtonLabel}
               </Button>
             </DialogFooter>
           </form>

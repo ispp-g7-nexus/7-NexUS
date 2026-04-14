@@ -35,6 +35,7 @@ OBJECT_RESERVATION_INTERVAL_MINUTES = 60
 ACTIVE_RENTAL_STATUSES = ["ACTIVE", "IN_PROGRESS"]
 ADMIN_CANCELLATION_REASON_MAX_LENGTH = 200
 RESERVATION_REMINDER_WINDOW = timedelta(hours=1)
+JSON_INVALID_DETAIL = "JSON inválido."
 
 
 def _parse_datetime_or_none(value):
@@ -379,7 +380,7 @@ class ObjectListView(AuthenticatedView):
         try:
             body = json.loads(request.body)
         except json.JSONDecodeError:
-            return JsonResponse({"detail": "JSON inválido."}, status=400)
+            return JsonResponse({"detail": JSON_INVALID_DETAIL}, status=400)
 
         payload, error_response = _parse_object_payload(body, request.residence)
         if error_response:
@@ -398,8 +399,6 @@ class ObjectListView(AuthenticatedView):
             if payload["labels"]:
                 obj.labels.set(payload["labels"])
             return JsonResponse({'id': obj.id, 'detail': 'Object created successfully'}, status=201)
-        except Exception as e:
-            return JsonResponse({"detail": str(e)}, status=400)
         except Exception as e:
             return JsonResponse({"detail": str(e)}, status=400)
 
@@ -427,7 +426,7 @@ class ObjectLabelListCreateView(AuthenticatedView):
         try:
             body = json.loads(request.body or "{}")
         except json.JSONDecodeError:
-            return JsonResponse({"detail": "JSON inválido."}, status=400)
+            return JsonResponse({"detail": JSON_INVALID_DETAIL}, status=400)
 
         name = str(body.get('name', '')).strip()
         if not name:
@@ -496,7 +495,7 @@ class ObjectDetailView(AuthenticatedView):
         try:
             body = json.loads(request.body or "{}")
         except json.JSONDecodeError:
-            return JsonResponse({"detail": "JSON inválido."}, status=400)
+            return JsonResponse({"detail": JSON_INVALID_DETAIL}, status=400)
 
         obj, error_response = get_residence_object(request, object_id)
         if error_response:
