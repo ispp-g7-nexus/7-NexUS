@@ -59,7 +59,7 @@
 
 ## 1. Introducción
 
-En el desarrollo de la documentación asociada al sprint 2 del proyecto NexUS, el equipo ha utilizado herramientas basadas en inteligencia artificial de forma complementaria y supervisada. Estas herramientas han servido como apoyo en tareas específicas, sin sustituir el análisis, la toma de decisiones ni la autoría del contenido por parte de los miembros del grupo.
+En el desarrollo de la documentación asociada al Sprint 3 del proyecto NexUS, el equipo ha utilizado herramientas basadas en inteligencia artificial de forma complementaria y supervisada. Estas herramientas han servido como apoyo en tareas específicas, sin sustituir el análisis, la toma de decisiones ni la autoría del contenido por parte de los miembros del grupo.
 
 El uso de IA se ha realizado respetando los principios de transparencia, responsabilidad académica y veracidad de la información.
 
@@ -101,7 +101,7 @@ Toda la información obtenida ha sido contrastada y validada por el equipo media
 ---
 
 ### 2.4 Generación y optimización de código fuente 
-Durante el Sprint 2 se han utilizado herramientas de asistencia basada en IA (como GitHub Copilot, ChatGPT o similares) para el desarrollo técnico del software. El uso se ha centrado en:
+Durante el Sprint 3 se han utilizado herramientas de asistencia basada en IA (como GitHub Copilot, ChatGPT o similares) para el desarrollo técnico del software. El uso se ha centrado en:
 
 - **Implementación de funcionalidades del sprint**: Apoyo en la creación y ajuste de componentes, endpoints y lógica de negocio vinculada a los objetivos del Sprint 3.
 
