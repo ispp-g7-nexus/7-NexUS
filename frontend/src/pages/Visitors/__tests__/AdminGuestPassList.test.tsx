@@ -93,9 +93,7 @@ describe('AdminGuestPassListPage — [NX-S2.39 / NX-S2.40]', () => {
     render(<AdminGuestPassListPage />)
     await waitFor(() => screen.getByText('Juan Pérez'))
 
-    // Clic en la tarjeta (role="button")
-    const passCard = screen.getByRole('button', { name: /Juan Pérez/i })
-    await user.click(passCard)
+    await user.click(screen.getByText('Juan Pérez'))
 
     // El diálogo muestra los datos del detalle
     await waitFor(() => {
@@ -109,8 +107,7 @@ describe('AdminGuestPassListPage — [NX-S2.39 / NX-S2.40]', () => {
     render(<AdminGuestPassListPage />)
     await waitFor(() => screen.getByText('Juan Pérez'))
 
-    const passCard = screen.getByRole('button', { name: /Juan Pérez/i })
-    await user.click(passCard)
+    await user.click(screen.getByText('Juan Pérez'))
 
     await waitFor(() => {
       const dialog = screen.getByRole('dialog')
