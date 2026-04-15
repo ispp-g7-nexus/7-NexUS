@@ -6,7 +6,14 @@ from .models import Membership, Role
 class RoleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Role
-        fields = ["id", "name", "description", "is_system_default", "residence"]
+        fields = [
+            "id",
+            "name",
+            "description",
+            "is_system_default",
+            "residence",
+            "permissions",
+        ]
         read_only_fields = ["is_system_default", "residence"]
 
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { trackEvent } from "../../../services/analytics";
 import { fetchWithAuth, API_URL } from "../../../utils/api";
 import { listCommonSpaces, isApiError, type CommonSpace } from "../../../services/reservations";
 import { EventForm } from "./components/EventForm";
@@ -9,6 +10,22 @@ import { PastEvents } from "./components/PastEvents";
 import "./Events.css";
 
 type EventType = "internal" | "external";
+
+const EVENT_NAME_MAX_LENGTH = 20;
+const EVENT_DESCRIPTION_MAX_LENGTH = 255;
+const EVENT_LOCATION_MAX_LENGTH = 100;
+const EVENT_IMAGE_URL_MAX_LENGTH = 300;
+const EVENT_TAG_MAX_LENGTH = 10;
+const EVENT_TAGS_MAX_LENGTH = 50;
+
+function isValidHttpUrl(value: string): boolean {
+    try {
+        const parsed = new URL(value);
+        return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    } catch {
+        return false;
+    }
+}
 
 type EventFormState = {
     name: string;
@@ -38,7 +55,13 @@ const EMPTY_EVENT_FORM: EventFormState = {
     labels: "",
 };
 
-export function Events() {
+export function Events({
+    onNavigateToChat,
+    onEventChatJoined,
+}: {
+    onNavigateToChat?: (groupId?: number) => void;
+    onEventChatJoined?: () => void;
+}) {
     const [events, setEvents] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isUnauthorized, setIsUnauthorized] = useState(false);
@@ -68,8 +91,6 @@ export function Events() {
             if (response.ok) {
                 const data = await response.json();
                 setEvents(data);
-            } else {
-                console.error("Failed to fetch events:", response.status);
             }
         } catch (error) {
             console.error("Error fetching events:", error);
@@ -84,15 +105,9 @@ export function Events() {
             const data = await listCommonSpaces();
             setSpaces(data.filter((space) => space.is_active));
         } catch (error) {
-            if (isApiError(error)) {
-                if (error.status === 401 || error.status === 403) {
-                    setIsUnauthorized(true);
-                    return;
-                }
-                toast.error(error.message);
-                return;
+            if (isApiError(error) && (error.status === 401 || error.status === 403)) {
+                setIsUnauthorized(true);
             }
-            toast.error("No se pudieron cargar los espacios comunes.");
         } finally {
             setIsLoadingSpaces(false);
         }
@@ -103,10 +118,6 @@ export function Events() {
         setParticipants([]);
         try {
             const response = await fetchWithAuth(`${API_URL}${event.id}/participants/`);
-            if (response.status === 401 || response.status === 403) {
-                setIsUnauthorized(true);
-                return;
-            }
             if (response.ok) {
                 const data = await response.json();
                 setParticipants(data);
@@ -118,54 +129,103 @@ export function Events() {
 
     const handleJoinEvent = async (eventId: number) => {
         try {
-            const response = await fetchWithAuth(`${API_URL}${eventId}/join/`, {
-                method: 'POST',
-            });
-
-            if (response.status === 401 || response.status === 403) {
-                setIsUnauthorized(true);
-                return;
-            }
-
+            const response = await fetchWithAuth(`${API_URL}${eventId}/join/`, { method: 'POST' });
             if (response.ok) {
+                trackEvent('event_joined', { event_id: eventId });
                 toast.success("¡Te has apuntado al evento!");
                 fetchEvents();
             } else {
                 const data = await response.json();
-                toast.error(data.detail || "Error al apuntarse al evento");
+                toast.error(data.detail || "Error al apuntarse");
             }
         } catch (error) {
-            console.error("Error joining event:", error);
             toast.error("Error de conexión");
         }
     };
 
     const handleLeaveEvent = async (eventId: number) => {
         try {
-            const response = await fetchWithAuth(`${API_URL}${eventId}/leave/`, {
-                method: 'POST',
-            });
-
-            if (response.status === 401 || response.status === 403) {
-                setIsUnauthorized(true);
-                return;
-            }
-
+            const response = await fetchWithAuth(`${API_URL}${eventId}/leave/`, { method: 'POST' });
             if (response.ok) {
+                trackEvent('event_left', { event_id: eventId });
                 toast.success("Te has desapuntado del evento.");
                 fetchEvents();
-            } else {
-                const data = await response.json();
-                toast.error(data.detail || "Error al cancelar la asistencia");
             }
         } catch (error) {
-            console.error("Error leaving event:", error);
+            toast.error("Error de conexión");
+        }
+    };
+
+    const handleJoinEventChat = async (eventId: number) => {
+        try {
+            const response = await fetchWithAuth(`${API_URL}${eventId}/join-chat/`, { method: 'POST' });
+            const data = await response.json().catch(() => ({}));
+            if (response.ok) {
+                toast.success("Te has unido al chat.");
+                onEventChatJoined?.();
+                fetchEvents();
+            } else {
+                toast.error(data.detail || "No se pudo unir al chat.");
+            }
+        } catch (error) {
             toast.error("Error de conexión");
         }
     };
 
     const handleSaveEvent = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        const normalizedName = newEvent.name.trim();
+        const normalizedDescription = newEvent.description.trim();
+        const normalizedLocation = newEvent.location.trim();
+        const normalizedPhoto = newEvent.photo.trim();
+        const rawTags = newEvent.labels.trim();
+        const normalizedTags = rawTags
+            ? rawTags
+                .split(',')
+                .map((tag) => tag.trim())
+                .filter(Boolean)
+                .join(',')
+            : "";
+
+        if (!normalizedTags) {
+            toast.error("Debes indicar al menos una etiqueta válida para el evento.");
+            return;
+        }
+
+        if (normalizedName.length > EVENT_NAME_MAX_LENGTH) {
+            toast.error(`El nombre del evento no puede superar ${EVENT_NAME_MAX_LENGTH} caracteres.`);
+            return;
+        }
+        if (normalizedDescription.length > EVENT_DESCRIPTION_MAX_LENGTH) {
+            toast.error(`La descripción no puede superar ${EVENT_DESCRIPTION_MAX_LENGTH} caracteres.`);
+            return;
+        }
+        if (newEvent.eventType === 'external' && normalizedLocation.length > EVENT_LOCATION_MAX_LENGTH) {
+            toast.error(`El lugar no puede superar ${EVENT_LOCATION_MAX_LENGTH} caracteres.`);
+            return;
+        }
+        if (normalizedPhoto.length > EVENT_IMAGE_URL_MAX_LENGTH) {
+            toast.error(`La URL de la foto no puede superar ${EVENT_IMAGE_URL_MAX_LENGTH} caracteres.`);
+            return;
+        }
+        if (normalizedPhoto && !isValidHttpUrl(normalizedPhoto)) {
+            toast.error("La imagen del evento debe ser una URL válida (http/https).");
+            return;
+        }
+        if (normalizedTags.length > EVENT_TAGS_MAX_LENGTH) {
+            toast.error(`Las etiquetas no pueden superar ${EVENT_TAGS_MAX_LENGTH} caracteres en total.`);
+            return;
+        }
+        const oversizedTag = normalizedTags
+            .split(',')
+            .map((tag) => tag.trim())
+            .find((tag) => tag.length > EVENT_TAG_MAX_LENGTH);
+        if (oversizedTag) {
+            toast.error(`Cada etiqueta debe tener como máximo ${EVENT_TAG_MAX_LENGTH} caracteres.`);
+            return;
+        }
+
         try {
             const method = isEditingEvent ? 'PUT' : 'POST';
             const url = isEditingEvent ? `${API_URL}${editingEventId}/` : API_URL;
@@ -173,25 +233,21 @@ export function Events() {
             const response = await fetchWithAuth(url, {
                 method: method,
                 body: JSON.stringify({
-                    title: newEvent.name,
-                    description: newEvent.description,
+                    title: normalizedName,
+                    description: normalizedDescription,
                     start_time: new Date(`${newEvent.date}T${newEvent.startTime}`).toISOString(),
                     end_time: new Date(`${newEvent.date}T${newEvent.endTime}`).toISOString(),
                     event_type: newEvent.eventType,
-                    location: newEvent.eventType === 'external' ? newEvent.location.trim() : "",
+                    location: newEvent.eventType === 'external' ? normalizedLocation : "",
                     space_id: newEvent.eventType === 'internal' ? Number(newEvent.spaceId) : null,
-                    tags: newEvent.labels || null,
+                    tags: normalizedTags || null,
                     max_participants: newEvent.limit ? parseInt(newEvent.limit) : null,
-                    image_url: newEvent.photo || null,
+                    image_url: normalizedPhoto || null,
                 })
             });
 
-            if (response.status === 401 || response.status === 403) {
-                setIsUnauthorized(true);
-                return;
-            }
-
             if (response.ok) {
+                trackEvent(isEditingEvent ? 'event_updated' : 'event_created');
                 toast.success(isEditingEvent ? "Evento guardado con éxito." : "Evento creado con éxito.");
                 setIsCreateEventOpen(false);
                 setIsEditingEvent(false);
@@ -200,11 +256,10 @@ export function Events() {
                 fetchEvents();
             } else {
                 const data = await response.json();
-                toast.error(`Error: ${JSON.stringify(data.detail || data)}`);
+                toast.error(`Error: ${data.detail || "No se pudo guardar el evento"}`);
             }
         } catch (error) {
-            console.error("Error saving event:", error);
-            toast.error("Error de conexión al guardar el evento");
+            toast.error("Error de conexión");
         }
     };
 
@@ -224,6 +279,7 @@ export function Events() {
                         }
 
                         if (response.ok || response.status === 204) {
+                            trackEvent('event_deleted', { event_id: eventId });
                             toast.success("Evento eliminado con éxito.");
                             fetchEvents();
                             setSelectedEvent(null);
@@ -251,14 +307,9 @@ export function Events() {
     if (isUnauthorized) {
         return (
             <div className="flex flex-col justify-center items-center min-h-[80vh] text-center w-full max-w-2xl mx-auto px-4">
-                <h2 className="text-2xl font-bold mb-4 text-gray-900">Acceso Denegado</h2>
-                <p className="text-gray-500 max-w-sm leading-relaxed mb-6">
-                    Debes iniciar sesión para ver y organizar las actividades de tu residencia.
-                </p>
-                <button
-                    className="bg-primary text-primary-foreground hover:bg-primary/90 px-6 py-2 rounded-lg font-medium transition-colors"
-                    onClick={() => window.location.href = '/login'}
-                >
+                <h2 className="text-2xl font-bold mb-4">Acceso Denegado</h2>
+                <p className="text-gray-500 mb-6 text-left">Debes iniciar sesión para ver y organizar las actividades.</p>
+                <button className="bg-primary text-primary-foreground px-6 py-2 rounded-lg font-medium" onClick={() => window.location.href = '/login'}>
                     Ir a Iniciar Sesión
                 </button>
             </div>
@@ -266,11 +317,11 @@ export function Events() {
     }
 
     return (
-        <div className="w-full mx-auto flex flex-col gap-6 pb-20 px-4 sm:px-6 lg:px-8 pt-6">
+        <div className="w-full mx-auto flex flex-col gap-6 pb-20 px-4 sm:px-6 lg:px-8 pt-6 text-left">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <h2 className="text-2xl font-bold tracking-tight text-gray-900">Actividades de la Residencia</h2>
+                <h2 className="text-2xl font-bold tracking-tight text-gray-900">Actividades</h2>
                 <button
-                    className="bg-primary text-primary-foreground hover:bg-primary/90 px-5 py-2.5 rounded-lg font-medium transition-colors flex items-center gap-2 shadow-sm whitespace-nowrap"
+                    className="bg-primary text-primary-foreground hover:bg-primary/90 px-5 py-2.5 rounded-lg font-medium transition-colors flex items-center gap-2 shadow-sm"
                     onClick={() => {
                         setNewEvent({ ...EMPTY_EVENT_FORM });
                         setIsEditingEvent(false);
@@ -278,29 +329,19 @@ export function Events() {
                         setIsCreateEventOpen(true);
                     }}
                 >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                     Crear Evento
                 </button>
             </div>
 
             <div className="flex gap-2 border-b border-gray-200 pb-1">
-                <button
-                    className={`px-4 py-2 font-medium text-sm transition-colors relative ${activeTab === 'upcoming' ? 'text-gray-900' : 'text-gray-500 hover:text-gray-900'}`}
-                    onClick={() => setActiveTab('upcoming')}
-                >
+                <button className={`px-4 py-2 font-medium text-sm ${activeTab === 'upcoming' ? 'text-gray-900' : 'text-gray-500'}`} onClick={() => setActiveTab('upcoming')}>
                     Próximas Actividades
-                    {activeTab === 'upcoming' && (
-                        <div className="absolute bottom-[-5px] left-0 right-0 h-[2px] bg-primary rounded-full" />
-                    )}
+                    {activeTab === 'upcoming' && <div className="absolute bottom-[-5px] left-0 right-0 h-[2px] bg-primary rounded-full" />}
                 </button>
-                <button
-                    className={`px-4 py-2 font-medium text-sm transition-colors relative ${activeTab === 'past' ? 'text-gray-900' : 'text-gray-500 hover:text-gray-900'}`}
-                    onClick={() => setActiveTab('past')}
-                >
+                <button className={`px-4 py-2 font-medium text-sm ${activeTab === 'past' ? 'text-gray-900' : 'text-gray-500'}`} onClick={() => setActiveTab('past')}>
                     Eventos Pasados
-                    {activeTab === 'past' && (
-                        <div className="absolute bottom-[-5px] left-0 right-0 h-[2px] bg-primary rounded-full" />
-                    )}
+                    {activeTab === 'past' && <div className="absolute bottom-[-5px] left-0 right-0 h-[2px] bg-primary rounded-full" />}
                 </button>
             </div>
 
@@ -345,21 +386,9 @@ export function Events() {
             />
 
             {activeTab === 'upcoming' ? (
-                <UpcomingEvents
-                    events={upcomingEvents}
-                    loading={loading}
-                    handleJoinEvent={handleJoinEvent}
-                    handleLeaveEvent={handleLeaveEvent}
-                    handleOpenDetails={handleOpenDetails}
-                />
+                <UpcomingEvents events={upcomingEvents} loading={loading} handleJoinEvent={handleJoinEvent} handleLeaveEvent={handleLeaveEvent} handleJoinEventChat={handleJoinEventChat} handleNavigateToChat={onNavigateToChat} handleOpenDetails={handleOpenDetails} />
             ) : (
-                <PastEvents
-                    events={pastEvents}
-                    loading={loading}
-                    handleJoinEvent={handleJoinEvent}
-                    handleLeaveEvent={handleLeaveEvent}
-                    handleOpenDetails={handleOpenDetails}
-                />
+                <PastEvents events={pastEvents} loading={loading} handleJoinEvent={handleJoinEvent} handleLeaveEvent={handleLeaveEvent} handleJoinEventChat={handleJoinEventChat} handleNavigateToChat={onNavigateToChat} handleOpenDetails={handleOpenDetails} />
             )}
         </div>
     );

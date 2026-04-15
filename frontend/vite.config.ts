@@ -1,5 +1,5 @@
 import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -7,7 +7,7 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
-    allowedHosts: ['demo.nexus.local'],
+    allowedHosts: ['demo.nexus.local', '.nbynexus.com'],
     proxy: {
       '/api': {
         target: 'http://demo.nexus.local',
@@ -15,5 +15,11 @@ export default defineConfig({
         secure: false,
       }
     }
-  }
+  },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./src/test/setup.ts'],
+    include: ['src/**/*.test.{ts,tsx}'],
+  },
 })

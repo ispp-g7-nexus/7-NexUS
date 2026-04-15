@@ -1,4 +1,5 @@
 // src/services/auth.ts
+import { trackEvent } from "./analytics";
 import { API_URL } from "./api";
 
 const AUTH_URL = `${API_URL}/auth`;
@@ -12,13 +13,20 @@ export interface LoginCredentials {
 
 export type PortalRole = "student" | "admin";
 
-interface AuthMeUser {
+export interface AuthMeUser {
     id?: string | number;
     username?: string;
     email?: string;
     roles?: string[];
+    permissions?: string[];
+    is_staff?: boolean;
     first_name?: string;
     last_name?: string;
+    raw?: {
+        roles?: string[];
+        permissions?: string[];
+        [key: string]: unknown;
+    };
 }
 
 interface AuthMeResponse {
@@ -26,14 +34,41 @@ interface AuthMeResponse {
     user: AuthMeUser | null;
 }
 
+export function hasScreenPermission(user: AuthMeUser | null | undefined, screenName: string): boolean {
+    if (!user) return false;
+
+    if (user.is_staff) return true;
+
+    const rawRoles = user.roles || user.raw?.roles || [];
+    const roles = rawRoles.map(r => r.toLowerCase());
+
+    const permissions = user.permissions || user.raw?.permissions || [];
+
+    if (
+        roles.includes("admin") ||
+        roles.includes("administrador") ||
+        roles.includes("residence_admin") ||
+        roles.includes("portfolio_admin") ||
+        permissions.includes("full_access")
+    ) {
+        return true;
+    }
+
+    if (roles.includes("student") || roles.includes("residente")) {
+        return false;
+    }
+
+    return permissions.includes(screenName);
+}
+
 export function resolvePortalRoleFromRoles(roles: string[] = []): PortalRole | null {
     const normalizedRoles = roles.map(r => r.toLowerCase());
 
-    if (normalizedRoles.includes("student")) {
+    if (normalizedRoles.includes("student") || normalizedRoles.includes("residente")) {
         return "student";
     }
 
-    if (normalizedRoles.some(role => role !== "student")) {
+    if (normalizedRoles.some(role => role !== "student" && role !== "residente")) {
         return "admin";
     }
 
@@ -50,12 +85,15 @@ export const authService = {
         });
         if (!response.ok) {
             const errorData = await response.json();
+            trackEvent('login_failed', { portal: data.portal });
             throw new Error(errorData.detail || 'Error al iniciar sesión');
         }
+        trackEvent('login_success', { portal: data.portal });
         return response.json();
     },
 
     logout: async () => {
+        trackEvent('logout');
         const response = await fetch(`${AUTH_URL}/logout/`, {
             method: 'POST',
             credentials: 'include',
@@ -105,6 +143,7 @@ export const authService = {
             const errorData = await response.json();
             throw new Error(errorData.detail || 'Error al solicitar recuperación');
         }
+        trackEvent('password_reset_requested');
         return response.json();
     },
 
@@ -118,6 +157,7 @@ export const authService = {
             const errorData = await response.json();
             throw new Error(errorData.detail || 'Enlace inválido o expirado');
         }
+        trackEvent('password_reset_confirmed');
         return response.json();
     },
 
@@ -139,6 +179,7 @@ export const authService = {
             throw new Error(errorData.detail || 'Error al actualizar el perfil');
         }
 
+        trackEvent('profile_updated');
         return response.json();
     }
 };

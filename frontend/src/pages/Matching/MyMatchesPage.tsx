@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { HeartHandshake, Loader2, Sparkles } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { matchingService, type MyMatchesResponse, type MatchItem } from "../../services/matching";
@@ -9,8 +10,8 @@ export function MyMatchesPage() {
     const [payload, setPayload] = useState<MyMatchesResponse | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [savedMatches, setSavedMatches] = useState<Record<number, boolean>>({});
     const [selectedMatch, setSelectedMatch] = useState<MatchItem | null>(null);
+    const navigate = useNavigate();
 
     const fetchMatches = useCallback(async () => {
         try {
@@ -36,12 +37,64 @@ export function MyMatchesPage() {
         return () => globalThis.clearInterval(intervalId);
     }, [payload?.status, fetchMatches]);
 
-    const toggleSaveMatch = (membershipId: number, e?: React.MouseEvent) => {
+    const updateMatchInPayload = useCallback(
+        (membershipId: number, updater: (m: MatchItem) => MatchItem) => {
+            setPayload((prev) => {
+                if (!prev) return prev;
+                return {
+                    ...prev,
+                    matches: prev.matches.map((m) =>
+                        m.membership_id === membershipId ? updater(m) : m
+                    ),
+                };
+            });
+        },
+        []
+    );
+
+    const toggleLike = async (match: MatchItem, e?: React.MouseEvent) => {
         if (e) e.stopPropagation();
-        setSavedMatches((prev) => ({
-            ...prev,
-            [membershipId]: !prev[membershipId],
+        const wasLiked = match.liked_by_me;
+        // optimista
+        updateMatchInPayload(match.membership_id, (m) => ({
+            ...m,
+            liked_by_me: !wasLiked,
+            is_mutual: wasLiked ? false : m.is_mutual,
         }));
+        try {
+            if (wasLiked) {
+                await matchingService.unlikeMatch(match.membership_id);
+            } else {
+                const { is_mutual } = await matchingService.likeMatch(
+                    match.membership_id
+                );
+                updateMatchInPayload(match.membership_id, (m) => ({
+                    ...m,
+                    liked_by_me: true,
+                    is_mutual,
+                }));
+            }
+        } catch (err) {
+            // revert
+            updateMatchInPayload(match.membership_id, (m) => ({
+                ...m,
+                liked_by_me: wasLiked,
+                is_mutual: match.is_mutual,
+            }));
+            setError(err instanceof Error ? err.message : "No se pudo actualizar el like");
+        }
+    };
+
+    const openChatWith = async (match: MatchItem, e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
+        try {
+            const { conversation_id } = await matchingService.startMatchChat(
+                match.membership_id
+            );
+            navigate("/chats", { state: { openConversationId: conversation_id } });
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "No se pudo abrir el chat");
+        }
     };
 
     if (isLoading) {
@@ -73,24 +126,19 @@ export function MyMatchesPage() {
 
     return (
         <div className="flex flex-col w-full bg-[#F6F7F9]">
-            {/* Header */}
-            <header className="bg-[#1B4D1C] p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg sticky top-0 z-20">
-                <h1 className="text-white text-2xl font-bold">Matches</h1>
-            </header>
-            
             <div className="max-w-2xl mx-auto p-4 space-y-4 pb-32">
-            <PageHeader />
-            <ContentRenderer 
-                payload={payload} 
-                savedMatches={savedMatches} 
-                onToggleSave={toggleSaveMatch} 
-                onSelectMatch={setSelectedMatch} 
-            />
-            <MatchProfileModal 
-                match={selectedMatch} 
-                onClose={() => setSelectedMatch(null)} 
-            />
-        </div>
+                <PageHeader />
+                <ContentRenderer
+                    payload={payload}
+                    onToggleLike={toggleLike}
+                    onOpenChat={openChatWith}
+                    onSelectMatch={setSelectedMatch}
+                />
+                <MatchProfileModal
+                    match={selectedMatch}
+                    onClose={() => setSelectedMatch(null)}
+                />
+            </div>
         </div>
     );
 }
@@ -112,13 +160,13 @@ function PageHeader() {
 
 function ContentRenderer({
     payload,
-    savedMatches,
-    onToggleSave,
+    onToggleLike,
+    onOpenChat,
     onSelectMatch,
 }: {
     payload: MyMatchesResponse;
-    savedMatches: Record<number, boolean>;
-    onToggleSave: (id: number, e?: React.MouseEvent) => void;
+    onToggleLike: (match: MatchItem, e?: React.MouseEvent) => void;
+    onOpenChat: (match: MatchItem, e?: React.MouseEvent) => void;
     onSelectMatch: (match: MatchItem) => void;
 }) {
     if (payload.status === "onboarding_pending") {
@@ -153,8 +201,8 @@ function ContentRenderer({
                     key={`${match.membership_id}-${index}`}
                     match={match}
                     index={index}
-                    isSaved={!!savedMatches[match.membership_id]}
-                    onToggleSave={onToggleSave}
+                    onToggleLike={onToggleLike}
+                    onOpenChat={onOpenChat}
                     onClick={() => onSelectMatch(match)}
                 />
             ))}

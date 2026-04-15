@@ -1,88 +1,50 @@
-import { Bell } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
-import { cn } from "../ui/utils";
-import { toast } from "sonner";
-import announcementService from "../../services/announcement.service";
+import { useEffect, useState } from "react";
+import { CentralNotificationBell, type StudentTab } from "../CentralNotificationBell";
+import { authService } from "../../services/auth";
 
 interface NotificationBellProps {
-  onMarkAsRead?: () => void;
-  className?: string;
+  readonly onMarkAsRead?: () => void;
+  readonly className?: string;
+  readonly mode?: "notifications" | "announcements";
+  readonly onNavigate?: (view: StudentTab) => void;
 }
-
-const TOAST_COOLDOWN_MS = 3500; // Tiempo para no repetir el mismo toast de notificación
-
-export function NotificationBell({ onMarkAsRead, className }: NotificationBellProps) {
-  const [unviewedCount, setUnviewedCount] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const lastEmptyToastTimeRef = useRef<number>(0);
-  const hasNotifications = unviewedCount > 0;
+export function NotificationBell(props: Readonly<NotificationBellProps>) {
+  const { onMarkAsRead, className, mode = "notifications", onNavigate } = props;
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [currentUserEmail, setCurrentUserEmail] = useState("");
+  const [isSessionUserResolved, setIsSessionUserResolved] = useState(false);
 
   useEffect(() => {
-    loadUnviewedCount();
+    authService.me()
+      .then((session) => {
+        const parsedId = Number(session.user?.id);
+        setCurrentUserId(Number.isFinite(parsedId) ? parsedId : null);
+        setCurrentUserEmail((session.user?.email || "").trim().toLowerCase());
+      })
+      .catch(() => {
+        setCurrentUserId(null);
+        setCurrentUserEmail("");
+      })
+      .finally(() => {
+        setIsSessionUserResolved(true);
+      });
   }, []);
 
-  const loadUnviewedCount = async () => {
-    try {
-      const data = await announcementService.getUnviewedCount();
-      setUnviewedCount(data.count);
-    } catch (error) {
-      console.error("Error loading unviewed count:", error);
-    }
-  };
-
-  const handleBellClick = async () => {
-    setLoading(true);
-    try {
-      const data = await announcementService.getUnviewedCount();
-      setUnviewedCount(data.count);
-
-      if (data.count === 0) {
-        const now = Date.now();
-        // Solo mostrar el toast de "no hay avisos" si ha pasado el cooldown
-        if (now - lastEmptyToastTimeRef.current > TOAST_COOLDOWN_MS) {
-          toast.info("Avisos", {
-            description: "No tienes avisos nuevos",
-            duration: 3000,
-          });
-          lastEmptyToastTimeRef.current = now;
-        }
-      } else {
-        // Si hay avisos, resetear el cooldown para permitir mostrar de nuevo
-        lastEmptyToastTimeRef.current = 0;
-        const pluralSuffix = data.count !== 1 ? "s" : "";
-        toast.info("Avisos", {
-          description: `Tienes ${data.count} aviso${pluralSuffix} nuevo${pluralSuffix}`,
-          duration: 3000,
-        });
-
-        await announcementService.markAsViewed();
-        setUnviewedCount(0);
-      }
-
+  const handleNavigate = (view: StudentTab) => {
+    if (mode === "announcements" && view === "announcements") {
       onMarkAsRead?.();
-    } catch (error) {
-      console.error("Error loading unviewed count:", error);
-      toast.error("Avisos", {
-        description: "No se pudo cargar el estado de notificaciones.",
-        duration: 3000,
-      });
-    } finally {
-      setLoading(false);
     }
+    onNavigate?.(view);
   };
 
   return (
-    <button
-      type="button"
-      aria-label="Ver notificaciones de avisos"
-      onClick={handleBellClick}
-      disabled={loading}
-      className={cn("relative h-9 w-9 inline-flex items-center justify-center rounded-full text-primary-foreground transition-colors hover:bg-primary-foreground/20", className)}
-    >
-      <Bell className="w-5 h-5 text-current" />
-      {hasNotifications && (
-        <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-background" />
-      )}
-    </button>
+    <div className={className}>
+      <CentralNotificationBell
+        onNavigate={handleNavigate}
+        currentUserId={currentUserId}
+        currentUserEmail={currentUserEmail}
+        isSessionUserResolved={isSessionUserResolved}
+      />
+    </div>
   );
 }

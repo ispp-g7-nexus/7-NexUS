@@ -1,4 +1,5 @@
 import { Announcement, AnnouncementList, CreateAnnouncementDTO, UpdateAnnouncementDTO } from "../types/announcement.types";
+import { trackEvent } from "./analytics";
 import { API_URL } from "./api";
 
 class AnnouncementService {
@@ -73,23 +74,28 @@ class AnnouncementService {
   }
 
   async createAnnouncement(data: CreateAnnouncementDTO): Promise<Announcement> {
-    return this.request<Announcement>('/announcements/', {
+    const result = await this.request<Announcement>('/announcements/', {
       method: 'POST',
       body: JSON.stringify(data),
     });
+    trackEvent('announcement_created', { category: data.category });
+    return result;
   }
 
   async updateAnnouncement(id: number, data: UpdateAnnouncementDTO): Promise<Announcement> {
-    return this.request<Announcement>(`/announcements/${id}/`, {
+    const result = await this.request<Announcement>(`/announcements/${id}/`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     });
+    trackEvent('announcement_updated', { announcement_id: id });
+    return result;
   }
 
   async deleteAnnouncement(id: number): Promise<void> {
-    return this.request(`/announcements/${id}/`, {
+    await this.request(`/announcements/${id}/`, {
       method: 'DELETE',
     });
+    trackEvent('announcement_deleted', { announcement_id: id });
   }
 
   async getUnviewedCount(): Promise<{ count: number }> {
@@ -97,10 +103,12 @@ class AnnouncementService {
   }
 
   async markAsViewed(announcementIds?: number[]): Promise<{ message: string; viewed_count: number }> {
-    return this.request('/announcements/mark_as_viewed/', {
+    const result = await this.request<{ message: string; viewed_count: number }>('/announcements/mark_as_viewed/', {
       method: 'POST',
       body: JSON.stringify({ announcement_ids: announcementIds }),
     });
+    trackEvent('announcements_viewed', { count: result.viewed_count });
+    return result;
   }
 }
 

@@ -1,27 +1,39 @@
 from rest_framework import permissions
 
+from apps.membership.permissions import has_screen_permission
+
+
+class IsIncidenceAdmin(permissions.BasePermission):
+    """Permite el acceso solo a administradores o usuarios con permiso de incidencias."""
+
+    message = "No tienes permisos para ver las analíticas de incidencias."
+
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        if getattr(request.user, "is_staff", False):
+            return True
+        residence = getattr(request, "residence", None)
+        return has_screen_permission(request.user, residence, "incidences")
+
+
 class IsAdminOrReadOnly(permissions.BasePermission):
     def has_permission(self, request, view):
-        return request.user and request.user.is_authenticated
-    
+        return bool(request.user and request.user.is_authenticated)
+
     def has_object_permission(self, request, view, obj):
         user = request.user
-        try:
-            user_roles = [r.lower() for r in user.memberships.filter(is_active=True).values_list('role__name', flat=True)]
-        except Exception:
-            user_roles = []
+        residence = getattr(request, "residence", None)
 
-        is_admin = (getattr(user, 'is_staff', False) is True) or "admin" in user_roles or "residence_admin" in user_roles
-
-        if is_admin:
+        if has_screen_permission(user, residence, "incidences"):
             return True
-        
+
         if request.method in permissions.SAFE_METHODS:
             if obj.student == user:
                 return True
-            return obj.location_type != 'habitacion'
+            return obj.location_type != "habitacion"
 
-        if request.method in ['PUT', 'PATCH', 'DELETE']:
-            return obj.student == user and obj.status == 'pending'
+        if request.method in ["PUT", "PATCH", "DELETE"]:
+            return obj.student == user and obj.status == "pending"
 
         return False

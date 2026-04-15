@@ -4,7 +4,6 @@ from typing import Any
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -14,10 +13,16 @@ from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
 from apps.common.utils.jwt_auth import resolve_user_from_request
-from apps.membership.models import Membership
 from apps.residences.models import Residence
 
+from .analytics import (
+    ReservationsAnalyticsValidationError,
+    get_admin_reservations_analytics,
+)
 from .models import CommonSpace, SpaceReservation
+from .permissions import is_reservations_admin
+
+RESERVATION_REMINDER_WINDOW = timedelta(hours=1)
 
 
 def _serialize_space(space: CommonSpace) -> dict:
@@ -25,6 +30,7 @@ def _serialize_space(space: CommonSpace) -> dict:
         "id": space.id,
         "name": space.name,
         "description": space.description,
+        "img": space.img,
         "capacity": space.capacity,
         "is_active": space.is_active,
         "open_time": space.open_time.strftime("%H:%M:%S"),
@@ -56,6 +62,25 @@ def _serialize_reservation(reservation: SpaceReservation) -> dict:
     }
 
 
+def _serialize_reservation_reminder(reservation: SpaceReservation) -> dict[str, Any]:
+    start_time = timezone.localtime(reservation.start_time)
+    return {
+        "id": f"space-reservations-{reservation.id}",
+        "title": f"Tu reserva en {reservation.space.name} empieza pronto",
+        "message": f"Tu reserva comienza a las {start_time.strftime('%H:%M')}.",
+        "created_at": reservation.start_time.isoformat(),
+        "start_time": reservation.start_time.isoformat(),
+        "end_time": reservation.end_time.isoformat(),
+    }
+
+
+def _build_reservation_reminders(reservations: list[SpaceReservation]) -> list[dict[str, Any]]:
+    return sorted(
+        [_serialize_reservation_reminder(reservation) for reservation in reservations],
+        key=lambda item: item["start_time"],
+    )
+
+
 def _parse_request_datetime(value: str) -> datetime | None:
     parsed = parse_datetime(value)
     if not parsed:
@@ -71,23 +96,6 @@ def _validate_residence(request) -> Residence | None:
     if not residence:
         return None
     return residence
-
-
-def _is_admin_for_residence(user, residence: Residence) -> bool:
-    if getattr(user, "is_staff", False):
-        return True
-
-    return (
-        Membership.objects.filter(
-            user=user,
-            is_active=True,
-        )
-        .filter(
-            Q(role__name__iexact="residence_admin", residence=residence)
-            | Q(role__name__iexact="portfolio_admin")
-        )
-        .exists()
-    )
 
 
 def _compute_available_slots(
@@ -124,7 +132,9 @@ def _compute_available_slots(
             {
                 "start_time": current.isoformat(),
                 "end_time": slot_end.isoformat(),
-                "status": "past" if is_past else ("occupied" if is_occupied else "available"),
+                "status": "past"
+                if is_past
+                else ("occupied" if is_occupied else "available"),
             }
         )
 
@@ -320,7 +330,6 @@ class SpaceReservationCreateView(AuthenticatedView):
                 is_active=True,
             )
 
-            # Serializa reservas concurrentes del mismo usuario para validar solapes entre espacios.
             get_user_model().objects.select_for_update().filter(
                 id=request.user.id
             ).exists()
@@ -420,6 +429,30 @@ class MyReservationsView(AuthenticatedView):
         return JsonResponse(data, safe=False)
 
 
+class MyReservationRemindersView(AuthenticatedView):
+    def get(self, request):
+        residence = _validate_residence(request)
+        if not residence:
+            return JsonResponse({"detail": "No residence context."}, status=400)
+
+        now = timezone.now()
+        reminder_deadline = now + RESERVATION_REMINDER_WINDOW
+
+        reservations = (
+            SpaceReservation.objects.filter(
+                residence=residence,
+                user=request.user,
+                status=SpaceReservation.Status.ACTIVE,
+                start_time__gt=now,
+                start_time__lte=reminder_deadline,
+            )
+            .select_related("space", "user")
+            .order_by("start_time")
+        )
+
+        return JsonResponse(_build_reservation_reminders(list(reservations)), safe=False)
+
+
 class SpaceReservationCancelView(AuthenticatedView):
     def post(self, request, reservation_id: int):
         residence = _validate_residence(request)
@@ -432,7 +465,7 @@ class SpaceReservationCancelView(AuthenticatedView):
             residence=residence,
         )
 
-        can_cancel = reservation.user_id == request.user.id or _is_admin_for_residence(
+        can_cancel = reservation.user_id == request.user.id or is_reservations_admin(
             request.user, residence
         )
         if not can_cancel:
@@ -454,11 +487,11 @@ class SpaceReservationCancelView(AuthenticatedView):
 
 
 class AdminRequiredMixin:
-    """Mixin que verifica que el usuario es admin de la residencia."""
+    """Mixin que verifica que el usuario tiene permisos de administrador de espacios."""
 
     def check_permissions(self, request):
         residence = _validate_residence(request)
-        if not residence or not _is_admin_for_residence(request.user, residence):
+        if not residence or not is_reservations_admin(request.user, residence):
             return JsonResponse(
                 {"detail": "No tienes permisos de administrador."}, status=403
             )
@@ -482,6 +515,7 @@ class AdminSpaceListCreateView(AdminRequiredMixin, AuthenticatedView):
 
         name = str(payload.get("name", "")).strip()
         description = str(payload.get("description", "")).strip()
+        img = payload.get("img", "")
         capacity = payload.get("capacity", 1)
         open_time = str(payload.get("open_time", "")).strip()
         close_time = str(payload.get("close_time", "")).strip()
@@ -502,7 +536,6 @@ class AdminSpaceListCreateView(AdminRequiredMixin, AuthenticatedView):
                 {"detail": "capacity debe ser un entero positivo."}, status=400
             )
 
-        from django.core.exceptions import ValidationError
         from datetime import time as dt_time
 
         try:
@@ -539,6 +572,7 @@ class AdminSpaceListCreateView(AdminRequiredMixin, AuthenticatedView):
             residence=residence,
             name=name,
             description=description,
+            img = img,
             capacity=capacity,
             open_time=ot,
             close_time=ct,
@@ -587,6 +621,9 @@ class AdminSpaceDetailView(AdminRequiredMixin, AuthenticatedView):
 
         if "description" in payload:
             space.description = str(payload["description"]).strip()
+
+        if "img" in payload:
+            space.img = payload["img"]
 
         if "capacity" in payload:
             try:
@@ -713,3 +750,24 @@ class AdminSpaceNotificationsView(AdminRequiredMixin, AuthenticatedView):
         ]
 
         return JsonResponse(data, safe=False)
+
+
+class AdminReservationsAnalyticsView(AdminRequiredMixin, AuthenticatedView):
+    def get(self, request):
+        residence = _validate_residence(request)
+        if not residence:
+            return JsonResponse({"detail": "No residence context."}, status=400)
+
+        try:
+            payload = get_admin_reservations_analytics(
+                residence=residence,
+                from_value=request.GET.get("from"),
+                to_value=request.GET.get("to"),
+                compare_value=request.GET.get("compare"),
+                resource_type_value=request.GET.get("resource_type"),
+                zone_id_value=request.GET.get("zone_id"),
+            )
+        except ReservationsAnalyticsValidationError as exc:
+            return JsonResponse(exc.detail, status=400)
+
+        return JsonResponse(payload)

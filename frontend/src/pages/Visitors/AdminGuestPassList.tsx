@@ -1,4 +1,4 @@
-import { UserCheck, RefreshCw, Search, Calendar, User, Hash, Clock, MessageSquare } from "lucide-react";
+import { Ban, Calendar, Clock, Hash, MessageSquare, RefreshCw, Search, Undo2, User, UserCheck } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -7,10 +7,10 @@ import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { Input } from "../../components/ui/input";
-import { type AdminGuestPass, GuestPassApiError, listAdminGuestPasses } from "../../services/guestPasses";
+import { type AdminGuestPass, GuestPassApiError, listAdminGuestPasses, rejectAdminGuestPass, unrejectAdminGuestPass } from "../../services/guestPasses";
 
 const STATUS_OPTIONS = [
-  { value: "", label: "Todos" },
+  { value: "", label: "Todos los estados" },
   { value: "ACTIVE", label: "Activos" },
   { value: "USED", label: "Usados" },
   { value: "CANCELLED", label: "Cancelados" },
@@ -19,10 +19,18 @@ const STATUS_OPTIONS = [
   { value: "INACTIVE", label: "Inactivos" },
 ];
 
+const SORT_OPTIONS = [
+  { value: "date_desc", label: "Fecha: Recientes primero" },
+  { value: "date_asc", label: "Fecha: Antiguos primero" },
+  { value: "name_asc", label: "Nombre: A-Z" },
+  { value: "name_desc", label: "Nombre: Z-A" },
+];
+
 const STATUS_BADGE: Record<string, string> = {
   ACTIVE:    "bg-green-100 text-green-700 border-0",
+  UPCOMING:  "bg-sky-100 text-sky-700 border-0",
   USED:      "bg-blue-100 text-blue-700 border-0",
-  CANCELLED: "bg-gray-50 text-gray-500 border-0",
+  CANCELLED: "bg-gray-100 text-gray-500 border-0",
   REVOKED:   "bg-red-100 text-red-700 border-0",
   REJECTED:  "bg-orange-100 text-orange-700 border-0",
   INACTIVE:  "bg-yellow-100 text-yellow-700 border-0",
@@ -30,12 +38,34 @@ const STATUS_BADGE: Record<string, string> = {
 
 const STATUS_LABEL: Record<string, string> = {
   ACTIVE:    "Activo",
+  UPCOMING:  "Programado",
   USED:      "Usado",
   CANCELLED: "Cancelado",
   REVOKED:   "Revocado",
   REJECTED:  "Rechazado",
   INACTIVE:  "Inactivo",
 };
+
+function getDisplayStatus(pass: AdminGuestPass): string {
+  const rawStatus = (pass.status || "").trim().toUpperCase();
+  if (rawStatus !== "ACTIVE") {
+    return rawStatus;
+  }
+
+  const nowMs = Date.now();
+  const validFromMs = Date.parse(pass.valid_from);
+  const validUntilMs = Date.parse(pass.valid_until);
+
+  if (Number.isFinite(validFromMs) && validFromMs > nowMs) {
+    return "UPCOMING";
+  }
+
+  if (Number.isFinite(validUntilMs) && validUntilMs < nowMs) {
+    return "INACTIVE";
+  }
+
+  return rawStatus;
+}
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString("es-ES", {
@@ -50,19 +80,54 @@ function formatDateTime(iso: string): string {
 interface GuestPassDetailDialogProps {
   readonly pass: AdminGuestPass | null;
   readonly onClose: () => void;
+  readonly onRefresh: () => void;
 }
 
-function GuestPassDetailDialog({ pass, onClose }: GuestPassDetailDialogProps) {
+function GuestPassDetailDialog({ pass, onClose, onRefresh }: GuestPassDetailDialogProps) {
+  const [revoking, setRevoking] = useState(false);
+  const [unrevoking, setUnrevoking] = useState(false);
+  const displayStatus = pass ? getDisplayStatus(pass) : "";
+
+  async function handleRevoke() {
+    if (!pass) return;
+    setRevoking(true);
+    try {
+      await rejectAdminGuestPass(pass.id);
+      toast.success("Pase rechazado correctamente.");
+      onRefresh();
+      onClose();
+    } catch (err) {
+      toast.error(err instanceof GuestPassApiError ? err.message : "Error al rechazar el pase.");
+    } finally {
+      setRevoking(false);
+    }
+  }
+
+  async function handleUnrevoke() {
+    if (!pass) return;
+    setUnrevoking(true);
+    try {
+      await unrejectAdminGuestPass(pass.id);
+      toast.success("Rechazo deshecho correctamente.");
+      onRefresh();
+      onClose();
+    } catch (err) {
+      toast.error(err instanceof GuestPassApiError ? err.message : "Error al deshacer el rechazo.");
+    } finally {
+      setUnrevoking(false);
+    }
+  }
+
   return (
     <Dialog open={pass !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="max-w-md">
         {pass && (
           <>
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 flex-wrap">
+              <DialogTitle className="flex items-center gap-2 flex-wrap text-xl">
                 {pass.full_name}
-                <Badge className={STATUS_BADGE[pass.status ?? ""] ?? "border-0"}>
-                  {STATUS_LABEL[pass.status ?? ""] ?? pass.status}
+                <Badge className={STATUS_BADGE[displayStatus] ?? "border-0"}>
+                  {STATUS_LABEL[displayStatus] ?? displayStatus}
                 </Badge>
               </DialogTitle>
             </DialogHeader>
@@ -70,40 +135,62 @@ function GuestPassDetailDialog({ pass, onClose }: GuestPassDetailDialogProps) {
               <div className="flex items-center gap-3">
                 <Hash className="w-4 h-4 text-gray-500 shrink-0" />
                 <div>
-                  <p className="text-xs text-gray-500">Código de pase</p>
-                  <p className="font-mono font-semibold">{pass.pass_code}</p>
+                  <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Código de pase</p>
+                  <p className="font-mono font-bold text-blue-600">{pass.pass_code}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <User className="w-4 h-4 text-gray-500 shrink-0" />
                 <div>
-                  <p className="text-xs text-gray-500">Registrado por</p>
-                  <p className="font-medium">{pass.resident_name}</p>
+                  <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Registrado por</p>
+                  <p className="font-semibold">{pass.resident_name}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <Calendar className="w-4 h-4 text-gray-500 shrink-0" />
                 <div>
-                  <p className="text-xs text-gray-500">Período de validez</p>
-                  <p className="text-sm">{formatDateTime(pass.valid_from)}</p>
-                  <p className="text-sm">{formatDateTime(pass.valid_until)}</p>
+                  <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Período de validez</p>
+                  <p className="text-sm font-medium">{formatDateTime(pass.valid_from)}</p>
+                  <p className="text-sm font-medium text-gray-500">{formatDateTime(pass.valid_until)}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <Clock className="w-4 h-4 text-gray-500 shrink-0" />
                 <div>
-                  <p className="text-xs text-gray-500">Creado el</p>
+                  <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Fecha de creación</p>
                   <p className="text-sm">{formatDateTime(pass.created_at)}</p>
                 </div>
               </div>
               {pass.comment && (
-                <div className="flex items-start gap-3">
-                  <MessageSquare className="w-4 h-4 text-gray-500 shrink-0 mt-0.5" />
+                <div className="flex items-start gap-3 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                  <MessageSquare className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-xs text-gray-500">Comentario</p>
-                    <p className="text-sm italic">"{pass.comment}"</p>
+                    <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Comentario</p>
+                    <p className="text-sm italic text-gray-700">"{pass.comment}"</p>
                   </div>
                 </div>
+              )}
+              {(pass.status === "ACTIVE" || pass.status === "INACTIVE") && (
+                <Button
+                  variant="outline"
+                  className="w-full mt-2 border-orange-300 text-orange-700 hover:bg-orange-50 hover:text-orange-800"
+                  onClick={handleRevoke}
+                  disabled={revoking}
+                >
+                  <Ban className="w-4 h-4 mr-2" />
+                  {revoking ? "Rechazando..." : "Rechazar pase"}
+                </Button>
+              )}
+              {pass.status === "REJECTED" && (
+                <Button
+                  variant="outline"
+                  className="w-full mt-2"
+                  onClick={handleUnrevoke}
+                  disabled={unrevoking}
+                >
+                  <Undo2 className="w-4 h-4 mr-2" />
+                  {unrevoking ? "Deshaciendo..." : "Deshacer rechazo"}
+                </Button>
               )}
             </div>
           </>
@@ -117,6 +204,7 @@ export function AdminGuestPassListPage() {
   const [passes, setPasses] = useState<AdminGuestPass[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("");
+  const [sortFilter, setSortFilter] = useState("date_desc");
   const [search, setSearch] = useState("");
   const [selectedPass, setSelectedPass] = useState<AdminGuestPass | null>(null);
   const requestIdRef = useRef(0);
@@ -130,8 +218,7 @@ export function AdminGuestPassListPage() {
       setPasses(data);
     } catch (err) {
       if (currentId !== requestIdRef.current) return;
-      const msg = err instanceof GuestPassApiError ? err.message : "Error al cargar el listado.";
-      toast.error(msg);
+      toast.error(err instanceof GuestPassApiError ? err.message : "Error al cargar el listado.");
     } finally {
       if (currentId === requestIdRef.current) setLoading(false);
     }
@@ -141,101 +228,187 @@ export function AdminGuestPassListPage() {
     fetchPasses(statusFilter);
   }, [statusFilter]);
 
-  const filtered = search.trim()
-    ? passes.filter(
-        (p) =>
-          p.full_name?.toLowerCase().includes(search.toLowerCase()) ||
-          p.resident_name?.toLowerCase().includes(search.toLowerCase()) ||
-          p.pass_code?.toLowerCase().includes(search.toLowerCase())
-      )
-    : passes;
+  const processedPasses = [...passes]
+    .filter((p) => {
+      if (!search.trim()) return true;
+      const s = search.toLowerCase();
+      return (
+        p.full_name?.toLowerCase().includes(s) ||
+        p.resident_name?.toLowerCase().includes(s) ||
+        p.pass_code?.toLowerCase().includes(s)
+      );
+    })
+    .sort((a, b) => {
+      switch (sortFilter) {
+        case "name_asc": return (a.full_name || "").localeCompare(b.full_name || "");
+        case "name_desc": return (b.full_name || "").localeCompare(a.full_name || "");
+        case "date_asc": return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        default: return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+    });
+
+  let content;
+  if (loading) {
+    content = (
+      <div className="flex flex-col items-center justify-center py-20 gap-3">
+        <RefreshCw className="w-8 h-8 text-purple-500 animate-spin" />
+        <p className="text-sm text-gray-500 font-medium">Cargando pases de invitados...</p>
+      </div>
+    );
+  } else if (processedPasses.length === 0) {
+    content = (
+      <Card className="border-dashed shadow-none bg-gray-50/50">
+        <CardContent className="py-12 text-center">
+          <p className="text-gray-500 font-medium">No hay pases que coincidan.</p>
+        </CardContent>
+      </Card>
+    );
+  } else {
+    content = (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {processedPasses.map((pass) => (
+          (() => {
+            const displayStatus = getDisplayStatus(pass);
+            return (
+          <Card
+            key={pass.id}
+            className={`hover:shadow-md transition-all cursor-pointer group ${
+              pass.out_of_schedule
+                ? "border-red-300 bg-red-50/70 hover:border-red-400"
+                : "border-gray-200 hover:border-purple-300"
+            }`}
+            role="button"
+            tabIndex={0}
+            aria-label={pass.full_name}
+            onClick={() => setSelectedPass(pass)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                setSelectedPass(pass);
+              }
+            }}
+          >
+            <CardContent className="p-5 flex flex-col h-full">
+              {pass.out_of_schedule && (
+                <div className="mb-3 rounded-md border border-red-200 bg-red-100 px-2 py-1 text-[11px] font-semibold text-red-700">
+                  Fuera de horario
+                </div>
+              )}
+
+              <div className="flex items-start justify-between gap-2 mb-3">
+                <span
+                  className={`font-bold transition-colors line-clamp-1 flex-1 ${
+                    pass.out_of_schedule
+                      ? "text-red-900 group-hover:text-red-800"
+                      : "text-gray-900 group-hover:text-purple-700"
+                  }`}
+                >
+                  {pass.full_name}
+                </span>
+                <Badge className={`${STATUS_BADGE[displayStatus] ?? "border-0"} whitespace-nowrap shrink-0`}>
+                  {STATUS_LABEL[displayStatus] ?? displayStatus}
+                </Badge>
+              </div>
+
+              <div className="space-y-2 flex-1">
+                <div className="flex items-center gap-2 text-xs">
+                  <User className="w-3.5 h-3.5 text-gray-400" />
+                  <span className="text-gray-500">De: </span>
+                  <span className="font-semibold text-gray-800 line-clamp-1">{pass.resident_name}</span>
+                </div>
+
+                <div className="flex items-center gap-2 text-xs">
+                  <Hash className="w-3.5 h-3.5 text-gray-400" />
+                  <span className="text-gray-500">Código: </span>
+                  <span className="font-mono font-bold text-purple-600">{pass.pass_code}</span>
+                </div>
+
+                <div className="flex items-start gap-2 text-[11px] text-gray-500 bg-gray-50 p-2 rounded-md border border-gray-100 mt-2">
+                  <Calendar className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                  <div className="leading-tight">
+                    <p>{formatDateTime(pass.valid_from).split(',')[0]}</p>
+                    <p className="text-[10px] text-gray-400">hasta {formatDateTime(pass.valid_until).split(',')[0]}</p>
+                  </div>
+                </div>
+                {pass.comment && (
+                  <p className="text-[11px] italic text-gray-500 line-clamp-1">"{pass.comment}"</p>
+                )}
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-[10px] text-gray-400 font-medium">
+                <span className="uppercase tracking-wider">Creado</span>
+                <span>{formatDateTime(pass.created_at).split(',')[0]}</span>
+              </div>
+            </CardContent>
+          </Card>
+            );
+          })()
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="bg-purple-100 p-2 rounded-xl">
+          <div className="bg-purple-100 p-2.5 rounded-xl">
             <UserCheck className="w-6 h-6 text-purple-600" />
           </div>
           <div>
-            <h2 className="text-xl font-bold">Historial de Invitados</h2>
-            <p className="text-sm text-gray-500">Pases de visita pasados y actuales</p>
+            <h2 className="text-2xl font-bold tracking-tight">Historial de Invitados</h2>
+            <p className="text-sm text-gray-500 font-medium">Gestión y control de pases de visita</p>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={() => fetchPasses(statusFilter)} disabled={loading}>
+        <Button variant="outline" size="sm" onClick={() => fetchPasses(statusFilter)} disabled={loading} className="shadow-sm">
           <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
           Actualizar
         </Button>
       </div>
 
-      {/* Filtros */}
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col lg:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <Input
             placeholder="Buscar por invitado, residente o código..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
+            className="pl-9 h-10 shadow-sm"
           />
         </div>
-        <select
-          aria-label="Filtrar por estado"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-        >
-          {STATUS_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
-          ))}
-        </select>
+        
+        <div className="flex gap-2">
+          <select
+            aria-label="Filtrar por estado"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-sm min-w-[140px]"
+          >
+            {STATUS_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+
+          <select
+            aria-label="Ordenar por"
+            value={sortFilter}
+            onChange={(e) => setSortFilter(e.target.value)}
+            className="h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-sm min-w-[180px]"
+          >
+            {SORT_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
-      {/* Lista */}
-      {loading ? (
-        <p className="text-sm text-gray-500 py-8 text-center">Cargando...</p>
-      ) : filtered.length === 0 ? (
-        <p className="text-sm text-gray-500 py-8 text-center">No hay pases que coincidan.</p>
-      ) : (
-        <div className="grid gap-3">
-          {filtered.map((pass) => (
-            <Card
-              key={pass.id}
-              className="hover:shadow-sm transition cursor-pointer hover:border-purple-200"
-              role="button"
-              tabIndex={0}
-              onClick={() => setSelectedPass(pass)}
-              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setSelectedPass(pass); }}
-            >
-              <CardContent className="flex items-start justify-between gap-4 p-4">
-                <div className="min-w-0 flex-1 space-y-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold truncate">{pass.full_name}</span>
-                    <Badge className={STATUS_BADGE[pass.status ?? ""] ?? "border-0"}>
-                      {STATUS_LABEL[pass.status ?? ""] ?? pass.status}
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-gray-500">
-                    Registrado por <span className="font-medium text-gray-900">{pass.resident_name}</span>
-                    {" · "}Código: <span className="font-mono">{pass.pass_code}</span>
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {formatDateTime(pass.valid_from)} — {formatDateTime(pass.valid_until)}
-                  </p>
-                  {pass.comment && (
-                    <p className="text-xs text-gray-500 italic">"{pass.comment}"</p>
-                  )}
-                </div>
-                <p className="text-xs text-gray-500 shrink-0 pt-0.5">
-                  {formatDateTime(pass.created_at)}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+      {content}
 
-      <GuestPassDetailDialog pass={selectedPass} onClose={() => setSelectedPass(null)} />
+      <GuestPassDetailDialog
+        pass={selectedPass}
+        onClose={() => setSelectedPass(null)}
+        onRefresh={() => fetchPasses(statusFilter)}
+      />
     </div>
   );
 }

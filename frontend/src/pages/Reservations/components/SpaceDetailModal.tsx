@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { X } from "lucide-react"; // Importamos X para un botón de cierre más visual
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
 import { getSpace, type AdminSpace } from "../../../services/adminSpaces";
@@ -9,9 +10,10 @@ interface Props {
   readonly onClose: () => void;
   readonly onEdit?: (space: AdminSpace) => void;
   readonly onDeactivate?: (space: AdminSpace) => void;
+  readonly onViewReservations?: (space: AdminSpace) => void;
 }
 
-export function SpaceDetailModal({ open, spaceId, onClose, onEdit, onDeactivate }: Props) {
+export function SpaceDetailModal({ open, spaceId, onClose, onEdit, onDeactivate, onViewReservations }: Props) {
   const [space, setSpace] = useState<AdminSpace | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -36,20 +38,26 @@ export function SpaceDetailModal({ open, spaceId, onClose, onEdit, onDeactivate 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <Card className="w-full max-w-lg shadow-xl">
-        <CardHeader className="flex items-center justify-between p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+      <Card className="w-full max-w-lg shadow-xl overflow-hidden">
+        <CardHeader className="flex flex-row items-center justify-between p-4 border-b">
           <CardTitle className="text-lg font-semibold">Detalle del espacio</CardTitle>
-          <button onClick={onClose} className="text-gray-500">Cerrar</button>
+          <button 
+            onClick={onClose} 
+            className="p-1 rounded-full hover:bg-gray-100 text-gray-500 transition-colors"
+          >
+            <X size={20} />
+          </button>
         </CardHeader>
-        <CardContent className="p-4">
+        
+        <CardContent className="p-0 overflow-y-auto max-h-[80vh]">
           {(() => {
             if (loading) {
-              return <p className="text-sm text-gray-500">Cargando...</p>;
+              return <div className="p-8 text-center text-sm text-gray-500">Cargando...</div>;
             }
 
             if (space == null) {
-              return <p className="text-sm text-red-500">No se encontró el espacio.</p>;
+              return <div className="p-8 text-center text-sm text-red-500">No se encontró el espacio.</div>;
             }
 
             const deactivateButton = onDeactivate
@@ -77,35 +85,64 @@ export function SpaceDetailModal({ open, spaceId, onClose, onEdit, onDeactivate 
               : null;
 
             return (
-              <div className="space-y-3">
-                <h3 className="text-base font-semibold">{space.name}</h3>
-                {space.description && <p className="text-sm text-gray-600">{space.description}</p>}
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div>
-                    <p className="text-xs text-gray-500">Aforo</p>
-                    <p className="font-semibold">{space.capacity}</p>
+              <div className="flex flex-col">
+                {/* SECCIÓN DE LA IMAGEN */}
+                {space.img ? (
+                  <div className="w-full h-56 bg-gray-100">
+                    <img 
+                      src={space.img} 
+                      alt={space.name} 
+                      className="w-full h-full object-cover"
+                    />
                   </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Intervalo</p>
-                    <p className="font-semibold">{space.reservation_interval_minutes}m</p>
+                ) : (
+                  <div className="w-full h-32 bg-gray-50 flex items-center justify-center border-b">
+                    <p className="text-xs text-gray-400 italic">Sin imagen asignada</p>
                   </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Apertura</p>
-                    <p className="font-semibold">{space.open_time.slice(0, 5)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Cierre</p>
-                    <p className="font-semibold">{space.close_time.slice(0, 5)}</p>
-                  </div>
-                </div>
+                )}
 
-                <div className="flex gap-2 justify-end pt-2">
-                  {onEdit && (
-                    <Button size="sm" onClick={() => onEdit(space)}>
-                      Editar
-                    </Button>
-                  )}
-                  {deactivateButton}
+                <div className="p-6 space-y-4">
+                  <div className="space-y-1">
+                    <h3 className="text-xl font-bold text-gray-900">{space.name}</h3>
+                    {space.description && (
+                      <p className="text-sm text-gray-600 leading-relaxed">
+                        {space.description}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-xl">
+                    <div>
+                      <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Aforo</p>
+                      <p className="font-semibold text-gray-700">{space.capacity} personas</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Intervalo</p>
+                      <p className="font-semibold text-gray-700">{space.reservation_interval_minutes} min</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Horario apertura</p>
+                      <p className="font-semibold text-gray-700">{space.open_time.slice(0, 5)} h</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Horario cierre</p>
+                      <p className="font-semibold text-gray-700">{space.close_time.slice(0, 5)} h</p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 justify-end pt-2 flex-wrap">
+                    {onViewReservations && (
+                      <Button variant="outline" size="sm" onClick={() => onViewReservations(space)}>
+                        Ver reservas
+                      </Button>
+                    )}
+                    {onEdit && (
+                      <Button variant="nexus" size="sm" onClick={() => onEdit(space)}>
+                        Editar información
+                      </Button>
+                    )}
+                    {deactivateButton}
+                  </div>
                 </div>
               </div>
             );

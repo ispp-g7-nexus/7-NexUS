@@ -1,7 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Search } from "lucide-react";
 import { toast } from "sonner";
-import { objectsService, ObjectItem, UserObjectReservation } from "../../services/objects.ts";
+import { InteractiveDatePicker } from "../../components/ui/InteractiveDatePicker";
+import {
+  objectsService,
+  ObjectItem,
+  ObjectAvailability,
+  UserObjectReservation,
+} from "../../services/objects.ts";
 import { ObjectsList } from "./components/ObjectsList";
 import { ReservationModal } from "./components/ReservationModal";
 import { MyReservations } from "./components/MyReservations";
@@ -12,23 +18,44 @@ interface ObjectsProps {
   onReservationSuccess?: () => void;
 }
 
+function getTodayDateString(): string {
+  const now = new Date();
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split("T")[0];
+}
+
 export function Objects({ onReservationSuccess }: ObjectsProps) {
+  const todayDate = useMemo(() => getTodayDateString(), []);
+
   const [objects, setObjects] = useState<ObjectItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState(todayDate);
+  const [availabilityByObjectId, setAvailabilityByObjectId] = useState<Record<number, ObjectAvailability>>({});
+  const [loadingAvailability, setLoadingAvailability] = useState(false);
   const [selectedObject, setSelectedObject] = useState<ObjectItem | null>(null);
   const [isReservationModalOpen, setIsReservationModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const shownObjectNotificationIdsRef = useRef<Set<string>>(new Set());
   
   const [reservations, setReservations] = useState<UserObjectReservation[]>([]);
   const [reservationsLoading, setReservationsLoading] = useState(true);
   const [reservationsError, setReservationsError] = useState<string | null>(null);
   const [cancellingRentalId, setCancellingRentalId] = useState<number | null>(null);
+  const [dismissingRentalId, setDismissingRentalId] = useState<number | null>(null);
 
   useEffect(() => {
-    fetchObjects();
-    fetchReservations();
+    void fetchObjects();
+    void fetchReservations();
+    void fetchObjectNotifications();
   }, []);
+
+  useEffect(() => {
+    if (objects.length === 0) {
+      setAvailabilityByObjectId({});
+      return;
+    }
+    void fetchAvailability(objects, selectedDate);
+  }, [objects, selectedDate]);
 
   const fetchObjects = async () => {
     try {
@@ -40,6 +67,24 @@ export function Objects({ onReservationSuccess }: ObjectsProps) {
       setError(err instanceof Error ? err.message : "Error al cargar objetos");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAvailability = async (objectsToLoad: ObjectItem[], date: string) => {
+    try {
+      setLoadingAvailability(true);
+      const entries = await Promise.all(
+        objectsToLoad.map(async (object) => {
+          const data = await objectsService.getObjectAvailability(object.id, date);
+          return [object.id, data] as const;
+        }),
+      );
+      setAvailabilityByObjectId(Object.fromEntries(entries));
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Error al cargar disponibilidad de objetos";
+      toast.error(errorMessage);
+    } finally {
+      setLoadingAvailability(false);
     }
   };
 
@@ -56,6 +101,26 @@ export function Objects({ onReservationSuccess }: ObjectsProps) {
     }
   };
 
+  const fetchObjectNotifications = async () => {
+    try {
+      const data = await objectsService.getUserObjectNotifications();
+      const unseenNotifications = data.filter(
+        (notification) => !shownObjectNotificationIdsRef.current.has(notification.id),
+      );
+
+      unseenNotifications.forEach((notification) => {
+        shownObjectNotificationIdsRef.current.add(notification.id);
+        toast.warning(notification.title, {
+          description: notification.message,
+          id: `object-delay-${notification.id}`,
+          duration: 5000,
+        });
+      });
+    } catch {
+      // Keep page usable even if notifications endpoint fails.
+    }
+  };
+
 
 
   const handleReserveObject = (object: ObjectItem) => {
@@ -66,8 +131,12 @@ export function Objects({ onReservationSuccess }: ObjectsProps) {
   const handleReservationSuccess = () => {
     setIsReservationModalOpen(false);
     setSelectedObject(null);
-    fetchObjects();
-    fetchReservations();
+    void fetchObjects();
+    void fetchReservations();
+    void fetchObjectNotifications();
+    if (objects.length > 0) {
+      void fetchAvailability(objects, selectedDate);
+    }
     if (onReservationSuccess) {
       onReservationSuccess();
     }
@@ -79,7 +148,9 @@ export function Objects({ onReservationSuccess }: ObjectsProps) {
       await objectsService.cancelReservation(objectId, { rental_id: rentalId });
       toast.success("Reserva cancelada correctamente.");
       await fetchReservations();
+      await fetchObjectNotifications();
       await fetchObjects();
+      await fetchAvailability(objects, selectedDate);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Error al cancelar reserva";
       toast.error(errorMessage);
@@ -88,6 +159,22 @@ export function Objects({ onReservationSuccess }: ObjectsProps) {
       setCancellingRentalId(null);
     }
   };
+
+  const handleDismissReservation = async (rentalId: number) => {
+    setDismissingRentalId(rentalId);
+    try {
+      await objectsService.dismissUserReservation(rentalId);
+      toast.success("Reserva descartada.");
+      await fetchReservations();
+      await fetchObjectNotifications();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Error al descartar reserva";
+      toast.error(errorMessage);
+    } finally {
+      setDismissingRentalId(null);
+    }
+  };
+
 
   const filteredObjects = objects.filter(object =>
     object.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -107,6 +194,13 @@ export function Objects({ onReservationSuccess }: ObjectsProps) {
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <InteractiveDatePicker
+              value={selectedDate}
+              onChange={(newDate) => setSelectedDate(newDate)}
+              minDate={todayDate}
+              className="group relative flex items-center gap-2 border-b-2 border-transparent pb-1 transition-all focus-within:border-green-700 hover:border-green-700/50"
+              inputClassName="w-[130px] text-sm font-medium"
+            />
             <label htmlFor="objects-search" className="inline-flex items-center gap-2 text-sm font-medium">
               <Search className="h-4 w-4" /> Buscar
             </label>
@@ -124,24 +218,29 @@ export function Objects({ onReservationSuccess }: ObjectsProps) {
 
       {/* Grid Layout: Objects List + My Reservations */}
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-        <div className="space-y-4">
+        <div className="space-y-4 min-w-0">
           <h3 className="text-lg font-semibold">Objetos disponibles</h3>
           <ObjectsList
             objects={filteredObjects}
             loading={loading}
             error={error}
+            selectedDate={selectedDate}
+            loadingAvailability={loadingAvailability}
+            availabilityByObjectId={availabilityByObjectId}
             onReserve={handleReserveObject}
             onRetry={fetchObjects}
           />
         </div>
 
-        <div>
+        <div className="min-w-0">
           <MyReservations
             reservations={reservations}
             loading={reservationsLoading}
             error={reservationsError}
             cancellingRentalId={cancellingRentalId}
+            dismissingRentalId={dismissingRentalId}
             onCancel={handleCancelReservation}
+            onDismiss={handleDismissReservation}
             onRetry={fetchReservations}
           />
         </div>

@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import time, timedelta
 
 from django.contrib.auth import get_user_model
 from django.db.utils import ProgrammingError
@@ -7,11 +7,12 @@ from django_tenants.test.cases import TenantTestCase
 from django_tenants.test.client import TenantClient
 
 from apps.common.services import build_access_token
-from apps.guests.models import GuestPass
+from apps.guests.models import GuestPass, GuestPassPolicy
 from apps.membership.models import Membership, Role
 from apps.residences.models import Residence, ResidenceDomain
 
 ADMIN_LIST_URL = "/api/admin/guest-passes/"
+ADMIN_NOTIFICATIONS_URL = "/api/admin/guest-passes/notifications/"
 
 
 class AdminGuestPassListTests(TenantTestCase):
@@ -38,7 +39,7 @@ class AdminGuestPassListTests(TenantTestCase):
         except ProgrammingError as exc:
             message = str(exc).strip()
             expected = 'relation "announcements_announcement" does not exist'
-            if message != expected:
+            if expected not in message:
                 raise
 
     def setUp(self):
@@ -83,7 +84,7 @@ class AdminGuestPassListTests(TenantTestCase):
         )
 
         student_role = Role.objects.create(
-            name="Student-AdminList",
+            name="Student",
             description="Residente",
             is_system_default=True,
             residence=None,
@@ -123,7 +124,9 @@ class AdminGuestPassListTests(TenantTestCase):
         client.defaults["HTTP_AUTHORIZATION"] = f"Bearer {token}"
         return client
 
-    def _create_pass(self, *, resident, pass_code, status, valid_from, valid_until, residence=None):
+    def _create_pass(
+        self, *, resident, pass_code, status, valid_from, valid_until, residence=None
+    ):
         return GuestPass.objects.create(
             residence=residence or self.residence,
             resident=resident,
@@ -179,7 +182,17 @@ class AdminGuestPassListTests(TenantTestCase):
 
         self.assertEqual(response.status_code, 200)
         item = response.json()[0]
-        for field in ["id", "full_name", "pass_code", "valid_from", "valid_until", "status", "comment", "created_at", "resident_name"]:
+        for field in [
+            "id",
+            "full_name",
+            "pass_code",
+            "valid_from",
+            "valid_until",
+            "status",
+            "comment",
+            "created_at",
+            "resident_name",
+        ]:
             self.assertIn(field, item)
 
     def test_resident_name_is_full_name_when_available(self):
@@ -252,6 +265,56 @@ class AdminGuestPassListTests(TenantTestCase):
         self.assertEqual(len(payload), 1)
         self.assertEqual(payload[0]["pass_code"], "FILTER-ACTIVE-1")
 
+    def test_admin_active_filter_excludes_expired_active_passes(self):
+        now = timezone.now()
+        self._create_pass(
+            resident=self.resident_membership,
+            pass_code="ACTIVE-NOW-1",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now - timedelta(hours=1),
+            valid_until=now + timedelta(hours=1),
+        )
+        self._create_pass(
+            resident=self.resident_membership,
+            pass_code="ACTIVE-EXPIRED-1",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now - timedelta(days=1),
+            valid_until=now - timedelta(hours=1),
+        )
+
+        response = self.admin_client.get(ADMIN_LIST_URL + "?status=ACTIVE")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(len(payload), 1)
+        self.assertEqual(payload[0]["pass_code"], "ACTIVE-NOW-1")
+        self.assertEqual(payload[0]["status"], GuestPass.Status.ACTIVE)
+
+    def test_admin_inactive_filter_returns_expired_active_passes(self):
+        now = timezone.now()
+        self._create_pass(
+            resident=self.resident_membership,
+            pass_code="INACTIVE-EXPIRED-1",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now - timedelta(days=1),
+            valid_until=now - timedelta(hours=1),
+        )
+        self._create_pass(
+            resident=self.resident_membership,
+            pass_code="INACTIVE-ACTIVE-1",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now - timedelta(hours=1),
+            valid_until=now + timedelta(hours=2),
+        )
+
+        response = self.admin_client.get(ADMIN_LIST_URL + "?status=INACTIVE")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(len(payload), 1)
+        self.assertEqual(payload[0]["pass_code"], "INACTIVE-EXPIRED-1")
+        self.assertEqual(payload[0]["status"], GuestPass.Status.INACTIVE)
+
     def test_admin_sees_empty_list_when_no_passes_exist(self):
         response = self.admin_client.get(ADMIN_LIST_URL)
 
@@ -307,4 +370,98 @@ class AdminGuestPassListTests(TenantTestCase):
     def test_unauthenticated_request_is_rejected(self):
         client = TenantClient(self.tenant)
         response = client.get(ADMIN_LIST_URL)
+        self.assertEqual(response.status_code, 403)
+
+    def test_admin_gets_notifications_for_visitors_after_end_time(self):
+        now = timezone.now()
+        self._create_pass(
+            resident=self.resident_membership,
+            pass_code="NOTIF-PASS-1",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now - timedelta(hours=1),
+            valid_until=now + timedelta(hours=2),
+        )
+        GuestPassPolicy.objects.update_or_create(
+            residence=self.residence,
+            defaults={"visit_end_time": time(0, 0)},
+        )
+
+        response = self.admin_client.get(ADMIN_NOTIFICATIONS_URL)
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(len(payload), 1)
+        self.assertEqual(payload[0]["title"], "Visitante fuera de horario")
+        self.assertNotIn("(", payload[0]["message"])
+        self.assertNotIn(")", payload[0]["message"])
+        self.assertIn("estudiante Carlos Ruiz", payload[0]["message"])
+        self.assertNotIn("Invitado Test", payload[0]["message"])
+
+    def test_admin_notifications_empty_when_end_time_not_configured(self):
+        now = timezone.now()
+        self._create_pass(
+            resident=self.resident_membership,
+            pass_code="NOTIF-PASS-2",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now - timedelta(hours=1),
+            valid_until=now + timedelta(hours=2),
+        )
+
+        response = self.admin_client.get(ADMIN_NOTIFICATIONS_URL)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), [])
+
+    def test_admin_notifications_limit_to_eight_and_exclude_non_active_cases(self):
+        now = timezone.now()
+        GuestPassPolicy.objects.update_or_create(
+            residence=self.residence,
+            defaults={"visit_end_time": time(0, 0)},
+        )
+
+        for index in range(10):
+            self._create_pass(
+                resident=self.resident_membership,
+                pass_code=f"NOTIF-ACTIVE-{index}",
+                status=GuestPass.Status.ACTIVE,
+                valid_from=now - timedelta(hours=1),
+                valid_until=now + timedelta(hours=3),
+            )
+
+        cancelled = self._create_pass(
+            resident=self.resident_membership,
+            pass_code="NOTIF-CANCELLED-1",
+            status=GuestPass.Status.CANCELLED,
+            valid_from=now - timedelta(hours=1),
+            valid_until=now + timedelta(hours=3),
+        )
+        revoked = self._create_pass(
+            resident=self.resident_membership,
+            pass_code="NOTIF-REVOKED-1",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now - timedelta(hours=1),
+            valid_until=now + timedelta(hours=3),
+        )
+        expired = self._create_pass(
+            resident=self.resident_membership,
+            pass_code="NOTIF-EXPIRED-1",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now - timedelta(days=1),
+            valid_until=now - timedelta(hours=1),
+        )
+        revoked.revoked_at = now - timedelta(minutes=1)
+        revoked.save(update_fields=["revoked_at", "updated_at"])
+
+        response = self.admin_client.get(ADMIN_NOTIFICATIONS_URL)
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(len(payload), 8)
+        ids = {item["id"] for item in payload}
+        self.assertNotIn(cancelled.id, ids)
+        self.assertNotIn(revoked.id, ids)
+        self.assertNotIn(expired.id, ids)
+
+    def test_resident_cannot_access_admin_notifications(self):
+        response = self.resident_client.get(ADMIN_NOTIFICATIONS_URL)
         self.assertEqual(response.status_code, 403)

@@ -2,6 +2,7 @@ from django.db import models
 from django.conf import settings
 from apps.residences.models import Residence
 from apps.spaces.models import CommonSpace, SpaceReservation
+from apps.chats.models import ChatGroup
 
 class Event(models.Model):
     class Type(models.TextChoices):
@@ -37,6 +38,13 @@ class Event(models.Model):
     max_participants = models.PositiveIntegerField(null=True, blank=True)
     residence = models.ForeignKey(Residence, on_delete=models.CASCADE, related_name='events')
     host = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='hosted_events')
+    chat_group = models.OneToOneField(
+        ChatGroup,
+        on_delete=models.SET_NULL,
+        related_name='event',
+        null=True,
+        blank=True,
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

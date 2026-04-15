@@ -1,5 +1,5 @@
 import json
-from datetime import timedelta
+from datetime import time, timedelta
 
 from django.contrib.auth import get_user_model
 from django.db.utils import ProgrammingError
@@ -16,7 +16,7 @@ from apps.residences.models import Residence, ResidenceDomain
 class GuestPassesApiTests(TenantTestCase):
     @classmethod
     def get_test_tenant_domain(cls):
-        return "guests.test.local"
+        return f"{cls.__name__.lower()}.test.local"
 
     @classmethod
     def setup_tenant(cls, tenant):
@@ -24,6 +24,7 @@ class GuestPassesApiTests(TenantTestCase):
         tenant.slug = "tenant-guests"
         tenant.is_active = True
         tenant.on_trial = True
+        tenant.schema_name = f"test_schema_{cls.__name__.lower()}"
 
     @classmethod
     def setup_domain(cls, domain):
@@ -180,6 +181,9 @@ class GuestPassesApiTests(TenantTestCase):
             "comment": comment,
         }
 
+    def _cancel_url(self, guest_pass_id: int) -> str:
+        return f"/api/guest-passes/me/{guest_pass_id}/cancel/"
+
     def test_resident_lists_only_own_active_passes(self):
         now = timezone.now()
 
@@ -258,6 +262,42 @@ class GuestPassesApiTests(TenantTestCase):
         response = self.admin_client.get("/api/guest-passes/me/active/")
         self.assertEqual(response.status_code, 403)
 
+    def test_unauthenticated_user_is_forbidden_for_resident_endpoints(self):
+        now = timezone.now()
+        guest_pass = self._create_pass(
+            resident=self.resident_membership,
+            pass_code="PASS-UNAUTH-CANCEL-1",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now - timedelta(hours=1),
+            valid_until=now + timedelta(hours=2),
+        )
+        anonymous_client = TenantClient(self.tenant)
+        create_payload = self._build_create_payload(
+            valid_from=now + timedelta(hours=1),
+            valid_until=now + timedelta(hours=2),
+        )
+
+        endpoints = [
+            ("GET", "/api/guest-passes/me/active/", None),
+            ("GET", "/api/guest-passes/me/upcoming/", None),
+            ("GET", "/api/guest-passes/me/history/", None),
+            ("GET", self.resident_policy_url, None),
+            ("POST", self.create_url, create_payload),
+            ("POST", self._cancel_url(guest_pass.id), {}),
+        ]
+
+        for method, url, payload in endpoints:
+            with self.subTest(method=method, url=url):
+                if method == "GET":
+                    response = anonymous_client.get(url)
+                else:
+                    response = anonymous_client.post(
+                        url,
+                        data=json.dumps(payload),
+                        content_type="application/json",
+                    )
+                self.assertEqual(response.status_code, 403)
+
     def test_resident_lists_only_own_upcoming_passes(self):
         now = timezone.now()
 
@@ -303,6 +343,176 @@ class GuestPassesApiTests(TenantTestCase):
         response = self.admin_client.get("/api/guest-passes/me/upcoming/")
         self.assertEqual(response.status_code, 403)
 
+    def test_resident_can_cancel_own_active_pass(self):
+        now = timezone.now()
+        guest_pass = self._create_pass(
+            resident=self.resident_membership,
+            pass_code="PASS-CANCEL-ME-1",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now - timedelta(hours=1),
+            valid_until=now + timedelta(hours=1),
+        )
+
+        response = self.resident_client.post(self._cancel_url(guest_pass.id))
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["detail"], "Pase cancelado correctamente.")
+        self.assertEqual(payload["guest_pass"]["id"], guest_pass.id)
+        self.assertEqual(payload["guest_pass"]["status"], GuestPass.Status.CANCELLED)
+
+        guest_pass.refresh_from_db()
+        self.assertEqual(guest_pass.status, GuestPass.Status.CANCELLED)
+        self.assertIsNotNone(guest_pass.cancelled_at)
+
+    def test_resident_can_cancel_upcoming_pass(self):
+        now = timezone.now()
+        guest_pass = self._create_pass(
+            resident=self.resident_membership,
+            pass_code="PASS-UPCOMING-CANCEL-1",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now + timedelta(hours=2),
+            valid_until=now + timedelta(hours=4),
+        )
+
+        response = self.resident_client.post(self._cancel_url(guest_pass.id))
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["detail"], "Pase cancelado correctamente.")
+        self.assertEqual(payload["guest_pass"]["id"], guest_pass.id)
+        self.assertEqual(payload["guest_pass"]["status"], GuestPass.Status.CANCELLED)
+
+        guest_pass.refresh_from_db()
+        self.assertEqual(guest_pass.status, GuestPass.Status.CANCELLED)
+        self.assertIsNotNone(guest_pass.cancelled_at)
+
+    def test_resident_cannot_cancel_expired_active_pass(self):
+        now = timezone.now()
+        guest_pass = self._create_pass(
+            resident=self.resident_membership,
+            pass_code="PASS-EXPIRED-CANCEL-1",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now - timedelta(hours=4),
+            valid_until=now - timedelta(minutes=1),
+        )
+
+        response = self.resident_client.post(self._cancel_url(guest_pass.id))
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("detail", response.json())
+        self.assertEqual(
+            response.json()["detail"],
+            "Solo puedes cancelar pases activos o próximos.",
+        )
+
+    def test_resident_cannot_cancel_pass_from_other_resident(self):
+        now = timezone.now()
+        guest_pass = self._create_pass(
+            resident=self.other_resident_membership,
+            pass_code="PASS-OTHER-CANCEL-1",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now - timedelta(hours=1),
+            valid_until=now + timedelta(hours=1),
+        )
+
+        response = self.resident_client.post(self._cancel_url(guest_pass.id))
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_non_resident_user_is_forbidden_for_cancel(self):
+        now = timezone.now()
+        guest_pass = self._create_pass(
+            resident=self.resident_membership,
+            pass_code="PASS-CANCEL-FORBIDDEN-1",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now - timedelta(hours=1),
+            valid_until=now + timedelta(hours=1),
+        )
+
+        response = self.admin_client.post(self._cancel_url(guest_pass.id))
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_resident_cannot_cancel_already_cancelled_pass(self):
+        now = timezone.now()
+        guest_pass = self._create_pass(
+            resident=self.resident_membership,
+            pass_code="PASS-CANCELLED-ALREADY-1",
+            status=GuestPass.Status.CANCELLED,
+            valid_from=now - timedelta(hours=1),
+            valid_until=now + timedelta(hours=1),
+            cancelled_at=now - timedelta(minutes=10),
+        )
+
+        response = self.resident_client.post(self._cancel_url(guest_pass.id))
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("detail", response.json())
+        self.assertEqual(response.json()["detail"], "El pase ya está cancelado.")
+
+    def test_resident_history_includes_expired_active_passes_as_inactive(self):
+        now = timezone.now()
+
+        expired_active = self._create_pass(
+            resident=self.resident_membership,
+            pass_code="PASS-HISTORY-EXPIRED-1",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now - timedelta(days=2),
+            valid_until=now - timedelta(hours=1),
+        )
+        self._create_pass(
+            resident=self.resident_membership,
+            pass_code="PASS-HISTORY-ACTIVE-NOW-1",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now - timedelta(hours=1),
+            valid_until=now + timedelta(hours=2),
+        )
+        self._create_pass(
+            resident=self.resident_membership,
+            pass_code="PASS-HISTORY-UPCOMING-1",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now + timedelta(hours=1),
+            valid_until=now + timedelta(hours=3),
+        )
+        revoked = self._create_pass(
+            resident=self.resident_membership,
+            pass_code="PASS-HISTORY-REVOKED-1",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now - timedelta(days=1),
+            valid_until=now + timedelta(hours=3),
+            revoked_at=now - timedelta(minutes=5),
+        )
+        used = self._create_pass(
+            resident=self.resident_membership,
+            pass_code="PASS-HISTORY-USED-1",
+            status=GuestPass.Status.USED,
+            valid_from=now - timedelta(days=1),
+            valid_until=now - timedelta(hours=20),
+        )
+
+        response = self.resident_client.get("/api/guest-passes/me/history/")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        ids = {item["id"] for item in payload}
+        self.assertIn(expired_active.id, ids)
+        self.assertIn(used.id, ids)
+
+        by_code = {item["pass_code"]: item for item in payload}
+        self.assertEqual(
+            by_code["PASS-HISTORY-EXPIRED-1"]["status"], GuestPass.Status.INACTIVE
+        )
+        self.assertEqual(
+            by_code["PASS-HISTORY-REVOKED-1"]["status"], GuestPass.Status.REVOKED
+        )
+        self.assertEqual(
+            by_code["PASS-HISTORY-USED-1"]["status"], GuestPass.Status.USED
+        )
+        self.assertIn(revoked.id, ids)
+        self.assertNotIn("PASS-HISTORY-ACTIVE-NOW-1", by_code)
+        self.assertNotIn("PASS-HISTORY-UPCOMING-1", by_code)
+
     def test_resident_creates_guest_pass_with_valid_data(self):
         now = timezone.now()
         valid_from = now + timedelta(hours=1)
@@ -333,7 +543,9 @@ class GuestPassesApiTests(TenantTestCase):
         now = timezone.now()
         valid_from = now + timedelta(hours=1)
         valid_until = valid_from + timedelta(hours=24, minutes=1)
-        payload = self._build_create_payload(valid_from=valid_from, valid_until=valid_until)
+        payload = self._build_create_payload(
+            valid_from=valid_from, valid_until=valid_until
+        )
 
         response = self.resident_client.post(
             self.create_url,
@@ -348,7 +560,41 @@ class GuestPassesApiTests(TenantTestCase):
         now = timezone.now()
         valid_from = now + timedelta(hours=4)
         valid_until = valid_from
-        payload = self._build_create_payload(valid_from=valid_from, valid_until=valid_until)
+        payload = self._build_create_payload(
+            valid_from=valid_from, valid_until=valid_until
+        )
+
+        response = self.resident_client.post(
+            self.create_url,
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("valid_until", response.json())
+
+    def test_create_rejects_when_start_datetime_is_in_the_past(self):
+        now = timezone.now()
+        payload = self._build_create_payload(
+            valid_from=now - timedelta(minutes=10),
+            valid_until=now + timedelta(hours=1),
+        )
+
+        response = self.resident_client.post(
+            self.create_url,
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("valid_from", response.json())
+
+    def test_create_rejects_when_end_datetime_is_in_the_past(self):
+        now = timezone.now()
+        payload = self._build_create_payload(
+            valid_from=now + timedelta(hours=1),
+            valid_until=now - timedelta(minutes=5),
+        )
 
         response = self.resident_client.post(
             self.create_url,
@@ -523,6 +769,26 @@ class GuestPassesApiTests(TenantTestCase):
         self.assertEqual(policy.max_duration_hours, 12)
         self.assertEqual(policy.max_concurrent_passes, 5)
 
+    def test_admin_policy_patch_requires_at_least_one_field(self):
+        response = self.admin_client.patch(
+            self.admin_policy_url,
+            data=json.dumps({}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("detail", response.json())
+
+    def test_admin_policy_patch_rejects_invalid_visit_window(self):
+        response = self.admin_client.patch(
+            self.admin_policy_url,
+            data=json.dumps({"visit_start_time": "22:00", "visit_end_time": "08:00"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("visit_start_time", response.json())
+
     def test_resident_cannot_update_admin_policy(self):
         response = self.resident_client.patch(
             self.admin_policy_url,
@@ -549,6 +815,56 @@ class GuestPassesApiTests(TenantTestCase):
             data=json.dumps(payload),
             content_type="application/json",
         )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("valid_until", response.json())
+
+    def test_create_rejects_when_start_is_before_visit_start_time_policy(self):
+        GuestPassPolicy.objects.update_or_create(
+            residence=self.residence,
+            defaults={
+                "max_duration_hours": 24,
+                "max_concurrent_passes": 3,
+                "visit_start_time": time(9, 0),
+                "visit_end_time": time(22, 0),
+            },
+        )
+
+        local_now = timezone.localtime(timezone.now())
+        valid_from = local_now.replace(hour=8, minute=30, second=0, microsecond=0) + timedelta(days=1)
+        valid_until = valid_from + timedelta(hours=2)
+
+        payload = self._build_create_payload(valid_from=valid_from, valid_until=valid_until)
+        response = self.resident_client.post(
+            self.create_url,
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("valid_from", response.json())
+
+    def test_create_rejects_when_end_is_after_visit_end_time_policy(self):
+        GuestPassPolicy.objects.update_or_create(
+            residence=self.residence,
+            defaults={
+                "max_duration_hours": 24,
+                "max_concurrent_passes": 3,
+                "visit_start_time": time(9, 0),
+                "visit_end_time": time(22, 0),
+            },
+        )
+
+        local_now = timezone.localtime(timezone.now())
+        valid_from = local_now.replace(hour=20, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        valid_until = local_now.replace(hour=22, minute=30, second=0, microsecond=0) + timedelta(days=1)
+
+        payload = self._build_create_payload(valid_from=valid_from, valid_until=valid_until)
+        response = self.resident_client.post(
+            self.create_url,
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+
         self.assertEqual(response.status_code, 400)
         self.assertIn("valid_until", response.json())
 
@@ -587,3 +903,247 @@ class GuestPassesApiTests(TenantTestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("detail", response.json())
+
+    # --- Admin reject ---
+
+    def _reject_url(self, guest_pass_id: int) -> str:
+        return f"/api/admin/guest-passes/{guest_pass_id}/reject/"
+
+    def _unreject_url(self, guest_pass_id: int) -> str:
+        return f"/api/admin/guest-passes/{guest_pass_id}/unreject/"
+
+    def test_admin_can_reject_active_pass(self):
+        now = timezone.now()
+        guest_pass = self._create_pass(
+            resident=self.resident_membership,
+            pass_code="PASS-REJECT-ACTIVE-1",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now - timedelta(hours=1),
+            valid_until=now + timedelta(hours=3),
+        )
+
+        response = self.admin_client.post(self._reject_url(guest_pass.id))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], GuestPass.Status.REJECTED)
+        guest_pass.refresh_from_db()
+        self.assertEqual(guest_pass.status, GuestPass.Status.REJECTED)
+        self.assertIsNone(guest_pass.cancelled_at)
+        self.assertIsNone(guest_pass.revoked_at)
+
+    def test_admin_cannot_reject_cancelled_pass(self):
+        now = timezone.now()
+        guest_pass = self._create_pass(
+            resident=self.resident_membership,
+            pass_code="PASS-REJECT-CANCELLED-1",
+            status=GuestPass.Status.CANCELLED,
+            valid_from=now - timedelta(hours=1),
+            valid_until=now + timedelta(hours=3),
+            cancelled_at=now - timedelta(minutes=10),
+        )
+
+        response = self.admin_client.post(self._reject_url(guest_pass.id))
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("detail", response.json())
+        guest_pass.refresh_from_db()
+        self.assertEqual(guest_pass.status, GuestPass.Status.CANCELLED)
+
+    def test_admin_cannot_reject_used_pass(self):
+        now = timezone.now()
+        guest_pass = self._create_pass(
+            resident=self.resident_membership,
+            pass_code="PASS-REJECT-USED-1",
+            status=GuestPass.Status.USED,
+            valid_from=now - timedelta(hours=2),
+            valid_until=now - timedelta(hours=1),
+        )
+
+        response = self.admin_client.post(self._reject_url(guest_pass.id))
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("detail", response.json())
+        guest_pass.refresh_from_db()
+        self.assertEqual(guest_pass.status, GuestPass.Status.USED)
+
+    def test_admin_can_reject_inactive_pass(self):
+        now = timezone.now()
+        guest_pass = self._create_pass(
+            resident=self.resident_membership,
+            pass_code="PASS-REJECT-INACTIVE-1",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now - timedelta(days=2),
+            valid_until=now - timedelta(hours=1),
+        )
+
+        response = self.admin_client.post(self._reject_url(guest_pass.id))
+
+        self.assertEqual(response.status_code, 200)
+        guest_pass.refresh_from_db()
+        self.assertEqual(guest_pass.status, GuestPass.Status.REJECTED)
+
+    def test_admin_cannot_reject_already_rejected_pass(self):
+        now = timezone.now()
+        guest_pass = self._create_pass(
+            resident=self.resident_membership,
+            pass_code="PASS-REJECT-ALREADY-1",
+            status=GuestPass.Status.REJECTED,
+            valid_from=now - timedelta(hours=2),
+            valid_until=now + timedelta(hours=2),
+        )
+
+        response = self.admin_client.post(self._reject_url(guest_pass.id))
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("detail", response.json())
+
+    def test_resident_cannot_use_admin_reject_endpoint(self):
+        now = timezone.now()
+        guest_pass = self._create_pass(
+            resident=self.resident_membership,
+            pass_code="PASS-REJECT-FORBIDDEN-1",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now - timedelta(hours=1),
+            valid_until=now + timedelta(hours=1),
+        )
+
+        response = self.resident_client.post(self._reject_url(guest_pass.id))
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_admin_cannot_reject_pass_from_other_residence(self):
+        now = timezone.now()
+        guest_pass = self._create_pass(
+            resident=self.resident_membership_other_residence,
+            pass_code="PASS-REJECT-OTHER-RES-1",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now - timedelta(hours=1),
+            valid_until=now + timedelta(hours=3),
+            residence=self.other_residence,
+        )
+
+        response = self.admin_client.post(self._reject_url(guest_pass.id))
+
+        self.assertEqual(response.status_code, 400)
+        guest_pass.refresh_from_db()
+        self.assertEqual(guest_pass.status, GuestPass.Status.ACTIVE)
+
+    # --- Admin unreject ---
+
+    def test_admin_can_unreject_rejected_active_pass(self):
+        now = timezone.now()
+        original_valid_until = now + timedelta(hours=3)
+        guest_pass = self._create_pass(
+            resident=self.resident_membership,
+            pass_code="PASS-UNREJECT-VALID-1",
+            status=GuestPass.Status.REJECTED,
+            valid_from=now - timedelta(hours=1),
+            valid_until=original_valid_until,
+        )
+
+        response = self.admin_client.post(self._unreject_url(guest_pass.id))
+
+        self.assertEqual(response.status_code, 200)
+        guest_pass.refresh_from_db()
+        self.assertEqual(guest_pass.status, GuestPass.Status.ACTIVE)
+        # valid_until no debe modificarse
+        self.assertEqual(
+            guest_pass.valid_until.replace(microsecond=0),
+            original_valid_until.replace(microsecond=0),
+        )
+
+    def test_admin_can_unreject_rejected_upcoming_pass(self):
+        now = timezone.now()
+        original_valid_until = now + timedelta(hours=5)
+        guest_pass = self._create_pass(
+            resident=self.resident_membership,
+            pass_code="PASS-UNREJECT-UPCOMING-1",
+            status=GuestPass.Status.REJECTED,
+            valid_from=now + timedelta(hours=2),
+            valid_until=original_valid_until,
+        )
+
+        response = self.admin_client.post(self._unreject_url(guest_pass.id))
+
+        self.assertEqual(response.status_code, 200)
+        guest_pass.refresh_from_db()
+        self.assertEqual(guest_pass.status, GuestPass.Status.ACTIVE)
+        # valid_until no debe modificarse (antes bug: se truncaba a now < valid_from → IntegrityError)
+        self.assertEqual(
+            guest_pass.valid_until.replace(microsecond=0),
+            original_valid_until.replace(microsecond=0),
+        )
+
+    def test_admin_can_unreject_rejected_pass_that_was_already_expired(self):
+        now = timezone.now()
+        original_valid_until = now - timedelta(hours=1)
+        guest_pass = self._create_pass(
+            resident=self.resident_membership,
+            pass_code="PASS-UNREJECT-EXPIRED-1",
+            status=GuestPass.Status.REJECTED,
+            valid_from=now - timedelta(hours=5),
+            valid_until=original_valid_until,
+        )
+
+        response = self.admin_client.post(self._unreject_url(guest_pass.id))
+
+        self.assertEqual(response.status_code, 200)
+        guest_pass.refresh_from_db()
+        self.assertEqual(guest_pass.status, GuestPass.Status.ACTIVE)
+        self.assertEqual(
+            guest_pass.valid_until.replace(microsecond=0),
+            original_valid_until.replace(microsecond=0),
+        )
+
+    def test_admin_cannot_unreject_non_rejected_pass(self):
+        now = timezone.now()
+        for status, code in [
+            (GuestPass.Status.ACTIVE, "PASS-UNREJECT-ACTIVE-1"),
+            (GuestPass.Status.CANCELLED, "PASS-UNREJECT-CANCELLED-1"),
+            (GuestPass.Status.USED, "PASS-UNREJECT-USED-1"),
+            (GuestPass.Status.REVOKED, "PASS-UNREJECT-REVOKED-1"),
+        ]:
+            with self.subTest(status=status):
+                guest_pass = self._create_pass(
+                    resident=self.resident_membership,
+                    pass_code=code,
+                    status=status,
+                    valid_from=now - timedelta(hours=1),
+                    valid_until=now + timedelta(hours=1),
+                    cancelled_at=now - timedelta(minutes=5) if status == GuestPass.Status.CANCELLED else None,
+                    revoked_at=now - timedelta(minutes=5) if status == GuestPass.Status.REVOKED else None,
+                )
+                response = self.admin_client.post(self._unreject_url(guest_pass.id))
+                self.assertEqual(response.status_code, 400)
+                self.assertIn("detail", response.json())
+
+    def test_resident_cannot_use_admin_unreject_endpoint(self):
+        now = timezone.now()
+        guest_pass = self._create_pass(
+            resident=self.resident_membership,
+            pass_code="PASS-UNREJECT-FORBIDDEN-1",
+            status=GuestPass.Status.REJECTED,
+            valid_from=now - timedelta(hours=1),
+            valid_until=now + timedelta(hours=1),
+        )
+
+        response = self.resident_client.post(self._unreject_url(guest_pass.id))
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_admin_cannot_unreject_pass_from_other_residence(self):
+        now = timezone.now()
+        guest_pass = self._create_pass(
+            resident=self.resident_membership_other_residence,
+            pass_code="PASS-UNREJECT-OTHER-RES-1",
+            status=GuestPass.Status.REJECTED,
+            valid_from=now - timedelta(hours=1),
+            valid_until=now + timedelta(hours=3),
+            residence=self.other_residence,
+        )
+
+        response = self.admin_client.post(self._unreject_url(guest_pass.id))
+
+        self.assertEqual(response.status_code, 400)
+        guest_pass.refresh_from_db()
+        self.assertEqual(guest_pass.status, GuestPass.Status.REJECTED)

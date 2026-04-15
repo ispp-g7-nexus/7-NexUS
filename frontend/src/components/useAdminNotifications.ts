@@ -4,7 +4,7 @@ import { authService } from "../services/auth";
 import type { AnnouncementList } from "../types/announcement.types";
 import { API_URL, API_URL_INCIDENCES, fetchWithAuth } from "../utils/api";
 
-export type AdminNotificationSource = "incidences" | "reservations" | "events" | "announcements";
+export type AdminNotificationSource = "incidences" | "reservations" | "events" | "announcements" | "visitors";
 
 export type AdminNotification = {
     id: string;
@@ -37,6 +37,14 @@ type ObjectReservationNotificationItem = {
     end_time: string;
 };
 
+type VisitorNotificationItem = {
+    id: number;
+    title: string;
+    message: string;
+    created_at: string;
+    end_time: string;
+};
+
 type EventItem = {
     id: number;
     title: string;
@@ -53,6 +61,7 @@ const ADMIN_NOTIFICATIONS_SEEN_IDS_KEY = "admin-notifications-seen-ids";
 const ADMIN_INCIDENCES_DISMISSED_IDS_KEY = "admin-incidences-dismissed-ids";
 const ADMIN_RESERVATIONS_DISMISSED_IDS_KEY = "admin-reservations-dismissed-ids";
 const ADMIN_EVENTS_DISMISSED_IDS_KEY = "admin-events-dismissed-ids";
+const ADMIN_ANNOUNCEMENTS_DISMISSED_IDS_KEY = "admin-announcements-dismissed-ids";
 const NOTIFICATIONS_LIMIT = 12;
 const POLL_MS_DEFAULT = 10000;
 const POLL_MS_OPEN = 5000;
@@ -104,6 +113,7 @@ export function useAdminNotifications() {
     const [dismissedIncidenceIds, setDismissedIncidenceIds] = useState<string[]>(() => getStoredIds(ADMIN_INCIDENCES_DISMISSED_IDS_KEY));
     const [dismissedReservationIds, setDismissedReservationIds] = useState<string[]>(() => getStoredIds(ADMIN_RESERVATIONS_DISMISSED_IDS_KEY));
     const [dismissedEventIds, setDismissedEventIds] = useState<string[]>(() => getStoredIds(ADMIN_EVENTS_DISMISSED_IDS_KEY));
+    const [dismissedAnnouncementIds, setDismissedAnnouncementIds] = useState<string[]>(() => getStoredIds(ADMIN_ANNOUNCEMENTS_DISMISSED_IDS_KEY));
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
     const unreadCount = notifications.filter((notification) => !seenNotificationIds.includes(notification.id)).length;
@@ -139,6 +149,12 @@ export function useAdminNotifications() {
         persistIds(setDismissedEventIds, ADMIN_EVENTS_DISMISSED_IDS_KEY, next);
     };
 
+    const appendDismissedAnnouncementIds = (ids: string[]) => {
+        if (ids.length === 0) return;
+        const next = Array.from(new Set([...dismissedAnnouncementIds, ...ids]));
+        persistIds(setDismissedAnnouncementIds, ADMIN_ANNOUNCEMENTS_DISMISSED_IDS_KEY, next);
+    };
+
     const getNotificationIdsBySource = (source: AdminNotificationSource) => (
         notifications
             .filter((item) => item.source === source)
@@ -164,11 +180,12 @@ export function useAdminNotifications() {
                 setNotificationsLoading(true);
             }
 
-            const [announcementsResult, incidencesResult, reservationsResult, objectReservationsResult, eventsResult] = await Promise.allSettled([
+            const [announcementsResult, incidencesResult, reservationsResult, objectReservationsResult, visitorNotificationsResult, eventsResult] = await Promise.allSettled([
                 announcementService.getAnnouncements(),
                 fetchWithAuth(`${API_URL_INCIDENCES}notifications/`),
                 fetchWithAuth("/api/admin/spaces/notifications/"),
                 fetchWithAuth("/api/admin/objects/notifications/"),
+                fetchWithAuth("/api/admin/guest-passes/notifications/"),
                 fetchWithAuth(API_URL),
             ]);
 
@@ -222,6 +239,21 @@ export function useAdminNotifications() {
                     .forEach((item) => merged.push(item));
             }
 
+            if (visitorNotificationsResult.status === "fulfilled" && visitorNotificationsResult.value.ok) {
+                const data = await visitorNotificationsResult.value.json();
+                const visitorItems = Array.isArray(data) ? (data as VisitorNotificationItem[]) : [];
+
+                visitorItems
+                    .map((item) => ({
+                        id: `visitors-${item.id}`,
+                        source: "visitors" as const,
+                        title: `[Visitantes] ${item.title}`,
+                        message: item.message,
+                        timestamp: item.created_at,
+                    }))
+                    .forEach((item) => merged.push(item));
+            }
+
             if (eventsResult.status === "fulfilled" && eventsResult.value.ok) {
                 const data = await eventsResult.value.json();
                 const eventItems = Array.isArray(data) ? (data as EventItem[]) : [];
@@ -254,9 +286,14 @@ export function useAdminNotifications() {
                     .filter((item) => !item.has_passed)
                     .filter((item) => currentUserId === null || String(item.user) !== currentUserId)
                     .forEach((item) => {
+                        const notificationId = `announcements-${item.id}`;
+                        if (dismissedAnnouncementIds.includes(notificationId)) {
+                            return;
+                        }
+
                         const createdAt = item.publication_date || `${item.announcement_date}T00:00:00`;
                         merged.push({
-                            id: `announcements-${item.id}`,
+                            id: notificationId,
                             source: "announcements",
                             title: `[Avisos] ${item.title}`,
                             message: item.description,
@@ -277,7 +314,7 @@ export function useAdminNotifications() {
                 setNotificationsLoading(false);
             }
         }
-    }, [currentUserId, dismissedIncidenceIds, dismissedReservationIds, dismissedEventIds]);
+    }, [currentUserId, dismissedIncidenceIds, dismissedReservationIds, dismissedEventIds, dismissedAnnouncementIds]);
 
     const handleNotificationsOpenChange = (open: boolean) => {
         setIsNotificationsOpen(open);
@@ -313,6 +350,28 @@ export function useAdminNotifications() {
 
         setIsNotificationsOpen(false);
         return notification.source;
+    };
+
+    const handleDismissNotification = (notification: AdminNotification) => {
+        appendSeenIds([notification.id]);
+
+        if (notification.source === "incidences") {
+            appendDismissedIncidenceIds([notification.id]);
+        }
+
+        if (notification.source === "reservations") {
+            appendDismissedReservationIds([notification.id]);
+        }
+
+        if (notification.source === "events") {
+            appendDismissedEventIds([notification.id]);
+        }
+
+        if (notification.source === "announcements") {
+            appendDismissedAnnouncementIds([notification.id]);
+        }
+
+        setNotifications((previous) => previous.filter((item) => item.id !== notification.id));
     };
 
     const handleNavbarModuleAccess = (tab: string) => {
@@ -361,6 +420,7 @@ export function useAdminNotifications() {
         hasUnreadNotifications,
         handleNotificationsOpenChange,
         handleOpenNotification,
+        handleDismissNotification,
         handleNavbarModuleAccess,
     };
 }

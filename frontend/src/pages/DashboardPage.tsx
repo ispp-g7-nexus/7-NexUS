@@ -2,7 +2,13 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AdminView } from '../components/AdminView';
 import { StudentView } from '../components/StudentView';
+import { identifyUser, resetUser } from '../services/analytics';
 import { authService, resolvePortalRoleFromRoles, type PortalRole } from '../services/auth';
+import { preferencesService } from '../services/preferences';
+
+const RULES_KEY = "nexus.community_rules.accepted";
+
+const getUserRulesKey = (userId: string) => `${RULES_KEY}.${userId}`;
 
 export function DashboardPage() {
     const navigate = useNavigate();
@@ -26,11 +32,43 @@ export function DashboardPage() {
                     return;
                 }
 
+                // Para estudiantes, validar que hayan completado el onboarding
+                if (nextRole === 'student') {
+                    const userRulesKey = getUserRulesKey(session.user.id.toString());
+                    // Verificar sessionStorage primero (aceptación temporal), luego localStorage (permanente)
+                    const skipRules = sessionStorage.getItem(userRulesKey) === 'true' || localStorage.getItem(userRulesKey) === 'true';
+                    if (!skipRules) {
+                        // No aceptó las normas, redirigir a AuthPage
+                        navigate('/');
+                        return;
+                    }
+
+                    try {
+                        const preferences = await preferencesService.getMyPreferences();
+                        if (!preferences.is_completed) {
+                            // No completó las preferencias, redirigir a AuthPage
+                            navigate('/');
+                            return;
+                        }
+                    } catch {
+                        // Error al obtener preferencias, redirigir a AuthPage
+                        navigate('/');
+                        return;
+                    }
+                }
+
                 const { first_name, last_name, username, email } = session.user;
                 const name = (first_name || last_name)
                     ? `${first_name ?? ''} ${last_name ?? ''}`.trim()
                     : (username ?? '');
                 setAdminUser({ name, email: email ?? '' });
+
+                identifyUser({
+                    id: session.user.id,
+                    email: session.user.email,
+                    name,
+                    role: nextRole,
+                });
 
                 localStorage.setItem('userRole', nextRole);
                 setRole(nextRole);
@@ -59,9 +97,14 @@ export function DashboardPage() {
         return () => clearInterval(interval);
     }, [role]);
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
         localStorage.removeItem('userRole');
-        authService.logout().catch(() => null);
+        resetUser();
+        try {
+            await authService.logout();
+        } catch {
+            // Ignorar errores de logout
+        }
         navigate('/');
     };
 

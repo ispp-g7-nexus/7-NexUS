@@ -15,6 +15,8 @@ import {
 type PolicyForm = {
   max_duration_hours: string;
   max_concurrent_passes: string;
+  visit_start_time: string;
+  visit_end_time: string;
 };
 
 type PolicyErrors = Partial<Record<keyof PolicyForm, string>>;
@@ -23,6 +25,11 @@ const DURATION_MIN = 1;
 const DURATION_MAX = 168;
 const CONCURRENT_MIN = 1;
 const CONCURRENT_MAX = 20;
+
+function normalizeTimeValue(value: string | null | undefined): string {
+  if (!value) return "";
+  return value.trim().slice(0, 5);
+}
 
 function validatePolicy(form: PolicyForm): PolicyErrors {
   const errors: PolicyErrors = {};
@@ -42,6 +49,10 @@ function validatePolicy(form: PolicyForm): PolicyErrors {
     errors.max_concurrent_passes = `El máximo concurrente debe estar entre ${CONCURRENT_MIN} y ${CONCURRENT_MAX}.`;
   }
 
+  if (form.visit_start_time && form.visit_end_time && form.visit_start_time >= form.visit_end_time) {
+    errors.visit_start_time = "La hora de inicio debe ser anterior a la hora límite de salida.";
+  }
+
   return errors;
 }
 
@@ -49,6 +60,8 @@ export function AdminGuestPassPolicyPage() {
   const [form, setForm] = useState<PolicyForm>({
     max_duration_hours: "24",
     max_concurrent_passes: "3",
+    visit_start_time: "",
+    visit_end_time: "",
   });
   const [errors, setErrors] = useState<PolicyErrors>({});
   const [loading, setLoading] = useState(true);
@@ -61,6 +74,8 @@ export function AdminGuestPassPolicyPage() {
       setForm({
         max_duration_hours: String(policy.max_duration_hours),
         max_concurrent_passes: String(policy.max_concurrent_passes),
+        visit_start_time: normalizeTimeValue(policy.visit_start_time),
+        visit_end_time: normalizeTimeValue(policy.visit_end_time),
       });
       setErrors({});
     } catch (error) {
@@ -93,10 +108,14 @@ export function AdminGuestPassPolicyPage() {
       const updated = await updateAdminGuestPassPolicy({
         max_duration_hours: Number(form.max_duration_hours),
         max_concurrent_passes: Number(form.max_concurrent_passes),
+        visit_start_time: form.visit_start_time || null,
+        visit_end_time: form.visit_end_time || null,
       });
       setForm({
         max_duration_hours: String(updated.max_duration_hours),
         max_concurrent_passes: String(updated.max_concurrent_passes),
+        visit_start_time: normalizeTimeValue(updated.visit_start_time),
+        visit_end_time: normalizeTimeValue(updated.visit_end_time),
       });
       setErrors({});
       toast.success("Configuración de visitantes guardada.");
@@ -165,6 +184,38 @@ export function AdminGuestPassPolicyPage() {
                 Rango permitido: {CONCURRENT_MIN} a {CONCURRENT_MAX} pases.
               </p>
             )}
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="policy-visit-start-time">Hora de inicio de visitas</Label>
+            <Input
+              id="policy-visit-start-time"
+              type="time"
+              value={form.visit_start_time}
+              onChange={(event) => setField("visit_start_time", event.target.value)}
+              disabled={loading || saving}
+            />
+            {errors.visit_start_time ? (
+              <p className="text-xs text-red-600">{errors.visit_start_time}</p>
+            ) : (
+              <p className="text-xs text-gray-500">
+                Hora diaria desde la que se permiten visitas (opcional). Formato: HH:MM
+              </p>
+            )}
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="policy-visit-end-time">Hora límite de visitas</Label>
+            <Input
+              id="policy-visit-end-time"
+              type="time"
+              value={form.visit_end_time}
+              onChange={(event) => setField("visit_end_time", event.target.value)}
+              disabled={loading || saving}
+            />
+            <p className="text-xs text-gray-500">
+              Hora diaria a partir de la cual no se permiten visitas (opcional). Formato: HH:MM
+            </p>
           </div>
 
           <div className="flex flex-wrap justify-end gap-2 pt-2">
