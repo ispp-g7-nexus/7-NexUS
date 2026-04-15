@@ -40,6 +40,7 @@
 | Versión | Fecha       | Cambio principal                                      |
 |---------|-------------|-------------------------------------------------------|
 | 1.0.0   | 15/04/2026  | Creación del documento base                           |
+| 1.0.1   | 15/04/2026  | Ampliación de la declaración de uso de IA en los storyboards  |
 
 
 
@@ -53,6 +54,7 @@
     - [2.2. Correcciones ortográficas y de estilo](#22-correcciones-ortográficas-y-de-estilo)
     - [2.3. Recopilación de información preliminar](#23-recopilación-de-información-preliminar)
     - [2.4. Generación y optimización de código fuente](#24-generación-y-optimización-de-código-fuente)
+    - [2.5. Generación de imágenes para storyboards](#25-generación-de-imágenes-para-storyboards)
   - [3. Limitaciones y Supervisión Humana](#3-limitaciones-y-supervisión-humana)
   - [4. Contribución Intelectual del Equipo](#4-contribución-intelectual-del-equipo)
 ---
@@ -110,6 +112,14 @@ Durante el Sprint 3 se han utilizado herramientas de asistencia basada en IA (co
 - **Optimización y refactorización puntual**: Propuestas para mejorar la eficiencia, legibilidad y mantenibilidad de funciones ya existentes.
 
 Todo el código sugerido por la IA ha sido analizado, modificado y validado por los integrantes del grupo para garantizar su seguridad y su correcta integración en la arquitectura del proyecto.
+
+---
+
+### 2.5. Generación de imágenes para storyboards
+
+La inteligencia artificial también se ha utilizado para generar imágenes de apoyo destinadas a los storyboards del proyecto. Estas imágenes han servido como material visual complementario para la planificación y la comunicación de ideas dentro del equipo.
+
+Su uso ha sido supervisado por los miembros del grupo, que han verificado su adecuación al contexto del proyecto antes de incorporarlas a la documentación correspondiente.
 
 ---
 
