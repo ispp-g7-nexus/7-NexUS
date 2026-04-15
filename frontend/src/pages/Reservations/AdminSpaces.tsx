@@ -307,6 +307,7 @@ export function AdminSpaces() {
         onClose={() => setDetailOpen(false)}
         onEdit={(s) => { setDetailOpen(false); handleOpenEdit(s); }}
         onDeactivate={(s) => { setDetailOpen(false); handleDeactivate(s); }}
+        onViewReservations={(s) => { setDetailOpen(false); void handleViewReservations(s); }}
       />
 
       {/* MODAL DESACTIVAR */}
