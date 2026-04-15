@@ -126,24 +126,19 @@ export function MyMatchesPage() {
 
     return (
         <div className="flex flex-col w-full bg-[#F6F7F9]">
-            {/* Header */}
-            <header className="bg-[#1B4D1C] p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg sticky top-0 z-20">
-                <h1 className="text-white text-2xl font-bold">Matches</h1>
-            </header>
-            
             <div className="max-w-2xl mx-auto p-4 space-y-4 pb-32">
-            <PageHeader />
-            <ContentRenderer
-                payload={payload}
-                onToggleLike={toggleLike}
-                onOpenChat={openChatWith}
-                onSelectMatch={setSelectedMatch}
-            />
-            <MatchProfileModal 
-                match={selectedMatch} 
-                onClose={() => setSelectedMatch(null)} 
-            />
-        </div>
+                <PageHeader />
+                <ContentRenderer
+                    payload={payload}
+                    onToggleLike={toggleLike}
+                    onOpenChat={openChatWith}
+                    onSelectMatch={setSelectedMatch}
+                />
+                <MatchProfileModal
+                    match={selectedMatch}
+                    onClose={() => setSelectedMatch(null)}
+                />
+            </div>
         </div>
     );
 }
