@@ -120,6 +120,8 @@ def create_resident(data: dict, residence, request) -> dict:
         user=user, role=student_role, residence=residence
     ).first()
 
+    check_in_date = data.get("checkin_date")
+
     if existing_membership is None:
         Membership.objects.create(
             user=user,
@@ -127,6 +129,7 @@ def create_resident(data: dict, residence, request) -> dict:
             residence=residence,
             is_active=True,
             bedroom=bedroom,
+            check_in_date=check_in_date,
         )
     else:
         # Fix #3: reactivar Membership inactiva (residente dado de baja y re-registrado)
@@ -183,7 +186,7 @@ def _membership_to_dict(membership) -> dict:
         "bedroom_id": bedroom.id if bedroom else None,
         "room": bedroom.numero if bedroom else "",
         "building": bedroom.edificio if bedroom else "",
-        "check_in_date": getattr(membership, "check_in_date", None),
+        "check_in_date": membership.check_in_date,
         "created_at": membership.created_at,
     }
 
@@ -227,6 +230,9 @@ def _update_membership_from_data(membership, data, residence) -> tuple:
     old_bedroom = membership.bedroom if "bedroom_id" in data else None
     if "is_active" in data:
         membership.is_active = data["is_active"]
+        dirty = True
+    if "check_in_date" in data:
+        membership.check_in_date = data["check_in_date"]
         dirty = True
     if "bedroom_id" in data:
         membership.bedroom = (
