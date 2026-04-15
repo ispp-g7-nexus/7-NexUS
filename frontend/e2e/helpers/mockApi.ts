@@ -299,7 +299,7 @@ export async function mockStudentApi(page: Page, overrides: StudentOverrides = {
       await route.fulfill(json(STUDENT_ME))
     } else if (path === '/api/residences/branding/') {
       await route.fulfill(json({ logo_url: null, primary_color: '#4A8F5D', secondary_color: '#0F4C81', accent_color: '#2E7D32', custom_css: '', favicon_url: '' }))
-    } else if (path === '/api/preferences/me/') {
+    } else if (path === '/api/preferences/my-preferences/') {
       await route.fulfill(json({ is_completed: true }))
     // Objects
     } else if (path === '/api/objects/') {

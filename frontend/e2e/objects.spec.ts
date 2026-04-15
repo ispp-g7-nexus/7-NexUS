@@ -17,8 +17,7 @@ import {
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function goToAdminObjects(page: Parameters<typeof mockAdminApi>[0]) {
-  await page.goto('/dashboard')
-  await page.getByRole('button', { name: /Recursos & Reservas/i }).first().click()
+  await page.goto('/dashboard/reservations')
   await page.getByRole('button', { name: /^Objetos$/i }).click()
 }
 
