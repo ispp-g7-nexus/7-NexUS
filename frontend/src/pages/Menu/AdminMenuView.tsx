@@ -147,17 +147,31 @@ interface EditMealModalProps {
 }
 
 const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditMealModalProps) => {
-  const [formData, setFormData] = useState<Meal>(
-    meal || { allergens: [], name: '', type: 'lunch', description: '', isGlutenFree: false, isVegetarian: false, isVegan: false }
-  );
+  const [formData, setFormData] = useState<Meal>(() =>
+  meal
+    ? {
+        ...meal,
+        allergens: typeof meal.allergens === 'string'
+          ? (meal.allergens as string).split(',').map(a => a.trim()).filter(Boolean)
+          : meal.allergens ?? [],
+      }
+    : { allergens: [], name: '', type: 'lunch', description: '', isGlutenFree: false, isVegetarian: false, isVegan: false }
+);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [imageToDelete, setImageToDelete] = useState(false);
   useEffect(() => {
     if (isOpen) {
       setFormData(
-        meal || { allergens: [], name: '', type: 'lunch', description: '', isGlutenFree: false, isVegetarian: false, isVegan: false }
-      );
+      meal
+        ? {
+            ...meal,
+            allergens: typeof meal.allergens === 'string'
+              ? (meal.allergens as string).split(',').map(a => a.trim()).filter(Boolean)
+              : meal.allergens ?? [],
+          }
+        : { allergens: [], name: '', type: 'lunch', description: '', isGlutenFree: false, isVegetarian: false, isVegan: false }
+    );
       setImageToDelete(false);
       setPhotoFile(null);
       setPreviewUrl(null);
@@ -649,6 +663,7 @@ export function AdminMenuView() {
     formData.append('name', meal.name);
     formData.append('description', meal.description || '');
     formData.append('type', meal.type);
+    formData.append('allergens', Array.isArray(meal.allergens) ? meal.allergens.join(',') : (meal.allergens || ''));
     formData.append('isGlutenFree', String(meal.isGlutenFree));
     formData.append('isVegetarian', String(meal.isVegetarian));
     formData.append('isVegan', String(meal.isVegan));

@@ -3,6 +3,11 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from apps.tenants.models import Client
 
+def validate_not_digit(value):
+    if value.isdigit():
+        raise ValidationError(
+            "Este campo no puede contener solo números."
+        )
 
 class MenuWeek(models.Model):
 
@@ -124,13 +129,15 @@ class Meal(models.Model):
 
     name = models.CharField(
         "Nombre",
-        max_length=200
+        max_length=200,
+        validators=[validate_not_digit]
     )
 
     description = models.TextField(
         "Descripción",
         blank=True,
-        default=""
+        default="",
+        validators=[validate_not_digit]
     )
 
     type = models.CharField(
@@ -138,6 +145,15 @@ class Meal(models.Model):
         max_length=10,
         choices=MealType.choices,
         default=MealType.LUNCH
+    )
+
+    allergens = models.TextField(
+        'Alérgenos',
+        max_length=100,
+        blank=True,
+        default="",
+        help_text="Ejemplo: Gluten, Lactosa, Frutos de cáscara",
+        validators=[validate_not_digit]
     )
 
     is_gluten_free = models.BooleanField(
@@ -192,7 +208,7 @@ class SpecialMenuRequest(models.Model):
         default=2
     )
     date = models.DateField("Fecha solicitada")
-    description = models.TextField("Motivo/Descripción")
+    description = models.TextField("Motivo/Descripción", validators=[validate_not_digit])
     status = models.CharField(
         max_length=10, 
         choices=STATUS_CHOICES, 
@@ -206,4 +222,4 @@ class SpecialMenuRequest(models.Model):
         ordering = ['-date']
 
     def __str__(self):
-        return f"Petición de {self.user} para el {self.date}"
+        return f"Petición de {self.resident} para el {self.date}"
