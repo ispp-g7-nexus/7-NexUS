@@ -1,11 +1,14 @@
 import { fetchWithAuth } from '../utils/api';
+import { trackEvent } from './analytics';
 
 const BASE = '/api/bedrooms/';
 
 export interface BedroomResident {
     id: number;
+    user_id: number;
     full_name: string;
     email: string | null;
+    residence_id?: number | null;
 }
 
 export interface Bedroom {
@@ -55,31 +58,29 @@ export async function listAvailableBedrooms(excludeResidentId?: number): Promise
 }
 
 export async function createBedroom(payload: Record<string, unknown>) {
-    return fetchWithAuth(`${BASE}create/`, {
+    const res = await fetchWithAuth(`${BASE}create/`, {
         method: 'POST',
         body: JSON.stringify(payload),
     });
+    if (res.ok) trackEvent('bedroom_created', { building: payload.edificio as string });
+    return res;
 }
 
 export async function updateBedroom(id: number, payload: Record<string, unknown>) {
-    return fetchWithAuth(`${BASE}${id}/update/`, {
+    const res = await fetchWithAuth(`${BASE}${id}/update/`, {
         method: 'PUT',
         body: JSON.stringify(payload),
     });
+    if (res.ok) trackEvent('bedroom_updated', { bedroom_id: id });
+    return res;
 }
 
 export async function deleteBedroom(id: number) {
-    return fetchWithAuth(`${BASE}${id}/delete/`, {
+    const res = await fetchWithAuth(`${BASE}${id}/delete/`, {
         method: 'DELETE',
     });
-}
-
-export interface BedroomResident {
-    id: number;
-    user_id: number;
-    full_name: string;
-    email: string | null;
-    residence_id: number | null;
+    if (res.ok) trackEvent('bedroom_deleted', { bedroom_id: id });
+    return res;
 }
 
 export async function getBedroomResidents(id: number): Promise<BedroomResident[]> {
@@ -90,4 +91,60 @@ export async function getBedroomResidents(id: number): Promise<BedroomResident[]
 
 export async function listResidents() {
     return fetchWithAuth(`${BASE}residents/`);
+}
+
+export interface BedroomAuditEntry {
+    id: number;
+    action: 'CREATED' | 'UPDATED' | 'RESIDENT_ASSIGNED' | 'RESIDENT_REMOVED';
+    changes: Record<string, unknown>;
+    timestamp: string;
+    performed_by: string | null;
+}
+
+export async function getBedroomAuditLog(id: number, options?: { signal?: AbortSignal }): Promise<BedroomAuditEntry[]> {
+    const res = await fetchWithAuth(`${BASE}${id}/audit/`, { signal: options?.signal });
+    if (!res.ok) throw new Error(`Error ${res.status}`);
+    return res.json();
+}
+
+export interface BedroomAnalyticsSummary {
+    total_rooms: number;
+    total_capacity: number;
+    total_occupants: number;
+    overall_occupation_rate: number;
+}
+
+export interface OccupationByBuilding {
+    edificio: string;
+    total_rooms: number;
+    total_capacity: number;
+    occupied_rooms: number;
+    occupants: number;
+    occupation_rate: number;
+}
+
+export interface OccupationByType {
+    tipo: string;
+    total_rooms: number;
+    total_capacity: number;
+    occupants: number;
+    occupation_rate: number;
+}
+
+export interface OccupationByYear {
+    year: number;
+    assignments: number;
+}
+
+export interface BedroomAnalyticsResponse {
+    summary: BedroomAnalyticsSummary;
+    occupation_by_building: OccupationByBuilding[];
+    occupation_by_type: OccupationByType[];
+    occupation_by_year: OccupationByYear[];
+}
+
+export async function getBedroomAnalytics(): Promise<BedroomAnalyticsResponse> {
+    const res = await fetchWithAuth(`${BASE}analytics/`);
+    if (!res.ok) throw new Error(`Error ${res.status}`);
+    return res.json() as Promise<BedroomAnalyticsResponse>;
 }

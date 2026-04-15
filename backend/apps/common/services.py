@@ -5,6 +5,8 @@ import jwt
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.tokens import default_token_generator
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import DataError
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.utils import timezone
@@ -76,18 +78,28 @@ def build_access_token(user, tenant, residence, remember_me=False):
 
     expires_at = now + timedelta(seconds=lifetime_seconds)
 
-    roles = list(
-        Membership.objects.filter(user=user, is_active=True)
-        .values_list("role__name", flat=True)
-        .distinct()
-    )
+    active_memberships = Membership.objects.filter(
+        user=user, is_active=True
+    ).select_related("role")
+
+    roles_set = set()
+    permissions_set = set()
+
+    for m in active_memberships:
+        roles_set.add(m.role.name)
+        # Si es un admin del sistema, le damos acceso total (full_access)
+        if m.role.name.lower() in ["admin", "residence_admin", "portfolio_admin"]:
+            permissions_set.add("full_access")
+        elif m.role.permissions:
+            permissions_set.update(m.role.permissions)
 
     payload = {
         "sub": str(user.pk),
         "user_id": str(user.pk),
         "username": user.get_username(),
         "email": getattr(user, "email", "") or "",
-        "roles": roles,
+        "roles": list(roles_set),
+        "permissions": list(permissions_set),
         "tenant_id": tenant.id,
         "tenant_slug": tenant.slug,
         "residence_id": residence.id if residence else None,
@@ -105,7 +117,6 @@ def build_access_token(user, tenant, residence, remember_me=False):
 
 
 logger = logging.getLogger(__name__)
-UserModel = get_user_model()
 
 
 class SMTPServerError(APIException):
@@ -206,29 +217,35 @@ class CustomJWTAuthentication(authentication.BaseAuthentication):
 
         try:
             user = UserModel.objects.get(pk=payload.get("user_id"))
-        except UserModel.DoesNotExist:
+        except (UserModel.DoesNotExist, ValueError, TypeError, OverflowError, DjangoValidationError, DataError):
             raise AuthenticationFailed("El usuario del token no existe.")
 
         if not user.is_active:
             raise AuthenticationFailed("El usuario está desactivado.")
 
         tenant_id = payload.get("tenant_id")
-        if tenant_id and (not getattr(request, "tenant", None) or request.tenant.schema_name == "public"):
-            from apps.tenants.models import Client
+        if tenant_id and (
+            not getattr(request, "tenant", None)
+            or request.tenant.schema_name == "public"
+        ):
             from django.db import connection
+
+            from apps.tenants.models import Client
+
             try:
                 tenant = Client.objects.get(pk=tenant_id)
                 request.tenant = tenant
                 connection.set_tenant(tenant)
-            except Client.DoesNotExist:
+            except (Client.DoesNotExist, ValueError, TypeError, OverflowError, DjangoValidationError, DataError):
                 pass
 
         residence_id = payload.get("residence_id")
         if residence_id:
             from apps.residences.models import Residence
+
             try:
                 request.residence = Residence.objects.get(pk=residence_id)
-            except Residence.DoesNotExist:
+            except (Residence.DoesNotExist, ValueError, TypeError, OverflowError, DjangoValidationError, DataError):
                 pass
 
         return (user, token)

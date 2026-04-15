@@ -6,11 +6,29 @@ from apps.residences.models import Residence
 
 
 class Role(models.Model):
+    class ScreenPermissions(models.TextChoices):
+        ANNOUNCEMENTS = "announcements", "Avisos"
+        ROOMS = "rooms", "Habitaciones"
+        CHATS = "chats", "Chats"
+        EVENTS = "events", "Eventos y Comunidad"
+        GUESTS = "guests", "Visitantes"
+        INCIDENCES = "incidences", "Incidencias"
+        RESERVATIONS = "reservations", "Recursos y Reservas"
+        STUDENTS = "students", "Residentes"
+        STAFF = "staff", "Personal"
+        PACKAGES = "packages", "Paquetería"
+        KITCHEN = "kitchen", "Menú Comedor"
+        ROLES = "roles", "Roles"
+
     name = models.CharField(max_length=50, verbose_name="Nombre del Rol")
     description = models.TextField(blank=True, verbose_name="Descripción")
 
     # Identifica si es "Admin" o "Student"
     is_system_default = models.BooleanField(default=False)
+
+    permissions = models.JSONField(
+        default=list, blank=True, help_text="Lista de pantallas permitidas"
+    )
 
     # Si es un rol personalizado, se asigna a la residencia del admin que lo creó
     residence = models.ForeignKey(
@@ -63,6 +81,7 @@ class Membership(models.Model):
         related_name="memberships",
     )
     is_active = models.BooleanField(default=True)
+    check_in_date = models.DateField(null=True, blank=True, verbose_name="Fecha de entrada")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     # Habitación asignada al residente. PROTECT impide eliminar una habitación

@@ -1,4 +1,5 @@
 import { fetchWithAuth } from "../utils/api";
+import { trackEvent } from "./analytics";
 import { ApiError } from "./reservations";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -13,6 +14,7 @@ export interface AdminSpace {
   id: number;
   name: string;
   description: string;
+  img?: string | null;
   capacity: number;
   is_active: boolean;
   open_time: string;
@@ -36,6 +38,7 @@ export interface AdminSpaceReservation {
 export interface CreateSpacePayload {
   name: string;
   description?: string;
+  img?: string | null;
   capacity: number;
   open_time: string;
   close_time: string;
@@ -83,22 +86,27 @@ export function getSpace(spaceId: number): Promise<AdminSpace> {
   return requestJson<AdminSpace>(`${ADMIN_SPACES_BASE}/${spaceId}/`);
 }
 
-export function createSpace(payload: CreateSpacePayload): Promise<AdminSpace> {
-  return requestJson<AdminSpace>(`${ADMIN_SPACES_BASE}/`, {
+export async function createSpace(payload: CreateSpacePayload): Promise<AdminSpace> {
+  const space = await requestJson<AdminSpace>(`${ADMIN_SPACES_BASE}/`, {
     method: "POST",
     body: JSON.stringify(payload),
   });
+  trackEvent('admin_space_created', { space_name: payload.name });
+  return space;
 }
 
-export function updateSpace(spaceId: number, payload: UpdateSpacePayload): Promise<AdminSpace> {
-  return requestJson<AdminSpace>(`${ADMIN_SPACES_BASE}/${spaceId}/`, {
+export async function updateSpace(spaceId: number, payload: UpdateSpacePayload): Promise<AdminSpace> {
+  const space = await requestJson<AdminSpace>(`${ADMIN_SPACES_BASE}/${spaceId}/`, {
     method: "PATCH",
     body: JSON.stringify(payload),
   });
+  trackEvent('admin_space_updated', { space_id: spaceId });
+  return space;
 }
 
 export async function deactivateSpace(spaceId: number): Promise<void> {
-  return requestVoid(`${ADMIN_SPACES_BASE}/${spaceId}/`, { method: "DELETE" });
+  await requestVoid(`${ADMIN_SPACES_BASE}/${spaceId}/`, { method: "DELETE" });
+  trackEvent('admin_space_deactivated', { space_id: spaceId });
 }
 
 export function listSpaceReservations(

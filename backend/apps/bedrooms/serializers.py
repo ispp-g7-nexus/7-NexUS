@@ -1,10 +1,24 @@
 from rest_framework import serializers
 from apps.membership.models import Membership
-from .models import Bedroom
+from .models import Bedroom, BedroomAuditLog
+
+
+class BedroomAuditLogSerializer(serializers.ModelSerializer):
+    performed_by = serializers.SerializerMethodField()
+
+    class Meta:
+        model = BedroomAuditLog
+        fields = ["id", "action", "changes", "timestamp", "performed_by"]
+
+    def get_performed_by(self, obj):
+        if obj.user is None:
+            return None
+        return obj.user.get_full_name().strip() or obj.user.username
 
 
 class BedroomResidentSerializer(serializers.Serializer):
     id = serializers.IntegerField()
+    user_id = serializers.IntegerField()
     full_name = serializers.CharField()
     email = serializers.EmailField(allow_null=True)
 
@@ -49,6 +63,7 @@ class BedroomSerializer(serializers.ModelSerializer):
         payload = [
             {
                 "id": resident.id,
+                "user_id": resident.user_id,
                 "full_name": resident.user.get_full_name().strip() or resident.user.username,
                 "email": getattr(resident.user, "email", None),
             }

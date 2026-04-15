@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { LogOut, User } from "lucide-react";
 import { AnnouncementCard } from "../../components/announcement/AnnouncementCard";
 import { AnnouncementFilters } from "../../components/announcement/AnnouncementFilters";
@@ -6,36 +6,57 @@ import { NotificationBell } from "../../components/announcement/NotificationBell
 import { Button } from "../../components/ui/button";
 import announcementService from "../../services/announcement.service";
 import { AnnouncementList } from "../../types/announcement.types";
+import type { StudentTab } from "../../components/StudentHome";
 
 
 interface StudentAnnouncementsProps {
-  onGoToProfile?: () => void;
-  onLogout?: () => void;
+  readonly onGoToProfile?: () => void;
+  readonly onLogout?: () => void;
+  readonly onAnnouncementsLoaded?: () => void;
+  readonly onNavigate?: (view: StudentTab) => void;
 }
 
-export function StudentAnnouncements({ onGoToProfile, onLogout }: StudentAnnouncementsProps) {
+export function StudentAnnouncements(props: Readonly<StudentAnnouncementsProps>) {
+  const { onGoToProfile, onLogout, onAnnouncementsLoaded, onNavigate } = props;
   const [announcements, setAnnouncements] = useState<AnnouncementList[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadAnnouncements();
-  }, [selectedCategory]);
+  const loadAnnouncements = useCallback(async (isInitialLoad = false) => {
+    if (isInitialLoad) {
+      setLoading(true);
+    }
 
-  const loadAnnouncements = async () => {
-    setLoading(true);
     setError(null);
     try {
       const data = await announcementService.getAnnouncementsByCategory(selectedCategory);
       setAnnouncements(data);
+
+      const visibleIds = data.map((announcement) => announcement.id);
+      if (visibleIds.length > 0) {
+        await announcementService.markAsViewed(visibleIds);
+      }
+      onAnnouncementsLoaded?.();
     } catch (err) {
       setError("Error al cargar los avisos");
       console.error(err);
     } finally {
-      setLoading(false);
+      if (isInitialLoad) {
+        setLoading(false);
+      }
     }
-  };
+  }, [onAnnouncementsLoaded, selectedCategory]);
+
+  useEffect(() => {
+    loadAnnouncements(true);
+
+    const intervalId = globalThis.setInterval(() => {
+      loadAnnouncements(false);
+    }, 3000);
+
+    return () => globalThis.clearInterval(intervalId);
+  }, [loadAnnouncements]);
 
 
   return (
@@ -44,7 +65,7 @@ export function StudentAnnouncements({ onGoToProfile, onLogout }: StudentAnnounc
       <header className="bg-primary  p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg sticky top-0 z-20">
         <h1 className="text-primary-foreground text-2xl font-bold">Avisos</h1>
         <div className="flex items-center gap-2">
-          <NotificationBell onMarkAsRead={loadAnnouncements} />
+          <NotificationBell mode="announcements" onMarkAsRead={loadAnnouncements} onNavigate={onNavigate} />
           <Button
             size="icon"
             variant="ghost"

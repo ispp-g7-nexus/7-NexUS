@@ -9,6 +9,21 @@ interface RoleCardProps {
     onDelete: (id: number) => void;
 }
 
+const PERMISSION_LABELS: Record<string, string> = {
+    announcements: 'Avisos',
+    rooms: 'Habitaciones',
+    chats: 'Chats',
+    events: 'Eventos',
+    guests: 'Visitantes',
+    incidences: 'Incidencias',
+    reservations: 'Reservas',
+    students: 'Residentes',
+    staff: 'Personal',
+    packages: 'Paquetería',
+    kitchen: 'Comedor',
+    roles: 'Roles'
+};
+
 const RoleCard: React.FC<RoleCardProps> = ({ role, onEdit, onDelete }) => {
     const [showMenu, setShowMenu] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -24,18 +39,32 @@ const RoleCard: React.FC<RoleCardProps> = ({ role, onEdit, onDelete }) => {
     }, []);
 
     const initial = role.name.charAt(0).toUpperCase();
+    const permissions = role.permissions || [];
 
     return (
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between mb-4 hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-4 overflow-hidden">
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg shrink-0
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-start justify-between mb-4 hover:shadow-md transition-shadow">
+            <div className="flex items-start gap-4 overflow-hidden w-full">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg shrink-0 mt-1
                     ${role.is_system_default ? 'bg-gray-100 text-gray-600' : 'bg-green-50 text-green-600'}`}>
                     {initial}
                 </div>
 
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                     <h3 className="text-base font-semibold text-gray-900 truncate">{role.name}</h3>
-                    <p className="text-sm text-gray-500 truncate mt-0.5">{role.description || 'Sin descripción'}</p>
+                    <p className="text-sm text-gray-500 truncate mt-0.5 mb-2">{role.description || 'Sin descripción'}</p>
+
+                    {/* Renderizamos los badges de permisos */}
+                    {permissions.length > 0 ? (
+                        <div className="flex flex-wrap gap-1.5 mt-1">
+                            {permissions.map((p) => (
+                                <span key={p} className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded border border-blue-100 text-[10px] font-semibold tracking-wide uppercase">
+                                    {PERMISSION_LABELS[p] || p}
+                                </span>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-xs text-gray-400 italic">Sin accesos específicos asignados</p>
+                    )}
                 </div>
             </div>
 

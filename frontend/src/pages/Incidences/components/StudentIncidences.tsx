@@ -1,36 +1,38 @@
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Bell, MapPin, User, Wrench, MessageSquare, Loader2, Clock, Pencil, Trash2, LogOut } from "lucide-react";
+import { Plus, MapPin, User, Wrench, MessageSquare, Clock, Pencil, Trash2, LogOut } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent } from "../../../components/ui/card";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "../../../components/ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "../../../components/ui/popover";
 import { fetchWithAuth, API_URL_INCIDENCES } from "../../../utils/api";
+import { authService } from "../../../services/auth";
 import { IncidenceForm } from "./IncidenceForm";
 import { IncidenceService } from "../../../services/incidences";
+import { CentralNotificationBell, type StudentTab } from "../../../components/CentralNotificationBell";
 
 import {
   IncidenceSelect, LOCATION_LABELS, PRIORITY_LABELS, STATUS_CONFIG,
-  formatUpdateText, applyIncidenceFilters, formatNotificationTime,
-  getLastReadNotificationsAt, saveLastReadNotificationsAt,
+  formatUpdateText, applyIncidenceFilters,
   COMMON_UI_CLASSES, BaseIncidence
 } from "./IncidenceShared";
 import "../Incidences.css";
 
 interface StudentIncidencesProps {
-  onGoToProfile?: () => void;
-  onLogout?: () => void;
+  readonly onGoToProfile?: () => void;
+  readonly onLogout?: () => void;
+  readonly onNavigate?: (view: StudentTab) => void;
 }
+const LIVE_REFRESH_MS = 5000;
 
-export default function StudentIncidences({ onGoToProfile, onLogout }: StudentIncidencesProps) {
+export default function StudentIncidences(props: Readonly<StudentIncidencesProps>) {
+  const { onGoToProfile, onLogout, onNavigate } = props;
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [incidences, setIncidences] = useState<BaseIncidence[]>([]);
   const [selectedDetails, setSelectedDetails] = useState<BaseIncidence | null>(null);
   const [isNotesOpen, setIsNotesOpen] = useState(false);
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [notifications, setNotifications] = useState<any[]>([]);
-  const [notificationsLoading, setNotificationsLoading] = useState(false);
-  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [currentUserEmail, setCurrentUserEmail] = useState("");
+  const [isSessionUserResolved, setIsSessionUserResolved] = useState(false);
 
   const [incidenceToDelete, setIncidenceToDelete] = useState<BaseIncidence | null>(null);
   const [incidenceToEdit, setIncidenceToEdit] = useState<BaseIncidence | null>(null);
@@ -41,39 +43,37 @@ export default function StudentIncidences({ onGoToProfile, onLogout }: StudentIn
   const [filterPriority, setFilterPriority] = useState('all');
   const [showOnlyMine, setShowOnlyMine] = useState(false);
 
-  const loadNotifications = useCallback(async (markAsRead = false, silent = false) => {
-    try {
-      if (!silent) setNotificationsLoading(true);
-      const res = await fetchWithAuth(`${API_URL_INCIDENCES}notifications/`);
-      if (!res.ok) return;
-      const data = await res.json();
-      const all = Array.isArray(data.results) ? data.results : [];
-      const lastReadAt = getLastReadNotificationsAt();
-
-      if (markAsRead && all.length > 0) {
-        saveLastReadNotificationsAt(all[0].created_at);
-        setUnreadNotifications(0);
-      } else {
-        const count = all.filter((n: any) => Date.parse(n.created_at) > lastReadAt).length;
-        setUnreadNotifications(count);
-      }
-      setNotifications(all);
-    } catch (e) { console.error(e); } finally { if (!silent) setNotificationsLoading(false); }
+  useEffect(() => {
+    authService.me()
+      .then((session) => {
+        const parsedId = Number(session.user?.id);
+        setCurrentUserId(Number.isFinite(parsedId) ? parsedId : null);
+        setCurrentUserEmail((session.user?.email || "").trim().toLowerCase());
+      })
+      .catch(() => {
+        setCurrentUserId(null);
+        setCurrentUserEmail("");
+      })
+      .finally(() => {
+        setIsSessionUserResolved(true);
+      });
   }, []);
 
-  const loadIncidences = useCallback(async () => {
+  const loadIncidences = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const res = await fetchWithAuth(API_URL_INCIDENCES);
       if (res.ok) setIncidences(await res.json());
-    } catch (e) { console.error(e); } finally { setLoading(false); }
+    } catch (e) { console.error(e); } finally { if (!silent) setLoading(false); }
   }, []);
 
   useEffect(() => {
-    loadIncidences(); loadNotifications();
-    const interval = setInterval(() => loadNotifications(false, true), 15000);
-    return () => clearInterval(interval);
-  }, [loadIncidences, loadNotifications]);
+    loadIncidences();
+    const incidencesInterval = setInterval(() => loadIncidences(true), LIVE_REFRESH_MS);
+    return () => {
+      clearInterval(incidencesInterval);
+    };
+  }, [loadIncidences]);
 
   const handleDelete = async () => {
     if (!incidenceToDelete) return;
@@ -85,18 +85,11 @@ export default function StudentIncidences({ onGoToProfile, onLogout }: StudentIn
   };
 
   const filteredIncidences = incidences.filter((inc) => {
-    if (showOnlyMine && !inc.is_mine) {
+    if (inc.location_type === 'habitacion' && inc.is_mine === false) {
       return false;
     }
-    if (!inc.is_mine && inc.location_type === 'habitacion') {
-      return false;
-    }
-    return applyIncidenceFilters(inc, {
-      search,
-      location: filterLocation,
-      status: filterStatus,
-      priority: filterPriority
-    });
+    if (showOnlyMine && inc.is_mine === false) return false;
+    return applyIncidenceFilters(inc, { search, location: filterLocation, status: filterStatus, priority: filterPriority });
   });
 
   return (
@@ -104,31 +97,12 @@ export default function StudentIncidences({ onGoToProfile, onLogout }: StudentIn
       <header className={UI_CLASSES.header}>
         <h1 className={UI_CLASSES.headerTitle}>Incidencias</h1>
         <div className="flex items-center gap-2">
-          <Popover open={isNotificationsOpen} onOpenChange={(open) => { setIsNotificationsOpen(open); if (open) loadNotifications(true); }}>
-            <PopoverTrigger asChild>
-              <Button type="button" size="icon" variant="ghost" className={UI_CLASSES.topIconButton} aria-label="Notificaciones">
-                <Bell className="w-5 h-5" />
-                {unreadNotifications > 0 && <span className={UI_CLASSES.bellBadge}>{unreadNotifications}</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent align="end" className="w-80 p-0 rounded-[28px] overflow-hidden border-none shadow-2xl">
-              <div className="bg-white p-4 border-b flex items-center justify-between">
-                <p className="text-xs font-bold uppercase tracking-[#0.2em] text-[#1B4D1C]">Notificaciones</p>
-                {notificationsLoading && <Loader2 className="w-3 h-3 animate-spin text-[#82D14C]" />}
-              </div>
-              <div className="max-h-80 overflow-y-auto p-2 bg-white">
-                {notifications.length > 0 ? notifications.map((n) => (
-                  <div key={n.id} className="p-3 mb-1 rounded-2xl bg-slate-50 border border-slate-100">
-                    <div className="flex justify-between items-start mb-1 text-left">
-                      <p className="text-xs font-bold text-slate-800">{n.title}</p>
-                      <span className="text-[9px] text-slate-400">{formatNotificationTime(n.created_at)}</span>
-                    </div>
-                    <p className="text-xs text-slate-600 mt-1 text-left">{n.message}</p>
-                  </div>
-                )) : <p className="text-center py-6 text-xs text-slate-400">Sin notificaciones</p>}
-              </div>
-            </PopoverContent>
-          </Popover>
+          <CentralNotificationBell
+            onNavigate={(tab) => onNavigate?.(tab)}
+            currentUserId={currentUserId}
+            currentUserEmail={currentUserEmail}
+            isSessionUserResolved={isSessionUserResolved}
+          />
           <Button
             type="button"
             size="icon"
@@ -197,7 +171,7 @@ export default function StudentIncidences({ onGoToProfile, onLogout }: StudentIn
                             </div>
                             <div className="flex flex-col items-end gap-2">
                               <span className={`${UI_CLASSES.statusBadge} ${style.colorClass}`}>{config.label}</span>
-                              {inc.is_mine && inc.status === 'pending' && (
+                              {inc.is_mine && inc.status === 'pending' && !inc.assigned_staff && !(inc.assigned_external_name && inc.assigned_external_name.trim()) && (!inc.updates || inc.updates.length === 0) && (
                                 <div className="flex gap-1">
                                   <button onClick={() => setIncidenceToEdit(inc)} className={UI_CLASSES.actionBtnSmall} title="Editar"><Pencil size={12} className="text-blue-500" /></button>
                                   <button onClick={() => setIncidenceToDelete(inc)} className={UI_CLASSES.actionBtnSmall} title="Eliminar"><Trash2 size={12} className="text-red-500" /></button>
@@ -206,20 +180,35 @@ export default function StudentIncidences({ onGoToProfile, onLogout }: StudentIn
                             </div>
 
                           </div>
-                          <div className={UI_CLASSES.cardLocationRow}>
+                          <div className={COMMON_UI_CLASSES.cardLocationRow}>
                             <MapPin size={14} className="text-slate-400" />
                             <span className="text-[11px] font-semibold text-slate-500 truncate">
                               {LOCATION_LABELS[inc.location_type]}
-                              {inc.location_type === 'habitacion' && inc.room_number ? ` • Hab. ${inc.room_number}` : ''}
+                              {inc.location_type === 'habitacion' && inc.room_number_detail && (
+                                <>
+                                  {` • Hab. ${inc.room_number_detail.numero}`}
+                                  {inc.room_number_detail.planta && ` Planta ${inc.room_number_detail.planta}` }
+                                  {inc.room_number_detail.edificio && ` Edificio ${inc.room_number_detail.edificio}`}
+                                </>
+                              )}
                             </span>
-                          </div>                        </div>
-
-                        <div className="mt-4 pt-3 border-t border-slate-50">
-                          <div className="flex items-center justify-between mb-2.5">
-                            <div className="flex items-center gap-1.5 text-slate-600 truncate text-[11px] font-bold"><Wrench size={13} />{inc.assigned_staff_name || inc.assigned_external_name || 'Sin asignar'}</div>
-                            <div className="flex items-center gap-1 text-slate-400 font-bold text-[10px]"><Clock size={10} />{new Date(inc.created_at).toLocaleDateString()}</div>
                           </div>
-                          <div className="flex justify-end"><Button variant="outline" onClick={async () => { const res = await fetchWithAuth(`${API_URL_INCIDENCES}${inc.id}/`); if (res.ok) { setSelectedDetails(await res.json()); setIsNotesOpen(true); } }} className={UI_CLASSES.btnNotes}>VER DETALLES</Button></div>
+                        </div>
+                        <div className="mt-4 pt-3 border-t">
+                          <div className="flex items-center justify-between mb-2.5">
+                            <div className="flex items-center gap-1.5 text-slate-600 truncate text-[11px] font-bold">
+                              <Wrench size={13} />{inc.assigned_staff_name || inc.assigned_external_name || 'Sin asignar'}</div>
+                            <div className="flex items-center gap-1 text-slate-400 font-bold text-[10px]">
+                              <Clock size={10} />{new Date(inc.created_at).toLocaleDateString()}</div>
+                          </div>
+                          <div className="flex justify-end">
+                            <Button variant="outline" onClick={async () => {
+                              const res = await fetchWithAuth(`${API_URL_INCIDENCES}${inc.id}/`);
+                              if (res.ok) { setSelectedDetails(await res.json()); setIsNotesOpen(true); }
+                            }}
+                              className={COMMON_UI_CLASSES.btnNotes}>VER DETALLES
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </CardContent>
@@ -269,7 +258,7 @@ export default function StudentIncidences({ onGoToProfile, onLogout }: StudentIn
                 <section className="pt-2">
                   <p className="text-[10px] font-bold uppercase text-[#3A7A1C] tracking-widest mb-4 text-left">Gestión y Actualizaciones</p>
                   <div className="relative ml-2 space-y-6 border-l-2 border-slate-100 pl-8">
-                    {selectedDetails.updates?.map((u: any) => (
+                    {selectedDetails.updates?.map((u) => (
                       <div key={u.id} className="relative">
                         <div className="absolute -left-[41px] top-1.5 h-4 w-4 rounded-full border-4 border-white bg-slate-200" />
                         <div className="bg-[#eef8ee] p-4 rounded-[22px] text-left">
@@ -306,7 +295,7 @@ const UI_CLASSES = {
   header: "bg-primary p-6 pt-12 flex justify-between items-center shrink-0 shadow-lg",
   headerTitle: "text-primary-foreground text-2xl font-bold",
   topIconButton: "relative text-primary-foreground hover:bg-primary-foreground/20 hover:scale-110 rounded-full transition-all",
-  bellBadge: "absolute -right-1 -top-1 min-w-5 h-5 flex items-center justify-center rounded-full bg-[#82D14C] text-[10px] font-bold text-[#123313]",
+  bellBadge: "absolute top-1 right-1 w-2.5 h-2.5 bg-destructive rounded-full border-2 border-primary",
   mainContent: "flex-1 overflow-y-auto p-4 md:p-6 pb-32 w-full",
   incidencesGrid: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5",
   card: "border-none shadow-sm rounded-[24px] overflow-hidden bg-white h-full flex flex-col hover:shadow-md transition-shadow",

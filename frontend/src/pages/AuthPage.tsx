@@ -15,9 +15,12 @@ export function AuthPage() {
     const [showAdminLogin, setShowAdminLogin] = useState(false);
     const [showRulesModal, setShowRulesModal] = useState(false);
     const [showPreferencesForm, setShowPreferencesForm] = useState(false);
+
     const navigate = useNavigate();
 
     const RULES_KEY = "nexus.community_rules.accepted";
+
+    const getUserRulesKey = (userId: string) => `${RULES_KEY}.${userId}`;
 
     useEffect(() => {
         const restoreSession = async () => {
@@ -25,7 +28,6 @@ export function AuthPage() {
                 const session = await authService.me();
                 if (!session.authenticated || !session.user) {
                     localStorage.removeItem('userRole');
-                    // Limpiar todos los estados cuando no hay sesión
                     setShowStudentLogin(false);
                     setShowAdminLogin(false);
                     setShowRulesModal(false);
@@ -40,26 +42,32 @@ export function AuthPage() {
                 }
 
                 localStorage.setItem('userRole', role);
-                
-                // Verificar si estudiante tiene el formulario de preferencias completado
+
                 if (role === 'student') {
+                    const userRulesKey = getUserRulesKey(session.user.id.toString());
+                    const sessionSkip = sessionStorage.getItem(userRulesKey) === 'true';
+                    const localSkip = localStorage.getItem(userRulesKey) === 'true';
+                    const skipRules = sessionSkip || localSkip;
+
+                    if (!skipRules) {
+                        setShowRulesModal(true);
+                        return;
+                    }
+
                     try {
                         const preferences = await preferencesService.getMyPreferences();
                         if (!preferences.is_completed) {
-                            // Mostrar el formulario de preferencias
                             setShowPreferencesForm(true);
                             return;
                         }
                     } catch {
-                        // Si hay error al obtener preferencias en la restauración, solo navegar
-                        // El dashboard o el servidor manejará la situación
+                        // Continuamos al dashboard si falla
                     }
                 }
-                
+
                 navigate('/dashboard');
             } catch {
                 localStorage.removeItem('userRole');
-                // Limpiar todos los estados si hay error durante la restauración
                 setShowStudentLogin(false);
                 setShowAdminLogin(false);
                 setShowRulesModal(false);
@@ -87,6 +95,34 @@ export function AuthPage() {
 
     const checkPreferencesAndFinalize = async () => {
         try {
+            const session = await authService.me();
+            if (!session.user) throw new Error("No session");
+
+            const userRulesKey = getUserRulesKey(session.user.id.toString());
+            // 🟢 COMPROBAMOS AMBOS STORAGE PARA SABER SI MOSTRAR EL MODAL
+            const skipSession = sessionStorage.getItem(userRulesKey) === 'true';
+            const skipLocal = localStorage.getItem(userRulesKey) === 'true';
+
+            if (!skipSession && !skipLocal) {
+                setShowRulesModal(true);
+                return;
+            }
+
+            const preferences = await preferencesService.getMyPreferences();
+            if (!preferences.is_completed) {
+                setShowPreferencesForm(true);
+            } else {
+                await finalizeLogin('student');
+                setShowPreferencesForm(false);
+            }
+        } catch (error) {
+            console.error(error);
+            setShowPreferencesForm(true);
+        }
+    };
+
+    const checkPreferencesOnly = async () => {
+        try {
             const preferences = await preferencesService.getMyPreferences();
             if (!preferences.is_completed) {
                 setShowPreferencesForm(true);
@@ -105,14 +141,8 @@ export function AuthPage() {
     };
 
     const handleStudentLogin = async () => {
-        const skipRules = localStorage.getItem(RULES_KEY) === 'true';
         setShowStudentLogin(false);
-
-        if (!skipRules) {
-            setShowRulesModal(true);
-        } else {
-            await checkPreferencesAndFinalize();
-        }
+        await checkPreferencesAndFinalize();
     };
 
     const handleAdminLogin = async () => {
@@ -121,18 +151,23 @@ export function AuthPage() {
 
     const handleRulesAccepted = async (dontShowAgain: boolean) => {
         try {
+            const session = await authService.me();
+            if (!session.user) return;
+            const userRulesKey = getUserRulesKey(session.user.id.toString());
+            sessionStorage.setItem(userRulesKey, 'true');
             if (dontShowAgain) {
-                localStorage.setItem(RULES_KEY, 'true');
+                localStorage.setItem(userRulesKey, 'true');
             }
         } catch (e) {
             console.error("Error saving rules preference", e);
         }
         setShowRulesModal(false);
-        await checkPreferencesAndFinalize();
+        await checkPreferencesOnly();
     };
 
     const handlePreferencesComplete = async () => {
         setShowPreferencesForm(false);
+        await new Promise(resolve => setTimeout(resolve, 500));
         await finalizeLogin('student');
     };
 
@@ -157,7 +192,11 @@ export function AuthPage() {
     return (
         <>
             <LoginView onSelectRole={handleRoleSelection} />
-            <CommunityRulesModal isOpen={showRulesModal} onAccept={handleRulesAccepted} />
+            {/* 🟢 El Modal ahora se autogestiona los textos internamente */}
+            <CommunityRulesModal
+                isOpen={showRulesModal}
+                onAccept={handleRulesAccepted}
+            />
         </>
     );
 }

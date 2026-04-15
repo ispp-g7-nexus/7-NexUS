@@ -3,6 +3,8 @@ from typing import Any
 import jwt
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import DataError
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 
@@ -99,7 +101,7 @@ def resolve_user_from_request(request) -> dict[str, Any] | None:
             if not email:
                 return None
             user = UserModel.objects.get(email=email)
-    except UserModel.DoesNotExist:
+    except (UserModel.DoesNotExist, ValueError, TypeError, OverflowError, DjangoValidationError, DataError):
         return None
 
     if not user.is_active:
@@ -153,7 +155,7 @@ class CustomJWTAuthentication(TokenAuthentication):
                     user = UserModel.objects.get(email=email)
                 else:
                     raise UserModel.DoesNotExist
-        except UserModel.DoesNotExist:
+        except (UserModel.DoesNotExist, ValueError, TypeError, OverflowError, DjangoValidationError, DataError):
             raise AuthenticationFailed('User not found')
 
         if not user.is_active:

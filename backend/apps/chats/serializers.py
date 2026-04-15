@@ -9,7 +9,7 @@ User = get_user_model()
 
 
 class ChatGroupLabelSerializer(serializers.ModelSerializer):
-    name = serializers.CharField(max_length=20)  
+    name = serializers.CharField(max_length=15)
     
     class Meta:
         model = ChatGroupLabel
@@ -124,6 +124,10 @@ class ChatGroupSerializer(serializers.ModelSerializer):
 
 
 class ChatGroupCreateUpdateSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(max_length=45)
+    description = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    label = serializers.CharField(max_length=15)
+
     class Meta:
         model = ChatGroup
         fields = ["name", "description", "label", "can_members_leave"]

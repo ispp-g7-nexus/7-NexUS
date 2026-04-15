@@ -5,11 +5,13 @@ from django.db.models import Q
 from rest_framework import serializers, status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.decorators import action
 
 from .models import Role
-from .permissions import IsResidenceAdmin
+from .permissions import IsResidenceAdmin, RequireScreenAccess
 from .serializers import RoleSerializer
 from .services import RoleService
+from . import analytics_services
 
 # Inicializamos el logger para el ViewSet
 logger = logging.getLogger(__name__)
@@ -56,6 +58,7 @@ class RoleViewSet(viewsets.ModelViewSet):
                 name=serializer.validated_data.get("name"),
                 description=serializer.validated_data.get("description", ""),
                 residence=residence,
+                permissions=serializer.validated_data.get("permissions", []),
             )
             serializer.instance = role_instance
             logger.debug(
@@ -96,3 +99,41 @@ class RoleViewSet(viewsets.ModelViewSet):
                 {"detail": error_msg},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+
+class MembershipAnalyticsViewSet(viewsets.ViewSet):
+    """
+    ViewSet for membership analytics.
+    """
+    permission_classes = [IsAuthenticated, RequireScreenAccess('analytics')]
+
+    @action(detail=False, methods=['get'])
+    def summary(self, request):
+        try:
+            residence = getattr(request, 'residence', None)
+            if residence is None:
+                return Response(
+                    {"detail": "No se pudo determinar la residencia del contexto."},
+                    status=status.HTTP_400_BAD_REQUEST,
+               )
+            active_members_by_role = list(analytics_services.get_active_members_by_role(residence))
+            active_vs_inactive = list(analytics_services.get_active_vs_inactive_members(residence))
+            membership_evolution = analytics_services.get_membership_evolution(residence)
+            average_stay = analytics_services.get_average_stay(residence)
+            staff_capacity = analytics_services.get_staff_capacity(residence)
+            staff_vacation = analytics_services.get_staff_vacation(residence)
+            residents_without_room = analytics_services.get_residents_without_room(residence)
+
+            data = {
+                "active_members_by_role": active_members_by_role,
+                "active_vs_inactive": active_vs_inactive,
+                "membership_evolution": membership_evolution,
+                "average_stay": average_stay,
+                "staff_capacity": staff_capacity,
+                "staff_vacation": staff_vacation,
+                "residents_without_room": residents_without_room,
+            }
+            return Response(data)
+        except Exception as e:
+            logger.exception("Error generating analytics summary")
+            return Response({"detail": "Error generating analytics summary"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

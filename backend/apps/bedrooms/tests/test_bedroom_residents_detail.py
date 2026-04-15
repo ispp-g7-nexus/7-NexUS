@@ -1,28 +1,20 @@
 from django.contrib.auth import get_user_model
-from django_tenants.test.cases import FastTenantTestCase
 from django_tenants.test.client import TenantClient
 
 from apps.bedrooms.models import Bedroom
-from apps.membership.models import Membership, Role
+from apps.membership.models import Role
 from apps.residences.models import Residence, ResidenceDomain
 
+from .base import BedroomTestBase
 
-class BedroomDetailViewTests(FastTenantTestCase):
-    @classmethod
-    def get_test_tenant_domain(cls):
-        return "bedrooms.test.local"
 
+class BedroomDetailViewTests(BedroomTestBase):
     @classmethod
     def setup_tenant(cls, tenant):
         tenant.name = "Tenant Bedrooms Test"
         tenant.slug = "tenant-bedrooms-test"
         tenant.is_active = True
         tenant.on_trial = True
-
-    @classmethod
-    def setup_domain(cls, domain):
-        domain.domain = cls.get_test_tenant_domain()
-        domain.is_primary = True
 
     def setUp(self):
         super().setUp()
@@ -107,15 +99,6 @@ class BedroomDetailViewTests(FastTenantTestCase):
     def _url(self, bedroom_id):
         return f"/api/bedrooms/{bedroom_id}/"
 
-    def _create_membership(self, user, bedroom=None, is_active=True, role=None):
-        return Membership.objects.create(
-            user=user,
-            role=role or self.student_role,
-            residence=self.residence,
-            bedroom=bedroom,
-            is_active=is_active,
-        )
-
     # --- Campos del detalle ---
 
     def test_response_includes_detail_fields(self):
@@ -142,6 +125,7 @@ class BedroomDetailViewTests(FastTenantTestCase):
         data = response.json()
         self.assertEqual(len(data["residentes"]), 1)
         residente = data["residentes"][0]
+        self.assertEqual(residente["user_id"], self.student_user.id)
         self.assertEqual(residente["full_name"], "Carlos Ruiz")
         self.assertIn("email", residente)
         self.assertEqual(residente["email"], "student@bedrooms.test")

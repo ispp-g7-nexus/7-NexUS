@@ -1,4 +1,5 @@
 // src/services/preferences.ts
+import { trackEvent } from "./analytics";
 import { API_URL } from "./api";
 
 const PREFERENCES_URL = `${API_URL}/preferences`;
@@ -26,13 +27,20 @@ export interface PreferencesResponse extends PreferencesData {
     created_at: string;
     updated_at: string;
 }
+const getAuthHeaders = () => {
+    const token = localStorage.getItem('token'); 
+    return {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
+};
 
 export const preferencesService = {
     // Get current user's preferences
     getMyPreferences: async (): Promise<PreferencesResponse> => {
         const response = await fetch(`${PREFERENCES_URL}/my-preferences/`, {
             method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getAuthHeaders(),
             credentials: 'include',
         });
         if (!response.ok) {
@@ -46,7 +54,7 @@ export const preferencesService = {
     saveMyPreferences: async (data: PreferencesData): Promise<PreferencesResponse> => {
         const response = await fetch(`${PREFERENCES_URL}/my-preferences/`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getAuthHeaders(),
             body: JSON.stringify(data),
             credentials: 'include',
         });
@@ -54,6 +62,7 @@ export const preferencesService = {
             const errorData = await response.json();
             throw new Error(errorData.detail || 'Error al guardar preferencias');
         }
+        trackEvent('preferences_saved');
         return response.json();
     },
 
@@ -61,7 +70,7 @@ export const preferencesService = {
     checkCompletion: async (): Promise<{ is_completed: boolean }> => {
         const response = await fetch(`${PREFERENCES_URL}/check-completion/`, {
             method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getAuthHeaders(),
             credentials: 'include',
         });
         if (!response.ok) {
