@@ -192,11 +192,31 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated, enforceCurrentMe
     };
 
     const handleSaveChanges = async () => {
+        const normalizedName = groupName.trim();
+        const normalizedDescription = groupDescription.trim();
+
+        if (!normalizedName) {
+            toast.error("El nombre del grupo es obligatorio.");
+            return;
+        }
+        if (normalizedName.length > 45) {
+            toast.error("El nombre del grupo no puede superar 45 caracteres.");
+            return;
+        }
+        if (normalizedDescription.length > 255) {
+            toast.error("La descripción no puede superar 255 caracteres.");
+            return;
+        }
+        if (groupType.length > 15) {
+            toast.error("La etiqueta no puede superar 15 caracteres.");
+            return;
+        }
+
         setSaving(true);
         try {
             const updated = await chatsService.updateGroup(currentGroup.id, {
-                name: groupName.trim(),
-                description: groupDescription.trim(),
+                name: normalizedName,
+                description: normalizedDescription,
                 label: groupType,
                 can_members_leave: canLeave,
             });
@@ -239,7 +259,11 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated, enforceCurrentMe
                             value={groupName}
                             onChange={(e) => setGroupName(e.target.value)}
                             placeholder="Nombre del grupo"
+                            maxLength={45}
                         />
+                        <p className="text-xs text-gray-500 text-right mt-1">
+                            {groupName.length}/45
+                        </p>
                     </div>
 
                     <div>
@@ -273,8 +297,12 @@ export function AdminGroupEdit({ group, onBack, onGroupUpdated, enforceCurrentMe
                         onChange={(e) => setGroupDescription(e.target.value)}
                         placeholder="Descripción del grupo"
                         rows={3}
+                        maxLength={255}
                         className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     />
+                    <p className="text-xs text-gray-500 text-right mt-1">
+                        {groupDescription.length}/255
+                    </p>
                 </div>
 
                 <div className="flex items-center gap-3">

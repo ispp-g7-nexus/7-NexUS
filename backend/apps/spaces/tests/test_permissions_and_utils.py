@@ -1,5 +1,5 @@
 from types import SimpleNamespace
-from datetime import timedelta, time
+from datetime import datetime, timedelta, time
 
 from django.utils import timezone
 from django.contrib.auth import get_user_model
@@ -12,6 +12,8 @@ from apps.spaces import permissions as spaces_permissions
 from apps.spaces.views import (
     _parse_request_datetime,
     _build_occupancy_events,
+    _build_reservation_reminders,
+    _compute_available_slots,
     _is_capacity_reached,
     SpaceListView,
     SpaceAvailabilityView,
@@ -23,6 +25,7 @@ from apps.spaces.views import (
     AdminSpaceNotificationsView,
 )
 from apps.spaces.models import CommonSpace, SpaceReservation
+from apps.spaces.tests import ensure_tenant_domain
 from apps.membership.models import Membership, Role
 
 
@@ -44,6 +47,7 @@ class PermissionsAndUtilsTests(FastTenantTestCase):
 
     def setUp(self):
         super().setUp()
+        ensure_tenant_domain(self.tenant, self.get_test_tenant_domain())
         self.factory = RequestFactory()
         User = get_user_model()
         self.user = User.objects.create_user(username="permuser", email="p@t.local")
@@ -280,6 +284,93 @@ class PermissionsAndUtilsTests(FastTenantTestCase):
 
         self.assertEqual(response.status_code, 401)
         self.assertIn("User not found", response.content.decode())
+
+    def test_authenticated_view_uses_resolved_jwt_user_when_present(self):
+        request = self.factory.get("/api/spaces/")
+        request.user = AnonymousUser()
+        request.residence = self.residence
+
+        from apps.spaces import views as spaces_views
+
+        original_resolve = spaces_views.resolve_user_from_request
+        try:
+            spaces_views.resolve_user_from_request = lambda req: {"id": self.user.id}
+            response = SpaceListView.as_view()(request)
+        finally:
+            spaces_views.resolve_user_from_request = original_resolve
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content.decode(), "[]")
+
+    def test_build_reservation_reminders_returns_sorted_payload(self):
+        space = CommonSpace.objects.create(
+            name="Sala Reminder",
+            capacity=2,
+            is_active=True,
+            open_time=time(8, 0),
+            close_time=time(22, 0),
+            residence=self.residence,
+        )
+
+        later = SpaceReservation.objects.create(
+            space=space,
+            user=self.user,
+            residence=self.residence,
+            start_time=timezone.now() + timedelta(minutes=50),
+            end_time=timezone.now() + timedelta(minutes=80),
+        )
+        earlier = SpaceReservation.objects.create(
+            space=space,
+            user=self.user,
+            residence=self.residence,
+            start_time=timezone.now() + timedelta(minutes=20),
+            end_time=timezone.now() + timedelta(minutes=40),
+        )
+
+        reminders = _build_reservation_reminders([later, earlier])
+
+        self.assertEqual(len(reminders), 2)
+        self.assertEqual(reminders[0]["id"], f"space-reservations-{earlier.id}")
+        self.assertIn("Sala Reminder", reminders[0]["title"])
+        self.assertEqual(reminders[0]["start_time"], earlier.start_time.isoformat())
+
+    def test_compute_available_slots_marks_available_and_occupied_slots(self):
+        space = CommonSpace.objects.create(
+            name="Sala Slots",
+            capacity=1,
+            is_active=True,
+            open_time=time(10, 0),
+            close_time=time(12, 0),
+            reservation_interval_minutes=60,
+            residence=self.residence,
+        )
+
+        target_date = (timezone.now() + timedelta(days=1)).date()
+        reserved_start = timezone.make_aware(
+            datetime.combine(target_date, time(11, 0)),
+            timezone.get_current_timezone(),
+        )
+        reserved_end = timezone.make_aware(
+            datetime.combine(target_date, time(12, 0)),
+            timezone.get_current_timezone(),
+        )
+        reservation = SpaceReservation.objects.create(
+            space=space,
+            user=self.user,
+            residence=self.residence,
+            start_time=reserved_start,
+            end_time=reserved_end,
+        )
+
+        slots = _compute_available_slots(
+            target_date=target_date,
+            space=space,
+            reservations=[reservation],
+        )
+
+        self.assertEqual(len(slots), 2)
+        self.assertEqual([slot["status"] for slot in slots], ["available", "occupied"])
+        self.assertEqual(slots[0]["start_time"], reserved_start.replace(hour=10).isoformat())
 
     def test_views_return_400_when_residence_missing(self):
         request_list = self.factory.get("/api/spaces/")

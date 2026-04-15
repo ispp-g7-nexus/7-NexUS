@@ -3,8 +3,8 @@ from datetime import datetime, time, timedelta
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django_tenants.test.cases import FastTenantTestCase
-from django_tenants.test.client import TenantClient
 
+from apps.common.test_utils import ensure_tenant_domain, make_tenant_client
 from apps.membership.models import Membership, Role
 from apps.objects.models import Object, ObjectLabel, ObjectRental
 from apps.objects.views import _serialize_object, _sync_started_rentals_for_residence
@@ -36,8 +36,9 @@ class ObjectReservationApiTests(FastTenantTestCase):
 
     def setUp(self):
         super().setUp()
+        ensure_tenant_domain(self.tenant, self.get_test_tenant_domain())
         domain = self.get_test_tenant_domain()
-        self.client = TenantClient(self.tenant, SERVER_NAME=domain, HTTP_HOST=domain)
+        self.client = make_tenant_client(self.tenant, domain)
 
         user_model = get_user_model()
         self.user = user_model.objects.create_user(

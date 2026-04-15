@@ -21,6 +21,10 @@ TEST_PASSWORD = "demo1234"  # NOSONAR
 class IncidenceAnalyticsViewTests(TenantTestCase):
 
     @classmethod
+    def get_test_schema_name(cls):
+        return "test_incidence_analytics"
+
+    @classmethod
     def get_test_tenant_domain(cls):
         return "incidence-analytics.test.local"
 
@@ -28,6 +32,7 @@ class IncidenceAnalyticsViewTests(TenantTestCase):
     def setup_tenant(cls, tenant):
         tenant.name = "Tenant Incidence Analytics"
         tenant.slug = "tenant-incidence-analytics"
+        tenant.schema_name = f"test_schema_{cls.__name__.lower()}"
         tenant.is_active = True
         tenant.on_trial = True
 
@@ -251,7 +256,6 @@ class IncidenceAnalyticsViewTests(TenantTestCase):
 
         url = self._url_with_range(self.yesterday, self.today)
         summary = self.admin_client.get(url).json()["summary"]
-        # The old open one must appear even though it's outside the range
         self.assertEqual(summary["currently_open"], 1)
 
     def test_avg_resolution_hours_none_when_no_resolved(self):
@@ -260,7 +264,11 @@ class IncidenceAnalyticsViewTests(TenantTestCase):
         self.assertIsNone(summary["avg_resolution_hours"])
 
     def test_avg_resolution_hours_computed(self):
-        # Created at 10:00, resolved at 18:00 → 8 hours
+        # Created at 10:00, resolved at 18:00 (mismo día) → 8 horas.
+        # Usamos una URL con ``from``/``to`` explícitos en el mismo día en
+        # el que fijamos ``created_at``/``updated_at`` para evitar depender
+        # del rango default de la analytics.
+        base_day = date(2024, 1, 1)
         with schema_context(self.tenant.schema_name):
             inc = Incidence.objects.create(
                 title="Timed",
@@ -269,13 +277,23 @@ class IncidenceAnalyticsViewTests(TenantTestCase):
                 student=self.admin_user,
                 status="resolved",
             )
-            created_dt = make_aware(datetime(2024, 1, 1, 10, 0, 0))
-            resolved_dt = make_aware(datetime(2024, 1, 1, 18, 0, 0))
+            created_dt = make_aware(
+                datetime(base_day.year, base_day.month, base_day.day, 10, 0, 0)
+            )
+            resolved_dt = make_aware(
+                datetime(base_day.year, base_day.month, base_day.day, 18, 0, 0)
+            )
             Incidence.objects.filter(id=inc.id).update(
                 created_at=created_dt, updated_at=resolved_dt
             )
 
-        summary = self.admin_client.get(ANALYTICS_URL).json()["summary"]
+        url = (
+            f"{ANALYTICS_URL}?from={base_day.isoformat()}"
+            f"&to={(base_day + timedelta(days=1)).isoformat()}"
+        )
+        response = self.admin_client.get(url)
+        summary = response.json()["summary"]
+
         self.assertEqual(summary["avg_resolution_hours"], 8.0)
 
     # ── Invalid date range ────────────────────────────────────────────────────

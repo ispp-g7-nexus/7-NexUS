@@ -9,6 +9,7 @@ from django_tenants.test.client import TenantClient
 from apps.objects.models import Object, ObjectRental
 from apps.residences.models import Residence, ResidenceDomain
 from apps.spaces.models import CommonSpace, SpaceReservation
+from apps.spaces.tests import ensure_tenant_domain, make_tenant_client
 
 ANALYTICS_URL = "/api/admin/analytics/reservations/"
 
@@ -32,6 +33,7 @@ class AdminReservationsAnalyticsTests(FastTenantTestCase):
 
     def setUp(self):
         super().setUp()
+        ensure_tenant_domain(self.tenant, self.get_test_tenant_domain())
         user_model = get_user_model()
         domain = self.get_test_tenant_domain()
 
@@ -117,14 +119,10 @@ class AdminReservationsAnalyticsTests(FastTenantTestCase):
             stock_total=1,
         )
 
-        self.admin_client = TenantClient(
-            self.tenant, SERVER_NAME=domain, HTTP_HOST=domain
-        )
+        self.admin_client = make_tenant_client(self.tenant, domain)
         self.admin_client.force_login(self.admin_user)
 
-        self.student_client = TenantClient(
-            self.tenant, SERVER_NAME=domain, HTTP_HOST=domain
-        )
+        self.student_client = make_tenant_client(self.tenant, domain)
         self.student_client.force_login(self.student_user)
 
         self.residence_tz = ZoneInfo("Europe/Madrid")

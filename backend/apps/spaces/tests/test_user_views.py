@@ -7,6 +7,7 @@ from django_tenants.test.client import TenantClient
 
 from apps.residences.models import Residence, ResidenceDomain
 from apps.spaces.models import CommonSpace, SpaceReservation
+from apps.spaces.tests import ensure_tenant_domain, make_tenant_client
 from apps.membership.models import Membership, Role
 
 class UserSpaceViewsTests(FastTenantTestCase):
@@ -27,6 +28,7 @@ class UserSpaceViewsTests(FastTenantTestCase):
 
     def setUp(self):
         super().setUp()
+        ensure_tenant_domain(self.tenant, self.get_test_tenant_domain())
         User = get_user_model()
         domain = self.get_test_tenant_domain()
         self.residence = Residence.objects.create(
@@ -50,13 +52,13 @@ class UserSpaceViewsTests(FastTenantTestCase):
             name="Sala Común", capacity=2, is_active=True, open_time=time(8, 0), close_time=time(22, 0), residence=self.residence,
         )
 
-        self.client1 = TenantClient(self.tenant, SERVER_NAME=domain, HTTP_HOST=domain)
+        self.client1 = make_tenant_client(self.tenant, domain)
         self.client1.force_login(self.user1)
 
-        self.client2 = TenantClient(self.tenant, SERVER_NAME=domain, HTTP_HOST=domain)
+        self.client2 = make_tenant_client(self.tenant, domain)
         self.client2.force_login(self.user2)
 
-        self.anon_client = TenantClient(self.tenant, SERVER_NAME=domain, HTTP_HOST=domain)
+        self.anon_client = make_tenant_client(self.tenant, domain)
 
     def test_list_active_spaces(self):
         resp = self.client1.get("/api/spaces/")
@@ -126,7 +128,7 @@ class UserSpaceViewsTests(FastTenantTestCase):
         user3 = get_user_model().objects.create_user(username="u3", password="123")
         Membership.objects.create(user=user3, role=self.student_role, residence=self.residence, is_active=True)
         
-        client3 = TenantClient(self.tenant, SERVER_NAME=self.get_test_tenant_domain(), HTTP_HOST=self.get_test_tenant_domain())
+        client3 = make_tenant_client(self.tenant, self.get_test_tenant_domain())
         client3.force_login(user3)
         
         r3 = client3.post(f"/api/spaces/{self.space.id}/reservations/", data=json.dumps(payload), content_type="application/json")
@@ -371,7 +373,7 @@ class UserSpaceViewsTests(FastTenantTestCase):
             password="123",
             is_staff=True,
         )
-        admin_client = TenantClient(self.tenant, SERVER_NAME=self.get_test_tenant_domain(), HTTP_HOST=self.get_test_tenant_domain())
+        admin_client = make_tenant_client(self.tenant, self.get_test_tenant_domain())
         admin_client.force_login(admin_user)
 
         start = timezone.now().replace(hour=12, minute=0) + timedelta(days=1)

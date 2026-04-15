@@ -412,6 +412,56 @@ class AdminGuestPassListTests(TenantTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), [])
 
+    def test_admin_notifications_limit_to_eight_and_exclude_non_active_cases(self):
+        now = timezone.now()
+        GuestPassPolicy.objects.update_or_create(
+            residence=self.residence,
+            defaults={"visit_end_time": time(0, 0)},
+        )
+
+        for index in range(10):
+            self._create_pass(
+                resident=self.resident_membership,
+                pass_code=f"NOTIF-ACTIVE-{index}",
+                status=GuestPass.Status.ACTIVE,
+                valid_from=now - timedelta(hours=1),
+                valid_until=now + timedelta(hours=3),
+            )
+
+        cancelled = self._create_pass(
+            resident=self.resident_membership,
+            pass_code="NOTIF-CANCELLED-1",
+            status=GuestPass.Status.CANCELLED,
+            valid_from=now - timedelta(hours=1),
+            valid_until=now + timedelta(hours=3),
+        )
+        revoked = self._create_pass(
+            resident=self.resident_membership,
+            pass_code="NOTIF-REVOKED-1",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now - timedelta(hours=1),
+            valid_until=now + timedelta(hours=3),
+        )
+        expired = self._create_pass(
+            resident=self.resident_membership,
+            pass_code="NOTIF-EXPIRED-1",
+            status=GuestPass.Status.ACTIVE,
+            valid_from=now - timedelta(days=1),
+            valid_until=now - timedelta(hours=1),
+        )
+        revoked.revoked_at = now - timedelta(minutes=1)
+        revoked.save(update_fields=["revoked_at", "updated_at"])
+
+        response = self.admin_client.get(ADMIN_NOTIFICATIONS_URL)
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(len(payload), 8)
+        ids = {item["id"] for item in payload}
+        self.assertNotIn(cancelled.id, ids)
+        self.assertNotIn(revoked.id, ids)
+        self.assertNotIn(expired.id, ids)
+
     def test_resident_cannot_access_admin_notifications(self):
         response = self.resident_client.get(ADMIN_NOTIFICATIONS_URL)
         self.assertEqual(response.status_code, 403)

@@ -10,6 +10,7 @@ from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from rest_framework.test import APIClient, APIRequestFactory
 
+from apps.bedrooms.models import Bedroom
 from apps.incidences.models import Incidence, IncidenceUpdate
 from apps.incidences.permissions import IsAdminOrReadOnly
 from apps.incidences.serializers import (
@@ -18,12 +19,22 @@ from apps.incidences.serializers import (
     IncidenceUpdateSerializer,
 )
 from apps.membership.models import Membership, Role
-from apps.residences.models import Residence
+from apps.residences.models import Residence, ResidenceDomain
 
 User = get_user_model()
 
 
 class IncidenceViewSetTests(TenantTestCase):
+    @classmethod
+    def get_test_schema_name(cls):
+        # Schema propio para no colisionar con otras suites TenantTestCase
+        # que comparten el nombre por defecto "test".
+        return "test_incidences_viewset"
+
+    @classmethod
+    def get_test_tenant_domain(cls):
+        return "incidences-viewset.test.local"
+
     def setUp(self):
         super().setUp()
         self.client = APIClient()
@@ -40,6 +51,12 @@ class IncidenceViewSetTests(TenantTestCase):
         with schema_context(self.tenant.schema_name):
             self.residence_obj = Residence.objects.create(
                 name="Residencia Demo", slug="demo"
+            )
+            ResidenceDomain.objects.create(
+                residence=self.residence_obj,
+                domain=self.host,
+                is_primary=True,
+                is_active=True,
             )
             self.role_admin = Role.objects.create(name="admin", is_system_default=True)
             self.role_student = Role.objects.create(
@@ -69,24 +86,42 @@ class IncidenceViewSetTests(TenantTestCase):
                 password="password123",
             )
 
+            bedroom = Bedroom.objects.create(
+                numero="101",
+                residence=self.residence_obj,
+                capacidad_maxima=1,
+            )
+
             Membership.objects.create(
                 user=self.admin_user,
                 role=self.role_admin,
                 residence=self.residence_obj,
                 is_active=True,
             )
+            self.bedroom_101 = Bedroom.objects.create(
+                residence=self.residence_obj,
+                numero="101",
+                tipo="individual",
+                capacidad_maxima=1,
+            )
+            self.bedroom_3a = Bedroom.objects.create(
+                residence=self.residence_obj,
+                numero="3º A",
+                tipo="individual",
+                capacidad_maxima=1,
+            )
             Membership.objects.create(
                 user=self.student_a,
                 role=self.role_student,
                 residence=self.residence_obj,
+                bedroom=self.bedroom_3a,
                 is_active=True,
             )
-
             self.inc_a = Incidence.objects.create(
                 title="Incidencia A",
                 location_type="habitacion",
                 student=self.student_a,
-                room_number="101",
+                room_number=self.bedroom_101,
             )
 
         self.list_url = reverse("incidence-list")
@@ -164,7 +199,9 @@ class IncidenceViewSetTests(TenantTestCase):
             {"title": "S", "description": "D", "location_type": "habitacion"},
             HTTP_HOST=self.host,
         )
-        self.assertEqual(res.data["room_number"], "3º A")
+        self.assertEqual(res.status_code, 201, res.content)
+        self.assertEqual(res.data["room_number"], self.bedroom_3a.id)
+        self.assertEqual(res.data["room_number_detail"]["numero"], "3º A")
 
     def test_perform_update_full_logs(self):
         self.client.force_authenticate(user=self.admin_user)
@@ -300,10 +337,16 @@ class IncidenceSerializersTests(TestCase):
         self.incidence.id = 10
         self.incidence.student_id = 1
         self.incidence.student = self.user
-        self.incidence.status = "pending"
+        self.incidence.status = "pending" 
         self.incidence.priority = "high"
         self.incidence.assigned_staff_id = None
+        self.incidence.assigned_staff = None
+        self.incidence.assigned_external_name = ""
+        self.incidence.updates.exists.return_value = False
         self.incidence.location_type = "habitacion"
+        
+        self.incidence.updates = MagicMock()
+        self.incidence.updates.exists.return_value = False
 
     def test_incidence_update_serializer_fields(self):
         class FakeAuthor:

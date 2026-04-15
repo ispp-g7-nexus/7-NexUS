@@ -4,6 +4,7 @@ import {
   createReservation,
   getSpaceAvailability,
   listCommonSpaces,
+  listMyReservations,
   listMyReservationReminders,
   ApiError,
 } from '../reservations'
@@ -81,6 +82,14 @@ describe('services/reservations', () => {
     expect(mockedFetchWithAuth).toHaveBeenCalledWith('/api/spaces/reservations/reminders/', undefined)
   })
 
+  it('listMyReservations consulta las reservas del usuario autenticado', async () => {
+    mockedFetchWithAuth.mockResolvedValue(mockJsonResponse([]))
+
+    await listMyReservations()
+
+    expect(mockedFetchWithAuth).toHaveBeenCalledWith('/api/spaces/reservations/me/', undefined)
+  })
+
   it('propaga ApiError con detail del backend', async () => {
     mockedFetchWithAuth.mockResolvedValue(mockJsonResponse({ detail: 'Franja ocupada' }, 400))
 
@@ -90,5 +99,21 @@ describe('services/reservations', () => {
     }).catch((caught) => caught)
     expect(error).toEqual(expect.any(ApiError))
     expect(error).toMatchObject({ message: 'Franja ocupada', status: 400 })
+  })
+
+  it('usa mensaje generico de permisos cuando el backend no devuelve JSON', async () => {
+    mockedFetchWithAuth.mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: vi.fn().mockRejectedValue(new Error('invalid json')),
+    } as unknown as Response)
+
+    const error = await listCommonSpaces().catch((caught) => caught)
+
+    expect(error).toEqual(expect.any(ApiError))
+    expect(error).toMatchObject({
+      message: 'No tienes permisos para realizar esta acción.',
+      status: 401,
+    })
   })
 })
