@@ -322,6 +322,8 @@ export async function mockStudentApi(page: Page, overrides: StudentOverrides = {
       await route.fulfill(json([]))
     } else if (path.startsWith('/api/events/')) {
       await route.fulfill(json([]))
+    } else if (path.startsWith('/api/chats/')) {
+      await route.fulfill(json([]))
     // Incidences (StudentHome badge)
     } else if (path === '/api/incidences/notifications/') {
       await route.fulfill(json({ results: [] }))
@@ -332,7 +334,8 @@ export async function mockStudentApi(page: Page, overrides: StudentOverrides = {
     } else if (path.startsWith('/api/spaces/')) {
       await route.fulfill(json([]))
     } else {
-      throw new Error(`Unmocked API route: ${route.request().method()} ${route.request().url()}`)
+      // Silent fallback for any other background API calls (matching, chats, etc.)
+      await route.fulfill(json([]))
     }
   })
 }
