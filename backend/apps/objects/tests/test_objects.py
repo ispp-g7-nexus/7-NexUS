@@ -11,8 +11,12 @@ from apps.residences.models import Residence, ResidenceDomain
 
 class ObjectAvailabilityApiTests(FastTenantTestCase):
     @classmethod
+    def get_test_schema_name(cls):
+        return "fast_test_objects"
+
+    @classmethod
     def get_test_tenant_domain(cls):
-        return "spaces.test.local"
+        return "objects.test.local"
 
     @classmethod
     def setup_tenant(cls, tenant):
@@ -214,8 +218,10 @@ class ObjectAvailabilityApiTests(FastTenantTestCase):
         self.assertEqual(response.status_code, 200)
         past_rental.refresh_from_db()
         future_rental.refresh_from_db()
-        self.assertEqual(past_rental.status, ObjectRental.Status.IN_PROGRESS)
-        self.assertEqual(future_rental.status, ObjectRental.Status.CANCELLED)
+        # The cancel view syncs started rentals, so the past rental is promoted
+        # to IN_PROGRESS (start_date <= now).
+        self.assertEqual(past_rental.status, "IN_PROGRESS")
+        self.assertEqual(future_rental.status, "CANCELLED")
 
         self.assertEqual(Object.objects.count(), 3)
 

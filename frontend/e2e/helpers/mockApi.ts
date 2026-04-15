@@ -12,6 +12,18 @@ const ADMIN_ME = {
   },
 }
 
+const STUDENT_ME = {
+  authenticated: true,
+  user: {
+    id: 1,
+    username: 'ana.student',
+    email: 'ana@nexus.test',
+    first_name: 'Ana',
+    last_name: 'García',
+    roles: ['student'],
+  },
+}
+
 export const MOCK_BEDROOM = {
   id: 1,
   numero: '101',
@@ -115,6 +127,55 @@ export const MOCK_PACKAGE_ANALYTICS = {
   meta: { from: '2026-03-15', to: '2026-03-17' },
 }
 
+export const MOCK_OBJECT = {
+  id: 10,
+  name: 'Bicicleta de montaña',
+  description: 'Bici disponible para residentes',
+  location: 'Garaje',
+  availability: true,
+  stock_total: 1,
+  current_reserved_stock: 0,
+  current_available_stock: 1,
+  tags: '',
+  labels: [],
+  rentals_count: 0,
+  can_rent: true,
+}
+
+export const MOCK_OBJECT_AVAILABILITY = {
+  reservation_interval_minutes: 60,
+  available_slots: [
+    { start_time: '2099-06-01T10:00:00+02:00', end_time: '2099-06-01T10:55:00+02:00', status: 'available', available_stock: 1 },
+    { start_time: '2099-06-01T11:00:00+02:00', end_time: '2099-06-01T11:55:00+02:00', status: 'available', available_stock: 1 },
+  ],
+  reservations: [],
+}
+
+export const MOCK_MY_RESERVATION = {
+  object: MOCK_OBJECT,
+  rental: {
+    id: 101,
+    user: { id: 1, first_name: 'Ana', last_name: 'García', email: 'ana@nexus.test' },
+    start_date: '2099-06-01T10:00:00Z',
+    end_date: '2099-06-01T10:55:00Z',
+    status: 'ACTIVE',
+  },
+}
+
+export const MOCK_ADMIN_RENTAL = {
+  id: 201,
+  object: { id: 10, name: 'Bicicleta de montaña', location: 'Garaje' },
+  user: { id: 2, first_name: 'Luis', last_name: 'Martínez', email: 'luis@nexus.test' },
+  start_date: '2099-06-01T10:00:00Z',
+  end_date: '2099-06-01T10:55:00Z',
+  status: 'ACTIVE',
+  is_overdue: false,
+  overdue_minutes: 0,
+  overdue_human: null,
+  remaining_human: null,
+  elapsed_human: null,
+}
+
 export const MOCK_INCIDENCE_ANALYTICS = {
   summary: {
     total_created_in_period: 10,
@@ -141,6 +202,11 @@ type Overrides = {
   bedroomAnalytics?: unknown
   packageAnalytics?: unknown
   incidenceAnalytics?: unknown
+  objects?: unknown[]
+  objectAvailability?: unknown
+  myReservations?: unknown[]
+  adminObjectRentals?: unknown[]
+  objectNotifications?: unknown[]
   adminSpaces?: unknown[]
   adminSpaceDetail?: unknown
   adminSpaceReservations?: {
@@ -148,6 +214,13 @@ type Overrides = {
     active?: unknown[]
     cancelled?: unknown[]
   }
+}
+
+type StudentOverrides = {
+  objects?: unknown[]
+  objectAvailability?: unknown
+  myReservations?: unknown[]
+  objectNotifications?: unknown[]
 }
 
 async function handleBedroomsRoute(route: Route, path: string, overrides: Overrides) {
@@ -213,10 +286,64 @@ async function handleSpacesRoute(route: Route, requestUrl: string, path: string,
   await route.fulfill(json([]))
 }
 
+export async function mockStudentApi(page: Page, overrides: StudentOverrides = {}) {
+  // Accept community rules and preferences before the page loads
+  await page.addInitScript(() => {
+    localStorage.setItem('nexus.community_rules.accepted.1', 'true')
+  })
+
+  await page.route('**/api/**', async (route: Route) => {
+    const path = new URL(route.request().url()).pathname
+
+    if (path === '/api/auth/me/') {
+      await route.fulfill(json(STUDENT_ME))
+    } else if (path === '/api/residences/branding/') {
+      await route.fulfill(json({ logo_url: null, primary_color: '#4A8F5D', secondary_color: '#0F4C81', accent_color: '#2E7D32', custom_css: '', favicon_url: '' }))
+    } else if (path === '/api/preferences/my-preferences/') {
+      await route.fulfill(json({ is_completed: true }))
+    // Objects
+    } else if (path === '/api/objects/') {
+      await route.fulfill(json(overrides.objects ?? []))
+    } else if (path.match(/^\/api\/objects\/\d+\/availability\//)) {
+      await route.fulfill(json(overrides.objectAvailability ?? MOCK_OBJECT_AVAILABILITY))
+    } else if (path === '/api/objects/notifications/') {
+      await route.fulfill(json(overrides.objectNotifications ?? []))
+    // My reservations
+    } else if (path === '/api/my-reservations/') {
+      await route.fulfill(json(overrides.myReservations ?? []))
+    } else if (path === '/api/my-reservations/reminders/') {
+      await route.fulfill(json([]))
+    } else if (path === '/api/my-reservations/reminders/unread-count/') {
+      await route.fulfill(json({ count: 0 }))
+    // Announcements & Events (StudentHome badge + list)
+    } else if (path === '/api/announcements/unviewed_count/') {
+      await route.fulfill(json({ count: 0 }))
+    } else if (path.startsWith('/api/announcements/')) {
+      await route.fulfill(json([]))
+    } else if (path.startsWith('/api/events/')) {
+      await route.fulfill(json([]))
+    } else if (path.startsWith('/api/chats/')) {
+      await route.fulfill(json([]))
+    // Incidences (StudentHome badge)
+    } else if (path === '/api/incidences/notifications/') {
+      await route.fulfill(json({ results: [] }))
+    // Packages (StudentHome badge)
+    } else if (path.startsWith('/api/packages/')) {
+      await route.fulfill(json([]))
+    // Spaces (reservation reminders)
+    } else if (path.startsWith('/api/spaces/')) {
+      await route.fulfill(json([]))
+    } else {
+      // Silent fallback for any other background API calls (matching, chats, etc.)
+      await route.fulfill(json([]))
+    }
+  })
+}
+
 export async function mockAdminApi(page: Page, overrides: Overrides = {}) {
   const guestPasses = overrides.guestPasses ?? []
 
-  await page.route('**/api/**', async (route) => {
+  await page.route('**/api/**', async (route: Route) => {
     const path = new URL(route.request().url()).pathname
 
     if (path === '/api/auth/me/') {
@@ -239,6 +366,12 @@ export async function mockAdminApi(page: Page, overrides: Overrides = {}) {
       await route.fulfill(json([]))
     } else if (path.startsWith('/api/spaces/') || path.startsWith('/api/admin/spaces/')) {
       await handleSpacesRoute(route, route.request().url(), path, overrides)
+    } else if (path === '/api/objects/') {
+      await route.fulfill(json(overrides.objects ?? []))
+    } else if (path.match(/^\/api\/objects\/\d+\/availability\//)) {
+      await route.fulfill(json(overrides.objectAvailability ?? MOCK_OBJECT_AVAILABILITY))
+    } else if (path === '/api/admin/objects/rentals/') {
+      await route.fulfill(json(overrides.adminObjectRentals ?? []))
     } else if (path.startsWith('/api/objects/') || path.startsWith('/api/admin/objects/') || path.startsWith('/api/chats/')) {
       await route.fulfill(json([]))
     } else {

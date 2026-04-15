@@ -42,12 +42,12 @@ describe('ReservationFormSheet', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockedGetSpaceAvailability.mockResolvedValue({
-      date: '2026-04-14',
+      date: '2099-06-01',
       space,
       reservations: [],
       available_slots: [
-        { start_time: '2026-04-14T10:00:00Z', end_time: '2026-04-14T11:00:00Z', status: 'available' },
-        { start_time: '2026-04-14T11:00:00Z', end_time: '2026-04-14T12:00:00Z', status: 'occupied' },
+        { start_time: '2099-06-01T10:00:00Z', end_time: '2099-06-01T11:00:00Z', status: 'available' },
+        { start_time: '2099-06-01T11:00:00Z', end_time: '2099-06-01T12:00:00Z', status: 'occupied' },
       ],
     })
     mockedCreateReservation.mockResolvedValue({
@@ -55,12 +55,12 @@ describe('ReservationFormSheet', () => {
       space: { id: 1, name: 'Sala A' },
       user: { id: 1, first_name: 'Juan', last_name: 'Pérez', email: 'juan@test.com' },
       residence_id: 1,
-      start_time: '2026-04-14T10:00:00Z',
-      end_time: '2026-04-14T11:00:00Z',
+      start_time: '2099-06-01T10:00:00Z',
+      end_time: '2099-06-01T11:00:00Z',
       status: 'active',
       notes: '',
-      created_at: '2026-04-13T10:00:00Z',
-      updated_at: '2026-04-13T10:00:00Z',
+      created_at: '2099-05-30T10:00:00Z',
+      updated_at: '2099-05-30T10:00:00Z',
     })
   })
 
@@ -71,7 +71,7 @@ describe('ReservationFormSheet', () => {
     render(
       <ReservationFormSheet
         open
-        initialDate="2026-04-14"
+        initialDate="2099-06-01"
         space={space}
         onOpenChange={vi.fn()}
         onSuccess={onSuccess}
@@ -79,7 +79,7 @@ describe('ReservationFormSheet', () => {
     )
 
     await waitFor(() => {
-      expect(mockedGetSpaceAvailability).toHaveBeenCalledWith(1, '2026-04-14')
+      expect(mockedGetSpaceAvailability).toHaveBeenCalledWith(1, '2099-06-01')
       expect(screen.getByText(/Horas disponibles/i)).toBeInTheDocument()
     })
 
@@ -96,8 +96,8 @@ describe('ReservationFormSheet', () => {
       expect(mockedCreateReservation).toHaveBeenCalledWith(
         1,
         expect.objectContaining({
-          start_time: '2026-04-14T10:00:00Z',
-          end_time: '2026-04-14T11:00:00Z',
+          start_time: '2099-06-01T10:00:00Z',
+          end_time: '2099-06-01T11:00:00Z',
           notes: 'Trabajo final',
         }),
       )
@@ -107,19 +107,19 @@ describe('ReservationFormSheet', () => {
 
   it('deshabilita tramos ocupados o pasados', async () => {
     mockedGetSpaceAvailability.mockResolvedValue({
-      date: '2026-04-14',
+      date: '2099-06-01',
       space,
       reservations: [],
       available_slots: [
-        { start_time: '2026-04-14T08:00:00Z', end_time: '2026-04-14T09:00:00Z', status: 'past' },
-        { start_time: '2026-04-14T10:00:00Z', end_time: '2026-04-14T11:00:00Z', status: 'occupied' },
+        { start_time: '2099-06-01T08:00:00Z', end_time: '2099-06-01T09:00:00Z', status: 'past' },
+        { start_time: '2099-06-01T10:00:00Z', end_time: '2099-06-01T11:00:00Z', status: 'occupied' },
       ],
     })
 
     render(
       <ReservationFormSheet
         open
-        initialDate="2026-04-14"
+        initialDate="2099-06-01"
         space={space}
         onOpenChange={vi.fn()}
         onSuccess={vi.fn()}
@@ -142,7 +142,7 @@ describe('ReservationFormSheet', () => {
     render(
       <ReservationFormSheet
         open
-        initialDate="2026-04-14"
+        initialDate="2099-06-01"
         space={space}
         onOpenChange={vi.fn()}
         onSuccess={vi.fn()}
