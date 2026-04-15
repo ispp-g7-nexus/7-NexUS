@@ -1,9 +1,3 @@
----
-title: Sprint 3
-sidebar_label: S3
-sidebar_position: 4
----
-
 #  Feedback Grupo 7 - NexUs
 
 ## 📅[Entrega 1: S3] – [Fecha: 09/04/2026]
