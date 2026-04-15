@@ -259,17 +259,36 @@ export async function mockStudentApi(page: Page, overrides: StudentOverrides = {
       await route.fulfill(json({ logo_url: null, primary_color: '#4A8F5D', secondary_color: '#0F4C81', accent_color: '#2E7D32', custom_css: '', favicon_url: '' }))
     } else if (path === '/api/preferences/me/') {
       await route.fulfill(json({ is_completed: true }))
+    // Objects
     } else if (path === '/api/objects/') {
       await route.fulfill(json(overrides.objects ?? []))
     } else if (path.match(/^\/api\/objects\/\d+\/availability\//)) {
       await route.fulfill(json(overrides.objectAvailability ?? MOCK_OBJECT_AVAILABILITY))
-    } else if (path === '/api/my-reservations/') {
-      await route.fulfill(json(overrides.myReservations ?? []))
     } else if (path === '/api/objects/notifications/') {
       await route.fulfill(json(overrides.objectNotifications ?? []))
-    } else {
-      // Permissive catch-all: return empty data for all other routes
+    // My reservations
+    } else if (path === '/api/my-reservations/') {
+      await route.fulfill(json(overrides.myReservations ?? []))
+    } else if (path === '/api/my-reservations/reminders/') {
       await route.fulfill(json([]))
+    } else if (path === '/api/my-reservations/reminders/unread-count/') {
+      await route.fulfill(json({ count: 0 }))
+    // Announcements (StudentHome badge + list)
+    } else if (path === '/api/announcements/unviewed_count/') {
+      await route.fulfill(json({ count: 0 }))
+    } else if (path.startsWith('/api/announcements/')) {
+      await route.fulfill(json([]))
+    // Incidences (StudentHome badge)
+    } else if (path === '/api/incidences/notifications/') {
+      await route.fulfill(json({ results: [] }))
+    // Packages (StudentHome badge)
+    } else if (path.startsWith('/api/packages/')) {
+      await route.fulfill(json([]))
+    // Spaces (reservation reminders)
+    } else if (path.startsWith('/api/spaces/')) {
+      await route.fulfill(json([]))
+    } else {
+      throw new Error(`Unmocked API route: ${route.request().method()} ${route.request().url()}`)
     }
   })
 }

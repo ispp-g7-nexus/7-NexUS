@@ -309,8 +309,8 @@ test.describe('Objetos (residente) — modal de reserva', () => {
   })
 
   test('muestra el botón Confirmar reserva en el modal', async ({ page }) => {
-    await page.getByRole('button', { name: /Confirmar reserva/i }).click()
-    // Button should be visible (disabled when no slot is selected)
+    await page.getByRole('button', { name: /Reservar/i }).click()
+    await expect(page.getByRole('heading', { name: 'Nueva reserva' })).toBeVisible({ timeout: 10000 })
     await expect(page.getByRole('button', { name: /Confirmar reserva/i })).toBeVisible({ timeout: 10000 })
   })
 

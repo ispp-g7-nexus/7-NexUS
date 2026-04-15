@@ -217,8 +217,8 @@ class ObjectAvailabilityApiTests(FastTenantTestCase):
         past_rental.refresh_from_db()
         future_rental.refresh_from_db()
         # The cancel view syncs started rentals, so the past rental is promoted
-        # to IN_PROGRESS (start_date <= now) but must NOT be cancelled.
-        self.assertNotEqual(past_rental.status, "CANCELLED")
+        # to IN_PROGRESS (start_date <= now).
+        self.assertEqual(past_rental.status, "IN_PROGRESS")
         self.assertEqual(future_rental.status, "CANCELLED")
 
         self.assertEqual(Object.objects.count(), 3)
