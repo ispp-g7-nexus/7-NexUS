@@ -47,7 +47,7 @@ test.describe('Objetos (admin) — carga y navegación', () => {
 
   test('muestra el botón Crear objeto', async ({ page }) => {
     await goToAdminObjects(page)
-    await expect(page.getByRole('button', { name: /Crear objeto/i })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('button', { name: /Crear objeto/i }).first()).toBeVisible({ timeout: 10000 })
   })
 
   test('muestra el botón Historial global', async ({ page }) => {
@@ -140,7 +140,7 @@ test.describe('Objetos (admin) — historial global', () => {
     await mockAdminApi(page, { adminObjectRentals: [MOCK_ADMIN_RENTAL] })
     await goToAdminObjects(page)
     await page.getByRole('button', { name: /Historial global/i }).click()
-    await expect(page.getByText('Reservadas')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Reservadas').first()).toBeVisible({ timeout: 10000 })
   })
 })
 

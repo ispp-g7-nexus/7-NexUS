@@ -315,10 +315,12 @@ export async function mockStudentApi(page: Page, overrides: StudentOverrides = {
       await route.fulfill(json([]))
     } else if (path === '/api/my-reservations/reminders/unread-count/') {
       await route.fulfill(json({ count: 0 }))
-    // Announcements (StudentHome badge + list)
+    // Announcements & Events (StudentHome badge + list)
     } else if (path === '/api/announcements/unviewed_count/') {
       await route.fulfill(json({ count: 0 }))
     } else if (path.startsWith('/api/announcements/')) {
+      await route.fulfill(json([]))
+    } else if (path.startsWith('/api/events/')) {
       await route.fulfill(json([]))
     // Incidences (StudentHome badge)
     } else if (path === '/api/incidences/notifications/') {
