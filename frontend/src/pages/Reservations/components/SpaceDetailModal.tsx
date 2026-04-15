@@ -10,9 +10,10 @@ interface Props {
   readonly onClose: () => void;
   readonly onEdit?: (space: AdminSpace) => void;
   readonly onDeactivate?: (space: AdminSpace) => void;
+  readonly onViewReservations?: (space: AdminSpace) => void;
 }
 
-export function SpaceDetailModal({ open, spaceId, onClose, onEdit, onDeactivate }: Props) {
+export function SpaceDetailModal({ open, spaceId, onClose, onEdit, onDeactivate, onViewReservations }: Props) {
   const [space, setSpace] = useState<AdminSpace | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -129,7 +130,12 @@ export function SpaceDetailModal({ open, spaceId, onClose, onEdit, onDeactivate 
                     </div>
                   </div>
 
-                  <div className="flex gap-3 justify-end pt-2">
+                  <div className="flex gap-3 justify-end pt-2 flex-wrap">
+                    {onViewReservations && (
+                      <Button variant="outline" size="sm" onClick={() => onViewReservations(space)}>
+                        Ver reservas
+                      </Button>
+                    )}
                     {onEdit && (
                       <Button variant="nexus" size="sm" onClick={() => onEdit(space)}>
                         Editar información
