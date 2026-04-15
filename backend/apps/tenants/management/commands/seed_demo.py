@@ -373,7 +373,10 @@ class Command(BaseCommand):
         now = tz.now()
 
         # ── Idempotency guard ──────────────────────────────────────────────────
-        if Bedroom.objects.filter(residence=residence).count() >= 3:
+        if Incidence.objects.filter(
+            student=admin_user,
+            title__startswith="Incidencia demo",
+        ).exists():
             self.stdout.write("Analytics seed data already present — skipping.")
             return
 
