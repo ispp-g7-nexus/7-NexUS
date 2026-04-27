@@ -115,6 +115,8 @@ export function StudentChats({
     onUnreadStatusChange,
     focusGroupId = null,
     onFocusGroupHandled,
+    focusConversationId = null,
+    onFocusConversationHandled,
 }: {
     readonly enableRealtimeStream?: boolean;
     readonly realtimeTick?: number;
@@ -125,6 +127,8 @@ export function StudentChats({
     readonly onUnreadStatusChange?: (status: { hasGroupUnread: boolean; hasPrivateUnread: boolean }) => void;
     readonly focusGroupId?: number | null;
     readonly onFocusGroupHandled?: () => void;
+    readonly focusConversationId?: number | null;
+    readonly onFocusConversationHandled?: () => void;
 }) {
     const [subTab, setSubTab] = useState<ChatSubTab>("grupos");
 
@@ -448,6 +452,14 @@ export function StudentChats({
             window.history.replaceState({}, "");
         }
     }, [location.state, loadConversations]);
+
+    useEffect(() => {
+        if (focusConversationId == null || focusConversationId <= 0) return;
+        pendingConvIdRef.current = focusConversationId;
+        setSubTab("privados");
+        loadConversations().catch(() => { });
+        onFocusConversationHandled?.();
+    }, [focusConversationId, loadConversations, onFocusConversationHandled]);
 
     useEffect(() => {
         const pendingId = pendingConvIdRef.current;

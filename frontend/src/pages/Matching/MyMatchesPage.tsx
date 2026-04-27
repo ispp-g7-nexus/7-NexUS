@@ -6,7 +6,7 @@ import { matchingService, type MyMatchesResponse, type MatchItem } from "../../s
 import { getInitials, getTags, formatWeekendReturn, formatStudyLocation, formatOutsidePlans, formatVisitorsPreference, formatBasicItems, formatTemperature } from "./utils";
 import { MatchCard } from "./components/MatchCard";
 
-export function MyMatchesPage() {
+export function MyMatchesPage({ onOpenPrivateChat }: { readonly onOpenPrivateChat?: (conversationId: number) => void } = {}) {
     const [payload, setPayload] = useState<MyMatchesResponse | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -91,7 +91,11 @@ export function MyMatchesPage() {
             const { conversation_id } = await matchingService.startMatchChat(
                 match.membership_id
             );
-            navigate("/chats", { state: { openConversationId: conversation_id } });
+            if (onOpenPrivateChat) {
+                onOpenPrivateChat(conversation_id);
+            } else {
+                navigate("/", { state: { openConversationId: conversation_id } });
+            }
         } catch (err) {
             setError(err instanceof Error ? err.message : "No se pudo abrir el chat");
         }
