@@ -78,6 +78,7 @@ export function Residents() {
             className="pl-10"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            autoComplete="off"
           />
         </div>
         <NativeSelect

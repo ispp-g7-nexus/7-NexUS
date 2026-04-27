@@ -81,6 +81,7 @@ class Membership(models.Model):
         related_name="memberships",
     )
     is_active = models.BooleanField(default=True)
+    check_in_date = models.DateField(null=True, blank=True, verbose_name="Fecha de entrada")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     # Habitación asignada al residente. PROTECT impide eliminar una habitación
