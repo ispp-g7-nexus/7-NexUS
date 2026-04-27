@@ -1,12 +1,8 @@
-import json
-
 from django.db.models import Prefetch, Q
-from django.http import Http404, StreamingHttpResponse
+from django.http import Http404
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.renderers import BaseRenderer
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.generics import ListAPIView
 from rest_framework.views import APIView
@@ -17,7 +13,7 @@ from apps.membership.permissions import has_screen_permission
 
 from .models import ChatGroup, ChatGroupMember, ChatGroupLabel, GroupMessage, PrivateConversation, PrivateMessage
 from .permissions import IsAuthenticatedResident, IsChatGroupManager, IsResidenceAdmin
-from .realtime import publish_chat_event, stream_chat_events
+from .realtime import publish_chat_event
 from .serializers import (
 	AddChatMemberSerializer,
 	ChatGroupCreateUpdateSerializer,
@@ -35,22 +31,6 @@ from .serializers import (
 # Constantes para mensajes duplicados
 NO_MEMBERSHIP_MESSAGE = "No tienes membresía activa."
 CONVERSATION_NOT_FOUND_MESSAGE = "Conversación no encontrada."
-
-
-class ServerSentEventsRenderer(BaseRenderer):
-	"""Permite que DRF negocie correctamente respuestas text/event-stream."""
-
-	media_type = "text/event-stream"
-	format = "sse"
-	charset = "utf-8"
-	render_style = "text"
-
-	def render(self, data, accepted_media_type=None, renderer_context=None):
-		if data is None:
-			return b""
-		if isinstance(data, bytes):
-			return data
-		return str(data).encode(self.charset)
 
 
 class ChatGroupViewSet(viewsets.ModelViewSet):
@@ -591,60 +571,3 @@ class ResidentListForChatView(ListAPIView):
 		)
 
 
-class ChatEventsStreamView(APIView):
-	"""Stream SSE de eventos de chat para la residencia actual."""
-
-	permission_classes = [IsAuthenticated]
-	renderer_classes = [ServerSentEventsRenderer]
-
-	def _stream_events_for_membership(self, residence_id: int, membership_id: int):
-		for chunk in stream_chat_events(residence_id):
-			if not chunk.startswith("data: "):
-				yield chunk
-				continue
-
-			raw_payload = chunk[6:].strip()
-			try:
-				event_data = json.loads(raw_payload)
-			except (TypeError, json.JSONDecodeError):
-				yield chunk
-				continue
-
-			if event_data.get("event") != "group_message_created":
-				yield chunk
-				continue
-
-			payload = event_data.get("payload") or {}
-			try:
-				group_id = int(payload.get("group_id"))
-			except (TypeError, ValueError):
-				continue
-
-			can_receive = ChatGroupMember.objects.filter(
-				group_id=group_id,
-				membership_id=membership_id,
-				can_interact=True,
-			).exists()
-			if can_receive:
-				yield chunk
-
-	def get(self, request):
-		residence = getattr(request, "residence", None)
-		if not residence:
-			raise ValidationError({"detail": "No se ha determinado la residencia."})
-
-		membership = Membership.objects.filter(
-			user=request.user,
-			residence=residence,
-			is_active=True,
-		).first()
-		if not membership:
-			raise ValidationError({"detail": "No tienes membresia activa."})
-
-		response = StreamingHttpResponse(
-			self._stream_events_for_membership(residence.id, membership.id),
-			content_type="text/event-stream",
-		)
-		response["Cache-Control"] = "no-cache"
-		response["X-Accel-Buffering"] = "no"
-		return response
