@@ -46,7 +46,6 @@
 
 
 ## Índice
-- [Declaración de Uso de Inteligencia Artificial](#declaración-de-uso-de-inteligencia-artificial)
   - [1. Introducción](#1-introducción)
   - [2. Alcance del Uso de la IA](#2-alcance-del-uso-de-la-ia)
     - [2.1. Claude](#21-claude)
