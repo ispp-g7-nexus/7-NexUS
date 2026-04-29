@@ -1,7 +1,6 @@
 import datetime
 from rest_framework import serializers
 from .models import MenuWeek, MenuDay, Meal, SpecialMenuRequest
-from apps.residents.models import Resident
 
 
 class MealSerializer(serializers.ModelSerializer):
@@ -13,6 +12,7 @@ class MealSerializer(serializers.ModelSerializer):
             'name',
             'description',
             'type',
+            'allergens',
             'is_gluten_free',
             'is_vegetarian',
             'is_vegan',
@@ -22,6 +22,7 @@ class MealSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         # Convertir nombres de campos al formato camelCase del frontend
+        data['allergens'] = data.pop('allergens')
         data['isGlutenFree'] = data.pop('is_gluten_free')
         data['isVegetarian'] = data.pop('is_vegetarian')
         data['isVegan'] = data.pop('is_vegan')
@@ -158,6 +159,7 @@ class MealCreateSerializer(serializers.ModelSerializer):
             'name',
             'description',
             'type',
+            'allergens',
             'is_gluten_free',
             'is_vegetarian',
             'is_vegan',
