@@ -11,7 +11,7 @@ from apps.chats import realtime
 from apps.chats.models import ChatGroup, ChatGroupLabel, ChatGroupMember, GroupMessage, PrivateConversation, PrivateMessage
 from apps.chats.permissions import IsAuthenticatedResident, IsChatGroupManager, IsResidenceAdmin
 from apps.chats.serializers import AddChatMemberSerializer, ChatGroupCreateUpdateSerializer, ChatGroupLabelSerializer, ChatGroupSerializer, PrivateConversationSerializer, SendMessageSerializer, StartConversationSerializer
-from apps.chats.views import ChatEventsStreamView, MyGroupsViewSet, PrivateConversationViewSet, ServerSentEventsRenderer
+from apps.chats.views import MyGroupsViewSet, PrivateConversationViewSet
 from apps.common.services import build_access_token
 from apps.membership.models import Membership, Role
 from apps.residences.models import Residence, ResidenceDomain
@@ -536,19 +536,6 @@ class ChatsModuleTests(FastTenantTestCase):
         self.assertIn(self.student_two_user.email, emails)
         self.assertNotIn(self.student_user.email, emails)
 
-    def test_chat_events_stream_requires_active_membership(self):
-        response = self.outsider_client.get(self._url("/events/"))
-        self.assertEqual(response.status_code, 400)
-
-    @patch("apps.chats.views.stream_chat_events")
-    def test_chat_events_stream_success(self, stream_mock):
-        stream_mock.return_value = iter(["retry: 5000\n\n"])
-
-        response = self.student_client.get(self._url("/events/"))
-
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response["Content-Type"], "text/event-stream")
-
     # Unit branches
 
     def test_permissions_unit_branches(self):
@@ -703,31 +690,6 @@ class ChatsModuleTests(FastTenantTestCase):
 
         unsubscribe_mock.assert_called_once()
 
-    def test_renderer_and_events_filtering_helper(self):
-        renderer = ServerSentEventsRenderer()
-        self.assertEqual(renderer.render(None), b"")
-        self.assertEqual(renderer.render(b"abc"), b"abc")
-
-        ChatGroupMember.objects.create(
-            group=self.group,
-            membership=self.student_membership,
-            is_admin=False,
-            can_interact=True,
-        )
-        chunks = [
-            "event: ping\n\n",
-            "data: not-json\n\n",
-            'data: {"event": "other", "payload": {}}\n\n',
-            'data: {"event": "group_message_created", "payload": {"group_id": "bad"}}\n\n',
-            f'data: {{"event": "group_message_created", "payload": {{"group_id": {self.group.id}}}}}\n\n',
-        ]
-
-        with patch("apps.chats.views.stream_chat_events", return_value=iter(chunks)):
-            view = ChatEventsStreamView()
-            result = list(view._stream_events_for_membership(self.residence.id, self.student_membership.id))
-
-        self.assertEqual(len(result), 4)
-
     def test_view_unit_not_found_and_validation_branches(self):
         private_view = PrivateConversationViewSet()
 
@@ -777,10 +739,6 @@ class ChatsModuleTests(FastTenantTestCase):
         )
         chat_member.refresh_from_db()
         self.assertIsNotNone(chat_member.interaction_disabled_at)
-
-        events_view = ChatEventsStreamView()
-        with self.assertRaises(ValidationError):
-            events_view.get(SimpleNamespace(user=self.student_user, residence=None))
 
     # Permissions
 

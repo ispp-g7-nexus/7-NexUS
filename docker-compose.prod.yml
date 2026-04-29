@@ -48,7 +48,7 @@ services:
       sh -c "python manage.py migrate_schemas --shared --noinput &&
              python manage.py migrate_schemas --tenant --noinput &&
              python manage.py collectstatic --noinput &&
-             gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers $${GUNICORN_WORKERS:-3} --timeout $${GUNICORN_TIMEOUT:-120}"
+             gunicorn config.wsgi:application --bind 0.0.0.0:8000 --worker-class gthread --workers $${GUNICORN_WORKERS:-4} --threads $${GUNICORN_THREADS:-8} --timeout $${GUNICORN_TIMEOUT:-60} --graceful-timeout 30 --keep-alive 5"
     restart: unless-stopped
 
   celery_worker:

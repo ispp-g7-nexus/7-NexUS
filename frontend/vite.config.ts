@@ -7,7 +7,7 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
-    allowedHosts: ['demo.nexus.local'],
+    allowedHosts: ['demo.nexus.local', '.nbynexus.com'],
     proxy: {
       '/api': {
         target: 'http://demo.nexus.local',

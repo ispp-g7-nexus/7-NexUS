@@ -203,6 +203,7 @@ export function ResidentFormDialog({
               value={form.email}
               onChange={(e) => set("email", e.target.value)}
               aria-invalid={!!errors.email}
+              autoComplete="off"
             />
             {errors.email && (
               <p className="text-xs text-red-600">{errors.email}</p>
