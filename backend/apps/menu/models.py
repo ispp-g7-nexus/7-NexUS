@@ -222,4 +222,4 @@ class SpecialMenuRequest(models.Model):
         ordering = ['-date']
 
     def __str__(self):
-        return f"Petición de {self.resident} para el {self.date}"
+        return f"Petición de {self.user} para el {self.date}"
