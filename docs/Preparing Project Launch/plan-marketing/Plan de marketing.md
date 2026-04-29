@@ -1,7 +1,52 @@
-# Plan de marketing
+# Plan de marketing - NexUS
+
+<p align="center">  
+  <img src="../../images/logo-app.png" alt="Logo NexUS" width="500">
+</p>
+
+<div align="center">
+
+<p>
+  <img src="https://img.shields.io/badge/Versión-2.0.0-blue?style=flat-square" alt="Versión">
+  <img src="https://img.shields.io/badge/Estado-Completado-orange?style=flat-square" alt="Estado">
+  <img src="https://img.shields.io/badge/Grupo-7--NexUS-green?style=flat-square" alt="Grupo">
+  <img src="https://img.shields.io/badge/Asignatura-ISPP-red?style=flat-square" alt="Asignatura">
+</p>
+
+<p>
+  <strong>Plataforma integral de gestión y convivencia para residencias universitarias</strong>
+</p>
+
+</div>
+
+---
+
+**Proyecto:** NexUS  
+**Grupo:** 7 - NexUS  
+**Asignatura:** Ingeniería del Software y Práctica Profesional (ISPP)  
+**Institución:** ETSII – Universidad de Sevilla  
+**Curso académico:** 2025/2026  
+**Fecha:** 28/04/2026  
+
+<p align="center">
+  <img src="../../images/logo-etsii.jpe" alt="Logo ETSII" width="400">
+</p>
+
+
+
+## Historial de Versiones
+
+| Versión | Fecha | Cambio principal |
+|---------|-------|------------------|
+| 1.0.0 | 28/04/2026 | Creación del documento del plan de marketing |
+| 2.0.0 | 28/04/2026 | Finalización del documento Plan de marketing |
+
+---
+
 
 ## ÍNDICE
-- [Plan de marketing](#plan-de-marketing)
+- [Plan de marketing - NexUS](#plan-de-marketing---nexus)
+  - [Historial de Versiones](#historial-de-versiones)
   - [ÍNDICE](#índice)
   - [1. Definición y Segmentación del Mercado Objetivo](#1-definición-y-segmentación-del-mercado-objetivo)
   - [2. Perfiles de Usuario](#2-perfiles-de-usuario)
