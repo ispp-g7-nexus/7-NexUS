@@ -223,13 +223,35 @@ async function handleChatWsUpgrade(req, socket, head) {
       scheduleRedisRetry(residenceId);
     }
 
-    ws.on("close", () => {
-      removeWsClient(residenceId, ws);
+    let isAlive = true;
+    ws.on("pong", () => {
+      isAlive = true;
     });
 
-    ws.on("error", () => {
+    const heartbeat = setInterval(() => {
+      if (!isAlive) {
+        try {
+          ws.terminate();
+        } catch {
+          // ignore
+        }
+        return;
+      }
+      isAlive = false;
+      try {
+        ws.ping();
+      } catch {
+        // ignore
+      }
+    }, 30000);
+
+    const cleanup = () => {
+      clearInterval(heartbeat);
       removeWsClient(residenceId, ws);
-    });
+    };
+
+    ws.on("close", cleanup);
+    ws.on("error", cleanup);
 
     ws.send(JSON.stringify({
       event: redisReady ? "ws_connected" : "ws_connected_degraded",

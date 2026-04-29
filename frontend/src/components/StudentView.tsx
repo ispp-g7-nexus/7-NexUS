@@ -11,7 +11,6 @@ import { PackagesPage } from "../pages/Packages/Packages";
 import { SocialHub } from "../pages/Social/SocialHub.tsx";
 import { StudentAnnouncements } from "../pages/announcements/StudentAnnouncements";
 import StudentIncidences from "../pages/Incidences/components/StudentIncidences";
-import { MyMatchesPage } from "../pages/Matching/MyMatchesPage";
 import { ResidentMenuView } from "../pages/Menu/ResidentMenuView";
 import announcementService from "../services/announcement.service";
 import { StudentReservations } from "./StudentReservations";
@@ -704,7 +703,24 @@ export function StudentView({ onLogout }: StudentViewProps) {
                 tabContent = <SocialHub initialTab="eventos" onNavigate={handleNavigation} />;
                 break;
             case "matches":
-                tabContent = <MyMatchesPage />;
+                tabContent = (
+                    <SocialHub
+                        initialTab="matches"
+                        onNavigate={handleNavigation}
+                        onLogout={onLogout}
+                        chatRealtimeTick={chatRealtimeTick}
+                        chatRealtimeEvent={chatRealtimeEvent}
+                        onChatTabActiveChange={setIsCommunityChatActive}
+                        onChatSubTabActiveChange={setCommunityChatSubTab}
+                        onChatUnreadStatusChange={({ hasGroupUnread, hasPrivateUnread }) => {
+                            setHasGroupChatNews(hasGroupUnread);
+                            setHasPrivateChatNews(hasPrivateUnread);
+                        }}
+                        hasChatNews={hasAnyChatNews}
+                        hasGroupChatNews={hasGroupChatNews}
+                        hasPrivateChatNews={hasPrivateChatNews}
+                    />
+                );
                 break;
             case "announcements":
                 tabContent = (
