@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/Versión-1.0.0-blue?style=flat-square" alt="Versión">
   <img src="https://img.shields.io/badge/Estado-Completado-yellow?style=flat-square" alt="Estado">
   <img src="https://img.shields.io/badge/Grupo-7--NexUS-green?style=flat-square" alt="Grupo">
-  <img src="https://img.shields.io/badge/Asignatura-PPL-red?style=flat-square" alt="Asignatura">
+  <img src="https://img.shields.io/badge/Asignatura-ISPP-red?style=flat-square" alt="Asignatura">
 </p>
 
 <p>
@@ -21,9 +21,9 @@
 
 ---
 
-**Proyecto:** NexUS (PPL)  
+**Proyecto:** NexUS
 **Grupo:** 7 - NexUS  
-**Asignatura:** Proyecto Profesional de Licenciatura (PPL)  
+**Asignatura:** Ingeniería del Software y Práctica Profesional (ISPP)  
 **Institución:** ETSII – Universidad de Sevilla  
 **Curso académico:** 2025/2026  
 **Fecha:** 28/04/2026  
@@ -68,7 +68,7 @@ El objetivo es garantizar transparencia, reproducibilidad y cumplimiento legal y
 
 ## 2. Alcance del Uso de la IA
 
-A continuación se listan las herramientas concretas utilizadas y su propósito en el proyecto PPL.
+A continuación se listan las herramientas concretas utilizadas y su propósito en el proyecto.
 
 ### 2.1. Claude
 
