@@ -2,11 +2,12 @@ from django.db import models
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from apps.tenants.models import Client
+import re
 
 def validate_not_digit(value):
-    if value.isdigit():
+    if not re.search(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ]', str(value)):
         raise ValidationError(
-            "Este campo no puede contener solo números."
+            "El campo debe contener texto descriptivo (letras), no solo números o signos."
         )
 
 class MenuWeek(models.Model):

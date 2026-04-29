@@ -58,7 +58,7 @@ const MealCard = ({ meal }: { meal: Meal }) => {
         </div>
       )}
       <div className="flex items-start justify-between mb-2">
-        <div className="flex items-center gap-3 flex-1">
+        <div className="flex flex-col items-center gap-3 mt-2 flex-1">
           <div className={`shrink-0 ${meal.image ? '-mt-8 p-1.5 bg-white/90 backdrop-blur rounded-lg shadow-sm border border-white/50 z-10 relative' : ''}`}>
             {getMealTypeIcon(meal.type)}
           </div>
@@ -68,6 +68,15 @@ const MealCard = ({ meal }: { meal: Meal }) => {
               <p className="text-sm text-gray-600 mt-0.5">{meal.description}</p>
             )}
           </div>
+          {meal.allergens && meal.allergens.trim() !== '' && (
+            <div className="mt-2 flex items-start gap-1 text-sm text-orange-600 bg-orange-50 p-2 rounded-md">
+              <span title="Alérgenos">⚠️</span>
+              <p>
+                <span className="font-semibold">Alérgenos: </span>
+                {meal.allergens}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 

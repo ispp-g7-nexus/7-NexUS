@@ -68,8 +68,8 @@ const MealCardAdmin = ({ meal, onEdit, onDelete }: MealCardAdminProps) => {
       <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
     </div>
   )}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-3 flex-1">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col items-center gap-3 mt-2 flex-1">
           <div className={`shrink-0 ${meal.image ? 'p-1.5 bg-white/90 backdrop-blur rounded-lg shadow-sm border border-white/50 z-10 relative' : ''}`}>
             {getMealTypeIcon(meal.type)}
           </div>
@@ -79,7 +79,17 @@ const MealCardAdmin = ({ meal, onEdit, onDelete }: MealCardAdminProps) => {
               <p className="text-sm text-gray-500">{meal.description}</p>
             )}
           </div>
+          {meal.allergens && meal.allergens.trim() !== '' && (
+          <div className="mt-2 flex items-start gap-1 text-sm text-orange-600 bg-orange-50 p-2 rounded-md">
+            <span title="Alérgenos">⚠️</span>
+            <p>
+              <span className="font-semibold">Alérgenos: </span>
+              {meal.allergens}
+            </p>
+          </div>
+        )}
         </div>
+        
         <div className={`flex gap-2 ml-4 shrink-0 ${meal.image ? ' z-10 relative' : ''}`}>
           <button
             onClick={() => onEdit(meal)}
@@ -151,11 +161,11 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
   meal
     ? {
         ...meal,
-        allergens: typeof meal.allergens === 'string'
-          ? (meal.allergens as string).split(',').map(a => a.trim()).filter(Boolean)
-          : meal.allergens ?? [],
+        allergens: Array.isArray(meal.allergens) 
+        ? meal.allergens.join(', ') 
+        : (meal.allergens || ''),
       }
-    : { allergens: [], name: '', type: 'lunch', description: '', isGlutenFree: false, isVegetarian: false, isVegan: false }
+    : { allergens: '', name: '', type: 'lunch', description: '', isGlutenFree: false, isVegetarian: false, isVegan: false }
 );
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -166,11 +176,11 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
       meal
         ? {
             ...meal,
-            allergens: typeof meal.allergens === 'string'
-              ? (meal.allergens as string).split(',').map(a => a.trim()).filter(Boolean)
-              : meal.allergens ?? [],
+            allergens: Array.isArray(meal.allergens) 
+        ? meal.allergens.join(', ') 
+        : (meal.allergens || ''),
           }
-        : { allergens: [], name: '', type: 'lunch', description: '', isGlutenFree: false, isVegetarian: false, isVegan: false }
+        : { allergens: '', name: '', type: 'lunch', description: '', isGlutenFree: false, isVegetarian: false, isVegan: false }
     );
       setImageToDelete(false);
       setPhotoFile(null);
@@ -275,8 +285,8 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
             </label>
             <input
               type="text"
-              value={formData.allergens?.join(', ') || ''}
-              onChange={(e) => handleChange('allergens', e.target.value.split(',').map(a => a.trim()).filter(Boolean))}
+              value={formData.allergens || ''}
+              onChange={(e) => handleChange('allergens', e.target.value)}
               placeholder="Ej: Gluten, Maní, Leche"
               className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
