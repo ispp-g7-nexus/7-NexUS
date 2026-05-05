@@ -50,10 +50,9 @@
 - [1. Introducción](#1-introducción)
 - [2. Propuesta de valor y modelo de ingresos](#2-propuesta-de-valor-y-modelo-de-ingresos)
 - [3. Política de precios](#3-política-de-precios)
-- [4. Estructura de costes](#4-estructura-de-costes)
-- [5. Estimación de rentabilidad](#5-estimación-de-rentabilidad)
-- [6. Punto de equilibrio y comparación con usuarios piloto](#6-punto-de-equilibrio-y-comparación-con-usuarios-piloto)
-- [7. Conclusión: ¿Es rentable?](#7-conclusión-es-rentable)
+- [4. Estimación de rentabilidad](#4-estimación-de-rentabilidad)
+- [5. Punto de equilibrio y comparación con usuarios piloto](#5-punto-de-equilibrio-y-comparación-con-usuarios-piloto)
+- [6. Conclusión: ¿Es rentable?](#6-conclusión-es-rentable)
 
 ---
 
@@ -192,22 +191,82 @@ En términos de posicionamiento, la estrategia de precios queda así:
 - **Cuota proporcional al tamaño del centro:** más simple de justificar ante dirección o gerencia.
 - **Descuento implícito por escala:** cuanto mayor es la residencia, menor es el coste por cama.
 
-## 5. Estimación de rentabilidad
+## 4. Estimación de rentabilidad
 
-### 5.1. Hipótesis de cálculo
+### 4.1. Hipótesis de cálculo
+Para proyectar la rentabilidad de NexUS, se ha tomado como base empírica el documento de seguimiento financiero (*Economic Analysis - Sprint 3*). Dado que la metodología ágil del proyecto establece Sprints de dos semanas, los datos de costes se han extrapolado a una base mensual (multiplicando por dos) para alinearlos con el modelo de suscripción recurrente (SaaS B2B).
 
-### 5.2. Ingresos estimados
+Las hipótesis fundamentales para esta estimación son:
+- **Costes Operativos Mensuales (Base Imponible):** El coste total de ejecución de un sprint (sin IVA) es de 24.363 €. Por tanto, el coste mensual de mantener la estructura actual asciende a **48.726 €/mes**.
+- **Ingresos Recurrentes Mensuales (MRR - *Monthly Recurring Revenue*):** Se calculan aplicando la política de precios definida en el apartado 3 a los tamaños reales de nuestros usuarios piloto.
+- **Ingresos Extraordinarios (Setup):** Se contabilizan las cuotas de implantación como ingresos puntuales devengados en el primer mes de facturación.
 
-### 5.3. Margen bruto y margen neto
+### 4.2. Ingresos estimados
+Actualmente, NexUS cuenta con dos usuarios piloto validados que nos permiten proyectar los primeros flujos de caja reales de la plataforma, demostrando la viabilidad comercial del *pricing*:
+
+1. **Residencia One (~200 camas):**
+   - *Tramo de precios:* 200-349 camas (8,90 €/cama/mes).
+   - *Cuota mensual recurrente:* 200 x 8,90 € = **1.780 €/mes**.
+   - *Cuota de implantación (Setup):* **1.200 €** (pago único inicial).
+
+2. **Residencia Guadaira (~90 camas):**
+   - *Tramo de precios:* 50-99 camas (12,50 €/cama/mes).
+   - *Cuota mensual recurrente:* 90 x 12,50 € = **1.125 €/mes**.
+   - *Cuota de implantación (Setup):* **600 €** (pago único inicial).
+
+**Resumen de Ingresos Iniciales:**
+- **MRR Total (Ingreso Recurrente Mensual):** 2.905 €/mes.
+- **Ingresos por Implantación (Mes 1):** 1.800 €.
+- **Facturación Total Mes 1:** 4.705 €.
+
+### 4.3. Margen bruto y margen neto
+En la fase actual de desarrollo intensivo, el modelo presenta un margen neto negativo, un comportamiento estándar y previsible en startups SaaS B2B durante su etapa de construcción y *Go-to-Market*. 
+
+- **Ingresos Mensuales (MRR):** 2.905 €
+- **Costes Mensuales (Base Imponible):** 48.726 €
+- **Déficit Operativo Mensual:** -45.821 €
+
+Este déficit subraya que los ingresos de los pilotos actuales validan la disposición a pagar del mercado, pero no están diseñados para sostener la estructura de un equipo de desarrollo de 27 personas (1 Jefe de Proyecto, 1 Consultor, 4 Coordinadores y 21 Programadores). La rentabilidad real dependerá de la escalabilidad comercial una vez finalizado el desarrollo *core* y optimizada la estructura de costes.
 
 
-## 6. Punto de equilibrio y comparación con usuarios piloto
+## 5. Punto de equilibrio y comparación con usuarios piloto
 
-### 6.1. Cálculo del punto de equilibrio
+### 5.1. Cálculo del punto de equilibrio
+El punto de equilibrio (*Break-even*) determina el volumen de ventas necesario para que los ingresos recurrentes cubran la totalidad de los costes operativos mensuales (48.726 €).
 
-### 6.2. Escenario con usuarios piloto actuales
+Para este cálculo, asumiremos un **cliente promedio** basado en el segmento de "Encaje alto" (Residencia mediana de 150 camas):
+- *Ingreso promedio por cliente (ARPA):* 150 camas x 10,50 € = **1.575 €/mes**.
 
-### 6.3. Brecha hasta la rentabilidad
+**Fórmula de Punto de Equilibrio:**
+`Costes Fijos Mensuales / Ingreso Promedio por Cliente = Número de Clientes`
+`48.726 € / 1.575 € = 30,93`
+
+**Conclusión:** NexUS necesita captar un mínimo de **31 residencias de tamaño medio** (aproximadamente 4.650 camas en total) para alcanzar el punto de equilibrio asumiendo la pesada estructura de costes actual.
+
+### 5.2. Escenario con usuarios piloto actuales
+Con los 2 pilotos actuales (Residencia One y Residencia Guadaira), NexUS cubre únicamente el **5,96%** de sus costes operativos mensuales (2.905 € de 48.726 €). 
+
+Sin embargo, el coste de adquisición de estos pilotos ha sido altamente eficiente. Según el análisis económico, la partida operativa dedicada a pilotos (captura digital, visitas físicas y material de onboarding) fue de solo **800 € por sprint** (1.600 €/mes). Esto demuestra que el Coste de Adquisición de Clientes (CAC) es extremadamente bajo en comparación con el *Lifetime Value* (LTV) que generarán estos contratos, lo que es un indicador excelente de escalabilidad.
+
+### 5.3. Brecha hasta la rentabilidad (Análisis de Escenarios)
+El análisis financiero muestra un remanente presupuestario de **41.050 €** (IVA incluido). Con un gasto mensual de 58.958 € (IVA incluido), el proyecto tiene un *runway* (tiempo de supervivencia financiera) inferior a un mes si mantiene la estructura de desarrollo actual. Ante esta realidad inminente, se plantean dos escenarios estratégicos:
+
+#### Escenario Optimista: Tracción y superación del Break-even
+En este escenario, la validación exitosa de los pilotos permite cerrar acuerdos rápidos en el mercado.
+- **Hito:** Se alcanzan 35 residencias a corto/medio plazo.
+- **Impacto:** El MRR supera los 55.000 €/mes. Se supera el punto de equilibrio y la empresa comienza a generar un EBITDA positivo.
+- **Estrategia Comercial:** Utilizar los casos de éxito documentados de Residencia One y Guadaira para atacar directamente al segmento de "Grupos o redes de residencias" (+500 camas). Vender a nivel corporativo permitiría incorporar múltiples centros bajo un único esfuerzo comercial, reduciendo drásticamente el tiempo para alcanzar las 31 residencias necesarias.
+
+#### Escenario Pesimista: Falta de tracción comercial
+En este escenario, la adopción es lenta, no se superan los 5-10 clientes iniciales y se agota el remanente presupuestario de 41.050 €.
+- **Estrategia Operativa (Reducción drástica del *Burn Rate*):** Transicionar inmediatamente de una "fase de desarrollo intensivo" a una "fase de mantenimiento *Lean*". Esto implica reducir el equipo de 21 programadores a un equipo *core* de soporte de 3-4 desarrolladores. Al recortar la partida de personal (actualmente de 39.346 €/mes), los costes fijos caerían a unos 10.000 € - 12.000 €/mes. Esto reduciría el punto de equilibrio a solo **7 u 8 residencias**, haciendo el negocio rentable casi de inmediato con los clientes existentes.
+- **Estrategia Comercial (Inyección de liquidez):** Eliminar temporalmente la opción de pago mensual y forzar el **cobro anual anticipado** ofreciendo un descuento del 15-20%. Si captamos 5 residencias que paguen una media de 15.000 € anuales por adelantado, inyectaríamos 75.000 € de liquidez inmediata en caja para extender el *runway* y asegurar la supervivencia del proyecto sin depender de financiación externa.
 
 
-## 7. Conclusión: ¿Es rentable?
+## 6. Conclusión: ¿Es rentable?
+
+El análisis económico y el modelo de negocio de NexUS demuestran que **el proyecto es estructuralmente rentable a medio plazo**, gracias a la solidez de su modelo de ingresos recurrentes (SaaS) y a la alta escalabilidad de su infraestructura (donde el coste de añadir una nueva residencia es marginal). 
+
+La política de precios por tramos de camas se adapta perfectamente a la realidad del sector. Los datos reales de los usuarios piloto (Residencia One y Guadaira) confirman que el mercado está dispuesto a asumir cuotas de entre 1.100 € y 1.800 € mensuales por una solución integral, validando nuestra propuesta de valor.
+
+No obstante, la rentabilidad a corto plazo está fuertemente condicionada por la pesada estructura de costes de la fase de construcción del software (27 personas y casi 50.000 € de gasto mensual). Para consolidar la viabilidad financiera definitiva, NexUS debe ejecutar una transición estratégica impecable al finalizar el presupuesto actual: o bien escalando rápidamente las ventas B2B hasta alcanzar la masa crítica de **31 residencias**, o bien reestructurando sus costes operativos hacia un modelo de mantenimiento ligero una vez el producto esté desplegado. Si se aplican las estrategias de mitigación de riesgos descritas, NexUS tiene el potencial de convertirse en un activo tecnológico altamente lucrativo y sostenible en el nicho universitario.
