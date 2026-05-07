@@ -43,7 +43,7 @@ export function MyReservationsList({ reservations, loading, cancellingId, onCanc
                       {formatDateTime(reservation.start_time)} - {formatDateTime(reservation.end_time)}
                     </p>
                     {reservation.notes && (
-                      <p className="mt-1 text-xs text-gray-500 break-words whitespace-pre-wrap">
+                      <p className="mt-1 max-w-full text-xs text-gray-500 whitespace-pre-wrap break-words [overflow-wrap:anywhere] [word-break:break-word]">
                         Nota: {reservation.notes}
                       </p>
                     )}

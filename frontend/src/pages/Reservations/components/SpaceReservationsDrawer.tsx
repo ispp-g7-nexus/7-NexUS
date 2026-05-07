@@ -80,7 +80,7 @@ export function SpaceReservationsDrawer({
                   {formatDateTime(r.start_time)} → {formatDateTime(r.end_time)}
                 </p>
                 {r.notes && (
-                  <p className="text-xs text-gray-500 border-t border-border/60 pt-2 break-words whitespace-pre-wrap">
+                  <p className="border-t border-border/60 pt-2 text-xs text-gray-500 whitespace-pre-wrap break-words [overflow-wrap:anywhere] [word-break:break-word]">
                     Nota: {r.notes}
                   </p>
                 )}

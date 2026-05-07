@@ -178,6 +178,44 @@ describe('ReservationFormSheet', () => {
     expect(screen.getByText('250/250')).toBeInTheDocument()
   })
 
+  it('aplica estilos defensivos para evitar overflow horizontal en la nota', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <ReservationFormSheet
+        open
+        initialDate="2099-06-01"
+        space={space}
+        onOpenChange={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText(/Horas disponibles/i)).toBeInTheDocument()
+    })
+
+    const sheetContent = screen.getByText('Nueva reserva').closest('[data-slot="sheet-content"]')
+    expect(sheetContent).not.toBeNull()
+    expect(sheetContent).toHaveClass('min-w-0', 'overflow-x-hidden')
+
+    const notesField = screen.getByLabelText(/Notas \(opcional\)/i) as HTMLTextAreaElement
+    expect(notesField).toHaveClass(
+      'w-full',
+      'min-w-0',
+      'max-w-full',
+      'box-border',
+      'overflow-x-hidden',
+      'overflow-y-auto',
+      'whitespace-pre-wrap',
+      'break-words',
+      '[overflow-wrap:anywhere]',
+    )
+
+    await user.type(notesField, 'a'.repeat(120))
+    expect(notesField.value).toBe('a'.repeat(120))
+  })
+
   it('muestra error de backend 400 y refresca disponibilidad', async () => {
     const user = userEvent.setup()
     mockedCreateReservation.mockRejectedValue(new ApiError('Esa franja ya no está disponible', 400))

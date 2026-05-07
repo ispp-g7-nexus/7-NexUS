@@ -231,7 +231,7 @@ export function ReservationFormSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side={isMobile ? "bottom" : "right"}
-        className={isMobile ? "max-h-[90vh] rounded-t-xl" : "w-full sm:max-w-md flex flex-col"}
+        className={isMobile ? "max-h-[90vh] rounded-t-xl min-w-0 overflow-x-hidden" : "w-full sm:max-w-md flex min-w-0 flex-col overflow-x-hidden"}
       >
         <SheetHeader className="px-6 pt-6 pb-4 border-b border-gray-200">
           <SheetTitle>Nueva reserva</SheetTitle>
@@ -241,7 +241,7 @@ export function ReservationFormSheet({
         </SheetHeader>
 
         {space && (
-          <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-6 p-6 overflow-y-auto">
+          <form onSubmit={handleSubmit} className="flex min-w-0 flex-1 flex-col gap-6 overflow-x-hidden overflow-y-auto p-6">
             <div className="space-y-2">
               <label htmlFor="reservation-date" className="block text-sm font-medium text-gray-900">
                 Fecha de la reserva
@@ -323,7 +323,7 @@ export function ReservationFormSheet({
                 </div>
               )}
             </div>
-            <div className="space-y-2">
+            <div className="min-w-0 max-w-full space-y-2 overflow-hidden">
               <label htmlFor="reservation-notes" className="block text-sm font-medium text-gray-900">
                 Notas (opcional)
               </label>
@@ -333,8 +333,9 @@ export function ReservationFormSheet({
                 onChange={(event) => setNotes(event.target.value)}
                 rows={3}
                 maxLength={RESERVATION_NOTES_MAX_LENGTH}
+                wrap="soft"
                 aria-describedby="reservation-notes-counter"
-                className="border-input bg-background focus-visible:ring-ring/50 w-full rounded-md border px-3 py-2 text-sm outline-none focus-visible:ring-[3px] resize-none min-h-[96px] max-h-40 overflow-y-auto whitespace-pre-wrap break-words"
+                className="border-input bg-background focus-visible:ring-ring/50 min-h-[96px] max-h-40 w-full min-w-0 max-w-full resize-none overflow-x-hidden overflow-y-auto rounded-md border px-3 py-2 text-sm whitespace-pre-wrap break-words [overflow-wrap:anywhere] [word-break:break-word] box-border outline-none focus-visible:ring-[3px]"
                 placeholder="Ejemplo: reunión del grupo de proyecto"
               />
               <div className="flex justify-end">
