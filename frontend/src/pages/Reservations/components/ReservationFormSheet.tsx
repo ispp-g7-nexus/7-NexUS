@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 import { InteractiveDatePicker } from "../../../components/ui/InteractiveDatePicker";
@@ -39,6 +39,13 @@ interface TimeSlot {
 }
 
 const RESERVATION_NOTES_MAX_LENGTH = 250;
+const SPACE_AVAILABILITY_LOAD_ERROR_MESSAGE =
+  "No se pudo cargar la disponibilidad del espacio. Inténtalo de nuevo.";
+const DATE_FORMAT_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+function isValidDateString(value: string): boolean {
+  return DATE_FORMAT_PATTERN.test(value);
+}
 
 function getTodayDateString(): string {
   const now = new Date();
@@ -67,50 +74,70 @@ export function ReservationFormSheet({
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const latestAvailabilityRequestId = useRef(0);
 
-  async function fetchAvailability() {
-    if (!space) return;
+  async function fetchAvailability(spaceId: number, date: string) {
+    const requestId = ++latestAvailabilityRequestId.current;
     setLoadingAvailability(true);
     setError(null);
     setSelectedSlot(null);
     setExpandedHour(null);
     try {
-      const data = await getSpaceAvailability(space.id, localDate);
+      const data = await getSpaceAvailability(spaceId, date);
+      if (latestAvailabilityRequestId.current !== requestId) {
+        return;
+      }
       setAvailability(data);
     } catch (err) {
+      if (latestAvailabilityRequestId.current !== requestId) {
+        return;
+      }
       try {
         if (err instanceof Error) {
           console.error(
             "Failed to load space availability",
             {
-              spaceId: space.id,
-              date: localDate,
+              spaceId,
+              date,
               message: err.message,
               stack: err.stack,
             }
           );
         } else {
-          console.error("Failed to load space availability", { spaceId: space.id, date: localDate, error: JSON.stringify(err) });
+          console.error("Failed to load space availability", { spaceId, date, error: JSON.stringify(err) });
         }
       } catch (logErr) {
         console.error("Failed to log availability error", logErr);
       }
-      setError("No se pudo cargar la disponibilidad para esta fecha.");
+      setAvailability(null);
+      setError(SPACE_AVAILABILITY_LOAD_ERROR_MESSAGE);
     } finally {
-      setLoadingAvailability(false);
+      if (latestAvailabilityRequestId.current === requestId) {
+        setLoadingAvailability(false);
+      }
     }
   }
 
   useEffect(() => {
-    if (!open || !space) return;
-    void fetchAvailability();
-  }, [open, space, localDate]);
+    if (!open) {
+      latestAvailabilityRequestId.current += 1;
+      setLoadingAvailability(false);
+      return;
+    }
+
+    if (!space?.id || !isValidDateString(localDate)) {
+      return;
+    }
+
+    void fetchAvailability(space.id, localDate);
+  }, [open, space?.id, localDate]);
 
   useEffect(() => {
     if (open) {
       setLocalDate(initialDate);
       setNotes("");
       setError(null);
+      setAvailability(null);
       setSelectedSlot(null);
     }
   }, [open, initialDate]);
@@ -156,7 +183,9 @@ export function ReservationFormSheet({
       const userMessage = backendMsg || "Esa franja ya no está disponible. Se ha actualizado la disponibilidad.";
       setError(userMessage);
       toast.error(userMessage);
-      void fetchAvailability();
+      if (space?.id && isValidDateString(localDate)) {
+        void fetchAvailability(space.id, localDate);
+      }
       setSelectedSlot(null);
       return;
     }
@@ -206,7 +235,9 @@ export function ReservationFormSheet({
       >
         <SheetHeader className="px-6 pt-6 pb-4 border-b border-gray-200">
           <SheetTitle>Nueva reserva</SheetTitle>
-          <SheetDescription>{space ? space.name : "Selecciona un espacio"}</SheetDescription>
+          <SheetDescription className="break-words line-clamp-2">
+            {space ? space.name : "Selecciona un espacio"}
+          </SheetDescription>
         </SheetHeader>
 
         {space && (

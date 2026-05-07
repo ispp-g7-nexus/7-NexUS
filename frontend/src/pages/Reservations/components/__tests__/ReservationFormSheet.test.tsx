@@ -105,6 +105,22 @@ describe('ReservationFormSheet', () => {
     })
   })
 
+  it('no llama a disponibilidad si la fecha inicial no es válida', async () => {
+    render(
+      <ReservationFormSheet
+        open
+        initialDate="fecha-invalida"
+        space={space}
+        onOpenChange={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(mockedGetSpaceAvailability).not.toHaveBeenCalled()
+    })
+  })
+
   it('deshabilita tramos ocupados o pasados', async () => {
     mockedGetSpaceAvailability.mockResolvedValue({
       date: '2099-06-01',
@@ -189,6 +205,28 @@ describe('ReservationFormSheet', () => {
     await waitFor(() => {
       expect(mockedCreateReservation).toHaveBeenCalledTimes(1)
       expect(mockedGetSpaceAvailability).toHaveBeenCalledTimes(2)
+    })
+  })
+
+  it('muestra error controlado cuando falla la carga de disponibilidad', async () => {
+    mockedGetSpaceAvailability.mockRejectedValue(
+      new ApiError('Ha ocurrido un error inesperado.', 500),
+    )
+
+    render(
+      <ReservationFormSheet
+        open
+        initialDate="2099-06-01"
+        space={space}
+        onOpenChange={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/No se pudo cargar la disponibilidad del espacio\. Inténtalo de nuevo\./i),
+      ).toBeInTheDocument()
     })
   })
 })

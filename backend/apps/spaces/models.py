@@ -4,6 +4,8 @@ from django.db.models import F, Q
 
 from apps.residences.models import Residence
 
+COMMON_SPACE_NAME_MAX_LENGTH = 80
+COMMON_SPACE_DESCRIPTION_MAX_LENGTH = 300
 SPACE_RESERVATION_NOTES_MAX_LENGTH = 250
 
 
