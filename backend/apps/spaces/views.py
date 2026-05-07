@@ -19,7 +19,11 @@ from .analytics import (
     ReservationsAnalyticsValidationError,
     get_admin_reservations_analytics,
 )
-from .models import CommonSpace, SpaceReservation
+from .models import (
+    SPACE_RESERVATION_NOTES_MAX_LENGTH,
+    CommonSpace,
+    SpaceReservation,
+)
 from .permissions import is_reservations_admin
 
 RESERVATION_REMINDER_WINDOW = timedelta(hours=1)
@@ -290,6 +294,17 @@ class SpaceReservationCreateView(AuthenticatedView):
         start_time_str = str(payload.get("start_time", "")).strip()
         end_time_str = str(payload.get("end_time", "")).strip()
         notes = str(payload.get("notes", "")).strip()
+
+        if len(notes) > SPACE_RESERVATION_NOTES_MAX_LENGTH:
+            return JsonResponse(
+                {
+                    "detail": (
+                        "La nota no puede superar los "
+                        f"{SPACE_RESERVATION_NOTES_MAX_LENGTH} caracteres."
+                    )
+                },
+                status=400,
+            )
 
         if not start_time_str or not end_time_str:
             return JsonResponse(

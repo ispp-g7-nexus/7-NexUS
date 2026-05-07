@@ -4,6 +4,8 @@ from django.db.models import F, Q
 
 from apps.residences.models import Residence
 
+SPACE_RESERVATION_NOTES_MAX_LENGTH = 250
+
 
 class CommonSpace(models.Model):
     name = models.CharField(max_length=140)

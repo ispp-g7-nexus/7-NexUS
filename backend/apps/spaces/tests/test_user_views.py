@@ -6,7 +6,11 @@ from django_tenants.test.cases import FastTenantTestCase
 from django_tenants.test.client import TenantClient
 
 from apps.residences.models import Residence, ResidenceDomain
-from apps.spaces.models import CommonSpace, SpaceReservation
+from apps.spaces.models import (
+    SPACE_RESERVATION_NOTES_MAX_LENGTH,
+    CommonSpace,
+    SpaceReservation,
+)
 from apps.spaces.tests import ensure_tenant_domain, make_tenant_client
 from apps.membership.models import Membership, Role
 
@@ -113,6 +117,34 @@ class UserSpaceViewsTests(FastTenantTestCase):
         )
         self.assertEqual(resp.status_code, 201)
         self.assertTrue(SpaceReservation.objects.filter(user=self.user1, notes="Estudiar").exists())
+
+    def test_create_reservation_accepts_notes_at_max_length(self):
+        start = timezone.now().replace(hour=11, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        end = start + timedelta(hours=1)
+        notes = "a" * SPACE_RESERVATION_NOTES_MAX_LENGTH
+        payload = {"start_time": start.isoformat(), "end_time": end.isoformat(), "notes": notes}
+
+        resp = self.client1.post(
+            f"/api/spaces/{self.space.id}/reservations/",
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 201)
+        self.assertEqual(resp.json()["notes"], notes)
+
+    def test_create_reservation_rejects_notes_over_max_length(self):
+        start = timezone.now().replace(hour=11, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        end = start + timedelta(hours=1)
+        notes = "a" * (SPACE_RESERVATION_NOTES_MAX_LENGTH + 1)
+        payload = {"start_time": start.isoformat(), "end_time": end.isoformat(), "notes": notes}
+
+        resp = self.client1.post(
+            f"/api/spaces/{self.space.id}/reservations/",
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("nota no puede superar", str(resp.json()).lower())
 
     def test_create_reservation_respects_capacity(self):
         start = timezone.now().replace(hour=10, minute=0, second=0, microsecond=0) + timedelta(days=1)

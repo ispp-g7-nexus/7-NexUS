@@ -37,12 +37,16 @@ export function MyReservationsList({ reservations, loading, cancellingId, onCanc
             {reservations.map((reservation) => (
               <article key={reservation.id} className="rounded-lg border border-border/80 bg-background px-4 py-3">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-sm font-semibold text-gray-900">{reservation.space.name}</p>
                     <p className="mt-1 text-sm text-gray-500">
                       {formatDateTime(reservation.start_time)} - {formatDateTime(reservation.end_time)}
                     </p>
-                    {reservation.notes && <p className="mt-1 text-xs text-gray-500">Nota: {reservation.notes}</p>}
+                    {reservation.notes && (
+                      <p className="mt-1 text-xs text-gray-500 break-words whitespace-pre-wrap">
+                        Nota: {reservation.notes}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     <span

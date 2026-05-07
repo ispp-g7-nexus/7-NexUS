@@ -12,10 +12,14 @@ import {
   SheetTitle,
 } from "../../../components/ui/sheet";
 import { useIsMobile } from "../../../components/ui/use-mobile";
-import { createReservation,
+import {
+  createReservation,
+  type ApiError,
   getSpaceAvailability,
-  isApiError} from "../../../services/reservations";
-import type {CommonSpace,
+  isApiError,
+} from "../../../services/reservations";
+import type {
+  CommonSpace,
   SpaceAvailability,
   AvailableSlot,
 } from "../../../services/reservations";
@@ -34,6 +38,7 @@ interface TimeSlot {
   status: "available" | "occupied"|"past";
 }
 
+const RESERVATION_NOTES_MAX_LENGTH = 250;
 
 function getTodayDateString(): string {
   const now = new Date();
@@ -113,6 +118,14 @@ export function ReservationFormSheet({
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!space || !selectedSlot) return;
+    const trimmedNotes = notes.trim();
+
+    if (trimmedNotes.length > RESERVATION_NOTES_MAX_LENGTH) {
+      const userMessage = `La nota no puede superar los ${RESERVATION_NOTES_MAX_LENGTH} caracteres.`;
+      setError(userMessage);
+      toast.error(userMessage);
+      return;
+    }
 
     setIsSubmitting(true);
     setError(null);
@@ -121,7 +134,7 @@ export function ReservationFormSheet({
       await createReservation(space.id, {
         start_time: selectedSlot.start_time,
         end_time: selectedSlot.end_time,
-        notes: notes.trim(),
+        notes: trimmedNotes,
       });
       toast.success("Reserva confirmada con éxito.");
       onSuccess();
@@ -136,7 +149,7 @@ export function ReservationFormSheet({
     }
   };
 
-  function handleApiError(apiErr: any) {
+  function handleApiError(apiErr: ApiError) {
     const status = apiErr.status;
     if (status === 400) {
       const backendMsg = apiErr.message && String(apiErr.message).trim();
@@ -288,10 +301,23 @@ export function ReservationFormSheet({
                 value={notes}
                 onChange={(event) => setNotes(event.target.value)}
                 rows={3}
-                maxLength={500}
-                className="border-input bg-background focus-visible:ring-ring/50 w-full rounded-md border px-3 py-2 text-sm outline-none focus-visible:ring-[3px] resize-none"
+                maxLength={RESERVATION_NOTES_MAX_LENGTH}
+                aria-describedby="reservation-notes-counter"
+                className="border-input bg-background focus-visible:ring-ring/50 w-full rounded-md border px-3 py-2 text-sm outline-none focus-visible:ring-[3px] resize-none min-h-[96px] max-h-40 overflow-y-auto whitespace-pre-wrap break-words"
                 placeholder="Ejemplo: reunión del grupo de proyecto"
               />
+              <div className="flex justify-end">
+                <span
+                  id="reservation-notes-counter"
+                  className={`text-xs ${
+                    notes.length >= RESERVATION_NOTES_MAX_LENGTH
+                      ? "text-amber-700"
+                      : "text-gray-500"
+                  }`}
+                >
+                  {notes.length}/{RESERVATION_NOTES_MAX_LENGTH}
+                </span>
+              </div>
             </div>
 
             {error && (

@@ -135,6 +135,33 @@ describe('ReservationFormSheet', () => {
     })
   })
 
+  it('limita la nota a 250 caracteres y muestra contador', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <ReservationFormSheet
+        open
+        initialDate="2099-06-01"
+        space={space}
+        onOpenChange={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText(/Horas disponibles/i)).toBeInTheDocument()
+      expect(screen.getByText('0/250')).toBeInTheDocument()
+    })
+
+    const notesField = screen.getByLabelText(/Notas \(opcional\)/i) as HTMLTextAreaElement
+    expect(notesField).toHaveAttribute('maxLength', '250')
+
+    await user.type(notesField, 'a'.repeat(260))
+
+    expect(notesField.value).toHaveLength(250)
+    expect(screen.getByText('250/250')).toBeInTheDocument()
+  })
+
   it('muestra error de backend 400 y refresca disponibilidad', async () => {
     const user = userEvent.setup()
     mockedCreateReservation.mockRejectedValue(new ApiError('Esa franja ya no está disponible', 400))
