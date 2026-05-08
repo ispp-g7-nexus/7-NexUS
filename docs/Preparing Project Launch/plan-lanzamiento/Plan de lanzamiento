@@ -71,7 +71,7 @@ Para el usuario residente, el objetivo se centra en la fidelización y el bienes
 ## 3. Fase de Pre-lanzamiento (PPL): Refinamiento y Validación
 Actualmente, nos encontramos en la etapa de estabilización final. El motor de esta fase es el ciclo de retroalimentación semanal derivado de los sprints de desarrollo. Este proceso nos permite procesar el feedback de los centros piloto para distinguir entre mejoras de interfaz y errores funcionales críticos. 
 
-El esfuerzo principal se centra en el "triage" de incidencias, asegurando que cualquier error que comprometa la veracidad de la información médica o la seguridad del residente sea resuelto antes del despliegue. Asimismo, estamos ejecutando pruebas de estrés de infraestructura para garantizar que la plataforma responda con agilidad durante los picos de tráfico simultáneo, comunes en las residencias al inicio de cada jornada laboral.
+Asimismo, estamos ejecutando pruebas de estrés de infraestructura para garantizar que la plataforma responda con agilidad durante los picos de tráfico simultáneo, comunes en las residencias al inicio de cada jornada laboral.
 
 ## 4. Estrategia de Go-to-Market y Comunicación
 La estrategia de comunicación se segmentará para alcanzar a ambos perfiles de usuario. Para la administración, la narrativa se centrará en la optimización de recursos y la trazabilidad: el valor de tener datos reales sobre el uso de las instalaciones y el estado de las infraestructuras. 
