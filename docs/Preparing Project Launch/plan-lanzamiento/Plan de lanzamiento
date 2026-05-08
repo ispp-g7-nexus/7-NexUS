@@ -1,0 +1,116 @@
+
+
+# Plan de lanzamiento - NexUS
+
+<p align="center">  
+  <img src="../../images/logo-app.png" alt="Logo NexUS" width="500">
+</p>
+
+<div align="center">
+
+
+<p>
+  <img src="https://img.shields.io/badge/Versión-1.1.0-blue?style=flat-square" alt="Versión">
+  <img src="https://img.shields.io/badge/Estado-Completado-orange?style=flat-square" alt="Estado">
+  <img src="https://img.shields.io/badge/Grupo-7--NexUS-green?style=flat-square" alt="Grupo">
+  <img src="https://img.shields.io/badge/Asignatura-ISPP-red?style=flat-square" alt="Asignatura">
+</p>
+
+
+<p>
+  <strong>Estrategia operativa y despliegue de la plataforma integral para residencias universitarias</strong>
+</p>
+
+</div>
+
+---
+
+**Proyecto:** NexUS  
+**Grupo:** 7 - NexUS  
+**Asignatura:** Ingeniería del Software y Práctica Profesional (ISPP)  
+**Institución:** ETSII – Universidad de Sevilla  
+**Curso académico:** 2025/2026  
+**Fecha:** 28/04/2026  
+
+<p align="center">
+  <img src="../../images/logo-etsii.jpe" alt="Logo ETSII" width="400">
+</p>
+
+## Historial de Versiones
+
+| Versión | Fecha | Cambio principal |
+|---------|-------|------------------|
+| 1.0.0 | 28/04/2026 | Creación del documento del plan de lanzamiento y versión inicial|
+| 1.1.0 | 28/04/2026 | Finalización y revisión del plan de lanzamiento |
+
+---
+
+## ÍNDICE
+- [1. Introducción y Visión Estratégica](#1-introducción-y-visión-estratégica)
+- [2. Definición de Objetivos y Métricas de Éxito](#2-definición-de-objetivos-y-métricas-de-éxito)
+- [3. Fase de Pre-lanzamiento (PPL): Refinamiento y Validación](#3-fase-de-pre-lanzamiento-ppl-refinamiento-y-validación)
+- [4. Estrategia de Go-to-Market y Comunicación](#4-estrategia-de-go-to-market-y-comunicación)
+  - [4.1 Acciones Tácticas de Captación y Activación (Basadas en Utilidad)](#41-acciones-tácticas-de-captación-y-activación-basadas-en-utilidad)
+  - [4.2 Evaluación de Efectividad de las Acciones](#42-evaluación-de-efectividad-de-las-acciones)
+  - [4.3 Estrategia de Adquisición de Centros (B2B)](#43-estrategia-de-adquisición-de-centros-b2b)
+  - [4.4 Evaluación de la Efectividad Comercial](#44-evaluación-de-la-efectividad-comercial)
+- [5. Ejecución del Lanzamiento y Despliegue Operativo](#5-ejecución-del-lanzamiento-y-despliegue-operativo)
+- [6. Gestión de Riesgos y Garantía de Continuidad](#6-gestión-de-riesgos-y-garantía-de-continuidad)
+- [7. Post-lanzamiento y Evolución del Producto](#7-post-lanzamiento-y-evolución-del-producto)
+
+---
+
+## 1. Introducción y Visión Estratégica
+El lanzamiento de esta plataforma se concibe como una solución de doble vertiente diseñada para transformar la dinámica de las residencias universitarias. Por un lado, ofrece al estudiante una interfaz intuitiva centrada en la experiencia social y el acceso a servicios; por otro, dota a la administración de un centro de mando robusto para la gestión operativa. La visión estratégica es digitalizar el ciclo de vida del residente, desde la resolución de incidencias técnicas hasta el fomento de la cohesión social, garantizando que la administración mantenga un control total y eficiente sobre los recursos del centro.
+
+## 2. Definición de Objetivos y Métricas de Éxito
+El éxito del despliegue se medirá mediante dos ejes complementarios. 
+Para la gestión administrativa, el objetivo es la centralización absoluta de los flujos de trabajo: reservas de espacios, gestión de menús de cocina y supervisión de incidencias. Buscamos reducir los tiempos de respuesta y eliminar la pérdida de información derivada de canales de comunicación informales. 
+Para el usuario residente, el objetivo se centra en la fidelización y el bienestar. El éxito se definirá por la participación activa en el programa de matching y la asistencia a eventos, convirtiendo la aplicación en el canal oficial y preferido para la vida social dentro de la residencia.
+
+## 3. Fase de Pre-lanzamiento (PPL): Refinamiento y Validación
+Actualmente, nos encontramos en la etapa de estabilización final. El motor de esta fase es el ciclo de retroalimentación semanal derivado de los sprints de desarrollo. Este proceso nos permite procesar el feedback de los centros piloto para distinguir entre mejoras de interfaz y errores funcionales críticos. 
+
+Asimismo, estamos ejecutando pruebas de estrés de infraestructura para garantizar que la plataforma responda con agilidad durante los picos de tráfico simultáneo, comunes en las residencias al inicio de cada jornada laboral.
+
+## 4. Estrategia de Go-to-Market y Comunicación
+La estrategia de comunicación se segmentará para alcanzar a ambos perfiles de usuario. Para la administración, la narrativa se centrará en la optimización de recursos y la trazabilidad: el valor de tener datos reales sobre el uso de las instalaciones y el estado de las infraestructuras. 
+
+Para los estudiantes, la campaña de marketing se enfocará en la exclusividad y la conexión. Se presentará como la mejor opción para disfrutar de la residencia, conocer a sus compañeros a través del sistema de matching y estar al tanto de todo lo que ocurre en su entorno inmediato. El lanzamiento se apoyará en una fuerte presencia visual en las zonas comunes, incentivando el registro temprano para comenzar la creación de perfiles sociales.
+
+### 4.1 Acciones Tácticas de Captación y Activación (Basadas en Utilidad)
+Para cumplir con el objetivo de captar usuarios reales sin depender de incentivos externos, la estrategia se centrará en la exclusividad de acceso y la agilidad operativa:
+
+* **Acción "Prioridad en Recepción":** Se establece que los residentes que realicen su registro y control de visitantes y paquetería a través de la aplicación tendrán una vía de acceso preferente en la recepción. Al eliminar la espera de los trámites manuales, el incentivo es el ahorro de tiempo, evaluando su efectividad por la reducción de colas en horas punta.
+* **Campaña "Información en Tiempo Real":** La publicación del menú de cocina y la agenda de eventos se realizará exclusivamente a través de la plataforma 24 horas antes que en cualquier otro medio físico. Este acceso anticipado actúa como un motor orgánico de descarga.
+* **Dinámica "Match de Intereses":** Campaña de comunicación visual resaltando que la única vía para encontrar compañeros de estudio o de deporte con intereses afines es el algoritmo de la app. El incentivo es la pertenencia al grupo y la integración social temprana.
+* **Acción "Gestión de Incidencias VIP":** Notificación automática de seguimiento en cada cambio de estado (ej. "Técnico en camino"). La transparencia del proceso incentiva al usuario a abandonar el reporte verbal por la seguridad del seguimiento digital.
+* **Protocolo de Invitados Digitales:** El registro de visitantes vía app permite al residente enviar un código de acceso o notificación previa, evitando que el estudiante tenga que bajar físicamente a recepción a autorizar cada entrada.
+
+### 4.2 Evaluación de Efectividad de las Acciones
+La efectividad de estas acciones se evaluará mediante el análisis del comportamiento de uso:
+* **Tasa de Adopción por Necesidad:** Porcentaje de incidencias reportadas digitalmente frente a las tradicionales.
+* **Engagement Social:** Número medio de conexiones en el sistema de matching por cada nuevo residente registrado.
+* **Eficiencia de Flujos:** Comparativa de tiempo de espera en recepción entre usuarios de la app y usuarios manuales.
+
+### 4.3 Estrategia de Adquisición de Centros (B2B)
+La captación de residencias se basará en una estrategia de venta consultiva:
+* **Campaña "Residencia Blindada":** Acción directa dirigida a directores de operaciones resaltando el módulo de control de visitantes. El argumento es la seguridad y el cumplimiento legal (RGPD), eliminando la responsabilidad civil de registros manuales ineficientes.
+* **Programa de Digitalización Zero-Friction:** Oferta de una "Prueba de Concepto" (PoC) de 30 días en una sola planta o edificio para evaluar la efectividad sin comprometer toda la operativa del centro.
+* **Estrategia de LinkedIn Authority:** Generación de contenido técnico sobre "La Residencia Universitaria del Futuro", posicionando la plataforma como la solución para mejorar la retención de estudiantes.
+* **Networking en Asociaciones del Sector:** Participación en foros de gestión de alojamiento estudiantil, presentando datos reales de los pilotos que demuestren la reducción de costes operativos.
+* **Acción "Referral de Directores":** Programa de embajadores donde directores que ya utilizan la app la recomiendan a otros centros a cambio de módulos de pago gratuitos.
+
+### 4.4 Evaluación de la Efectividad Comercial
+Se evaluará mediante el Coste de Adquisición de Cliente (CAC) y el Ciclo de Venta. Se considerará una campaña exitosa aquella que logre convertir un contacto en una reunión de demostración (Demo) en menos de 30 días.
+
+## 5. Ejecución del Lanzamiento y Despliegue Operativo
+El día del lanzamiento activará simultáneamente los dos entornos. El equipo técnico monitorizará la carga de datos y el flujo de mensajes para asegurar una respuesta instantánea del sistema. 
+
+El proceso de onboarding será dual: mientras los estudiantes descubren las funciones sociales, los administradores recibirán una sesión de acompañamiento para dominar la gestión operativa. Esta atención personalizada es crítica para asegurar que el sistema se asiente como la herramienta estándar.
+
+## 6. Gestión de Riesgos y Garantía de Continuidad
+Implementación de protocolos de seguridad para que solo el personal autorizado gestione reservas y datos sensibles. Para los residentes, el entorno de chat y matching cuenta con medidas de privacidad blindadas. Asimismo, la arquitectura está preparada para mantener la funcionalidad de consulta de menús y eventos incluso ante incidencias técnicas menores.
+
+## 7. Post-lanzamiento y Evolución del Producto
+Tras el despliegue inicial, el foco se desplazará hacia el análisis del comportamiento del usuario en el entorno real para nutrir la hoja de ruta de futuras versiones. El objetivo final es establecer un comité de producto que evalúe mensualmente las métricas de uso, asegurando que la plataforma evolucione al ritmo que dicten las necesidades reales.
