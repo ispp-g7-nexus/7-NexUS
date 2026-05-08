@@ -145,7 +145,6 @@ export function AdminProfile() {
 
                     <div className="relative z-10 max-w-full overflow-hidden">
                         <div className="flex items-center gap-3 flex-wrap">
-                            {/* MEJORA VISUAL: truncate para evitar que el nombre rompa la cabecera si es muy largo */}
                             <h2 className="text-3xl font-bold tracking-tight truncate max-w-[250px] sm:max-w-md" title={`${userData.first_name} ${userData.last_name}`}>
                                 {userData.first_name} {userData.last_name}
                             </h2>
@@ -187,7 +186,7 @@ export function AdminProfile() {
                                 value={userData.first_name}
                                 onChange={(e) => handleInputChange('first_name', e.target.value)}
                                 disabled={!isEditing}
-                                maxLength={MAX_LENGTH} // Límite físico en el input
+                                maxLength={MAX_LENGTH} 
                                 className={`w-full px-4 py-3 border rounded-xl focus:outline-none transition-all duration-200 break-words ${errors.first_name ? 'border-red-500 bg-red-50/30 focus:ring-4 focus:ring-red-500/10' :
                                     isEditing ? 'border-primary/50 focus:border-primary focus:ring-4 focus:ring-primary/10 bg-white hover:border-primary/70' :
                                         'border-gray-200 bg-gray-50/80 text-gray-600 cursor-default'
@@ -205,7 +204,7 @@ export function AdminProfile() {
                                 value={userData.last_name}
                                 onChange={(e) => handleInputChange('last_name', e.target.value)}
                                 disabled={!isEditing}
-                                maxLength={MAX_LENGTH} // Límite físico en el input
+                                maxLength={MAX_LENGTH}
                                 className={`w-full px-4 py-3 border rounded-xl focus:outline-none transition-all duration-200 break-words ${errors.last_name ? 'border-red-500 bg-red-50/30 focus:ring-4 focus:ring-red-500/10' :
                                     isEditing ? 'border-primary/50 focus:border-primary focus:ring-4 focus:ring-primary/10 bg-white hover:border-primary/70' :
                                         'border-gray-200 bg-gray-50/80 text-gray-600 cursor-default'

@@ -191,7 +191,6 @@
   cursor: default;
 }
 
-/* Efecto hover:bg-green-100 */
 .preference-item:hover {
   background-color: #dcfce7;
   border-color: #86efac;
@@ -202,7 +201,6 @@
 .preference-label {
   display: block;
   font-size: 10px;
-  /* text-[10px] */
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
