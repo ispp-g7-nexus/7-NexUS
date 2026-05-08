@@ -104,7 +104,7 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
         {/* Campo Título */}
         <div className="space-y-1.5 text-left">
           <Label htmlFor="title" className={UI_CLASSES.label}>¿Qué sucede?</Label>
-          <Input id="title" name="title" defaultValue={initialData?.title} required className={UI_CLASSES.input} />
+          <Input id="title" name="title" defaultValue={initialData?.title} required className={UI_CLASSES.input} maxLength={75} break-words/>
         </div>
 
         {/* Campo Área */}
@@ -134,7 +134,7 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
         {/* Campo Descripción */}
         <div className="space-y-1.5 text-left">
           <Label className={UI_CLASSES.label}>Descripción detallada</Label>
-          <textarea id="description" name="description" defaultValue={initialData?.description} required className={UI_CLASSES.textarea} />
+          <textarea id="description" name="description" defaultValue={initialData?.description} required className={UI_CLASSES.textarea} maxLength={255} break-words/>
         </div>
 
         {/* Campo Foto */}

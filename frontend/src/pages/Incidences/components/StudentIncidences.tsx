@@ -252,7 +252,7 @@ export default function StudentIncidences(props: Readonly<StudentIncidencesProps
                 <section className="border-l-4 border-[#82D14C] pl-3 py-1"><h3 className="font-bold text-lg text-slate-800">{selectedDetails.title}</h3></section>
                 <section className="space-y-2 text-left">
                   <div className="flex items-center gap-2"><MessageSquare size={14} className="text-slate-400" /><p className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Descripción</p></div>
-                  <div className="bg-slate-50 p-4 rounded-[20px] border border-slate-100 italic text-sm text-slate-600">"{selectedDetails.description}"</div>
+                  <div className="bg-slate-50 p-4 rounded-[20px] border border-slate-100 italic text-sm text-slate-600 break-words whitespace-pre-wrap ">"{selectedDetails.description}"</div>
                 </section>
                 {selectedDetails.img && <section className="flex justify-center"><div className="rounded-[24px] overflow-hidden border border-slate-100 max-w-[220px] shadow-sm"><img src={selectedDetails.img} alt="Evidencia" className="w-full h-auto" /></div></section>}
                 <section className="pt-2">
@@ -261,12 +261,12 @@ export default function StudentIncidences(props: Readonly<StudentIncidencesProps
                     {selectedDetails.updates?.map((u) => (
                       <div key={u.id} className="relative">
                         <div className="absolute -left-[41px] top-1.5 h-4 w-4 rounded-full border-4 border-white bg-slate-200" />
-                        <div className="bg-[#eef8ee] p-4 rounded-[22px] text-left">
+                        <div className="bg-[#eef8ee] p-4 rounded-[22px] text-left break-words overflow-hidden">
                           <div className="flex justify-between items-center mb-2 text-[9px] font-bold">
                             <span className="text-slate-700 uppercase bg-[#b1e7b1] px-1.5 py-0.5 rounded">{u.author_name || 'Gestión'}</span>
                             <span className="text-slate-700">{new Date(u.created_at).toLocaleDateString()}</span>
                           </div>
-                          <p className="text-sm text-slate-700 font-medium leading-relaxed">{formatUpdateText(u.text)}</p>
+                          <p className="text-sm text-slate-700 font-medium leading-relaxed break-words whitespace-pre-wrap">{formatUpdateText(u.text)}</p>
                         </div>
                       </div>
                     ))}

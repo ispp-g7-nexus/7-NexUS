@@ -105,7 +105,12 @@ const ManageIncidenceModal = ({ incidence, onClose, onRefresh }: ManageModalProp
                 <input value={externalName} onChange={(e) => setExternalName(e.target.value)} placeholder="Ej: Cerrajero..." className={UI_CLASSES.input} />
               </div>
             )}
-
+            <div className="space-y-2 text-left">
+              <Label className={UI_CLASSES.label}>Descripción del problema</Label>
+              <div className="relative">
+                <textarea value={incidence.description} readOnly className={UI_CLASSES.historyScrollArea} />
+              </div>
+            </div>
             <div className="space-y-2 text-left">
               <Label className={UI_CLASSES.label}>Historial de actualizaciones</Label>
               <div className={UI_CLASSES.historyScrollArea}>
@@ -126,7 +131,7 @@ const ManageIncidenceModal = ({ incidence, onClose, onRefresh }: ManageModalProp
             <div className="space-y-2 text-left">
               <Label className={UI_CLASSES.label}>Mensaje para el residente</Label>
               <div className="relative">
-                <textarea value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="Escribe aquí..." className={UI_CLASSES.textarea} />
+                <textarea value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="Escribe aquí..." className={UI_CLASSES.textarea} maxLength={255}/>
                 <Send size={16} className="absolute right-3 bottom-3 text-slate-300 pointer-events-none" />
               </div>
             </div>
@@ -239,7 +244,7 @@ export const AdminIncidences = () => {
                     <div className="text-left flex-1 flex flex-col justify-between">
                       <div>
                         <h2 className={UI_CLASSES.cardTitle}>{inc.title}</h2>
-                        <div className={UI_CLASSES.cardLocation}><MapPin size={14} /> {LOCATION_LABELS[inc.location_type]} 
+                        <div className={UI_CLASSES.cardLocation}><MapPin size={14} /> {LOCATION_LABELS[inc.location_type]}
                         </div>
                         <div className="flex flex-wrap gap-2 mt-4">
                           <span className={`${cfg.admin.bg} ${cfg.admin.text} ${UI_CLASSES.statusBadge}`}>{cfg.label}</span>
