@@ -121,7 +121,7 @@ const ManageIncidenceModal = ({ incidence, onClose, onRefresh }: ManageModalProp
                         <span className="text-[9px] font-black text-primary uppercase bg-primary/10 px-1.5 py-0.5 rounded">{u.author_name || 'Admin'}</span>
                         <span className="text-[9px] text-slate-400 font-bold">{new Date(u.created_at).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
                       </div>
-                      <p className="text-xs text-slate-600 leading-snug">{u.text}</p>
+                      <p className="text-xs text-slate-600 leading-snug break-words whitespace-pre-wrap">{u.text}</p>
                     </div>
                   ))
                 ) : <p className="text-center py-4 text-xs text-slate-400 italic">Sin mensajes previos.</p>}
