@@ -32,7 +32,9 @@ const ManageIncidenceModal = ({ incidence, onClose, onRefresh }: ManageModalProp
   const [newComment, setNewComment] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const staffOptions = staff.reduce((acc, m) => ({
+  const staffOptions = staff
+    .filter(m => m.status == 'active')
+    .reduce((acc, m) => ({
     ...acc, [String(m.id)]: m.full_name
   }), {
     "none": "Sin asignar",

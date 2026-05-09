@@ -191,7 +191,12 @@ class IncidenceViewSet(viewsets.ModelViewSet):
                 serializer.validated_data['room_number'] = membership.bedroom
             else:
                 raise ValidationError({"location_type": "No tienes una habitación asignada para reportar incidencias en 'Mi Habitación'."})
-
+            if 'assigned_staff' in serializer.validated_data:
+                staff_member = serializer.validated_data.get('assigned_staff')
+            if staff_member and not staff_member.is_active:
+                raise ValidationError({
+                    "assigned_staff": "No se puede asignar la incidencia a un miembro del staff que no esté activo."
+                })
         instance = self.get_object()
         old_status = instance.status
         
