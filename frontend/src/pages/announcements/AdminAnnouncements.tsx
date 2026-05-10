@@ -87,7 +87,8 @@ export function AdminAnnouncements() {
     } else if (field === 'description') {
       if (value.length > DESCRIPTION_MAX_LENGTH) error = `Máximo ${DESCRIPTION_MAX_LENGTH} caracteres.`;
     } else if (field === 'announcement_date') {
-      if (value < todayDate) error = "La fecha no puede estar en pasado.";
+      if (value.trim() === '') error = "La fecha es obligatoria.";
+      else if (value < todayDate) error = "La fecha no puede estar en pasado.";
     }
 
     if (isCreate) {

@@ -141,7 +141,7 @@ class AnnouncementModuleTests(FastTenantTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(
             response.json()["title"][0],
-            "El título no puede contener más de 200 caracteres."
+            "El título no puede contener más de 50 caracteres."
         )
 
     def test_create_announcement_long_description(self):
@@ -160,7 +160,7 @@ class AnnouncementModuleTests(FastTenantTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(
             response.json()["description"][0],
-            "La descripción no puede contener más de 1000 caracteres."
+            "La descripción no puede contener más de 255 caracteres."
         )
 
     def test_create_announcement_past_date(self):
