@@ -1,4 +1,4 @@
-import { ArrowLeft, MessageSquare, Send, Users, Plus, Search, Trash2, Tag, X } from "lucide-react";
+import { ArrowLeft, LogOut, MessageSquare, Send, Users, Plus, Search, Trash2, Tag, X } from "lucide-react";
 import { type ReactElement, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AdminGroupEdit } from "./AdminGroupEdit";
@@ -54,9 +54,16 @@ function upsertGroup(groups: ChatGroup[], incoming: ChatGroup): ChatGroup[] {
     }
 
     const idx = groups.findIndex((g) => normalizeGroupId(g.id) === incomingId);
+    const previous = idx >= 0 ? groups[idx] : null;
+    const normalizedIncoming = {
+        ...incoming,
+        is_member: typeof incoming.is_member === "boolean"
+            ? incoming.is_member
+            : previous?.is_member,
+    };
     const next = idx === -1
-        ? [...groups, incoming]
-        : groups.map((g, i) => (i === idx ? incoming : g));
+        ? [...groups, normalizedIncoming]
+        : groups.map((g, i) => (i === idx ? normalizedIncoming : g));
 
     return next.sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -135,6 +142,7 @@ export function AdminChats({
 
     const [groupToDelete, setGroupToDelete] = useState<ChatGroup | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+        const [joiningGroupId, setJoiningGroupId] = useState<number | null>(null);
 
     // ── Chatting in Group (Inline) ──
     const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
@@ -172,7 +180,7 @@ export function AdminChats({
     const refreshGroups = async () => {
         setLoading(true);
         try {
-            const data = await chatsService.listGroups();
+            const data = await chatsService.listAvailableGroups();
             setGroups(data);
             setEditingGroup((prev) => {
                 if (!prev) return prev;
@@ -240,7 +248,11 @@ export function AdminChats({
     useEffect(() => {
         if (groups.length === 0) return;
 
-        const groupIds = new Set(groups.map((group) => group.id));
+        const groupIds = new Set(
+            groups
+                .filter((group) => group.is_member)
+                .map((group) => group.id),
+        );
         setUnreadCountsByGroup((prev) => {
             const next = Object.entries(prev).reduce<UnreadCountsByGroup>((acc, [key, count]) => {
                 const groupId = Number(key);
@@ -297,10 +309,20 @@ export function AdminChats({
         const incomingId = normalizeGroupId(incoming.id);
         if (!Number.isFinite(incomingId)) return;
 
-        setGroups((prev) => upsertGroup(prev, incoming));
+        let mergedIncoming = incoming;
+        setGroups((prev) => {
+            const existing = prev.find((g) => normalizeGroupId(g.id) === incomingId);
+            mergedIncoming = {
+                ...incoming,
+                is_member: typeof incoming.is_member === "boolean"
+                    ? incoming.is_member
+                    : existing?.is_member,
+            };
+            return upsertGroup(prev, mergedIncoming);
+        });
 
-        setEditingGroup((prev) => (prev && normalizeGroupId(prev.id) === incomingId ? incoming : prev));
-        setChattingGroup((prev) => (prev && normalizeGroupId(prev.id) === incomingId ? incoming : prev));
+        setEditingGroup((prev) => (prev && normalizeGroupId(prev.id) === incomingId ? mergedIncoming : prev));
+        setChattingGroup((prev) => (prev && normalizeGroupId(prev.id) === incomingId ? mergedIncoming : prev));
     };
 
     const markGroupAsUnread = (groupId: number, senderEmail?: string) => {
@@ -309,6 +331,9 @@ export function AdminChats({
         const normalizedCurrentUser = currentUserEmail.trim().toLowerCase();
         if (normalizedSender && normalizedCurrentUser && normalizedSender === normalizedCurrentUser) return;
         if (chattingGroup && normalizeGroupId(chattingGroup.id) === groupId) return;
+
+        const targetGroup = groups.find((group) => normalizeGroupId(group.id) === groupId);
+        if (!targetGroup?.is_member) return;
 
         setUnreadCountsByGroup((prev) => ({
             ...prev,
@@ -354,9 +379,19 @@ export function AdminChats({
 
         try {
             const fresh = await chatsService.getGroup(groupId);
-            setGroups((prev) => upsertGroup(prev, fresh));
-            setEditingGroup((prev) => (prev && normalizeGroupId(prev.id) === groupId ? fresh : prev));
-            setChattingGroup((prev) => (prev && normalizeGroupId(prev.id) === groupId ? fresh : prev));
+            let mergedFresh = fresh;
+            setGroups((prev) => {
+                const existing = prev.find((g) => normalizeGroupId(g.id) === groupId);
+                mergedFresh = {
+                    ...fresh,
+                    is_member: typeof fresh.is_member === "boolean"
+                        ? fresh.is_member
+                        : existing?.is_member,
+                };
+                return upsertGroup(prev, mergedFresh);
+            });
+            setEditingGroup((prev) => (prev && normalizeGroupId(prev.id) === groupId ? mergedFresh : prev));
+            setChattingGroup((prev) => (prev && normalizeGroupId(prev.id) === groupId ? mergedFresh : prev));
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message.toLowerCase() : String(err).toLowerCase();
             const notFound = msg.includes("no encontrado") || msg.includes("not found") || msg.includes("error 404");
@@ -514,6 +549,20 @@ export function AdminChats({
         setEditingGroup(group);
     };
 
+    const handleJoinGroup = async (group: ChatGroup) => {
+        setJoiningGroupId(group.id);
+        try {
+            await chatsService.joinGroup(group.id);
+            toast.success(`Te has unido a "${group.name}" correctamente.`);
+            // Recargar la lista completa para asegurar sincronización
+            await refreshGroups();
+        } catch (err: unknown) {
+            toast.error(err instanceof Error ? err.message : "No se pudo unirse al grupo.");
+        } finally {
+            setJoiningGroupId(null);
+        }
+    };
+
     const executeDeleteGroup = async () => {
         if (!groupToDelete) return;
         setIsDeleting(true);
@@ -526,6 +575,33 @@ export function AdminChats({
             toast.error(err instanceof Error ? err.message : "No se pudo eliminar el grupo.");
         } finally {
             setIsDeleting(false);
+        }
+    };
+
+    const handleLeaveGroup = async (group: ChatGroup) => {
+        if (!group.can_members_leave) {
+            toast.error("No puedes abandonar este grupo.");
+            return;
+        }
+
+        setJoiningGroupId(group.id);
+        try {
+            await chatsService.leaveGroup(group.id);
+            setGroups((prev) => prev.map((g) => (
+                g.id === group.id
+                    ? { ...g, is_member: false, current_user_can_interact: false }
+                    : g
+            )));
+            if (chattingGroup && normalizeGroupId(chattingGroup.id) === group.id) {
+                setChattingGroup(null);
+                setGroupMessages([]);
+            }
+            clearUnreadForGroup(group.id);
+            toast.success(`Has abandonado "${group.name}".`);
+        } catch (err: unknown) {
+            toast.error(err instanceof Error ? err.message : "No se pudo abandonar el grupo.");
+        } finally {
+            setJoiningGroupId(null);
         }
     };
 
@@ -569,8 +645,18 @@ export function AdminChats({
     };
 
     const handleGroupUpdated = (updated: ChatGroup) => {
-        setGroups((prev) => prev.map((group) => (group.id === updated.id ? updated : group)));
-        setEditingGroup(updated);
+        let mergedUpdated = updated;
+        setGroups((prev) => {
+            const existing = prev.find((group) => normalizeGroupId(group.id) === normalizeGroupId(updated.id));
+            mergedUpdated = {
+                ...updated,
+                is_member: typeof updated.is_member === "boolean"
+                    ? updated.is_member
+                    : existing?.is_member,
+            };
+            return upsertGroup(prev, mergedUpdated);
+        });
+        setEditingGroup(mergedUpdated);
     };
 
     const handleCreateLabel = async () => {
@@ -629,22 +715,35 @@ export function AdminChats({
         };
         return (
             <div className="flex flex-col h-[calc(100vh-220px)] bg-white rounded-lg border border-gray-200 p-4">
-                <div className="flex items-center gap-3 pb-3 border-b border-gray-200 shrink-0">
-                    <Button variant="ghost" size="icon" onClick={() => {
-                        setChattingGroup(null);
-                        setGroupMessages([]);
-                    }} className="w-9 h-9 shrink-0">
-                        <ArrowLeft className="w-5 h-5" />
-                    </Button>
-                    <div className="w-9 h-9 bg-gradient-to-br from-primary/20 to-primary/40 rounded-full flex items-center justify-center text-primary font-bold text-sm shrink-0">
-                        {chattingGroup.name.charAt(0).toUpperCase()}
+                <div className="flex items-center gap-3 pb-3 border-b border-gray-200 shrink-0 justify-between">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <Button variant="ghost" size="icon" onClick={() => {
+                            setChattingGroup(null);
+                            setGroupMessages([]);
+                        }} className="w-9 h-9 shrink-0">
+                            <ArrowLeft className="w-5 h-5" />
+                        </Button>
+                        <div className="w-9 h-9 bg-gradient-to-br from-primary/20 to-primary/40 rounded-full flex items-center justify-center text-primary font-bold text-sm shrink-0">
+                            {chattingGroup.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0 flex flex-col text-left">
+                            <h2 className="text-base font-bold text-gray-900 truncate">{chattingGroup.name}</h2>
+                            <span className={`inline-flex items-center gap-1 mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-medium w-fit ${config.color}`}>
+                                {config.icon} {config.label}
+                            </span>
+                        </div>
                     </div>
-                    <div className="min-w-0 flex flex-col text-left">
-                        <h2 className="text-base font-bold text-gray-900 truncate">{chattingGroup.name}</h2>
-                        <span className={`inline-flex items-center gap-1 mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-medium w-fit ${config.color}`}>
-                            {config.icon} {config.label}
-                        </span>
-                    </div>
+                    {chattingGroup.can_members_leave && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="w-9 h-9 text-red-600 hover:bg-red-50 hover:text-red-700"
+                            onClick={() => handleLeaveGroup(chattingGroup)}
+                            disabled={joiningGroupId === chattingGroup.id}
+                        >
+                            <LogOut className="w-4 h-4" />
+                        </Button>
+                    )}
                 </div>
 
                 <div className="flex-1 overflow-y-auto py-4 space-y-3">
@@ -766,7 +865,7 @@ export function AdminChats({
                                             <h4 className="font-bold text-gray-900 truncate">
                                                 {group.name}
                                             </h4>
-                                            {(unreadCountsByGroup[group.id] ?? 0) > 0 && (
+                                            {group.is_member && (unreadCountsByGroup[group.id] ?? 0) > 0 && (
                                                 <span className="inline-flex shrink-0 items-center justify-center min-w-5 h-5 px-1 rounded-full text-[10px] font-semibold bg-red-500 text-white">
                                                     {(unreadCountsByGroup[group.id] ?? 0) > 99 ? "99+" : unreadCountsByGroup[group.id]}
                                                 </span>
@@ -787,7 +886,7 @@ export function AdminChats({
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 ml-4">
-                                        {currentUserEmail && group.members_list?.some(m => m.email === currentUserEmail) && (
+                                        {group.is_member ? (
                                             <Button
                                                 variant="default"
                                                 size="sm"
@@ -799,6 +898,16 @@ export function AdminChats({
                                                 }}
                                             >
                                                 <MessageSquare className="w-4 h-4 mr-1.5" /> Entrar
+                                            </Button>
+                                        ) : (
+                                            <Button
+                                                variant="default"
+                                                size="sm"
+                                                className="bg-green-600 text-white hover:bg-green-700 rounded-xl"
+                                                onClick={() => handleJoinGroup(group)}
+                                                disabled={joiningGroupId === group.id}
+                                            >
+                                                {joiningGroupId === group.id ? "Uniéndose..." : "Unirse"}
                                             </Button>
                                         )}
                                         <Button

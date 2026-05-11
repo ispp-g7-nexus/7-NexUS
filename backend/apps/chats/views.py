@@ -212,6 +212,14 @@ class ChatGroupViewSet(viewsets.ModelViewSet):
 		):
 			raise ValidationError({"detail": "No puedes quitar el rol de administrador al creador del grupo."})
 
+		# Prevenir que un admin se quite el rol a sí mismo
+		if (
+			not serializer.validated_data["is_admin"]
+			and member.is_admin
+			and member.membership.user_id == request.user.id
+		):
+			raise ValidationError({"detail": "No puedes quitarte el rol de administrador en un chat."})
+
 		member.is_admin = serializer.validated_data["is_admin"]
 		member.save(update_fields=["is_admin"])
 
@@ -300,6 +308,87 @@ class MyGroupsViewSet(viewsets.ReadOnlyModelViewSet):
 			.prefetch_related(Prefetch("memberships", queryset=members_qs))
 			.order_by("name")
 		)
+
+	@action(detail=True, methods=["post"], url_path="join")
+	def join(self, request, pk=None):
+		"""Permite a un usuario con acceso a chats unirse a un grupo."""
+		residence = getattr(request, "residence", None)
+		membership = request.user.memberships.filter(
+			residence=residence,
+			is_active=True,
+		).first()
+		if not membership:
+			raise ValidationError({"detail": NO_MEMBERSHIP_MESSAGE})
+
+		# Verificar que el usuario tiene permisos de acceso a chats
+		if not has_screen_permission(request.user, residence, "chats"):
+			raise PermissionDenied("No tienes permisos para acceder a los chats.")
+
+		join_as_admin = has_screen_permission(request.user, residence, "chats")
+
+		group = ChatGroup.objects.filter(
+			id=pk,
+			residence=residence,
+		).first()
+		if not group:
+			raise NotFound("Grupo no encontrado.")
+
+		# Obtener o crear membresía
+		chat_member, created = ChatGroupMember.objects.get_or_create(
+			group=group,
+			membership=membership,
+			defaults={"is_admin": join_as_admin, "can_interact": True},
+		)
+
+		# Si ya era miembro activo, retornar error 409
+		if not created and chat_member.can_interact:
+			return Response(
+				{"detail": "Ya eres miembro de este grupo."},
+				status=status.HTTP_409_CONFLICT,
+			)
+
+		# Si ya era miembro pero no podía interactuar, reactivarlo
+		if not created and not chat_member.can_interact:
+			chat_member.can_interact = True
+			chat_member.interaction_disabled_at = None
+			chat_member.save(update_fields=["can_interact", "interaction_disabled_at"])
+
+		# Si el usuario tiene permiso de chats, al unirse debe quedar como administrador del grupo
+		if join_as_admin and not chat_member.is_admin:
+			chat_member.is_admin = True
+			chat_member.save(update_fields=["is_admin"])
+
+		if residence:
+			members_qs = ChatGroupMember.objects.select_related("membership__user")
+			updated_group = (
+				ChatGroup.objects.filter(id=group.id, residence=residence)
+				.prefetch_related(Prefetch("memberships", queryset=members_qs))
+				.first()
+			)
+			payload = {
+				"group_id": group.id,
+				"group": ChatGroupSerializer(updated_group).data,
+			} if updated_group else {
+				"group_id": group.id,
+			}
+			publish_chat_event(
+				residence.id,
+				"group_updated",
+				payload,
+			)
+
+		members_qs = ChatGroupMember.objects.select_related("membership__user")
+		updated_group = (
+			ChatGroup.objects.filter(id=group.id, residence=residence)
+			.prefetch_related(Prefetch("memberships", queryset=members_qs))
+			.first()
+		)
+		group_data = ChatGroupSerializer(updated_group, context={"request": request}).data
+		group_data["is_member"] = updated_group.memberships.filter(
+			membership=membership,
+			can_interact=True
+		).exists()
+		return Response(group_data, status=status.HTTP_201_CREATED)
 
 	@action(detail=True, methods=["post"], url_path="leave")
 	def leave(self, request, pk=None):
@@ -416,7 +505,44 @@ class MyGroupsViewSet(viewsets.ReadOnlyModelViewSet):
 			status=status.HTTP_201_CREATED,
 		)
 
+	@action(detail=False, methods=["get"], url_path="available")
+	def available(self, request):
+		"""Listar todos los grupos disponibles en la residencia para admins."""
+		residence = getattr(request, "residence", None)
+		if not residence:
+			return Response([])
 
+		# Verificar que el usuario tiene permisos de acceso a chats
+		if not has_screen_permission(request.user, residence, "chats"):
+			raise PermissionDenied("No tienes permisos para acceder a los chats.")
+
+		membership = request.user.memberships.filter(
+			residence=residence,
+			is_active=True,
+		).first()
+		if not membership:
+			return Response([])
+
+		# Obtener todos los grupos de la residencia
+		members_qs = ChatGroupMember.objects.select_related("membership__user")
+		groups = (
+			ChatGroup.objects.filter(residence=residence)
+			.prefetch_related(Prefetch("memberships", queryset=members_qs))
+			.order_by("name")
+		)
+
+		# Serializar con indicador de membresía
+		groups_data = []
+		for group in groups:
+			group_data = ChatGroupSerializer(group, context={"request": request}).data
+			# Agregar indicador si el usuario es miembro
+			group_data["is_member"] = group.memberships.filter(
+				membership=membership,
+				can_interact=True
+			).exists()
+			groups_data.append(group_data)
+
+		return Response(groups_data)
 class PrivateConversationViewSet(viewsets.ViewSet):
 	"""Conversaciones privadas 1-a-1 del residente."""
 
