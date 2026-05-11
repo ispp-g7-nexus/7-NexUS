@@ -511,10 +511,6 @@ export function AdminChats({
             handleGroupMessageCreatedEvent(realtimeEvent);
             return;
         }
-
-        if (chattingGroup) {
-            void fetchGroupMessages(chattingGroup.id);
-        }
     }, [realtimeEvent, realtimeTick, chattingGroup, currentUserEmail]);
 
     const handleSendGroupMessage = async () => {
@@ -633,6 +629,8 @@ export function AdminChats({
                 name: normalizedName,
                 description: normalizedDescription,
             });
+            // El creador es automáticamente miembro
+            created.is_member = true;
             setGroups((prev) => upsertGroup(prev, created));
             setCreateForm(EMPTY_GROUP_FORM);
             setIsCreateOpen(false);
