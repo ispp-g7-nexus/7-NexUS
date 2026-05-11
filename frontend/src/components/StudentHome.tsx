@@ -1,7 +1,5 @@
 import {
     Bell,
-    Check,
-    Copy,
     Calendar,
     LogOut,
     Megaphone,
@@ -11,11 +9,9 @@ import {
     User,
     Users,
     Utensils,
-    X,
-    Wifi
+    X
 } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
 import { authService } from "../services/auth";
 import { brandingService, type ResidenceBranding } from "../services/branding";
 import announcementService from "../services/announcement.service";
@@ -28,7 +24,6 @@ import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 
 export type StudentTab = "home" | "incidences" | "reservations" | "community" | "events" | "matches" | "announcements" | "menu" | "packages" | "visitors";
@@ -448,9 +443,7 @@ const fallbackByType: Record<NotificationType, {
 
 export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
     // --- ESTADOS DE LA VISTA ---
-    const [isWifiDialogOpen, setIsWifiDialogOpen] = useState(false);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-    const [copied, setCopied] = useState(false);
     const [residenceLogo, setResidenceLogo] = useState<string | null>(null);
 
     // Estado para los datos reales del usuario
@@ -474,7 +467,6 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
     const dismissedNotificationIdsRef = useRef<string[]>(getInitialDismissedNotificationIds());
     const dismissedIncidenceIdsRef = useRef<string[]>(getInitialDismissedIncidenceIds());
 
-    const wifiPassword = "NexUS2026@Residence";
     const unreadCount = notifications.filter((notification) => !seenNotificationIds.includes(notification.id)).length;
     const hasUnreadNotifications = unreadCount > 0;
 
@@ -843,25 +835,7 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
         });
     };
 
-    const handleCopyPassword = () => {
-        const textarea = document.createElement('textarea');
-        textarea.value = wifiPassword;
-        textarea.style.position = 'fixed';
-        textarea.style.opacity = '0';
-        document.body.appendChild(textarea);
-        textarea.select();
 
-        try {
-            document.execCommand('copy');
-            setCopied(true);
-            toast.success("Contraseña copiada", { description: "La contraseña WiFi se ha copiado al portapapeles" });
-            setTimeout(() => setCopied(false), 2000);
-        } catch (err) {
-            toast.error("Error al copiar");
-        } finally {
-            document.body.removeChild(textarea);
-        }
-    };
 
     const getNotificationIcon = (source: string) => {
         switch (source) {
@@ -989,27 +963,10 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                     <QuickAction icon={<MessageSquare className="w-6 h-6" />} label="Avisos" color="bg-primary text-primary-foreground" onClick={() => onNavigate("announcements")} />
                     <QuickAction icon={<Utensils className="w-6 h-6" />} label="Menú" color="bg-primary text-primary-foreground" onClick={() => onNavigate("menu")} />
-                    <QuickAction icon={<Wifi className="w-6 h-6" />} label="WiFi" color="bg-primary text-primary-foreground" onClick={() => setIsWifiDialogOpen(true)} />
                     <QuickAction icon={<Package className="w-6 h-6" />} label="Paquetes" color="bg-primary text-primary-foreground" onClick={() => onNavigate("packages")} badge={pendingPackages > 0 ? pendingPackages : undefined} />
                     <QuickAction icon={<Users className="w-6 h-6" />} label="Invitados" color="bg-primary text-primary-foreground" onClick={() => onNavigate("visitors")} />
                 </div>
             </div>
-
-            {/* --- DIALOGS (WIFI, QR Y NOTIFICACIONES) --- */}
-            <Dialog open={isWifiDialogOpen} onOpenChange={setIsWifiDialogOpen}>
-                <DialogContent className="sm:max-w-[425px]">
-                    <DialogHeader>
-                        <DialogTitle>Acceso WiFi</DialogTitle>
-                        <DialogDescription>Aquí tienes la contraseña para conectarte a la red WiFi de la residencia.</DialogDescription>
-                    </DialogHeader>
-                    <div className="flex items-center gap-2">
-                        <p className="text-sm font-bold text-gray-900">{wifiPassword}</p>
-                        <Button size="icon" variant="ghost" className="text-gray-500 hover:text-gray-900" onClick={handleCopyPassword}>
-                            {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
-                        </Button>
-                    </div>
-                </DialogContent>
-            </Dialog>
 
         </div>
     );
