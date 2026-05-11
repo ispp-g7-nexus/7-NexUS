@@ -282,14 +282,27 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
     }, []);
 
     useEffect(() => {
-        authService.me().then((session) => {
-            if (session.user) {
-                setFullUser(session.user);
-                if (session.user.email) {
-                    setCurrentUserEmail(session.user.email);
+        const fetchUserData = async () => {
+            try {
+                const session = await authService.me();
+                if (session.user) {
+                    setFullUser(session.user);
+                    console.log("Permisos actualizados:", session.user.roles);
                 }
+            } catch (error) {
+                console.error("Error al refrescar permisos", error);
             }
-        }).catch(() => { });
+        };
+
+        fetchUserData();
+
+        window.addEventListener("focus", fetchUserData);
+        window.addEventListener("reload-permissions", fetchUserData);
+
+        return () => {
+            window.removeEventListener("focus", fetchUserData);
+            window.removeEventListener("reload-permissions", fetchUserData);
+        };
     }, []);
 
     useEffect(() => {
@@ -441,7 +454,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
         { id: "events", label: "Eventos & Comunidad", icon: <Calendar className="w-5 h-5" />, permission: "events" },
         { id: "reservations", label: "Objetos & Espacios", icon: <BookOpen className="w-5 h-5" />, permission: "reservations" },
         { id: "roles", label: "Roles", icon: <Shield className="w-5 h-5" />, permission: "roles" },
-        { id: "branding", label: "Personalización", icon: <Palette className="w-5 h-5" /> },
+        { id: "branding", label: "Personalización", icon: <Palette className="w-5 h-5" />, permission: "branding" },
         { id: "announcements", label: "Avisos", icon: <Bell className="w-5 h-5" />, permission: "announcements" },
         { id: "visitors", label: "Visitantes", icon: <UserCheck className="w-5 h-5" />, permission: "guests" },
         { id: "chats", label: "Chats", icon: <MessageSquare className="w-5 h-5" />, permission: "chats" },
@@ -495,7 +508,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
     const currentTab = allNavItems.find((item) => item.id === activeTab) || allNavItems[0];
 
     const renderContent = () => {
-        const alwaysAllowed = ["dashboard", "profile", "branding"];
+        const alwaysAllowed = ["dashboard", "profile"];
         const isAllowed = alwaysAllowed.includes(activeTab) || allNavItems.some(item => item.id === activeTab);
 
         if (!isAllowed) {

@@ -1,19 +1,23 @@
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.membership.permissions import IsResidenceAdmin
+from apps.chats.realtime import publish_chat_event
+from apps.membership.permissions import IsResidenceAdmin, RequireScreenAccess
 
 from .models import ResidenceBranding
 from .serializers import ResidenceBrandingSerializer
-from apps.chats.realtime import publish_chat_event
 
 
 class ResidenceBrandingAdminView(APIView):
     def get_permissions(self):
-        if self.request.method == 'GET':
+        if self.request.method == "GET":
             return [IsAuthenticated()]
-        return [IsAuthenticated(), IsResidenceAdmin()]
+        return [
+            IsAuthenticated(),
+            IsResidenceAdmin(),
+            RequireScreenAccess("branding")(),
+        ]
 
     def _get_branding(self, request):
         residence = getattr(request, "residence", None)

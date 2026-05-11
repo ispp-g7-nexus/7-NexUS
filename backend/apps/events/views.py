@@ -19,6 +19,7 @@ from apps.chats.realtime import publish_chat_event
 from apps.chats.serializers import ChatGroupSerializer
 from apps.common.utils.jwt_auth import resolve_user_from_request
 from apps.membership.models import Membership
+from apps.membership.permissions import has_screen_permission
 from apps.spaces.models import CommonSpace, SpaceReservation
 from apps.spaces.views import SpaceReservationCreateView
 
@@ -120,12 +121,17 @@ def _create_event_chat_group(
 
         return chat_group, None
     except IntegrityError:
-        return None, "Este evento ya tiene un chat asociado o el nombre del chat está duplicado."
+        return (
+            None,
+            "Este evento ya tiene un chat asociado o el nombre del chat está duplicado.",
+        )
     except Exception:
         return None, "No se pudo crear el grupo de chat para este evento."
 
 
-def _normalize_text_field(raw_value, *, field_name: str, max_length: int, required: bool) -> tuple[str, str | None]:
+def _normalize_text_field(
+    raw_value, *, field_name: str, max_length: int, required: bool
+) -> tuple[str, str | None]:
     value = str(raw_value or "").strip()
     if required and not value:
         return "", f"El campo '{field_name}' es obligatorio."
@@ -134,7 +140,9 @@ def _normalize_text_field(raw_value, *, field_name: str, max_length: int, requir
     return value, None
 
 
-def _normalize_optional_url_field(raw_value, *, field_name: str, max_length: int) -> tuple[str, str | None]:
+def _normalize_optional_url_field(
+    raw_value, *, field_name: str, max_length: int
+) -> tuple[str, str | None]:
     value, error = _normalize_text_field(
         raw_value,
         field_name=field_name,
@@ -197,7 +205,7 @@ def _get_user_interests(user) -> set:
     profile = user.student_profile
     interests = profile.interests or []
     custom_interests = profile.custom_interests or []
-    
+
     user_tastes = set()
     for taste in list(interests) + list(custom_interests):
         if taste and isinstance(taste, str):
@@ -208,13 +216,15 @@ def _get_user_interests(user) -> set:
 def _calculate_recommendation_score(event_tags: str, user_interests: set) -> int:
     if not event_tags or not user_interests:
         return 0
-    
+
     tags = [tag.strip().lower() for tag in event_tags.split(",") if tag.strip()]
     score = sum(1 for tag in tags if tag in user_interests)
     return score
 
 
-def _serialize_event(event: Event, current_user, residence, recommendation_score=0, is_recommended=False):
+def _serialize_event(
+    event: Event, current_user, residence, recommendation_score=0, is_recommended=False
+):
     is_joined = event.participations.filter(user=current_user).exists()
     can_edit = event.host == current_user or is_events_admin(current_user, residence)
 
@@ -415,9 +425,11 @@ class EventListView(AuthenticatedView):
         if not hasattr(request, "residence") or not request.residence:
             return JsonResponse({"detail": "No residence context."}, status=400)
 
-        events = list(Event.objects.filter(residence=request.residence).select_related(
-            "host", "space"
-        ))
+        events = list(
+            Event.objects.filter(residence=request.residence).select_related(
+                "host", "space"
+            )
+        )
 
         user_interests = _get_user_interests(request.user)
         only_recommended = request.GET.get("recommended", "false").lower() == "true"
@@ -439,8 +451,9 @@ class EventListView(AuthenticatedView):
                 current_user=request.user,
                 residence=request.residence,
                 recommendation_score=tup[0],
-                is_recommended=tup[3]
-            ) for tup in event_tuples
+                is_recommended=tup[3],
+            )
+            for tup in event_tuples
         ]
         return JsonResponse(data, safe=False)
 
@@ -660,7 +673,15 @@ class EventDetailView(AuthenticatedView):
         )
         user_interests = _get_user_interests(request.user)
         score = _calculate_recommendation_score(event.tags, user_interests)
-        return JsonResponse(_serialize_event(event, request.user, request.residence, recommendation_score=score, is_recommended=score > 0))
+        return JsonResponse(
+            _serialize_event(
+                event,
+                request.user,
+                request.residence,
+                recommendation_score=score,
+                is_recommended=score > 0,
+            )
+        )
 
     def put(self, request, event_id):
         event = get_object_or_404(Event, id=event_id, residence=request.residence)
@@ -1120,7 +1141,12 @@ class AdminEventsAnalyticsView(AuthenticatedView):
         if not residence:
             return JsonResponse({"detail": "No residence context."}, status=400)
 
-        if not is_events_admin(request.user, residence):
+        can_access_by_events = is_events_admin(request.user, residence)
+        can_access_by_analytics = has_screen_permission(
+            request.user, residence, "analytics"
+        )
+
+        if not (can_access_by_events or can_access_by_analytics):
             return JsonResponse(
                 {"detail": "No tienes permisos para consultar analíticas de eventos."},
                 status=403,
