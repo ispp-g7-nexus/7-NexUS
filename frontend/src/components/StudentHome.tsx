@@ -8,7 +8,6 @@ import {
     MessageSquare,
     Package,
     AlertCircle,
-    QrCode,
     User,
     Users,
     Utensils,
@@ -18,10 +17,12 @@ import {
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { authService } from "../services/auth";
+import { brandingService, type ResidenceBranding } from "../services/branding";
 import announcementService from "../services/announcement.service";
 import { packagesService } from "../services/packages";
 import { objectsService } from "../services/objects";
 import { listMyReservationReminders, type ReservationReminderNotification } from "../services/reservations";
+import defaultLogo from "../assets/logo.png";
 import { fetchWithAuth, API_URL, API_URL_INCIDENCES } from "../utils/api";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Badge } from "./ui/badge";
@@ -448,9 +449,9 @@ const fallbackByType: Record<NotificationType, {
 export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
     // --- ESTADOS DE LA VISTA ---
     const [isWifiDialogOpen, setIsWifiDialogOpen] = useState(false);
-    const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
     const [copied, setCopied] = useState(false);
+    const [residenceLogo, setResidenceLogo] = useState<string | null>(null);
 
     // Estado para los datos reales del usuario
     const [userData, setUserData] = useState({
@@ -526,7 +527,31 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
             }
         };
 
+        const fetchBranding = async () => {
+            try {
+                const branding = await brandingService.get();
+                if (branding.logo_url) {
+                    setResidenceLogo(branding.logo_url);
+                }
+            } catch (error) {
+                console.error("Error cargando logo de la residencia", error);
+            }
+        };
+
+        const handleBrandingUpdate = (e: Event) => {
+            const customEvent = e as CustomEvent<ResidenceBranding>;
+            if (customEvent.detail) {
+                setResidenceLogo(customEvent.detail.logo_url || null);
+            }
+        };
+
+        globalThis.addEventListener("tenant-branding-updated", handleBrandingUpdate);
         fetchUserData();
+        fetchBranding();
+
+        return () => {
+            globalThis.removeEventListener("tenant-branding-updated", handleBrandingUpdate);
+        };
     }, []);
 
     const appendSeenNotificationIds = (notificationIds: string[]) => {
@@ -939,10 +964,9 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                 <div className="absolute left-6 right-6 -bottom-16">
                     <Card className="bg-card shadow-xl shadow-primary/10 border-none rounded-2xl overflow-hidden">
                         <CardContent className="p-0 flex h-32">
-                            <button className="w-24 bg-gray-900 flex flex-col items-center justify-center text-white p-2 text-center hover:bg-gray-800 transition-colors cursor-pointer" onClick={() => setIsQrDialogOpen(true)}>
-                                <QrCode className="w-10 h-10 mb-2 opacity-80" />
-                                <span className="text-[10px] uppercase tracking-wider">Acceso</span>
-                            </button>
+                            <div className="w-24 bg-gray-900 flex items-center justify-center p-2">
+                                <img src={residenceLogo || defaultLogo} alt="Logo Residencia" className="w-16 h-16 object-contain" />
+                            </div>
                             <div className="flex-1 p-4 flex flex-col justify-center">
                                 <p className="text-xs text-gray-400 uppercase font-bold tracking-wider">Membresía</p>
                                 <p className="text-lg font-bold text-gray-900">{userData.room}</p>
@@ -983,28 +1007,6 @@ export function StudentHome({ onNavigate, onLogout }: StudentHomeProps) {
                         <Button size="icon" variant="ghost" className="text-gray-500 hover:text-gray-900" onClick={handleCopyPassword}>
                             {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
                         </Button>
-                    </div>
-                </DialogContent>
-            </Dialog>
-
-            <Dialog open={isQrDialogOpen} onOpenChange={setIsQrDialogOpen}>
-                <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                        <DialogTitle>Código QR de Acceso</DialogTitle>
-                        <DialogDescription>Muestra este código para acceder a las instalaciones</DialogDescription>
-                    </DialogHeader>
-                    <div className="flex flex-col items-center py-6 space-y-6">
-                        <div className="w-64 h-64 bg-white border-4 border-gray-200 rounded-2xl flex items-center justify-center shadow-lg">
-                            <div className="w-56 h-56 bg-gray-900 rounded-xl flex items-center justify-center">
-                                <QrCode className="w-48 h-48 text-white" strokeWidth={1.5} />
-                            </div>
-                        </div>
-                        <div className="text-center space-y-2">
-                            <p className="font-bold text-gray-900 text-lg">{userData.name}</p>
-                            <p className="text-sm text-gray-600">{userData.room}</p>
-                            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 mt-2">{userData.status}</Badge>
-                        </div>
-                        <p className="text-xs text-gray-400 text-center px-4">Este código QR es personal e intransferible. Úsalo para acceder a la residencia y registrar tu entrada/salida.</p>
                     </div>
                 </DialogContent>
             </Dialog>
