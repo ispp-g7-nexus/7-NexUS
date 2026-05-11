@@ -44,8 +44,11 @@ class AdminCreateResidentSerializer(ResidentFieldValidatorMixin, serializers.Ser
         min_length=8,
         required=False,
         allow_blank=True,
-        max_length=128,
-        error_messages={"min_length": "La contraseña debe tener al menos 8 caracteres."},
+        max_length=64,
+        error_messages={
+            "min_length": "La contraseña debe tener al menos 8 caracteres.",
+            "max_length": "La contraseña no puede superar 64 caracteres."
+        },
     )
     checkin_date = serializers.DateField(required=False, allow_null=True)
     is_active = serializers.BooleanField(default=True)
