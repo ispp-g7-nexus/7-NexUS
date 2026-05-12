@@ -8,6 +8,7 @@ from apps.membership.permissions import (
 from apps.bedrooms.serializers import BedroomSerializer
 from apps.membership.models import Membership
 from apps.bedrooms.models import Bedroom
+from apps.staff.models import Staff
 from .models import Incidence, IncidenceUpdate
 
 
@@ -76,6 +77,12 @@ class IncidenceSerializer(serializers.ModelSerializer):
                     raise serializers.ValidationError(
                         {"detail": "No puedes editar una incidencia que ya ha sido gestionada por un administrador."}
                     )
+                assigned_staff = data.get('assigned_staff')
+                if assigned_staff and assigned_staff.status != 'active':
+                    status_display = assigned_staff.get_status_display()
+                    raise serializers.ValidationError(
+                        {"assigned_staff": f"No se puede asignar personal en estado: {status_display}."}
+                )
 
             if not is_admin:
                 if not is_owner:
@@ -120,6 +127,12 @@ class IncidenceSerializer(serializers.ModelSerializer):
 
 class AdminIncidenceSerializer(IncidenceSerializer):
     student_name = serializers.SerializerMethodField()
+    #Solo staff activo
+    assigned_staff = serializers.PrimaryKeyRelatedField(
+        queryset=Staff.objects.filter(status='active'), 
+        required=False,
+        allow_null=True
+    )
 
     class Meta(IncidenceSerializer.Meta):
         fields = IncidenceSerializer.Meta.fields + ["student_name", "student"]

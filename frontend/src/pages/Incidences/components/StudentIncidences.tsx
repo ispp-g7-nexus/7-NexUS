@@ -226,7 +226,7 @@ export default function StudentIncidences(props: Readonly<StudentIncidencesProps
       <Dialog open={!!incidenceToDelete} onOpenChange={() => setIncidenceToDelete(null)}>
         <DialogContent className="max-w-[400px] rounded-3xl p-6">
           <DialogTitle className="text-center text-lg font-bold">¿Eliminar incidencia?</DialogTitle>
-          <DialogDescription className="text-center text-gray-500 mt-2">Esta acción no se puede deshacer. El reporte "{incidenceToDelete?.title}" será borrado.</DialogDescription>
+          <DialogDescription className="text-center text-gray-500 mt-2 break-all">Esta acción no se puede deshacer. El reporte "{incidenceToDelete?.title}" será borrado.</DialogDescription>
           <div className="flex gap-3 mt-6">
             <Button variant="outline" onClick={() => setIncidenceToDelete(null)} className="flex-1 rounded-xl h-12 font-bold">Cancelar</Button>
             <Button variant="destructive" onClick={handleDelete} className="flex-1 rounded-xl h-12 font-bold">Eliminar</Button>
@@ -249,10 +249,10 @@ export default function StudentIncidences(props: Readonly<StudentIncidencesProps
           <div className="p-6 bg-white overflow-y-auto max-h-[75vh] space-y-6 pb-12 text-left">
             {selectedDetails && (
               <>
-                <section className="border-l-4 border-[#82D14C] pl-3 py-1"><h3 className="font-bold text-lg text-slate-800">{selectedDetails.title}</h3></section>
+                <section className="border-l-4 border-[#82D14C] pl-3 py-1"><h3 className="font-bold text-lg text-slate-800 break-all">{selectedDetails.title}</h3></section>
                 <section className="space-y-2 text-left">
                   <div className="flex items-center gap-2"><MessageSquare size={14} className="text-slate-400" /><p className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Descripción</p></div>
-                  <div className="bg-slate-50 p-4 rounded-[20px] border border-slate-100 italic text-sm text-slate-600">"{selectedDetails.description}"</div>
+                  <div className="bg-slate-50 p-4 rounded-[20px] border border-slate-100 italic text-sm text-slate-600 break-words whitespace-pre-wrap ">"{selectedDetails.description}"</div>
                 </section>
                 {selectedDetails.img && <section className="flex justify-center"><div className="rounded-[24px] overflow-hidden border border-slate-100 max-w-[220px] shadow-sm"><img src={selectedDetails.img} alt="Evidencia" className="w-full h-auto" /></div></section>}
                 <section className="pt-2">
@@ -261,12 +261,12 @@ export default function StudentIncidences(props: Readonly<StudentIncidencesProps
                     {selectedDetails.updates?.map((u) => (
                       <div key={u.id} className="relative">
                         <div className="absolute -left-[41px] top-1.5 h-4 w-4 rounded-full border-4 border-white bg-slate-200" />
-                        <div className="bg-[#eef8ee] p-4 rounded-[22px] text-left">
+                        <div className="bg-[#eef8ee] p-4 rounded-[22px] text-left break-words overflow-hidden">
                           <div className="flex justify-between items-center mb-2 text-[9px] font-bold">
                             <span className="text-slate-700 uppercase bg-[#b1e7b1] px-1.5 py-0.5 rounded">{u.author_name || 'Gestión'}</span>
                             <span className="text-slate-700">{new Date(u.created_at).toLocaleDateString()}</span>
                           </div>
-                          <p className="text-sm text-slate-700 font-medium leading-relaxed">{formatUpdateText(u.text)}</p>
+                          <p className="text-sm text-slate-700 font-medium leading-relaxed break-words whitespace-pre-wrap">{formatUpdateText(u.text)}</p>
                         </div>
                       </div>
                     ))}
@@ -300,7 +300,7 @@ const UI_CLASSES = {
   incidencesGrid: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5",
   card: "border-none shadow-sm rounded-[24px] overflow-hidden bg-white h-full flex flex-col hover:shadow-md transition-shadow",
   cardSideBar: "w-1.5 shrink-0",
-  cardTitle: "font-bold text-[16px] text-[#1A1C1E] mb-0.5",
+  cardTitle: "font-bold text-[16px] text-[#1A1C1E] mb-0.5 truncate",
   cardLocationRow: "flex items-center gap-1.5 opacity-70 mb-3",
   statusBadge: "text-[11px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider shadow-sm",
   btnNotes: "bg-[#F0F5F0] h-8 px-4 rounded-xl text-[#1B4D1C] border-[#E3F2DA] border-2 font-bold text-[10px] uppercase hover:bg-[#82D14C] hover:text-white transition-all",
