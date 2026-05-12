@@ -118,7 +118,7 @@ function getAvailableTimeSlots(selectedDate: string, minDT: Date, startT?: strin
     const min = toMinutesFromClock(timeValue);
     if (min === null) return false;
     if (startMin !== null && min < startMin) return false;
-    if (endMin !== null && min > endMin) return false; 
+    if (endMin !== null && min > endMin) return false;
     const cand = parseDateTimeLocal(combineDateAndTimeLocal(selectedDate, timeValue));
     return cand ? cand.getTime() > minDT.getTime() : false;
   });
@@ -126,7 +126,7 @@ function getAvailableTimeSlots(selectedDate: string, minDT: Date, startT?: strin
   if (startT && !slots.includes(startT.slice(0, 5))) slots.push(startT.slice(0, 5));
   if (endT && !slots.includes(endT.slice(0, 5))) slots.push(endT.slice(0, 5));
 
-  return slots.sort();
+  return slots.sort((a, b) => a.localeCompare(b));
 }
 
 function buildInitialFormState(): GuestPassFormState {
@@ -176,9 +176,9 @@ function TimeSelect({ id, selectedDate, selectedTime, slots, disabled, placehold
 
 function GuestPassCard({ pass, statusLabel, badgeClassName, onCancel, onShowQR, isCancelling = false }: any) {
   return (
-    <article className="rounded-xl border border-border/80 bg-white p-4 shadow-sm text-left overflow-hidden"> 
+    <article className="rounded-xl border border-border/80 bg-white p-4 shadow-sm text-left overflow-hidden">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1 text-left min-w-0 flex-1"> 
+        <div className="space-y-1 text-left min-w-0 flex-1">
           <p className="text-base font-bold text-gray-900 break-words">
             {pass.full_name}
           </p>
@@ -186,7 +186,7 @@ function GuestPassCard({ pass, statusLabel, badgeClassName, onCancel, onShowQR, 
             Código: <span className="font-mono font-bold text-primary">{pass.pass_code}</span>
           </p>
           {pass.comment && (
-            <p className="text-xs text-gray-400 italic break-words mt-1"> 
+            <p className="text-xs text-gray-400 italic break-words mt-1">
               "{pass.comment}"
             </p>
           )}
@@ -259,23 +259,43 @@ function CreateGuestPassForm({ policy, form, formErrors, isSubmitting, onFieldCh
           <div className="grid gap-1.5">
             <Label className="font-bold text-sm">Inicio</Label>
             <div className="flex gap-2">
-              <Input className={`flex-1 ${formErrors.valid_from ? 'border-red-500' : ''}`} type="date" value={startDate} min={toDateInputValue(now)} onChange={
-                (e) => onFieldChange("valid_from", combineDateAndTimeLocal(e.target.value, startTime))} />
+              <Input
+                className={`flex-1 ${formErrors.valid_from ? 'border-red-500' : ''}`}
+                type="date"
+                value={startDate}
+                min={toDateInputValue(now)}
+                onChange={(e) => onFieldChange("valid_from", combineDateAndTimeLocal(e.target.value, startTime))}
+              />
               <div className="w-32">
-                <TimeSelect selectedDate={startDate} selectedTime={startTime} slots={
-                  getAvailableTimeSlots(startDate, now, policy?.visit_start_time, policy?.visit_end_time)}
-                  onSelect={(t: string) =>
-                    onFieldChange("valid_from", combineDateAndTimeLocal(startDate, t))
-                  } />
+                <TimeSelect
+                  selectedDate={startDate}
+                  selectedTime={startTime}
+                  slots={getAvailableTimeSlots(startDate, now, policy?.visit_start_time, policy?.visit_end_time)}
+                  onSelect={(t: string) => onFieldChange("valid_from", combineDateAndTimeLocal(startDate, t))}
+                />
               </div>
-              {formErrors.valid_from && <p className="text-[10px] text-red-500 font-bold uppercase mt-1">{formErrors.valid_from}</p>}
             </div>
+            {formErrors.valid_from && <p className="text-[10px] text-red-500 font-bold uppercase mt-1">{formErrors.valid_from}</p>}
           </div>
+
           <div className="grid gap-1.5">
             <Label className="font-bold text-sm">Fin</Label>
             <div className="flex gap-2">
-              <Input className={`flex-1 ${formErrors.valid_until ? 'border-red-500' : ''}`} type="date" value={splitDateTimeLocal(form.valid_until).datePart} min={startDate || toDateInputValue(now)} onChange={(e) => onFieldChange("valid_until", combineDateAndTimeLocal(e.target.value, splitDateTimeLocal(form.valid_until).timePart))} />
-              <div className="w-32"><TimeSelect selectedDate={splitDateTimeLocal(form.valid_until).datePart} selectedTime={splitDateTimeLocal(form.valid_until).timePart} slots={getAvailableTimeSlots(splitDateTimeLocal(form.valid_until).datePart, parseDateTimeLocal(form.valid_from) || now, policy?.visit_start_time, policy?.visit_end_time)} onSelect={(t: string) => onFieldChange("valid_until", combineDateAndTimeLocal(splitDateTimeLocal(form.valid_until).datePart, t))} /></div>
+              <Input
+                className={`flex-1 ${formErrors.valid_until ? 'border-red-500' : ''}`}
+                type="date"
+                value={splitDateTimeLocal(form.valid_until).datePart}
+                min={startDate || toDateInputValue(now)}
+                onChange={(e) => onFieldChange("valid_until", combineDateAndTimeLocal(e.target.value, splitDateTimeLocal(form.valid_until).timePart))}
+              />
+              <div className="w-32">
+                <TimeSelect
+                  selectedDate={splitDateTimeLocal(form.valid_until).datePart}
+                  selectedTime={splitDateTimeLocal(form.valid_until).timePart}
+                  slots={getAvailableTimeSlots(splitDateTimeLocal(form.valid_until).datePart, parseDateTimeLocal(form.valid_from) || now, policy?.visit_start_time, policy?.visit_end_time)}
+                  onSelect={(t: string) => onFieldChange("valid_until", combineDateAndTimeLocal(splitDateTimeLocal(form.valid_until).datePart, t))}
+                />
+              </div>
             </div>
             {formErrors.valid_until && <p className="text-[10px] text-red-500 font-bold uppercase mt-1">{formErrors.valid_until}</p>}
           </div>
