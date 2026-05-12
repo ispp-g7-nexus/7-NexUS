@@ -166,6 +166,7 @@ export function StudentChats({
     const processedGroupMessageEventKeysRef = useRef<Set<string>>(new Set());
     const processedPrivateMessageEventKeysRef = useRef<Set<string>>(new Set());
     const lastHandledFocusGroupIdRef = useRef<number | null>(null);
+    const lastFetchGroupMessagesTimeRef = useRef<number>(0);
 
     // ── Estado nueva conversación ──
     const [showNewConv, setShowNewConv] = useState(false);
@@ -420,6 +421,13 @@ export function StudentChats({
     }, [focusGroupId, groups, onFocusGroupHandled]);
 
     const loadSelectedGroupMessages = useCallback(async (groupId: number) => {
+        // Debounce: prevent multiple fetches within 500ms to avoid infinite loops
+        const now = Date.now();
+        if (now - lastFetchGroupMessagesTimeRef.current < 500) {
+            return;
+        }
+        lastFetchGroupMessagesTimeRef.current = now;
+
         try {
             setGroupMessages(dedupeGroupMessages(await chatsService.listGroupMessages(groupId)));
         } catch {

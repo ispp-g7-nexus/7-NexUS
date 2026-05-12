@@ -1,5 +1,5 @@
 import { ArrowLeft, LogOut, MessageSquare, Send, Users, Plus, Search, Trash2, Tag, X } from "lucide-react";
-import { type ReactElement, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AdminGroupEdit } from "./AdminGroupEdit";
 import { authService } from "../../services/auth";
@@ -154,6 +154,7 @@ export function AdminChats({
     const [unreadCountsByGroup, setUnreadCountsByGroup] = useState<UnreadCountsByGroup>({});
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const processedGroupMessageEventKeysRef = useRef<Set<string>>(new Set());
+    const lastFetchGroupMessagesTimeRef = useRef<number>(0);
 
     // ── Etiquetas personalizadas ──
     const [customLabels, setCustomLabels] = useState<ChatGroupLabelItem[]>([]);
@@ -275,6 +276,13 @@ export function AdminChats({
     }, [groups, onChatsCountChange]);
 
     const fetchGroupMessages = async (groupId: number) => {
+        // Debounce: prevent multiple fetches within 500ms to avoid infinite loops
+        const now = Date.now();
+        if (now - lastFetchGroupMessagesTimeRef.current < 500) {
+            return;
+        }
+        lastFetchGroupMessagesTimeRef.current = now;
+
         try {
             const msgs = await chatsService.listGroupMessages(groupId);
             setGroupMessages(dedupeGroupMessages(msgs));
@@ -441,6 +449,31 @@ export function AdminChats({
         };
     }, [chattingGroup, currentUserEmail, enableRealtimeStream]);
 
+    // Ref to track current chatting group without affecting listeners
+    const chattingGroupRef = useRef<ChatGroup | null>(null);
+    useEffect(() => {
+        chattingGroupRef.current = chattingGroup;
+    }, [chattingGroup]);
+
+    // Stable event handler that never changes
+    const handleVisibilityOrFocus = useCallback(() => {
+        if (document.visibilityState === "visible" && chattingGroupRef.current) {
+            void fetchGroupMessages(chattingGroupRef.current.id);
+        }
+    }, []);
+
+    // Set up visibility/focus listeners ONCE with stable reference
+    useEffect(() => {
+        window.addEventListener("focus", handleVisibilityOrFocus);
+        document.addEventListener("visibilitychange", handleVisibilityOrFocus);
+
+        return () => {
+            window.removeEventListener("focus", handleVisibilityOrFocus);
+            document.removeEventListener("visibilitychange", handleVisibilityOrFocus);
+        };
+    }, [handleVisibilityOrFocus]);
+
+    // Fetch messages when chattingGroup changes
     useEffect(() => {
         if (!chattingGroup) return;
 
@@ -453,19 +486,8 @@ export function AdminChats({
         setLoadingGroupMsgs(true);
         fetchMsgs().finally(() => { if (isMounted) setLoadingGroupMsgs(false); });
 
-        const handleVisibilityOrFocus = () => {
-            if (document.visibilityState === "visible") {
-                void fetchMsgs();
-            }
-        };
-
-        window.addEventListener("focus", handleVisibilityOrFocus);
-        document.addEventListener("visibilitychange", handleVisibilityOrFocus);
-
         return () => {
             isMounted = false;
-            window.removeEventListener("focus", handleVisibilityOrFocus);
-            document.removeEventListener("visibilitychange", handleVisibilityOrFocus);
         };
     }, [chattingGroup]);
 
@@ -511,7 +533,7 @@ export function AdminChats({
             handleGroupMessageCreatedEvent(realtimeEvent);
             return;
         }
-    }, [realtimeEvent, realtimeTick, chattingGroup, currentUserEmail]);
+    }, [realtimeEvent, realtimeTick, currentUserEmail]);
 
     const handleSendGroupMessage = async () => {
         if (!groupMsgText.trim() || !chattingGroup) return;
