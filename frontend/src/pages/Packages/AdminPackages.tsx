@@ -70,6 +70,68 @@ function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback;
 }
 
+type ApiErrorLike = Error & {
+  response?: {
+    data?: unknown;
+    status?: number;
+  };
+};
+
+const PACKAGE_FIELD_LABELS: Record<string, string> = {
+  resident_id: "Residente",
+  carrier: "Transportista",
+  tracking_number: "Tracking",
+  notes: "Notas",
+  status: "Estado",
+  received_at: "Fecha de recepción",
+  delivered_at: "Fecha de entrega",
+  detail: "Error",
+  non_field_errors: "Error",
+};
+
+function isApiErrorLike(error: unknown): error is ApiErrorLike {
+  return Boolean(error && typeof error === "object" && "response" in error);
+}
+
+function formatApiValidationMessages(data: unknown, fieldLabel?: string): string[] {
+  if (data == null) {
+    return [];
+  }
+
+  if (typeof data === "string" || typeof data === "number" || typeof data === "boolean") {
+    return [fieldLabel ? `${fieldLabel}: ${data}` : String(data)];
+  }
+
+  if (Array.isArray(data)) {
+    return data.flatMap((item) => formatApiValidationMessages(item, fieldLabel));
+  }
+
+  if (typeof data === "object") {
+    return Object.entries(data as Record<string, unknown>).flatMap(([key, value]) => {
+      if (key === "detail" || key === "non_field_errors") {
+        return formatApiValidationMessages(value);
+      }
+
+      const nextLabel = PACKAGE_FIELD_LABELS[key] || key.replace(/_/g, " ");
+      return formatApiValidationMessages(value, nextLabel);
+    });
+  }
+
+  return [];
+}
+
+function showPackageApiError(error: unknown, fallback: string): void {
+  const apiData = isApiErrorLike(error) ? error.response?.data : undefined;
+  const messages = formatApiValidationMessages(apiData);
+
+  if (messages.length > 0) {
+    messages.forEach((message) => toast.error(message));
+    return;
+  }
+
+  toast.error(getErrorMessage(error, fallback));
+}
+
 function isPermissionError(error: unknown): boolean {
   const message = getErrorMessage(error, "").toLowerCase();
   return (
@@ -318,32 +380,32 @@ function PackageCard({
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-xl bg-gray-50 p-3">
+          <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="min-w-0 rounded-xl bg-gray-50 p-3">
               <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
                 Tracking
               </p>
-              <p className="mt-1 font-mono text-sm text-gray-900">
+              <p className="mt-1 break-all font-mono text-sm text-gray-900">
                 {packageItem.tracking_number || "Sin tracking"}
               </p>
             </div>
-            <div className="rounded-xl bg-gray-50 p-3">
+            <div className="min-w-0 rounded-xl bg-gray-50 p-3">
               <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
-                Ubicacion
+                Ubicación
               </p>
               <p className="mt-1 text-sm text-gray-900">
                 {formatLocation(packageItem.room, packageItem.building)}
               </p>
             </div>
-            <div className="rounded-xl bg-gray-50 p-3">
+            <div className="min-w-0 rounded-xl bg-gray-50 p-3">
               <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
-                Recepcion
+                Recepción
               </p>
               <p className="mt-1 text-sm text-gray-900">
                 {formatDateTime(packageItem.received_at)}
               </p>
             </div>
-            <div className="rounded-xl bg-gray-50 p-3">
+            <div className="min-w-0 rounded-xl bg-gray-50 p-3">
               <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
                 Entrega
               </p>
@@ -356,11 +418,11 @@ function PackageCard({
           </div>
 
           {packageItem.notes && (
-            <div className="rounded-xl border border-dashed border-gray-200 bg-white p-3">
+            <div className="min-w-0 rounded-xl border border-dashed border-gray-200 bg-white p-3">
               <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
                 Notas
               </p>
-              <p className="mt-1 line-clamp-2 text-sm text-gray-600">
+              <p className="mt-1 break-words whitespace-pre-wrap text-sm text-gray-600">
                 {packageItem.notes}
               </p>
             </div>
@@ -584,7 +646,7 @@ function DeliveryDialog({
             </div>
 
             <div className="space-y-4 text-center py-4">
-              <p className="text-sm font-medium text-gray-700">Codigo de recogida esperado:</p>
+              <p className="text-sm font-medium text-gray-700">Código de recogida esperado:</p>
               <div className="flex justify-center">
                 <div className="bg-gray-100 px-6 py-3 rounded-xl border-2 border-dashed border-gray-300">
                   <span className="text-4xl font-mono font-bold tracking-widest text-gray-800">
@@ -864,6 +926,8 @@ function PackageFormDialog({
     setForm((current) => ({ ...current, [key]: value }));
   }
 
+  const maxReceivedAt = toDateTimeLocal(new Date().toISOString());
+
   async function handleLabelImageChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) {
@@ -1012,8 +1076,8 @@ function PackageFormDialog({
                     Analizar etiqueta del paquete
                   </p>
                   <p className="mt-1 text-sm text-gray-500">
-                    Selecciona una imagen y el sistema intentara detectar el
-                    residente, transportista y tracking automaticamente.
+                    Selecciona una imagen y el sistema intentará detectar el
+                    residente, transportista y tracking automáticamente.
                   </p>
                 </div>
                 <Label
@@ -1116,11 +1180,12 @@ function PackageFormDialog({
               </div>
 
               <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="package-received-at">Fecha de recepcion</Label>
+                <Label htmlFor="package-received-at">Fecha de recepción</Label>
                 <Input
                   id="package-received-at"
                   type="datetime-local"
                   value={form.received_at}
+                  max={maxReceivedAt}
                   onChange={(event) => updateField("received_at", event.target.value)}
                 />
               </div>
@@ -1200,7 +1265,7 @@ export function AdminPackages() {
       if (isPermissionError(error)) {
         setIsUnauthorized(true);
       } else {
-        toast.error(getErrorMessage(error, "No se pudo cargar la paqueteria."));
+        toast.error(getErrorMessage(error, "No se pudo cargar la paquetería."));
       }
     } finally {
       setLoading(false);
@@ -1277,7 +1342,7 @@ export function AdminPackages() {
         toast.success("Paquete registrado correctamente.");
         return true;
       } catch (error) {
-        toast.error(getErrorMessage(error, "No se pudo registrar el paquete."));
+        showPackageApiError(error, "No se pudo registrar el paquete.");
         return false;
       }
     },
@@ -1292,7 +1357,7 @@ export function AdminPackages() {
         toast.success("Paquete actualizado correctamente.");
         return true;
       } catch (error) {
-        toast.error(getErrorMessage(error, "No se pudo actualizar el paquete."));
+        showPackageApiError(error, "No se pudo actualizar el paquete.");
         return false;
       }
     },
@@ -1309,7 +1374,7 @@ export function AdminPackages() {
       toast.success("Paquete eliminado correctamente.");
       return true;
     } catch (error) {
-      toast.error(getErrorMessage(error, "No se pudo eliminar el paquete."));
+      showPackageApiError(error, "No se pudo eliminar el paquete.");
       return false;
     }
   }, []);
@@ -1323,7 +1388,7 @@ export function AdminPackages() {
         toast.success("Entrega registrada correctamente.");
         return true;
       } catch (error) {
-        toast.error(getErrorMessage(error, "No se pudo registrar la entrega."));
+        showPackageApiError(error, "No se pudo registrar la entrega.");
         return false;
       }
     },
@@ -1334,7 +1399,7 @@ export function AdminPackages() {
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-3 text-gray-500">
         <Package className="h-10 w-10 opacity-40" />
-        <p className="text-sm">No tienes permisos para ver la paqueteria.</p>
+        <p className="text-sm">No tienes permisos para ver la paquetería.</p>
       </div>
     );
   }
@@ -1343,7 +1408,7 @@ export function AdminPackages() {
     <section className="space-y-6 p-1">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Paqueteria</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Paquetería</h2>
           <p className="mt-1 text-sm text-gray-500">
             Gestiona entradas, entregas y seguimiento de paquetes para los
             residentes.
