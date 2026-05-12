@@ -64,9 +64,9 @@ const MealCard = ({ meal }: { meal: Meal }) => {
             </div>
           )}
           <div className="flex-1">
-            <p className="font-semibold text-gray-900 leading-tight">{meal.name}</p>
+            <p className="font-semibold text-gray-900 leading-tight break-all">{meal.name}</p>
             {meal.description && (
-              <p className="text-sm text-gray-600 mt-0.5">{meal.description}</p>
+              <p className="text-sm text-gray-600 mt-0.5 break-all">{meal.description}</p>
             )}
           </div>
           {meal.allergens && meal.allergens.trim() !== '' && (
@@ -352,10 +352,10 @@ export function ResidentMenuView({ onGoToProfile, onLogout, onNavigate }: Reside
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
-            <span className="text-lg font-semibold text-gray-900 whitespace-nowrap min-w-[140px] text-center">
-              {new Date(menuWeek.weekStart + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+            <span className="text-lg font-semibold text-gray-900 whitespace-nowrap min-w-[180px] text-center">
+              {new Date(menuWeek.weekStart + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
               {' - '}
-              {new Date(menuWeek.weekEnd + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+              {new Date(menuWeek.weekEnd + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
             </span>
             <button
               onClick={() => handleNavigateWeek('next')}
@@ -415,7 +415,7 @@ export function ResidentMenuView({ onGoToProfile, onLogout, onNavigate }: Reside
                       Pendiente de Aprobar/Rechazar
                     </span>
                   </div>
-                  <p className="text-sm text-gray-500">{req.date}: {req.description}</p>
+                  <p className="text-sm text-gray-500 break-all">{req.date}: {req.description}</p>
                 </div>
               ))}
               
@@ -443,7 +443,7 @@ export function ResidentMenuView({ onGoToProfile, onLogout, onNavigate }: Reside
                           {req.status === 'approved' ? 'Aprobada' : 'Rechazada'}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-500">{req.date}: {req.description}</p>
+                      <p className="text-sm text-gray-500 break-all">{req.date}: {req.description}</p>
                     </div>
                   ))}
                 </>
@@ -470,7 +470,12 @@ export function ResidentMenuView({ onGoToProfile, onLogout, onNavigate }: Reside
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl animate-in fade-in zoom-in duration-200">
             <h3 className="text-xl font-bold text-gray-900 mb-4">Petición Especial</h3>
+            <div className="mb-2 flex justify-between items-center">
+              <label className="text-sm text-gray-600">Describe tu necesidad</label>
+              <span className="text-xs text-gray-500">{requestText.length}/500</span>
+            </div>
             <textarea
+              maxLength={500}
               className="w-full h-32 p-3 border border-gray-200 rounded-xl mb-4 focus:ring-2 focus:ring-amber-500 outline-none resize-none text-gray-700"
               placeholder="Describe tu necesidad (picnic, dieta médica...)"
               value={requestText}
