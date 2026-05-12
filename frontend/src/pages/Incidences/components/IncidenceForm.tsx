@@ -23,6 +23,8 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
   const [loading, setLoading] = useState(false)
   const [locationType, setLocationType] = useState<string>(initialData?.location_type ?? "")
   const [urgent, setUrgent] = useState<boolean>(initialData?.priority === "high")
+  const [title, setTitle] = useState<string>(initialData?.title ?? "")
+  const [description, setDescription] = useState<string>(initialData?.description ?? "")
   const [staffId] = useState("")
   const [externalName] = useState("")
   const [areaError, setAreaError] = useState(false)
@@ -59,8 +61,8 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
     setLoading(true);
 
     const payload: any = {
-      title: formData.get("title") as string,
-      description: formData.get("description") as string,
+      title,
+      description,
       location_type: locationType,
       priority: (urgent ? "high" : "low") as 'low' | 'high',
       room_number: locationType === "habitacion"
@@ -103,8 +105,23 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
       <div className={UI_CLASSES.body}>
         {/* Campo Título */}
         <div className="space-y-1.5 text-left">
-          <Label htmlFor="title" className={UI_CLASSES.label}>¿Qué sucede?</Label>
-          <Input id="title" name="title" defaultValue={initialData?.title} required className={UI_CLASSES.input} maxLength={75} break-words/>
+          <div className="flex justify-between items-center gap-3">
+            <Label htmlFor="title" className={UI_CLASSES.label}>¿Qué sucede?</Label>
+            <span className="text-[11px] text-gray-500">
+              {title.length}/75
+            </span>
+          </div>
+          <Input
+            id="title"
+            name="title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            required
+            className={UI_CLASSES.input}
+            maxLength={75}
+            break-words
+            whitespace-pre-wrap
+          />
         </div>
 
         {/* Campo Área */}
@@ -133,8 +150,23 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
 
         {/* Campo Descripción */}
         <div className="space-y-1.5 text-left">
-          <Label className={UI_CLASSES.label}>Descripción detallada</Label>
-          <textarea id="description" name="description" defaultValue={initialData?.description} required className={UI_CLASSES.textarea} maxLength={255} break-words/>
+          <div className="flex justify-between items-center gap-3">
+            <Label className={UI_CLASSES.label}>Descripción detallada</Label>
+            <span className="text-[11px] text-gray-500">
+              {description.length}/255
+            </span>
+          </div>
+          <textarea
+            id="description"
+            name="description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            required
+            className={UI_CLASSES.textarea}
+            maxLength={255}
+            break-words
+            whitespace-pre-wrap
+          />
         </div>
 
         {/* Campo Foto */}

@@ -249,7 +249,7 @@ export default function StudentIncidences(props: Readonly<StudentIncidencesProps
           <div className="p-6 bg-white overflow-y-auto max-h-[75vh] space-y-6 pb-12 text-left">
             {selectedDetails && (
               <>
-                <section className="border-l-4 border-[#82D14C] pl-3 py-1"><h3 className="font-bold text-lg text-slate-800">{selectedDetails.title}</h3></section>
+                <section className="border-l-4 border-[#82D14C] pl-3 py-1"><h3 className="font-bold text-lg text-slate-800 break-all">{selectedDetails.title}</h3></section>
                 <section className="space-y-2 text-left">
                   <div className="flex items-center gap-2"><MessageSquare size={14} className="text-slate-400" /><p className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Descripción</p></div>
                   <div className="bg-slate-50 p-4 rounded-[20px] border border-slate-100 italic text-sm text-slate-600 break-words whitespace-pre-wrap ">"{selectedDetails.description}"</div>
@@ -300,7 +300,7 @@ const UI_CLASSES = {
   incidencesGrid: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5",
   card: "border-none shadow-sm rounded-[24px] overflow-hidden bg-white h-full flex flex-col hover:shadow-md transition-shadow",
   cardSideBar: "w-1.5 shrink-0",
-  cardTitle: "font-bold text-[16px] text-[#1A1C1E] mb-0.5",
+  cardTitle: "font-bold text-[16px] text-[#1A1C1E] mb-0.5 truncate",
   cardLocationRow: "flex items-center gap-1.5 opacity-70 mb-3",
   statusBadge: "text-[11px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider shadow-sm",
   btnNotes: "bg-[#F0F5F0] h-8 px-4 rounded-xl text-[#1B4D1C] border-[#E3F2DA] border-2 font-bold text-[10px] uppercase hover:bg-[#82D14C] hover:text-white transition-all",

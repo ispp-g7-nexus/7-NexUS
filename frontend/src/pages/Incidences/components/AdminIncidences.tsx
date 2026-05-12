@@ -69,7 +69,7 @@ const ManageIncidenceModal = ({ incidence, onClose, onRefresh }: ManageModalProp
         <DialogTitle className={UI_CLASSES.notesTitle}>Gestionar Incidencia</DialogTitle>
         <DialogDescription className="sr-only">Actualizar estado o asignar personal</DialogDescription>
         <div className="p-6 bg-white overflow-y-auto max-h-[85vh] space-y-6 pb-12 text-left">
-          <p className="text-slate-500 text-sm font-medium">{incidence.title} • {locationDisplay}</p>
+          <p className="text-slate-500 text-sm font-medium break-all">{incidence.title} • {locationDisplay}</p>
 
           <div className="space-y-5">
             {incidence.img && (
