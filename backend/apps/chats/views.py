@@ -631,7 +631,7 @@ class PrivateConversationViewSet(viewsets.ViewSet):
 
 		conv = PrivateConversation.objects.filter(
 			Q(member_one=my) | Q(member_two=my), id=pk
-		).first()
+		).select_related("member_one__user", "member_two__user").first()
 		if not conv:
 			raise NotFound(CONVERSATION_NOT_FOUND_MESSAGE)
 
@@ -656,6 +656,15 @@ class PrivateConversationViewSet(viewsets.ViewSet):
 
 		residence = getattr(request, "residence", None)
 		if residence:
+			# Incluir participantes para que consumidores (ej. admin) puedan filtrar notificaciones
+			participants = []
+			try:
+				participants = [
+					conv.member_one.user.email if conv.member_one and getattr(conv.member_one, 'user', None) else None,
+					conv.member_two.user.email if conv.member_two and getattr(conv.member_two, 'user', None) else None,
+				]
+			except Exception:
+				participants = []
 			publish_chat_event(
 				residence.id,
 				"private_message_created",
@@ -665,6 +674,7 @@ class PrivateConversationViewSet(viewsets.ViewSet):
 					"sender_email": my.user.email,
 					"sender_name": my.user.get_full_name().strip() or my.user.email,
 					"message": serialized_msg,
+					"participants": [p for p in participants if p],
 				},
 			)
 
