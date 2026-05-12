@@ -315,6 +315,7 @@ export function AdminAnnouncements() {
               <Input
                 id="title"
                 placeholder="Ej: Corte de agua programado"
+                maxLength={TITLE_MAX_LENGTH}
                 value={newAnnouncement.title}
                 onChange={(e) => {
                   setNewAnnouncement({ ...newAnnouncement, title: e.target.value });
@@ -357,6 +358,7 @@ export function AdminAnnouncements() {
                 id="description"
                 placeholder="Describe el aviso en detalle..."
                 rows={4}
+                maxLength={DESCRIPTION_MAX_LENGTH}
                 value={newAnnouncement.description}
                 onChange={(e) => {
                   setNewAnnouncement({ ...newAnnouncement, description: e.target.value });
@@ -430,6 +432,7 @@ export function AdminAnnouncements() {
                 <Label htmlFor="edit-title">Título *</Label>
                 <Input
                   id="edit-title"
+                  maxLength={TITLE_MAX_LENGTH}
                   value={editingAnnouncement.title}
                   onChange={(e) => {
                     setEditingAnnouncement({
@@ -474,6 +477,7 @@ export function AdminAnnouncements() {
                 <Textarea
                   id="edit-description"
                   rows={4}
+                  maxLength={DESCRIPTION_MAX_LENGTH}
                   value={editingAnnouncement.description}
                     onChange={(e) => {
                       setEditingAnnouncement({
