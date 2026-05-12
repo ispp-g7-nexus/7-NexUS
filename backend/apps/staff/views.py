@@ -7,7 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.membership.models import Membership, Role
-from apps.incidences.models import Incidence
+from apps.incidences.models import Incidence, IncidenceUpdate
 
 from .models import Staff
 from .permissions import IsStaffAdmin
@@ -145,8 +145,20 @@ class StaffViewSet(viewsets.ModelViewSet):
             staff.save()
 
             new_status = data.get("status")
+
+            # Tratamiento de incidencias si el staff deja de estar activo
             if new_status and old_status == 'active' and new_status != 'active':
-                Incidence.objects.filter(assigned_staff=staff).update(assigned_staff=None)
+                incidencias_afectadas = Incidence.objects.filter(assigned_staff=staff)
+                
+                # Ya estamos dentro del transaction.atomic() superior, no hace falta otro.
+                for inc in incidencias_afectadas:
+                    IncidenceUpdate.objects.create(
+                        incidence=inc,
+                        author_name="Sistema",
+                        text=f"El técnico {staff.user.get_full_name() or staff.user.username} ya no está disponible. Asignación retirada automáticamente."
+                    )
+                    inc.assigned_staff = None
+                    inc.save()  
 
             role_id = data.get("role_id")
             residence = getattr(request, "residence", None)

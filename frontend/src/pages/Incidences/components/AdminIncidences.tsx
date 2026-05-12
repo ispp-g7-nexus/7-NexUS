@@ -272,7 +272,7 @@ export const AdminIncidences = () => {
         <Dialog open={!!incidenceToDelete} onOpenChange={() => setIncidenceToDelete(null)}>
           <DialogContent className="max-w-[400px] rounded-3xl p-6">
             <DialogTitle className="text-center font-bold">¿Eliminar incidencia?</DialogTitle>
-            <DialogDescription className="text-center text-gray-500 mt-2">
+            <DialogDescription className="text-center text-gray-500 mt-2 break-all">
               Esta acción no se puede deshacer. Vas a borrar el reporte: <strong>{incidenceToDelete?.title}</strong>.
             </DialogDescription>
             <div className="flex gap-3 mt-6">

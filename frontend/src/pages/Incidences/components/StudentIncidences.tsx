@@ -226,7 +226,7 @@ export default function StudentIncidences(props: Readonly<StudentIncidencesProps
       <Dialog open={!!incidenceToDelete} onOpenChange={() => setIncidenceToDelete(null)}>
         <DialogContent className="max-w-[400px] rounded-3xl p-6">
           <DialogTitle className="text-center text-lg font-bold">¿Eliminar incidencia?</DialogTitle>
-          <DialogDescription className="text-center text-gray-500 mt-2">Esta acción no se puede deshacer. El reporte "{incidenceToDelete?.title}" será borrado.</DialogDescription>
+          <DialogDescription className="text-center text-gray-500 mt-2 break-all">Esta acción no se puede deshacer. El reporte "{incidenceToDelete?.title}" será borrado.</DialogDescription>
           <div className="flex gap-3 mt-6">
             <Button variant="outline" onClick={() => setIncidenceToDelete(null)} className="flex-1 rounded-xl h-12 font-bold">Cancelar</Button>
             <Button variant="destructive" onClick={handleDelete} className="flex-1 rounded-xl h-12 font-bold">Eliminar</Button>
