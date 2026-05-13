@@ -13,6 +13,7 @@ from django.utils import timezone
 from django.utils.encoding import force_bytes, force_str
 from django.utils.html import strip_tags
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+from urllib.parse import quote
 from rest_framework import authentication
 from rest_framework.exceptions import APIException, AuthenticationFailed
 
@@ -135,7 +136,8 @@ def process_password_reset_request(email: str, request):
 
         domain = request.get_host()
         scheme = request.scheme
-        reset_link = f"{scheme}://{domain}/reset-password?uid={uid}&token={token}"
+        # Ensure uid and token are URL-encoded to avoid breaking query parsing
+        reset_link = f"{scheme}://{domain}/reset-password?uid={quote(uid)}&token={quote(token)}"
 
         html_message = render_to_string(
             "password_reset_email.html", {"reset_link": reset_link}
@@ -180,7 +182,8 @@ def process_welcome_email(email: str, request):
 
         domain = request.get_host()
         scheme = request.scheme
-        reset_link = f"{scheme}://{domain}/reset-password?uid={uid}&token={token}"
+        # Ensure uid and token are URL-encoded to avoid breaking query parsing
+        reset_link = f"{scheme}://{domain}/reset-password?uid={quote(uid)}&token={quote(token)}"
 
         html_message = render_to_string(
             "welcome_email.html", {"reset_link": reset_link}
