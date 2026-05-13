@@ -2,7 +2,13 @@ from django.db import models
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from apps.tenants.models import Client
+import re
 
+def validate_not_digit(value):
+    if not re.search(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ]', str(value)):
+        raise ValidationError(
+            "El campo debe contener texto descriptivo (letras), no solo números o signos."
+        )
 
 class MenuWeek(models.Model):
 
@@ -124,13 +130,15 @@ class Meal(models.Model):
 
     name = models.CharField(
         "Nombre",
-        max_length=200
+        max_length=200,
+        validators=[validate_not_digit]
     )
 
     description = models.TextField(
         "Descripción",
         blank=True,
-        default=""
+        default="",
+        validators=[validate_not_digit]
     )
 
     type = models.CharField(
@@ -138,6 +146,15 @@ class Meal(models.Model):
         max_length=10,
         choices=MealType.choices,
         default=MealType.LUNCH
+    )
+
+    allergens = models.TextField(
+        'Alérgenos',
+        max_length=100,
+        blank=True,
+        default="",
+        help_text="Ejemplo: Gluten, Lactosa, Frutos de cáscara",
+        validators=[validate_not_digit]
     )
 
     is_gluten_free = models.BooleanField(
@@ -192,7 +209,7 @@ class SpecialMenuRequest(models.Model):
         default=2
     )
     date = models.DateField("Fecha solicitada")
-    description = models.TextField("Motivo/Descripción")
+    description = models.TextField("Motivo/Descripción", validators=[validate_not_digit])
     status = models.CharField(
         max_length=10, 
         choices=STATUS_CHOICES, 

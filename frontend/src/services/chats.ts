@@ -6,7 +6,7 @@ const CHAT_LABELS_URL = "/api/chats/labels/";
 const MY_GROUPS_URL = "/api/chats/my-groups/";
 const CONVERSATIONS_URL = "/api/chats/conversations/";
 const CHAT_RESIDENTS_URL = "/api/chats/residents/";
-const CHAT_EVENTS_STREAM_URL = "/api/chats/events/";
+const CHAT_EVENTS_WS_PATH = "/ws/chats/events";
 
 // Eliminado tipo alias redundante - usar string directamente
 
@@ -29,6 +29,7 @@ export interface ChatGroup {
   members: number;
   members_list: ChatMember[];
   created_by_email?: string;
+  is_member?: boolean;
 }
 
 export interface UpsertChatGroupPayload {
@@ -68,34 +69,96 @@ async function handleResponse<T>(res: Response): Promise<T> {
 
 export const chatsService = {
   subscribeToEvents: (onEvent: (event: ChatRealtimeEvent) => void): ChatEventsConnection => {
-    let source: EventSource | null = null;
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const wsUrl = `${protocol}//${window.location.host}${CHAT_EVENTS_WS_PATH}`;
+
+    let socket: WebSocket | null = null;
     let manuallyClosed = false;
+    let reconnectTimer: number | null = null;
+    let reconnectAttempts = 0;
+    let visibilityListener: (() => void) | null = null;
 
-    source = new EventSource(CHAT_EVENTS_STREAM_URL, { withCredentials: true });
-
-    source.onopen = () => {
-      connection.onopen?.();
-    };
-
-    source.onerror = () => {
-      if (manuallyClosed) return;
-      connection.onerror?.();
-    };
-
-    source.onmessage = (evt) => {
-      try {
-        const parsed = JSON.parse(String(evt.data)) as ChatRealtimeEvent;
-        onEvent(parsed);
-      } catch {
-        // Ignorar payloads malformados para no romper la conexion.
+    const clearReconnect = () => {
+      if (reconnectTimer !== null) {
+        window.clearTimeout(reconnectTimer);
+        reconnectTimer = null;
       }
     };
+
+    const scheduleReconnect = () => {
+      if (manuallyClosed) return;
+      if (reconnectTimer !== null) return;
+
+      if (typeof document !== "undefined" && document.hidden) {
+        if (!visibilityListener) {
+          visibilityListener = () => {
+            if (!document.hidden) {
+              document.removeEventListener("visibilitychange", visibilityListener!);
+              visibilityListener = null;
+              scheduleReconnect();
+            }
+          };
+          document.addEventListener("visibilitychange", visibilityListener);
+        }
+        return;
+      }
+
+      const delay = Math.min(30000, 2000 * 2 ** reconnectAttempts);
+      reconnectAttempts += 1;
+      reconnectTimer = window.setTimeout(() => {
+        reconnectTimer = null;
+        connect();
+      }, delay);
+    };
+
+    const connect = () => {
+      try {
+        socket = new WebSocket(wsUrl);
+      } catch {
+        scheduleReconnect();
+        return;
+      }
+
+      socket.onopen = () => {
+        reconnectAttempts = 0;
+        connection.onopen?.();
+      };
+
+      socket.onerror = () => {
+        connection.onerror?.();
+      };
+
+      socket.onclose = () => {
+        socket = null;
+        scheduleReconnect();
+      };
+
+      socket.onmessage = (evt) => {
+        try {
+          const parsed = JSON.parse(String(evt.data)) as ChatRealtimeEvent;
+          onEvent(parsed);
+        } catch {
+          // Ignorar payloads malformados para no romper la conexion.
+        }
+      };
+    };
+
+    connect();
 
     const connection: ChatEventsConnection = {
       close: () => {
         manuallyClosed = true;
-        source?.close();
-        source = null;
+        clearReconnect();
+        if (visibilityListener) {
+          document.removeEventListener("visibilitychange", visibilityListener);
+          visibilityListener = null;
+        }
+        try {
+          socket?.close();
+        } catch {
+          // ignore
+        }
+        socket = null;
       },
       onopen: null,
       onerror: null,
@@ -181,6 +244,20 @@ export const chatsService = {
     });
     await handleResponse<void>(res);
     trackEvent('chat_group_left', { group_id: groupId });
+  },
+
+  joinGroup: async (groupId: number): Promise<ChatGroup> => {
+    const res = await fetchWithAuth(`${MY_GROUPS_URL}${groupId}/join/`, {
+      method: "POST",
+    });
+    const group = await handleResponse<ChatGroup>(res);
+    trackEvent('chat_group_joined', { group_id: groupId });
+    return group;
+  },
+
+  listAvailableGroups: async (): Promise<ChatGroup[]> => {
+    const res = await fetchWithAuth(`${MY_GROUPS_URL}available/`);
+    return handleResponse<ChatGroup[]>(res);
   },
 
   // ── Mensajes de Grupo ──

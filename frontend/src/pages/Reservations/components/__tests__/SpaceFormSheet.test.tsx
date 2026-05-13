@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SpaceFormSheet } from '../SpaceFormSheet'
+import { COMMON_SPACE_DESCRIPTION_MAX_LENGTH, COMMON_SPACE_NAME_MAX_LENGTH } from '../../constants'
 
 describe('SpaceFormSheet', () => {
   const baseProps = {
@@ -72,5 +73,75 @@ describe('SpaceFormSheet', () => {
 
     await user.click(screen.getByRole('button', { name: /Cerrar/i }))
     expect(onOpenChange).toHaveBeenCalledWith(false)
+  })
+
+  it('aplica límites de caracteres en nombre y descripción', () => {
+    render(<SpaceFormSheet {...baseProps} />)
+
+    const nameInput = screen.getByPlaceholderText(/Salón de usos múltiples/i)
+    const descriptionInput = screen.getByPlaceholderText(/Describe el espacio/i)
+
+    expect(nameInput).toHaveAttribute('maxLength', String(COMMON_SPACE_NAME_MAX_LENGTH))
+    expect(descriptionInput).toHaveAttribute('maxLength', String(COMMON_SPACE_DESCRIPTION_MAX_LENGTH))
+  })
+
+  it('bloquea envío con nombre demasiado largo y muestra error claro', async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn().mockResolvedValue(undefined)
+
+    render(
+      <SpaceFormSheet
+        {...baseProps}
+        onSubmit={onSubmit}
+        space={{
+          id: 1,
+          name: 'A'.repeat(COMMON_SPACE_NAME_MAX_LENGTH + 1),
+          description: '',
+          img: null,
+          capacity: 8,
+          is_active: true,
+          open_time: '09:00:00',
+          close_time: '21:00:00',
+          reservation_interval_minutes: 30,
+        }}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: /Guardar cambios/i }))
+
+    expect(onSubmit).not.toHaveBeenCalled()
+    expect(
+      screen.getByText(`El nombre no puede superar los ${COMMON_SPACE_NAME_MAX_LENGTH} caracteres.`),
+    ).toBeInTheDocument()
+  })
+
+  it('bloquea envío con descripción demasiado larga y muestra error claro', async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn().mockResolvedValue(undefined)
+
+    render(
+      <SpaceFormSheet
+        {...baseProps}
+        onSubmit={onSubmit}
+        space={{
+          id: 1,
+          name: 'Sala Música',
+          description: 'B'.repeat(COMMON_SPACE_DESCRIPTION_MAX_LENGTH + 1),
+          img: null,
+          capacity: 8,
+          is_active: true,
+          open_time: '09:00:00',
+          close_time: '21:00:00',
+          reservation_interval_minutes: 30,
+        }}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: /Guardar cambios/i }))
+
+    expect(onSubmit).not.toHaveBeenCalled()
+    expect(
+      screen.getByText(`La descripción no puede superar los ${COMMON_SPACE_DESCRIPTION_MAX_LENGTH} caracteres.`),
+    ).toBeInTheDocument()
   })
 })

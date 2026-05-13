@@ -39,6 +39,13 @@ export function SocialHub({
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [manualGroupNews, setManualGroupNews] = useState(false);
   const [targetGroupId, setTargetGroupId] = useState<number | null>(null);
+  const [targetConversationId, setTargetConversationId] = useState<number | null>(null);
+
+  const handleOpenPrivateChat = (conversationId: number) => {
+    setTargetConversationId(conversationId);
+    setActiveTab("chat");
+    onChatSubTabActiveChange?.("privados");
+  };
 
   useEffect(() => {
     onChatTabActiveChange?.(activeTab === "chat");
@@ -138,9 +145,11 @@ export function SocialHub({
             onUnreadStatusChange={onChatUnreadStatusChange}
             focusGroupId={targetGroupId}
             onFocusGroupHandled={() => setTargetGroupId(null)}
+            focusConversationId={targetConversationId}
+            onFocusConversationHandled={() => setTargetConversationId(null)}
           />
         )}
-        {activeTab === "matches" && <MyMatchesPage />}
+        {activeTab === "matches" && <MyMatchesPage onOpenPrivateChat={handleOpenPrivateChat} />}
       </div>
       </div>
     </div>

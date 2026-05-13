@@ -9,7 +9,7 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.membership.permissions import IsResident
+from apps.membership.permissions import IsResident, RequireScreenAccess
 
 from .models import Package
 from .permissions import IsPackageAdmin
@@ -224,7 +224,7 @@ class ResidentPackageMarkAsViewedView(ResidentPackageBaseView):
 
 
 class PackageAnalyticsView(APIView):
-    permission_classes = [IsPackageAdmin]
+    permission_classes = [IsPackageAdmin, RequireScreenAccess("analytics")]
 
     def get(self, request):
         residence = getattr(request, "residence", None)
@@ -235,13 +235,21 @@ class PackageAnalyticsView(APIView):
         to_str = (request.query_params.get("to") or "").strip()
 
         try:
-            from_date = date.fromisoformat(from_str) if from_str else date.today() - timedelta(days=29)
+            from_date = (
+                date.fromisoformat(from_str)
+                if from_str
+                else date.today() - timedelta(days=29)
+            )
             to_date = date.fromisoformat(to_str) if to_str else date.today()
         except ValueError as err:
-            raise ValidationError({"detail": "Formato de fecha inválido. Usa YYYY-MM-DD."}) from err
+            raise ValidationError(
+                {"detail": "Formato de fecha inválido. Usa YYYY-MM-DD."}
+            ) from err
 
         if from_date > to_date:
-            raise ValidationError({"detail": "La fecha inicial debe ser anterior o igual a la final."})
+            raise ValidationError(
+                {"detail": "La fecha inicial debe ser anterior o igual a la final."}
+            )
 
         base_qs = Package.objects.filter(residence=residence)
 
@@ -249,8 +257,9 @@ class PackageAnalyticsView(APIView):
         received_map = {
             item["day"]: item["count"]
             for item in (
-                base_qs
-                .filter(received_at__date__gte=from_date, received_at__date__lte=to_date)
+                base_qs.filter(
+                    received_at__date__gte=from_date, received_at__date__lte=to_date
+                )
                 .annotate(day=TruncDate("received_at"))
                 .values("day")
                 .annotate(count=Count("id"))
@@ -261,8 +270,7 @@ class PackageAnalyticsView(APIView):
         delivered_map = {
             item["day"]: item["count"]
             for item in (
-                base_qs
-                .filter(
+                base_qs.filter(
                     status=Package.Status.DELIVERED,
                     delivered_at__date__gte=from_date,
                     delivered_at__date__lte=to_date,
@@ -288,17 +296,20 @@ class PackageAnalyticsView(APIView):
             dlv = delivered_map.get(day, 0)
             running_received += rec
             running_delivered += dlv
-            daily_activity.append({
-                "date": day.isoformat(),
-                "received": rec,
-                "delivered": dlv,
-                "pending_cumulative": max(0, running_received - running_delivered),
-            })
+            daily_activity.append(
+                {
+                    "date": day.isoformat(),
+                    "received": rec,
+                    "delivered": dlv,
+                    "pending_cumulative": max(0, running_received - running_delivered),
+                }
+            )
 
         # Top 15 residents by packages received in period
         by_resident = list(
-            base_qs
-            .filter(received_at__date__gte=from_date, received_at__date__lte=to_date)
+            base_qs.filter(
+                received_at__date__gte=from_date, received_at__date__lte=to_date
+            )
             .values("resident_name_snapshot")
             .annotate(
                 total_received=Count("id"),
@@ -307,23 +318,27 @@ class PackageAnalyticsView(APIView):
             .order_by("-total_received")[:15]
         )
 
-        return Response({
-            "summary": {
-                "total_received_in_period": sum(received_map.values()),
-                "total_delivered_in_period": sum(delivered_map.values()),
-                "currently_pending": base_qs.filter(status=Package.Status.RECEIVED).count(),
-            },
-            "daily_activity": daily_activity,
-            "by_resident": [
-                {
-                    "resident_name": item["resident_name_snapshot"],
-                    "total_received": item["total_received"],
-                    "total_delivered": item["total_delivered"],
-                }
-                for item in by_resident
-            ],
-            "meta": {
-                "from": from_date.isoformat(),
-                "to": to_date.isoformat(),
-            },
-        })
+        return Response(
+            {
+                "summary": {
+                    "total_received_in_period": sum(received_map.values()),
+                    "total_delivered_in_period": sum(delivered_map.values()),
+                    "currently_pending": base_qs.filter(
+                        status=Package.Status.RECEIVED
+                    ).count(),
+                },
+                "daily_activity": daily_activity,
+                "by_resident": [
+                    {
+                        "resident_name": item["resident_name_snapshot"],
+                        "total_received": item["total_received"],
+                        "total_delivered": item["total_delivered"],
+                    }
+                    for item in by_resident
+                ],
+                "meta": {
+                    "from": from_date.isoformat(),
+                    "to": to_date.isoformat(),
+                },
+            }
+        )

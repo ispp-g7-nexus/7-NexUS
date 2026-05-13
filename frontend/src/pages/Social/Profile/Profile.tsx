@@ -7,7 +7,7 @@ import { getStudentProfile } from "../../../services/api";
 import { preferencesService } from "../../../services/preferences";
 
 const emptyProfileData: ProfileFormData = {
-  name: "", 
+  name: "",
   nickname: "",
   bio: "",
   birthplace: "",
@@ -103,7 +103,7 @@ export function Profile() {
   };
 
   const handleSaveSuccess = (updatedData: ProfileFormData) => {
-    setProfileData(updatedData);    
+    setProfileData(updatedData);
     setIsEditModalOpen(false);
   };
 
@@ -171,12 +171,12 @@ export function Profile() {
               <Home size={14} /> Habitación {profileData.room || profileData.roomNumber || "Sin asignar"}
             </span>
             <div className="flex items-center gap-2 mt-3">
-                <Button
-                  onClick={() => setIsEditModalOpen(true)}
-                  className="bg-primary-foreground/20 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/40 rounded-xl border-none"
-                >
-                  <Edit size={14} className="mr-2" /> Editar Perfil
-                </Button>
+              <Button
+                onClick={() => setIsEditModalOpen(true)}
+                className="bg-primary-foreground/20 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/40 rounded-xl border-none"
+              >
+                <Edit size={14} className="mr-2" /> Editar Perfil
+              </Button>
             </div>
           </div>
         </div>
@@ -184,15 +184,25 @@ export function Profile() {
 
       {/* Información Card */}
       <div className="profile-info-card">
-        <section>
-          <h3 className="profile-section-title">
-            <User size={18} className="text-primary" /> Sobre mí
-          </h3>
-          <p className="profile-bio-text">{profileData.bio}</p>
-          {profileData.birthplace && (
-            <p className="profile-bio-text text-sm text-gray-500 mt-2">
-              📍 {profileData.birthplace}
+        <section className="space-y-6">
+          <div>
+            <h3 className="profile-section-title flex items-center gap-2 mb-3">
+              <User size={18} className="text-primary" /> Sobre mí
+            </h3>
+            <p className="profile-bio-text whitespace-pre-wrap text-gray-700 leading-relaxed px-1">
+              {profileData.bio}
             </p>
+          </div>
+          {profileData.birthplace && (
+            <div className="flex flex-col gap-2 pt-4 border-t border-gray-100">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">
+                Lugar de origen
+              </span>
+              <div className="inline-flex w-fit items-center px-2 py-2 rounded-2xl bg-green-50 border border-green-200 text-sm shadow-sm transition-all hover:bg-green-100">
+                <span className="text-base mr-1">📍</span>
+                <span className="font-bold text-green-800">{profileData.birthplace}</span>
+              </div>
+            </div>
           )}
         </section>
 
@@ -286,7 +296,7 @@ export function Profile() {
         <ProfileEditForm
           initialData={profileData}
           onClose={() => setIsEditModalOpen(false)}
-          onSave={handleSaveSuccess} 
+          onSave={handleSaveSuccess}
         />
       )}
     </div>

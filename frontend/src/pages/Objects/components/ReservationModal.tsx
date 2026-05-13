@@ -177,7 +177,7 @@ export function ReservationModal({ object, isOpen, onClose, onSuccess }: Reserva
       >
         <SheetHeader className="px-6 pt-6 pb-4 border-b border-gray-200">
           <SheetTitle>Nueva reserva</SheetTitle>
-          <SheetDescription>{object.name}</SheetDescription>
+          <SheetDescription className="break-words line-clamp-2">{object.name}</SheetDescription>
         </SheetHeader>
 
         <form onSubmit={handleReservation} className="flex flex-1 flex-col gap-6 overflow-y-auto p-6">
@@ -205,9 +205,9 @@ export function ReservationModal({ object, isOpen, onClose, onSuccess }: Reserva
             ) : (
               <ul className="max-h-28 space-y-2 overflow-y-auto rounded-md border border-border/70 bg-muted/20 p-2">
                 {reservations.map((reservation) => (
-                  <li key={reservation.id} className="flex items-center justify-between gap-2 rounded-md bg-background px-2 py-1.5 text-xs">
-                    <span className="font-medium text-gray-900">{reservationUserDisplay(reservation)}</span>
-                    <span className="text-gray-500">
+                  <li key={reservation.id} className="flex items-center justify-between gap-2 rounded-md bg-background px-2 py-1.5 text-xs min-w-0">
+                    <span className="font-medium text-gray-900 min-w-0 flex-1 break-words line-clamp-2">{reservationUserDisplay(reservation)}</span>
+                    <span className="text-gray-500 shrink-0">
                       {formatInterval(reservation.start_date, reservation.end_date)}
                     </span>
                   </li>

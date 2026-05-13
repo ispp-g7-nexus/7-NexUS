@@ -27,23 +27,23 @@ const SORT_OPTIONS = [
 ];
 
 const STATUS_BADGE: Record<string, string> = {
-  ACTIVE:    "bg-green-100 text-green-700 border-0",
-  UPCOMING:  "bg-sky-100 text-sky-700 border-0",
-  USED:      "bg-blue-100 text-blue-700 border-0",
+  ACTIVE: "bg-green-100 text-green-700 border-0",
+  UPCOMING: "bg-sky-100 text-sky-700 border-0",
+  USED: "bg-blue-100 text-blue-700 border-0",
   CANCELLED: "bg-gray-100 text-gray-500 border-0",
-  REVOKED:   "bg-red-100 text-red-700 border-0",
-  REJECTED:  "bg-orange-100 text-orange-700 border-0",
-  INACTIVE:  "bg-yellow-100 text-yellow-700 border-0",
+  REVOKED: "bg-red-100 text-red-700 border-0",
+  REJECTED: "bg-orange-100 text-orange-700 border-0",
+  INACTIVE: "bg-yellow-100 text-yellow-700 border-0",
 };
 
 const STATUS_LABEL: Record<string, string> = {
-  ACTIVE:    "Activo",
-  UPCOMING:  "Programado",
-  USED:      "Usado",
+  ACTIVE: "Activo",
+  UPCOMING: "Programado",
+  USED: "Usado",
   CANCELLED: "Cancelado",
-  REVOKED:   "Revocado",
-  REJECTED:  "Rechazado",
-  INACTIVE:  "Inactivo",
+  REVOKED: "Revocado",
+  REJECTED: "Rechazado",
+  INACTIVE: "Inactivo",
 };
 
 function getDisplayStatus(pass: AdminGuestPass): string {
@@ -124,9 +124,9 @@ function GuestPassDetailDialog({ pass, onClose, onRefresh }: GuestPassDetailDial
         {pass && (
           <>
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 flex-wrap text-xl">
-                {pass.full_name}
-                <Badge className={STATUS_BADGE[displayStatus] ?? "border-0"}>
+              <DialogTitle className="flex items-start gap-2 text-xl break-words">
+                <span className="flex-1 min-w-0">{pass.full_name}</span>
+                <Badge className={`${STATUS_BADGE[displayStatus] ?? "border-0"} shrink-0 mt-1`}>
                   {STATUS_LABEL[displayStatus] ?? displayStatus}
                 </Badge>
               </DialogTitle>
@@ -141,9 +141,9 @@ function GuestPassDetailDialog({ pass, onClose, onRefresh }: GuestPassDetailDial
               </div>
               <div className="flex items-center gap-3">
                 <User className="w-4 h-4 text-gray-500 shrink-0" />
-                <div>
+                <div className="min-w-0 flex-1">
                   <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Registrado por</p>
-                  <p className="font-semibold">{pass.resident_name}</p>
+                  <p className="font-semibold break-words">{pass.resident_name}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -164,9 +164,9 @@ function GuestPassDetailDialog({ pass, onClose, onRefresh }: GuestPassDetailDial
               {pass.comment && (
                 <div className="flex items-start gap-3 bg-gray-50 p-3 rounded-lg border border-gray-100">
                   <MessageSquare className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" />
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Comentario</p>
-                    <p className="text-sm italic text-gray-700">"{pass.comment}"</p>
+                    <p className="text-sm italic text-gray-700 break-words">"{pass.comment}"</p>
                   </div>
                 </div>
               )}
@@ -270,77 +270,75 @@ export function AdminGuestPassListPage() {
           (() => {
             const displayStatus = getDisplayStatus(pass);
             return (
-          <Card
-            key={pass.id}
-            className={`hover:shadow-md transition-all cursor-pointer group ${
-              pass.out_of_schedule
-                ? "border-red-300 bg-red-50/70 hover:border-red-400"
-                : "border-gray-200 hover:border-purple-300"
-            }`}
-            role="button"
-            tabIndex={0}
-            aria-label={pass.full_name}
-            onClick={() => setSelectedPass(pass)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                setSelectedPass(pass);
-              }
-            }}
-          >
-            <CardContent className="p-5 flex flex-col h-full">
-              {pass.out_of_schedule && (
-                <div className="mb-3 rounded-md border border-red-200 bg-red-100 px-2 py-1 text-[11px] font-semibold text-red-700">
-                  Fuera de horario
-                </div>
-              )}
-
-              <div className="flex items-start justify-between gap-2 mb-3">
-                <span
-                  className={`font-bold transition-colors line-clamp-1 flex-1 ${
-                    pass.out_of_schedule
-                      ? "text-red-900 group-hover:text-red-800"
-                      : "text-gray-900 group-hover:text-purple-700"
+              <Card
+                key={pass.id}
+                className={`hover:shadow-md transition-all cursor-pointer group ${pass.out_of_schedule
+                  ? "border-red-300 bg-red-50/70 hover:border-red-400"
+                  : "border-gray-200 hover:border-purple-300"
                   }`}
-                >
-                  {pass.full_name}
-                </span>
-                <Badge className={`${STATUS_BADGE[displayStatus] ?? "border-0"} whitespace-nowrap shrink-0`}>
-                  {STATUS_LABEL[displayStatus] ?? displayStatus}
-                </Badge>
-              </div>
+                role="button"
+                tabIndex={0}
+                aria-label={pass.full_name}
+                onClick={() => setSelectedPass(pass)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    setSelectedPass(pass);
+                  }
+                }}
+              >
+                <CardContent className="p-5 flex flex-col h-full">
+                  {pass.out_of_schedule && (
+                    <div className="mb-3 rounded-md border border-red-200 bg-red-100 px-2 py-1 text-[11px] font-semibold text-red-700">
+                      Fuera de horario
+                    </div>
+                  )}
 
-              <div className="space-y-2 flex-1">
-                <div className="flex items-center gap-2 text-xs">
-                  <User className="w-3.5 h-3.5 text-gray-400" />
-                  <span className="text-gray-500">De: </span>
-                  <span className="font-semibold text-gray-800 line-clamp-1">{pass.resident_name}</span>
-                </div>
-
-                <div className="flex items-center gap-2 text-xs">
-                  <Hash className="w-3.5 h-3.5 text-gray-400" />
-                  <span className="text-gray-500">Código: </span>
-                  <span className="font-mono font-bold text-purple-600">{pass.pass_code}</span>
-                </div>
-
-                <div className="flex items-start gap-2 text-[11px] text-gray-500 bg-gray-50 p-2 rounded-md border border-gray-100 mt-2">
-                  <Calendar className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                  <div className="leading-tight">
-                    <p>{formatDateTime(pass.valid_from).split(',')[0]}</p>
-                    <p className="text-[10px] text-gray-400">hasta {formatDateTime(pass.valid_until).split(',')[0]}</p>
+                  <div className="flex items-start justify-between gap-2 mb-3">
+                    <span
+                      className={`font-bold transition-colors line-clamp-1 flex-1 ${pass.out_of_schedule
+                        ? "text-red-900 group-hover:text-red-800"
+                        : "text-gray-900 group-hover:text-purple-700"
+                        }`}
+                    >
+                      {pass.full_name}
+                    </span>
+                    <Badge className={`${STATUS_BADGE[displayStatus] ?? "border-0"} whitespace-nowrap shrink-0`}>
+                      {STATUS_LABEL[displayStatus] ?? displayStatus}
+                    </Badge>
                   </div>
-                </div>
-                {pass.comment && (
-                  <p className="text-[11px] italic text-gray-500 line-clamp-1">"{pass.comment}"</p>
-                )}
-              </div>
 
-              <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-[10px] text-gray-400 font-medium">
-                <span className="uppercase tracking-wider">Creado</span>
-                <span>{formatDateTime(pass.created_at).split(',')[0]}</span>
-              </div>
-            </CardContent>
-          </Card>
+                  <div className="space-y-2 flex-1">
+                    <div className="flex items-center gap-2 text-xs">
+                      <User className="w-3.5 h-3.5 text-gray-400" />
+                      <span className="text-gray-500">De: </span>
+                      <span className="font-semibold text-gray-800 line-clamp-1">{pass.resident_name}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-xs">
+                      <Hash className="w-3.5 h-3.5 text-gray-400" />
+                      <span className="text-gray-500">Código: </span>
+                      <span className="font-mono font-bold text-purple-600">{pass.pass_code}</span>
+                    </div>
+
+                    <div className="flex items-start gap-2 text-[11px] text-gray-500 bg-gray-50 p-2 rounded-md border border-gray-100 mt-2">
+                      <Calendar className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                      <div className="leading-tight">
+                        <p>{formatDateTime(pass.valid_from).split(',')[0]}</p>
+                        <p className="text-[10px] text-gray-400">hasta {formatDateTime(pass.valid_until).split(',')[0]}</p>
+                      </div>
+                    </div>
+                    {pass.comment && (
+                      <p className="text-[11px] italic text-gray-500 line-clamp-1">"{pass.comment}"</p>
+                    )}
+                  </div>
+
+                  <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-[10px] text-gray-400 font-medium">
+                    <span className="uppercase tracking-wider">Creado</span>
+                    <span>{formatDateTime(pass.created_at).split(',')[0]}</span>
+                  </div>
+                </CardContent>
+              </Card>
             );
           })()
         ))}
@@ -376,7 +374,7 @@ export function AdminGuestPassListPage() {
             className="pl-9 h-10 shadow-sm"
           />
         </div>
-        
+
         <div className="flex gap-2">
           <select
             aria-label="Filtrar por estado"

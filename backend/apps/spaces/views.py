@@ -1,4 +1,6 @@
+import base64
 import json
+import re
 from datetime import datetime, time, timedelta
 from typing import Any
 
@@ -13,16 +15,49 @@ from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
 from apps.common.utils.jwt_auth import resolve_user_from_request
+from apps.membership.permissions import has_screen_permission
 from apps.residences.models import Residence
 
 from .analytics import (
     ReservationsAnalyticsValidationError,
     get_admin_reservations_analytics,
 )
-from .models import CommonSpace, SpaceReservation
+from .models import (
+    COMMON_SPACE_DESCRIPTION_MAX_LENGTH,
+    COMMON_SPACE_NAME_MAX_LENGTH,
+    SPACE_RESERVATION_NOTES_MAX_LENGTH,
+    CommonSpace,
+    SpaceReservation,
+)
 from .permissions import is_reservations_admin
 
 RESERVATION_REMINDER_WINDOW = timedelta(hours=1)
+
+ALLOWED_IMAGE_MIME_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+IMAGE_MAX_SIZE_BYTES = 5 * 1024 * 1024  # 5 MB
+_DATA_URL_RE = re.compile(r"^data:(?P<mime>[^;]+);base64,(?P<data>.+)$", re.DOTALL)
+
+
+def _validate_space_img(img: str) -> JsonResponse | None:
+    """Returns a 400 JsonResponse if img is not a valid image data URL, else None."""
+    if not img:
+        return None
+    match = _DATA_URL_RE.match(img)
+    if not match:
+        return JsonResponse({"detail": "El formato de la imagen no es válido."}, status=400)
+    mime = match.group("mime")
+    if mime not in ALLOWED_IMAGE_MIME_TYPES:
+        return JsonResponse(
+            {"detail": "Solo se permiten imágenes en formato JPEG, PNG, WebP o GIF."},
+            status=400,
+        )
+    try:
+        decoded = base64.b64decode(match.group("data"))
+    except Exception:
+        return JsonResponse({"detail": "El formato de la imagen no es válido."}, status=400)
+    if len(decoded) > IMAGE_MAX_SIZE_BYTES:
+        return JsonResponse({"detail": "La imagen no puede superar los 5 MB."}, status=400)
+    return None
 
 
 def _serialize_space(space: CommonSpace) -> dict:
@@ -74,7 +109,9 @@ def _serialize_reservation_reminder(reservation: SpaceReservation) -> dict[str, 
     }
 
 
-def _build_reservation_reminders(reservations: list[SpaceReservation]) -> list[dict[str, Any]]:
+def _build_reservation_reminders(
+    reservations: list[SpaceReservation],
+) -> list[dict[str, Any]]:
     return sorted(
         [_serialize_reservation_reminder(reservation) for reservation in reservations],
         key=lambda item: item["start_time"],
@@ -96,6 +133,38 @@ def _validate_residence(request) -> Residence | None:
     if not residence:
         return None
     return residence
+
+
+def _validate_common_space_text_fields(
+    *,
+    name: str | None = None,
+    description: str | None = None,
+) -> JsonResponse | None:
+    if name is not None and len(name) > COMMON_SPACE_NAME_MAX_LENGTH:
+        return JsonResponse(
+            {
+                "name": [
+                    f"El nombre no puede superar los {COMMON_SPACE_NAME_MAX_LENGTH} caracteres."
+                ]
+            },
+            status=400,
+        )
+
+    if (
+        description is not None
+        and len(description) > COMMON_SPACE_DESCRIPTION_MAX_LENGTH
+    ):
+        return JsonResponse(
+            {
+                "description": [
+                    "La descripción no puede superar los "
+                    f"{COMMON_SPACE_DESCRIPTION_MAX_LENGTH} caracteres."
+                ]
+            },
+            status=400,
+        )
+
+    return None
 
 
 def _compute_available_slots(
@@ -291,6 +360,17 @@ class SpaceReservationCreateView(AuthenticatedView):
         end_time_str = str(payload.get("end_time", "")).strip()
         notes = str(payload.get("notes", "")).strip()
 
+        if len(notes) > SPACE_RESERVATION_NOTES_MAX_LENGTH:
+            return JsonResponse(
+                {
+                    "detail": (
+                        "La nota no puede superar los "
+                        f"{SPACE_RESERVATION_NOTES_MAX_LENGTH} caracteres."
+                    )
+                },
+                status=400,
+            )
+
         if not start_time_str or not end_time_str:
             return JsonResponse(
                 {"detail": "Debes indicar hora de inicio y fin."}, status=400
@@ -450,7 +530,9 @@ class MyReservationRemindersView(AuthenticatedView):
             .order_by("start_time")
         )
 
-        return JsonResponse(_build_reservation_reminders(list(reservations)), safe=False)
+        return JsonResponse(
+            _build_reservation_reminders(list(reservations)), safe=False
+        )
 
 
 class SpaceReservationCancelView(AuthenticatedView):
@@ -527,6 +609,13 @@ class AdminSpaceListCreateView(AdminRequiredMixin, AuthenticatedView):
                 {"detail": "name, open_time y close_time son obligatorios."}, status=400
             )
 
+        text_validation_error = _validate_common_space_text_fields(
+            name=name,
+            description=description,
+        )
+        if text_validation_error:
+            return text_validation_error
+
         try:
             capacity = int(capacity)
             if capacity < 1:
@@ -568,11 +657,15 @@ class AdminSpaceListCreateView(AdminRequiredMixin, AuthenticatedView):
                 status=400,
             )
 
+        img_error = _validate_space_img(img)
+        if img_error:
+            return img_error
+
         space = CommonSpace.objects.create(
             residence=residence,
             name=name,
             description=description,
-            img = img,
+            img=img,
             capacity=capacity,
             open_time=ot,
             close_time=ct,
@@ -609,6 +702,9 @@ class AdminSpaceDetailView(AdminRequiredMixin, AuthenticatedView):
                 return JsonResponse(
                     {"detail": "El nombre no puede estar vacío."}, status=400
                 )
+            text_validation_error = _validate_common_space_text_fields(name=name)
+            if text_validation_error:
+                return text_validation_error
             if (
                 CommonSpace.objects.filter(residence=residence, name=name)
                 .exclude(id=space_id)
@@ -620,10 +716,20 @@ class AdminSpaceDetailView(AdminRequiredMixin, AuthenticatedView):
             space.name = name
 
         if "description" in payload:
-            space.description = str(payload["description"]).strip()
+            description = str(payload["description"]).strip()
+            text_validation_error = _validate_common_space_text_fields(
+                description=description
+            )
+            if text_validation_error:
+                return text_validation_error
+            space.description = description
 
         if "img" in payload:
-            space.img = payload["img"]
+            img_value = payload["img"] or ""
+            img_error = _validate_space_img(img_value)
+            if img_error:
+                return img_error
+            space.img = img_value
 
         if "capacity" in payload:
             try:
@@ -752,7 +858,29 @@ class AdminSpaceNotificationsView(AdminRequiredMixin, AuthenticatedView):
         return JsonResponse(data, safe=False)
 
 
-class AdminReservationsAnalyticsView(AdminRequiredMixin, AuthenticatedView):
+class AnalyticsPermissionMixin:
+    """Mixin que permite el acceso a analíticas si es admin del módulo O tiene permiso analytics."""
+
+    def check_permissions(self, request):
+        residence = _validate_residence(request)
+        if not residence:
+            return JsonResponse({"detail": "No residence context."}, status=400)
+
+        # Lógica OR: administrador de reservas O permiso general de analytics
+        is_mod_admin = is_reservations_admin(request.user, residence)
+        has_analytics_perm = has_screen_permission(request.user, residence, "analytics")
+
+        if not (is_mod_admin or has_analytics_perm):
+            return JsonResponse(
+                {
+                    "detail": "No tienes permisos para consultar analíticas de este módulo."
+                },
+                status=403,
+            )
+        return None
+
+
+class AdminReservationsAnalyticsView(AnalyticsPermissionMixin, AuthenticatedView):
     def get(self, request):
         residence = _validate_residence(request)
         if not residence:

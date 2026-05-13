@@ -13,6 +13,7 @@ const TENANT_BOOTSTRAP_GLOBAL = process.env.TENANT_BOOTSTRAP_GLOBAL || "__NEXUS_
 const REQUEST_TIMEOUT_MS = Number(process.env.REQUEST_TIMEOUT_MS || 5000);
 const REDIS_URL = process.env.REDIS_URL || "redis://redis:6379/0";
 const WS_EVENTS_PATH = "/ws/chats/events";
+const WS_MAX_BUFFERED_AMOUNT = Number(process.env.WS_MAX_BUFFERED_AMOUNT || 1024 * 1024);
 
 const frontendTarget = new URL(FRONTEND_UPSTREAM_URL);
 const backendTarget = new URL(BACKEND_UPSTREAM_URL);
@@ -117,8 +118,35 @@ function broadcastToResidence(residenceId, message) {
   if (!set || set.size === 0) return;
 
   for (const client of set) {
-    if (client.readyState === client.OPEN) {
-      client.send(message);
+    if (client.readyState !== client.OPEN) {
+      continue;
+    }
+
+    if (client.bufferedAmount > WS_MAX_BUFFERED_AMOUNT) {
+      try {
+        client.terminate();
+      } catch {
+        // ignore
+      }
+      continue;
+    }
+
+    try {
+      client.send(message, (error) => {
+        if (error) {
+          try {
+            client.terminate();
+          } catch {
+            // ignore
+          }
+        }
+      });
+    } catch {
+      try {
+        client.terminate();
+      } catch {
+        // ignore
+      }
     }
   }
 }
@@ -223,13 +251,35 @@ async function handleChatWsUpgrade(req, socket, head) {
       scheduleRedisRetry(residenceId);
     }
 
-    ws.on("close", () => {
-      removeWsClient(residenceId, ws);
+    let isAlive = true;
+    ws.on("pong", () => {
+      isAlive = true;
     });
 
-    ws.on("error", () => {
+    const heartbeat = setInterval(() => {
+      if (!isAlive) {
+        try {
+          ws.terminate();
+        } catch {
+          // ignore
+        }
+        return;
+      }
+      isAlive = false;
+      try {
+        ws.ping();
+      } catch {
+        // ignore
+      }
+    }, 30000);
+
+    const cleanup = () => {
+      clearInterval(heartbeat);
       removeWsClient(residenceId, ws);
-    });
+    };
+
+    ws.on("close", cleanup);
+    ws.on("error", cleanup);
 
     ws.send(JSON.stringify({
       event: redisReady ? "ws_connected" : "ws_connected_degraded",

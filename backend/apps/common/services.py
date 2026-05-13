@@ -13,6 +13,7 @@ from django.utils import timezone
 from django.utils.encoding import force_bytes, force_str
 from django.utils.html import strip_tags
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+from urllib.parse import quote
 from rest_framework import authentication
 from rest_framework.exceptions import APIException, AuthenticationFailed
 
@@ -135,7 +136,8 @@ def process_password_reset_request(email: str, request):
 
         domain = request.get_host()
         scheme = request.scheme
-        reset_link = f"{scheme}://{domain}/reset-password?uid={uid}&token={token}"
+        # Ensure uid and token are URL-encoded to avoid breaking query parsing
+        reset_link = f"{scheme}://{domain}/reset-password?uid={quote(uid)}&token={quote(token)}"
 
         html_message = render_to_string(
             "password_reset_email.html", {"reset_link": reset_link}
@@ -167,6 +169,52 @@ def process_password_reset_request(email: str, request):
     return (
         True,
         "Si el email está registrado, recibirás un correo con las instrucciones.",
+    )
+
+
+def process_welcome_email(email: str, request):
+    """Envía un correo de bienvenida con enlace para establecer contraseña inicial."""
+    user = get_user_by_email(email)
+
+    if user and user.is_active:
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+
+        domain = request.get_host()
+        scheme = request.scheme
+        # Ensure uid and token are URL-encoded to avoid breaking query parsing
+        reset_link = f"{scheme}://{domain}/reset-password?uid={quote(uid)}&token={quote(token)}"
+
+        html_message = render_to_string(
+            "welcome_email.html", {"reset_link": reset_link}
+        )
+        plain_message = strip_tags(html_message)
+
+        try:
+            send_mail(
+                subject="¡Bienvenido/a a NexUS!",
+                message=plain_message,
+                html_message=html_message,
+                from_email=getattr(
+                    settings, "DEFAULT_FROM_EMAIL", "nbynexus@gmail.com"
+                ),
+                recipient_list=[user.email],
+                fail_silently=False,
+            )
+            return (
+                True,
+                "Correo de bienvenida enviado exitosamente.",
+            )
+
+        except Exception as e:
+            logger.exception(
+                "Error al enviar correo SMTP de bienvenida"
+            )
+            raise SMTPServerError() from e
+
+    return (
+        True,
+        "Correo de bienvenida enviado exitosamente.",
     )
 
 

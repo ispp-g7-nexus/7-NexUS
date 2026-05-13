@@ -126,6 +126,107 @@ class MenuWeekViewSet(TenantMixin, viewsets.ModelViewSet):
 
         return Response(MenuWeekSerializer(menu_week).data)
 
+    @action(detail=False, methods=['post'])
+    def import_csv(self, request):
+        if not self._is_admin():
+            raise PermissionDenied({"detail": "Solo los administradores pueden importar menús."})
+
+        file_obj = request.FILES.get('file')
+        if not file_obj:
+            return Response({"detail": "No se proporcionó ningún archivo."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not file_obj.name.lower().endswith('.csv'):
+            return Response({"detail": "El archivo debe ser un CSV válido."}, status=status.HTTP_400_BAD_REQUEST)
+
+        week_start_str = request.data.get('week_start')
+        if not week_start_str:
+            return Response({"detail": "Se requiere la fecha de inicio de la semana."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            week_start = datetime.datetime.strptime(week_start_str, "%Y-%m-%d").date()
+            week_start = week_start - datetime.timedelta(days=week_start.weekday())
+            week_end = week_start + datetime.timedelta(days=6)
+        except ValueError:
+            return Response({"detail": "Formato de fecha inválido."}, status=status.HTTP_400_BAD_REQUEST)
+
+        tenant = self._resolve_tenant()
+        user = self._resolve_user()
+
+        import csv
+        import io
+
+        try:
+            decoded_file = file_obj.read().decode('utf-8-sig')
+            io_string = io.StringIO(decoded_file)
+            reader = csv.DictReader(io_string, delimiter=';')
+            if not reader.fieldnames or 'day' not in [f.strip().lower() for f in reader.fieldnames]:
+                io_string.seek(0)
+                reader = csv.DictReader(io_string, delimiter=',')
+                if not reader.fieldnames or 'day' not in [f.strip().lower() for f in reader.fieldnames]:
+                    return Response({"detail": "Formato de CSV inválido. Asegúrese de incluir las columnas requeridas."}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"detail": f"Error al leer el archivo CSV: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+
+        fieldnames = [f.strip().lower() for f in reader.fieldnames]
+
+        menu_week, _ = MenuWeek.objects.get_or_create(
+            residence=tenant,
+            week_start=week_start,
+            defaults={
+                'week_end': week_end,
+                'created_by': user,
+                'is_published': False
+            }
+        )
+
+        day_names = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
+        menu_days = {}
+        for i, d_name in enumerate(day_names):
+            d_date = week_start + datetime.timedelta(days=i)
+            md, _ = MenuDay.objects.get_or_create(
+                menu_week=menu_week,
+                date=d_date,
+                defaults={'day': d_name}
+            )
+            menu_days[d_name] = md
+
+        valid_meal_types = [choice[0] for choice in Meal.MealType.choices]
+        
+        for row in reader:
+            row_lower = {k.strip().lower() if k else '': v for k, v in row.items()}
+            day_str = row_lower.get('day', '').strip().lower()
+            if day_str not in menu_days:
+                continue
+            
+            meal_type = row_lower.get('type', '').strip().lower()
+            if meal_type not in valid_meal_types:
+                continue
+            
+            name = row_lower.get('name', '').strip()
+            if not name:
+                continue
+                
+            description = row_lower.get('description', '').strip()
+            allergens = row_lower.get('allergens', '').strip()
+            is_gluten_free = str(row_lower.get('is_gluten_free', '')).strip().lower() in ['true', '1', 'si', 'sí', 'yes']
+            is_vegetarian = str(row_lower.get('is_vegetarian', '')).strip().lower() in ['true', '1', 'si', 'sí', 'yes']
+            is_vegan = str(row_lower.get('is_vegan', '')).strip().lower() in ['true', '1', 'si', 'sí', 'yes']
+            
+            Meal.objects.update_or_create(
+                menu_day=menu_days[day_str],
+                name=name,
+                type=meal_type,
+                defaults={
+                    'description': description,
+                    'allergens': allergens,
+                    'is_gluten_free': is_gluten_free,
+                    'is_vegetarian': is_vegetarian,
+                    'is_vegan': is_vegan
+                }
+            )
+            
+        return Response(MenuWeekSerializer(menu_week).data, status=status.HTTP_200_OK)
+
 
 class MealViewSet(TenantMixin, viewsets.ModelViewSet):
     queryset = Meal.objects.all()

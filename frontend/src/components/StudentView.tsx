@@ -11,7 +11,6 @@ import { PackagesPage } from "../pages/Packages/Packages";
 import { SocialHub } from "../pages/Social/SocialHub.tsx";
 import { StudentAnnouncements } from "../pages/announcements/StudentAnnouncements";
 import StudentIncidences from "../pages/Incidences/components/StudentIncidences";
-import { MyMatchesPage } from "../pages/Matching/MyMatchesPage";
 import { ResidentMenuView } from "../pages/Menu/ResidentMenuView";
 import announcementService from "../services/announcement.service";
 import { StudentReservations } from "./StudentReservations";
@@ -222,6 +221,7 @@ export function StudentView({ onLogout }: StudentViewProps) {
     const [visitLimitBanner, setVisitLimitBanner] = useState<VisitLimitBannerState | null>(null);
     const previousUnreadCount = useRef<number | null>(null);
     const processedGroupMessageEventKeysRef = useRef<Set<string>>(new Set());
+    const groupMembershipRef = useRef<Map<number, boolean>>(new Map());
     const notifiedExpiringPassesRef = useRef<Set<string>>(new Set());
     const urgentVisitCheckSequenceRef = useRef(0);
     const visitUrgentStorageKey = buildVisitUrgentNotificationStorageKey(currentUserEmail);
@@ -398,17 +398,49 @@ export function StudentView({ onLogout }: StudentViewProps) {
             const isViewingPrivateChats = activeTab === "community" && isCommunityChatActive && communityChatSubTab === "privados";
 
             if (evt.event === "group_message_created" && !isViewingGroupChats) {
-                setHasGroupChatNews(true);
-
-                const chatModuleMounted = activeTab === "community" && isCommunityChatActive;
-                if (!chatModuleMounted) {
-                    const groupId = Number(evt.payload?.group_id ?? -1);
-                    persistResidentUnreadGroupIncrement(currentUserEmail, groupId);
+                const groupId = Number(evt.payload?.group_id ?? -1);
+                if (Number.isFinite(groupId) && groupId > 0) {
+                    const cached = groupMembershipRef.current.get(groupId);
+                    if (typeof cached === 'boolean') {
+                        if (cached) {
+                            setHasGroupChatNews(true);
+                            const chatModuleMounted = activeTab === "community" && isCommunityChatActive;
+                            if (!chatModuleMounted) {
+                                persistResidentUnreadGroupIncrement(currentUserEmail, groupId);
+                            }
+                        }
+                    } else {
+                        // Cache miss: fetch group and decide
+                        (async () => {
+                            try {
+                                const grp = await chatsService.getGroup(groupId);
+                                const isMember = !!grp.is_member;
+                                groupMembershipRef.current.set(groupId, isMember);
+                                if (!isMember) return;
+                                setHasGroupChatNews(true);
+                                const chatModuleMounted = activeTab === "community" && isCommunityChatActive;
+                                if (!chatModuleMounted) {
+                                    persistResidentUnreadGroupIncrement(currentUserEmail, groupId);
+                                }
+                            } catch (e) {
+                                // ignore failures
+                            }
+                        })();
+                    }
                 }
             }
 
             if (evt.event === "private_message_created" && !isViewingPrivateChats) {
-                setHasPrivateChatNews(true);
+                // If backend provided participants, ensure current user is included
+                const participants = Array.isArray(evt.payload?.participants) ? evt.payload.participants.map((p: string) => (typeof p === 'string' ? p.trim().toLowerCase() : '')).filter(Boolean) : null;
+                if (participants && participants.length > 0) {
+                    if (participants.includes(normalizedCurrentUserEmail)) {
+                        setHasPrivateChatNews(true);
+                    }
+                } else {
+                    // Fallback: mark as news if we can't determine participants
+                    setHasPrivateChatNews(true);
+                }
             }
 
         });
@@ -704,7 +736,24 @@ export function StudentView({ onLogout }: StudentViewProps) {
                 tabContent = <SocialHub initialTab="eventos" onNavigate={handleNavigation} />;
                 break;
             case "matches":
-                tabContent = <MyMatchesPage />;
+                tabContent = (
+                    <SocialHub
+                        initialTab="matches"
+                        onNavigate={handleNavigation}
+                        onLogout={onLogout}
+                        chatRealtimeTick={chatRealtimeTick}
+                        chatRealtimeEvent={chatRealtimeEvent}
+                        onChatTabActiveChange={setIsCommunityChatActive}
+                        onChatSubTabActiveChange={setCommunityChatSubTab}
+                        onChatUnreadStatusChange={({ hasGroupUnread, hasPrivateUnread }) => {
+                            setHasGroupChatNews(hasGroupUnread);
+                            setHasPrivateChatNews(hasPrivateUnread);
+                        }}
+                        hasChatNews={hasAnyChatNews}
+                        hasGroupChatNews={hasGroupChatNews}
+                        hasPrivateChatNews={hasPrivateChatNews}
+                    />
+                );
                 break;
             case "announcements":
                 tabContent = (

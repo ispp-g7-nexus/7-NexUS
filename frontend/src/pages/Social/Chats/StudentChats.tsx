@@ -115,6 +115,8 @@ export function StudentChats({
     onUnreadStatusChange,
     focusGroupId = null,
     onFocusGroupHandled,
+    focusConversationId = null,
+    onFocusConversationHandled,
 }: {
     readonly enableRealtimeStream?: boolean;
     readonly realtimeTick?: number;
@@ -125,6 +127,8 @@ export function StudentChats({
     readonly onUnreadStatusChange?: (status: { hasGroupUnread: boolean; hasPrivateUnread: boolean }) => void;
     readonly focusGroupId?: number | null;
     readonly onFocusGroupHandled?: () => void;
+    readonly focusConversationId?: number | null;
+    readonly onFocusConversationHandled?: () => void;
 }) {
     const [subTab, setSubTab] = useState<ChatSubTab>("grupos");
 
@@ -162,12 +166,14 @@ export function StudentChats({
     const processedGroupMessageEventKeysRef = useRef<Set<string>>(new Set());
     const processedPrivateMessageEventKeysRef = useRef<Set<string>>(new Set());
     const lastHandledFocusGroupIdRef = useRef<number | null>(null);
+    const lastFetchGroupMessagesTimeRef = useRef<number>(0);
 
     // ── Estado nueva conversación ──
     const [showNewConv, setShowNewConv] = useState(false);
     const [residents, setResidents] = useState<ChatResident[]>([]);
     const [loadingResidents, setLoadingResidents] = useState(false);
     const [residentSearch, setResidentSearch] = useState("");
+    const [joiningGroupId, setJoiningGroupId] = useState<number | null>(null);
 
     const unreadGroupsStorageKey = useMemo(
         () => buildResidentUnreadGroupsStorageKey(currentUserEmail),
@@ -179,7 +185,8 @@ export function StudentChats({
     const loadGroups = useCallback(async () => {
         setLoadingGroups(true);
         try {
-            setGroups(await chatsService.listMyGroups());
+            const myGroups = await chatsService.listMyGroups();
+            setGroups(myGroups.map((group) => ({ ...group, is_member: true })));
         } catch {
             toast.error("No se pudieron cargar tus grupos.");
         } finally {
@@ -323,6 +330,14 @@ export function StudentChats({
         globalThis.localStorage.setItem(unreadGroupsStorageKey, JSON.stringify(unreadGroupCounts));
     }, [unreadGroupCounts, unreadGroupsStorageKey]);
 
+    const clearUnreadForGroup = (groupId: number) => {
+        setUnreadGroupCounts((prev) => {
+            if (!(groupId in prev)) return prev;
+            const { [groupId]: _ignored, ...rest } = prev;
+            return rest;
+        });
+    };
+
     const handleLeaveGroup = async () => {
         if (!selectedGroup) return;
         if (!selectedGroup.can_members_leave) {
@@ -346,6 +361,22 @@ export function StudentChats({
             toast.error(err instanceof Error ? err.message : "No se pudo abandonar el grupo.");
         } finally {
             setLeaving(false);
+        }
+    };
+
+    const handleJoinGroup = async (group: ChatGroup) => {
+        setJoiningGroupId(group.id);
+        try {
+            const updated = await chatsService.joinGroup(group.id);
+            const nextGroup = { ...updated, is_member: true };
+            setGroups((prev) => prev.map((current) => (current.id === updated.id ? nextGroup : current)));
+            clearUnreadForGroup(group.id);
+            await openGroup(nextGroup);
+            toast.success(`Te has unido a "${group.name}".`);
+        } catch (err: unknown) {
+            toast.error(err instanceof Error ? err.message : "No se pudo unirte al grupo.");
+        } finally {
+            setJoiningGroupId(null);
         }
     };
 
@@ -390,6 +421,13 @@ export function StudentChats({
     }, [focusGroupId, groups, onFocusGroupHandled]);
 
     const loadSelectedGroupMessages = useCallback(async (groupId: number) => {
+        // Debounce: prevent multiple fetches within 500ms to avoid infinite loops
+        const now = Date.now();
+        if (now - lastFetchGroupMessagesTimeRef.current < 500) {
+            return;
+        }
+        lastFetchGroupMessagesTimeRef.current = now;
+
         try {
             setGroupMessages(dedupeGroupMessages(await chatsService.listGroupMessages(groupId)));
         } catch {
@@ -448,6 +486,14 @@ export function StudentChats({
             window.history.replaceState({}, "");
         }
     }, [location.state, loadConversations]);
+
+    useEffect(() => {
+        if (focusConversationId == null || focusConversationId <= 0) return;
+        pendingConvIdRef.current = focusConversationId;
+        setSubTab("privados");
+        loadConversations().catch(() => { });
+        onFocusConversationHandled?.();
+    }, [focusConversationId, loadConversations, onFocusConversationHandled]);
 
     useEffect(() => {
         const pendingId = pendingConvIdRef.current;
@@ -1121,10 +1167,10 @@ export function StudentChats({
                         <div className="text-center py-16">
                             <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                             <h3 className="text-base font-medium text-gray-900 mb-1">
-                                {searchTerm ? "Sin resultados" : "No estás en ningún grupo"}
+                                {searchTerm ? "Sin resultados" : "No hay grupos disponibles"}
                             </h3>
                             <p className="text-sm text-gray-400">
-                                {searchTerm ? "Prueba con otra búsqueda." : "Cuando un administrador te añada a un grupo, aparecerá aquí."}
+                                {searchTerm ? "Prueba con otra búsqueda." : "Cuando haya grupos en la residencia, podrás unirte desde aquí."}
                             </p>
                         </div>
                     ) : (
@@ -1136,6 +1182,7 @@ export function StudentChats({
                                     icon: <Tag className="w-3 h-3" />,
                                 };
                                 const isFormerMember = group.current_user_can_interact === false;
+                                const isMember = group.is_member === true;
                                 const unreadCount = unreadGroupCounts[group.id] ?? 0;
                                 const unreadBadgeText = unreadCount > 9 ? "9+" : String(unreadCount);
                                 const membersLabel = group.members === 1 ? "miembro" : "miembros";
@@ -1149,7 +1196,7 @@ export function StudentChats({
                                         }`}
                                     >
                                         <button
-                                            onClick={() => openGroup(group)}
+                                            onClick={() => (isMember ? openGroup(group) : handleJoinGroup(group))}
                                             className="flex-1 min-w-0 text-left flex items-center gap-3"
                                         >
                                             <div className="relative shrink-0">
@@ -1160,7 +1207,7 @@ export function StudentChats({
                                                 }`}>
                                                     {group.name.charAt(0).toUpperCase()}
                                                 </div>
-                                                {unreadCount > 0 && (
+                                                {isMember && unreadCount > 0 && (
                                                     <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                                                         {unreadBadgeText}
                                                     </span>
@@ -1179,6 +1226,11 @@ export function StudentChats({
                                                     </span>
                                                 </div>
                                                 {group.description && <p className="text-xs truncate text-gray-500">{group.description}</p>}
+                                                {!isMember && !isFormerMember && (
+                                                    <p className="text-[11px] text-gray-600 mt-0.5">
+                                                        Pulsa para unirte y ver los mensajes.
+                                                    </p>
+                                                )}
                                                 {isFormerMember && (
                                                     <p className="text-[11px] text-gray-600 mt-0.5">
                                                         Ya no puedes enviar ni recibir mensajes en este grupo.
@@ -1190,6 +1242,17 @@ export function StudentChats({
                                                 </div>
                                             </div>
                                         </button>
+                                        {!isFormerMember && !isMember && (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="text-green-700 border-green-200 hover:bg-green-50 shrink-0"
+                                                onClick={() => handleJoinGroup(group)}
+                                                disabled={joiningGroupId === group.id}
+                                            >
+                                                {joiningGroupId === group.id ? "Uniéndose..." : "Unirse"}
+                                            </Button>
+                                        )}
                                         {canManageGroup(group) && (
                                             <Button
                                                 variant="outline"

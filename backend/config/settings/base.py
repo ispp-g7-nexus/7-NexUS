@@ -106,6 +106,8 @@ DATABASES = {
         "PASSWORD": os.getenv("POSTGRES_PASSWORD", "postgres"),
         "HOST": os.getenv("POSTGRES_HOST", "localhost"),
         "PORT": os.getenv("POSTGRES_PORT", "5432"),
+        "CONN_MAX_AGE": int(os.getenv("DB_CONN_MAX_AGE", "60")),
+        "CONN_HEALTH_CHECKS": True,
     }
 }
 
@@ -192,3 +194,7 @@ REST_FRAMEWORK = {
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# Allow request bodies up to 10 MB to support base64-encoded image uploads (max image ~5 MB → ~6.7 MB in base64)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10 MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10 MB

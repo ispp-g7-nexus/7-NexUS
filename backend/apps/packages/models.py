@@ -33,7 +33,7 @@ class Package(models.Model):
     carrier = models.CharField(max_length=120, blank=True)
     tracking_number = models.CharField(max_length=120, blank=True)
     delivery_code = models.CharField(max_length=5, default=generate_delivery_code)
-    notes = models.TextField(blank=True)
+    notes = models.TextField(blank=True, max_length=2000)
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
@@ -57,21 +57,26 @@ class Package(models.Model):
     def clean(self) -> None:
         super().clean()
 
-        if self.status == self.Status.DELIVERED and self.delivered_at is None:
-            raise ValidationError(
-                {
-                    "delivered_at": "Los paquetes entregados deben tener fecha de entrega.",
-                }
-            )
+        errors = {}
+        now = timezone.now()
+
+        if self.received_at and self.received_at > now:
+            errors["received_at"] = "La fecha de recepción no puede ser futura."
+
+        if self.delivered_at and self.received_at and self.delivered_at < self.received_at:
+            errors["delivered_at"] = "La fecha de entrega no puede ser anterior a la fecha de recepción."
+
+        if self.status == self.Status.DELIVERED:
+            if self.delivered_at is None:
+                errors["delivered_at"] = "Los paquetes entregados deben tener fecha de entrega."
+            elif self.delivered_at > now:
+                errors["delivered_at"] = "La fecha de entrega no puede ser futura."
 
         if self.status != self.Status.DELIVERED and self.delivered_at is not None:
-            raise ValidationError(
-                {
-                    "delivered_at": (
-                        "Solo los paquetes entregados pueden tener fecha de entrega."
-                    ),
-                }
-            )
+            errors["delivered_at"] = "Solo los paquetes entregados pueden tener fecha de entrega."
+
+        if errors:
+            raise ValidationError(errors)
 
     class Meta:
         ordering = ["-received_at", "-created_at"]
