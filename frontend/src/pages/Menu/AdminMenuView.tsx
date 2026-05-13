@@ -77,21 +77,22 @@ const MealCardAdmin = ({ meal, onEdit, onDelete }: MealCardAdminProps) => {
           <div className="flex-1">
             <p className="font-semibold text-gray-900">{meal.name}</p>
             {meal.description && (
-              <p className="text-sm text-gray-500">{meal.description}</p>
+              <p className="text-sm text-gray-500 break-all w-full">
+                {meal.description}
+              </p>
             )}
           </div>
+          </div>
           {meal.allergens && meal.allergens.trim() !== '' && (
-          <div className="mt-2 flex items-start gap-1 text-sm text-orange-600 bg-orange-50 p-2 rounded-md">
-            <span title="Alérgenos">⚠️</span>
-            <p>
+          <div className="flex items-start gap-1 text-sm text-orange-600 bg-orange-50 p-2 rounded-md overflow-hidden">
+            <span className="shrink-0" title="Alérgenos">⚠️</span>
+            <p className="overflow-hidden">
               <span className="font-semibold">Alérgenos: </span>
-              {meal.allergens}
+              <span className="break-words">{meal.allergens}</span>
             </p>
           </div>
-        )}
-        </div>
-        
-        <div className={`flex gap-2 ml-4 shrink-0 ${meal.image ? ' z-10 relative' : ''}`}>
+        )}        
+        <div className={`flex gap-2 shrink-0 ${meal.image ? ' z-10 relative' : ''}`}>
           <button
             onClick={() => onEdit(meal)}
             className="p-1.5 hover:bg-green-100 rounded-md text-green-600 transition-colors"
@@ -235,10 +236,11 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
           {/* Nombre */}
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-1">
-              Nombre de la comida *
+              Nombre de la comida * ({formData.name?.length || 0}/80)
             </label>
             <input
               type="text"
+              maxLength={80}
               value={formData.name}
               onChange={(e) => handleChange('name', e.target.value)}
               placeholder="Ej: Arroz con pollo"
@@ -267,9 +269,10 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
           {/* Descripción */}
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-1">
-              Descripción (opcional)
+              Descripción (opcional) * ({formData.description?.length || 0}/150)
             </label>
             <textarea
+              maxLength={150}
               value={formData.description || ''}
               onChange={(e) => handleChange('description', e.target.value)}
               placeholder="Ej: Acompañado de ensalada fresca"
@@ -412,6 +415,11 @@ const NewWeekModal = ({ isOpen, onClose, onSave, isSaving }: NewWeekModalProps) 
 
   if (!isOpen) return null;
 
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const selectedDateObj = new Date(selectedDate + 'T00:00:00');
+  const isDateInPast = selectedDateObj < today;
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70] animate-in fade-in duration-200">
       <div className="bg-white rounded-xl shadow-lg max-w-sm w-full mx-4 animate-in zoom-in-95 duration-200">
@@ -437,8 +445,12 @@ const NewWeekModal = ({ isOpen, onClose, onSave, isSaving }: NewWeekModalProps) 
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
+              min={new Date().toISOString().split('T')[0]}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
             />
+            {isDateInPast && (
+              <p className="text-sm text-red-600 mt-2">No puedes crear menús para fechas pasadas</p>
+            )}
           </div>
         </div>
 
@@ -452,7 +464,7 @@ const NewWeekModal = ({ isOpen, onClose, onSave, isSaving }: NewWeekModalProps) 
           </button>
           <button
             onClick={() => onSave(selectedDate, selectedDate)}
-            disabled={isSaving || !selectedDate}
+            disabled={isSaving || !selectedDate || isDateInPast}
             className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
@@ -1010,10 +1022,10 @@ export function AdminMenuView() {
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
-              <span className="text-lg font-semibold text-gray-900 whitespace-nowrap min-w-[120px] text-center">
-                {new Date(menuWeek.weekStart + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+              <span className="text-lg font-semibold text-gray-900 whitespace-nowrap min-w-[180px] text-center">
+                {new Date(menuWeek.weekStart + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
                 {' - '}
-                {new Date(menuWeek.weekEnd + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                {new Date(menuWeek.weekEnd + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
               </span>
               <button
                 onClick={() => handleNavigateWeek('next')}
@@ -1169,36 +1181,38 @@ export function AdminMenuView() {
       <div className="mt-12 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="bg-[#1B4D1C] p-4 flex justify-between items-center">
           <h3 className="text-white font-bold">Solicitudes Especiales</h3>
-          <span className="bg-white/20 text-white text-xs px-2 py-1 rounded">{specialRequests.filter(r => r.status === 'pending').length}</span>
+          <span className="bg-white/20 text-white text-xs px-2 py-1 rounded">
+            {specialRequests.filter(r => r.status === 'pending').length}
+          </span>
         </div>
         <div className="divide-y divide-gray-100">
           {specialRequests.length === 0 ? (
             <p className="p-8 text-center text-gray-400">No hay peticiones</p>
           ) : (
             <>
-              {/* Peticiones Pendientes */}
               {specialRequests.filter(r => r.status === 'pending').map((req) => (
-                <div key={req.id} className="p-4 flex justify-between items-center bg-orange-50/50 hover:bg-orange-50 transition-colors">
-                  <div>
-                    <p className="font-bold text-gray-800">{req.user_name || 'Usuario'}</p>
-                    <p className="text-sm text-gray-500">{req.date}: {req.description}</p>
+                <div key={req.id} className="p-4 flex items-center justify-between w-full gap-4 bg-orange-50/50 hover:bg-orange-50 transition-colors">
+                  <div className="flex-1 min-w-0 max-w-[75%] pr-2">
+                    <p className="font-bold text-gray-800 break-all">{req.user_name || 'Usuario'}</p>
+                    <p className="text-sm text-gray-500 break-all">{req.date}: {req.description}</p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 shrink-0 justify-center">
                     <button 
                       onClick={() => handleUpdateSpecialRequest(req.id, 'approved')} 
-                      className="bg-green-600 text-white px-3 py-1 rounded-lg text-sm font-bold hover:bg-green-700 transition-colors"
+                      className="bg-green-600 text-white px-3 py-1 rounded-lg text-sm font-bold hover:bg-green-700 transition-colors shrink-0 whitespace-nowrap"
                     >
                       Aprobar
                     </button>
                     <button 
                       onClick={() => handleUpdateSpecialRequest(req.id, 'rejected')} 
-                      className="border border-red-200 text-red-600 px-3 py-1 rounded-lg text-sm font-bold hover:bg-red-50 transition-colors"
+                      className="border border-red-200 text-red-600 px-3 py-1 rounded-lg text-sm font-bold hover:bg-red-50 transition-colors shrink-0 whitespace-nowrap"
                     >
                       Rechazar
                     </button>
                   </div>
                 </div>
               ))}
+
               
               {/* Historial (Aprobadas/Rechazadas) */}
               {specialRequests.filter(r => r.status !== 'pending').length > 0 && (
@@ -1226,7 +1240,7 @@ export function AdminMenuView() {
                             {req.status === 'approved' ? 'Aprobada' : 'Rechazada'}
                           </span>
                         </div>
-                        <p className="text-sm text-gray-500">{req.date}: {req.description}</p>
+                        <p className="text-sm text-gray-500 break-all">{req.date}: {req.description}</p>
                       </div>
                     </div>
                   ))}
