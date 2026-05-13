@@ -7,7 +7,12 @@ from django_tenants.test.client import TenantClient
 
 from django.contrib.auth import get_user_model
 from apps.residences.models import Residence, ResidenceDomain
-from apps.spaces.models import CommonSpace, SpaceReservation
+from apps.spaces.models import (
+    COMMON_SPACE_DESCRIPTION_MAX_LENGTH,
+    COMMON_SPACE_NAME_MAX_LENGTH,
+    CommonSpace,
+    SpaceReservation,
+)
 from apps.spaces.tests import ensure_tenant_domain, make_tenant_client
 
 
@@ -304,6 +309,42 @@ class AdminSpaceViewsTests(FastTenantTestCase):
         self.assertEqual(resp.status_code, 400)
         self.assertIn("obligatorios", resp.json()["detail"])
 
+    def test_admin_create_space_name_too_long_returns_400(self):
+        payload = {
+            "name": "A" * (COMMON_SPACE_NAME_MAX_LENGTH + 1),
+            "description": "desc",
+            "capacity": 3,
+            "open_time": "09:00",
+            "close_time": "18:00",
+            "reservation_interval_minutes": 30,
+        }
+        resp = self.admin_client.post(
+            "/api/admin/spaces/",
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("name", resp.json())
+        self.assertIn("no puede superar", resp.json()["name"][0])
+
+    def test_admin_create_space_description_too_long_returns_400(self):
+        payload = {
+            "name": "Sala de Prueba",
+            "description": "D" * (COMMON_SPACE_DESCRIPTION_MAX_LENGTH + 1),
+            "capacity": 3,
+            "open_time": "09:00",
+            "close_time": "18:00",
+            "reservation_interval_minutes": 30,
+        }
+        resp = self.admin_client.post(
+            "/api/admin/spaces/",
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("description", resp.json())
+        self.assertIn("no puede superar", resp.json()["description"][0])
+
     def test_admin_create_space_negative_capacity_returns_400(self):
         payload = {
             "name": "Sala Y",
@@ -372,6 +413,28 @@ class AdminSpaceViewsTests(FastTenantTestCase):
         )
         self.assertEqual(resp.status_code, 400)
         self.assertIn("nombre", resp.json()["detail"])
+
+    def test_admin_patch_space_name_too_long_returns_400(self):
+        payload = {"name": "A" * (COMMON_SPACE_NAME_MAX_LENGTH + 1)}
+        resp = self.admin_client.patch(
+            f"/api/admin/spaces/{self.space.id}/",
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("name", resp.json())
+        self.assertIn("no puede superar", resp.json()["name"][0])
+
+    def test_admin_patch_space_description_too_long_returns_400(self):
+        payload = {"description": "D" * (COMMON_SPACE_DESCRIPTION_MAX_LENGTH + 1)}
+        resp = self.admin_client.patch(
+            f"/api/admin/spaces/{self.space.id}/",
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("description", resp.json())
+        self.assertIn("no puede superar", resp.json()["description"][0])
 
     def test_admin_patch_space_invalid_open_time_format_returns_400(self):
         payload = {"open_time": "invalid"}

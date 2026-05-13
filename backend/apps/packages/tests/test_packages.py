@@ -1,6 +1,7 @@
 import base64
 import json
 from unittest.mock import patch
+from datetime import timedelta
 
 import requests
 from django.contrib.auth import get_user_model
@@ -489,6 +490,40 @@ class PackageApiTests(TenantTestCase):
 
         with self.assertRaises(ValidationError):
             package.clean()
+
+    def test_model_clean_rejects_future_reception_date(self):
+        package = Package(
+            residence=self.residence,
+            resident=self.resident_membership,
+            resident_name_snapshot="Maria Lopez",
+            room_snapshot="101",
+            building_snapshot="A",
+            status=Package.Status.RECEIVED,
+            received_at=timezone.now() + timedelta(days=1),
+        )
+
+        with self.assertRaises(ValidationError) as ctx:
+            package.clean()
+
+        self.assertIn("received_at", ctx.exception.message_dict)
+
+    def test_model_clean_rejects_delivery_before_reception(self):
+        received_at = timezone.now()
+        package = Package(
+            residence=self.residence,
+            resident=self.resident_membership,
+            resident_name_snapshot="Maria Lopez",
+            room_snapshot="101",
+            building_snapshot="A",
+            status=Package.Status.DELIVERED,
+            received_at=received_at,
+            delivered_at=received_at - timedelta(minutes=5),
+        )
+
+        with self.assertRaises(ValidationError) as ctx:
+            package.clean()
+
+        self.assertIn("delivered_at", ctx.exception.message_dict)
 
     def test_db_constraint_rejects_status_and_delivered_at_mismatch(self):
         with self.assertRaises(IntegrityError):

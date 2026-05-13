@@ -5,14 +5,116 @@ import type { ReservationReminderNotification } from "./reservations";
 
 const OBJECTS_URL = `${API_URL}/objects`;
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+const FIELD_LABELS: Record<string, string> = {
+  name: "nombre",
+  description: "descripción",
+  location: "ubicación",
+  stock_total: "stock total",
+  image_url: "URL de imagen",
+  label_ids: "etiquetas",
+  tags: "etiquetas",
+  start_date: "fecha de inicio",
+  end_date: "fecha de fin",
+  rental_id: "reserva",
+};
+
+function normalizeFieldMessage(fieldName: string, rawMessage: string): string {
+  const message = rawMessage.trim();
+  const label = FIELD_LABELS[fieldName] ?? fieldName;
+
+  const drfMaxLengthMatch = message.match(/Ensure this field has no more than (\d+) characters\./i);
+  if (drfMaxLengthMatch) {
+    return `El campo ${label} no puede superar los ${drfMaxLengthMatch[1]} caracteres.`;
+  }
+  if (/This field may not be blank\./i.test(message)) {
+    return `El campo ${label} no puede estar vacío.`;
+  }
+  if (/This field is required\./i.test(message)) {
+    return `El campo ${label} es obligatorio.`;
+  }
+
+  const customMaxLengthMatch = message.match(/^El campo '([^']+)' no puede superar (\d+) caracteres\.?$/i);
+  if (customMaxLengthMatch) {
+    const normalizedField = customMaxLengthMatch[1].trim();
+    const maxLength = customMaxLengthMatch[2];
+    if (normalizedField === "description") {
+      return `La descripción no puede superar los ${maxLength} caracteres.`;
+    }
+    const normalizedLabel = FIELD_LABELS[normalizedField] ?? normalizedField;
+    return `El campo ${normalizedLabel} no puede superar los ${maxLength} caracteres.`;
+  }
+
+  return message;
+}
+
+function collectFieldMessages(payload: Record<string, unknown>): string[] {
+  const messages: string[] = [];
+
+  for (const [fieldName, value] of Object.entries(payload)) {
+    if (fieldName === "detail" || fieldName === "message" || fieldName === "error") {
+      continue;
+    }
+
+    if (typeof value === "string" && value.trim()) {
+      messages.push(normalizeFieldMessage(fieldName, value));
+      continue;
+    }
+
+    if (Array.isArray(value)) {
+      const firstText = value.find((item) => typeof item === "string" && item.trim());
+      if (typeof firstText === "string") {
+        messages.push(normalizeFieldMessage(fieldName, firstText));
+      }
+    }
+  }
+
+  return messages;
+}
+
+function pickErrorMessage(payload: unknown, fallbackMessage: string): string {
+  if (typeof payload === "string" && payload.trim()) {
+    return payload;
+  }
+
+  if (!isRecord(payload)) {
+    return fallbackMessage;
+  }
+
+  if (typeof payload.detail === "string" && payload.detail.trim()) {
+    const detailMessage = payload.detail.trim();
+    const fieldInDetailMatch = detailMessage.match(/^El campo '([^']+)' no puede superar \d+ caracteres\.?$/i);
+    if (fieldInDetailMatch) {
+      return normalizeFieldMessage(fieldInDetailMatch[1], detailMessage);
+    }
+    return detailMessage;
+  }
+  if (typeof payload.message === "string" && payload.message.trim()) {
+    return payload.message;
+  }
+  if (typeof payload.error === "string" && payload.error.trim()) {
+    return payload.error;
+  }
+
+  const fieldMessages = collectFieldMessages(payload);
+  if (fieldMessages.length > 0) {
+    return fieldMessages[0];
+  }
+
+  return fallbackMessage;
+}
+
 async function buildApiError(response: Response, fallbackMessage: string): Promise<Error> {
+  const fallbackWithStatus = `${fallbackMessage} (HTTP ${response.status})`;
   try {
     const contentType = response.headers.get("content-type") || "";
 
     if (contentType.includes("application/json")) {
-      const payload = await response.json();
-      const detail = typeof payload?.detail === "string" ? payload.detail : "";
-      return new Error(detail || `${fallbackMessage} (HTTP ${response.status})`);
+      const payload = (await response.json()) as unknown;
+      return new Error(pickErrorMessage(payload, fallbackWithStatus));
     }
 
     const rawText = (await response.text()).trim();
@@ -23,7 +125,7 @@ async function buildApiError(response: Response, fallbackMessage: string): Promi
     // Fall back to a generic message when body parsing fails.
   }
 
-  return new Error(`${fallbackMessage} (HTTP ${response.status})`);
+  return new Error(fallbackWithStatus);
 }
 
 export interface ObjectRental {

@@ -1,4 +1,4 @@
-import { Clock, Edit2, Plus, Trash2, Leaf, Flame, X, Loader2, ChevronLeft } from "lucide-react";
+import { Clock, Edit2, Plus, Trash2, Leaf, Flame, X, Loader2, ChevronLeft, FileUp } from "lucide-react";
 import { useState, useEffect, useCallback, JSX, SyntheticEvent } from "react";
 import { MenuWeek, MenuDay, Meal } from "../../types/menu.types";
 import menuService from "../../services/menu.service";
@@ -476,6 +476,95 @@ const NewWeekModal = ({ isOpen, onClose, onSave, isSaving }: NewWeekModalProps) 
   );
 };
 
+interface ImportCsvModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (weekStart: string, file: File) => void;
+  isSaving?: boolean;
+}
+
+const ImportCsvModal = ({ isOpen, onClose, onSave, isSaving }: ImportCsvModalProps) => {
+  const [selectedDate, setSelectedDate] = useState('');
+  const [file, setFile] = useState<File | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      const today = new Date();
+      setSelectedDate(today.toISOString().split('T')[0]);
+      setFile(null);
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70] animate-in fade-in duration-200">
+      <div className="bg-white rounded-xl shadow-lg max-w-sm w-full mx-4 animate-in zoom-in-95 duration-200">
+        <div className="flex items-center justify-between p-6 border-b border-gray-100">
+          <h2 className="text-xl font-semibold text-gray-900">
+            Importar Menú por CSV
+          </h2>
+          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-md transition-colors">
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-4">
+          <p className="text-sm text-gray-500 leading-relaxed">
+            Sube un archivo CSV con el formato adecuado. Selecciona una fecha de inicio para la semana.
+          </p>
+          <div>
+            <label htmlFor="csv-week-date" className="block text-sm font-medium text-gray-700 mb-2">
+              Fecha de inicio
+            </label>
+            <input
+              id="csv-week-date"
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
+            />
+          </div>
+          <div>
+             <label htmlFor="csv-file" className="block text-sm font-medium text-gray-700 mb-2">
+              Archivo CSV
+             </label>
+             <input
+              id="csv-file"
+              type="file"
+              accept=".csv"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+             />
+          </div>
+        </div>
+
+        <div className="flex gap-3 p-6 border-t border-gray-100 bg-gray-50/50 rounded-b-xl">
+          <button
+            onClick={onClose}
+            disabled={isSaving}
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-white transition-colors disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={() => {
+               if (selectedDate && file) {
+                  onSave(selectedDate, file);
+               }
+            }}
+            disabled={isSaving || !selectedDate || !file}
+            className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+            Importar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 interface DayMenuCardAdminProps {
   day: MenuDay;
   onAddMeal: (dayDate: string, dayId: string) => void;
@@ -558,6 +647,7 @@ export function AdminMenuView() {
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isNewWeekModalOpen, setIsNewWeekModalOpen] = useState(false);
+  const [isImportCsvModalOpen, setIsImportCsvModalOpen] = useState(false);
   const [selectedMeal, setSelectedMeal] = useState<Meal | undefined>();
   const [editingDayId, setEditingDayId] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
@@ -747,6 +837,22 @@ export function AdminMenuView() {
     }
   };
 
+  const handleImportCsv = async (weekStart: string, file: File) => {
+    setIsSaving(true);
+    try {
+      const newWeek = await menuService.importWeekFromCsv(weekStart, file);
+      setIsImportCsvModalOpen(false);
+      setMenuWeek(newWeek);
+      setSelectedWeekId(newWeek.id || null);
+      showToast('Menú importado correctamente', 'success');
+      await loadWeeks();
+    } catch (err) {
+      showToast('Error al importar menú: ' + (err instanceof Error ? err.message : 'Error desconocido'), 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleNavigateWeek = async (direction: 'prev' | 'next') => {
     if (!selectedWeekId || allWeeks.length === 0) return;
 
@@ -836,13 +942,22 @@ export function AdminMenuView() {
                 {error || 'No hay menús semanales creados aún'}
               </p>
             </div>
-            <button
-              onClick={() => setIsNewWeekModalOpen(true)}
-              className="px-5 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors font-medium flex items-center gap-2 shadow-sm"
-            >
-              <Plus className="w-5 h-5" />
-              Nueva Semana
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setIsImportCsvModalOpen(true)}
+                className="px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium flex items-center gap-2 shadow-sm"
+              >
+                <FileUp className="w-5 h-5" />
+                Importar CSV
+              </button>
+              <button
+                onClick={() => setIsNewWeekModalOpen(true)}
+                className="px-5 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors font-medium flex items-center gap-2 shadow-sm"
+              >
+                <Plus className="w-5 h-5" />
+                Nueva Semana
+              </button>
+            </div>
           </div>
 
           <div className="col-span-full text-center py-16 text-gray-400">
@@ -855,6 +970,13 @@ export function AdminMenuView() {
           isOpen={isNewWeekModalOpen}
           onClose={() => setIsNewWeekModalOpen(false)}
           onSave={handleCreateWeek}
+          isSaving={isSaving}
+        />
+
+        <ImportCsvModal
+          isOpen={isImportCsvModalOpen}
+          onClose={() => setIsImportCsvModalOpen(false)}
+          onSave={handleImportCsv}
           isSaving={isSaving}
         />
 
@@ -952,6 +1074,13 @@ export function AdminMenuView() {
               </button>
 
               <button
+                onClick={() => setIsImportCsvModalOpen(true)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-2"
+              >
+                <FileUp className="w-4 h-4" />
+                Importar CSV
+              </button>
+              <button
                 onClick={() => setIsNewWeekModalOpen(true)}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center gap-2"
               >
@@ -1020,6 +1149,14 @@ export function AdminMenuView() {
         isOpen={isNewWeekModalOpen}
         onClose={() => setIsNewWeekModalOpen(false)}
         onSave={handleCreateWeek}
+        isSaving={isSaving}
+      />
+
+      {/* Import CSV Modal */}
+      <ImportCsvModal
+        isOpen={isImportCsvModalOpen}
+        onClose={() => setIsImportCsvModalOpen(false)}
+        onSave={handleImportCsv}
         isSaving={isSaving}
       />
 

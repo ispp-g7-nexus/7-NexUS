@@ -28,9 +28,9 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
   const [staffId] = useState("")
   const [externalName] = useState("")
   const [areaError, setAreaError] = useState(false)
-  const [base64Image, setBase64Image] = useState<string | null>(null)
+  const [base64Image, setBase64Image] = useState<string | null>(initialData?.img || null);
   const [, setRooms] = useState<any[]>([])
-  
+
   useEffect(() => {
     if (isAdmin) {
       fetchWithAuth('/api/bedrooms/').then(res => res.json()).then(data => setRooms(data));
@@ -50,8 +50,6 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-
     if (!locationType) {
       setAreaError(true);
       return;
@@ -181,9 +179,16 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
             <label className={UI_CLASSES.imageUploadPlaceholder}>
               <Camera className="w-6 h-6 mb-1 opacity-40" />
               <span className="text-xs font-medium opacity-60">Subir foto</span>
-              <input type="file" accept="image/*" onChange={(e) => {
+              <input type="file" accept="image/png, image/jpeg, image/webp" onChange={(e) => {
                 const file = e.target.files?.[0];
-                if (file) { const r = new FileReader(); r.onloadend = () => setBase64Image(r.result as string); r.readAsDataURL(file); }
+                if (file) {
+                  if (!file.type.startsWith('image/')) {
+                    alert('Por favor, selecciona solo archivos de imagen (JPG, PNG...).');
+                    e.target.value = '';
+                    return;
+                  }
+                  const r = new FileReader(); r.onloadend = () => setBase64Image(r.result as string); r.readAsDataURL(file);
+                }
               }} className="hidden" />
             </label>
           )}

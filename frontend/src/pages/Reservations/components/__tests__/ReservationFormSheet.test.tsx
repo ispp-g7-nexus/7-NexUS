@@ -105,6 +105,22 @@ describe('ReservationFormSheet', () => {
     })
   })
 
+  it('no llama a disponibilidad si la fecha inicial no es válida', async () => {
+    render(
+      <ReservationFormSheet
+        open
+        initialDate="fecha-invalida"
+        space={space}
+        onOpenChange={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(mockedGetSpaceAvailability).not.toHaveBeenCalled()
+    })
+  })
+
   it('deshabilita tramos ocupados o pasados', async () => {
     mockedGetSpaceAvailability.mockResolvedValue({
       date: '2099-06-01',
@@ -135,6 +151,71 @@ describe('ReservationFormSheet', () => {
     })
   })
 
+  it('limita la nota a 250 caracteres y muestra contador', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <ReservationFormSheet
+        open
+        initialDate="2099-06-01"
+        space={space}
+        onOpenChange={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText(/Horas disponibles/i)).toBeInTheDocument()
+      expect(screen.getByText('0/250')).toBeInTheDocument()
+    })
+
+    const notesField = screen.getByLabelText(/Notas \(opcional\)/i) as HTMLTextAreaElement
+    expect(notesField).toHaveAttribute('maxLength', '250')
+
+    await user.type(notesField, 'a'.repeat(260))
+
+    expect(notesField.value).toHaveLength(250)
+    expect(screen.getByText('250/250')).toBeInTheDocument()
+  })
+
+  it('aplica estilos defensivos para evitar overflow horizontal en la nota', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <ReservationFormSheet
+        open
+        initialDate="2099-06-01"
+        space={space}
+        onOpenChange={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText(/Horas disponibles/i)).toBeInTheDocument()
+    })
+
+    const sheetContent = screen.getByText('Nueva reserva').closest('[data-slot="sheet-content"]')
+    expect(sheetContent).not.toBeNull()
+    expect(sheetContent).toHaveClass('min-w-0', 'overflow-x-hidden')
+
+    const notesField = screen.getByLabelText(/Notas \(opcional\)/i) as HTMLTextAreaElement
+    expect(notesField).toHaveClass(
+      'w-full',
+      'min-w-0',
+      'max-w-full',
+      'box-border',
+      'overflow-x-hidden',
+      'overflow-y-auto',
+      'whitespace-pre-wrap',
+      'break-words',
+      '[overflow-wrap:anywhere]',
+    )
+
+    await user.type(notesField, 'a'.repeat(120))
+    expect(notesField.value).toBe('a'.repeat(120))
+  })
+
   it('muestra error de backend 400 y refresca disponibilidad', async () => {
     const user = userEvent.setup()
     mockedCreateReservation.mockRejectedValue(new ApiError('Esa franja ya no está disponible', 400))
@@ -162,6 +243,28 @@ describe('ReservationFormSheet', () => {
     await waitFor(() => {
       expect(mockedCreateReservation).toHaveBeenCalledTimes(1)
       expect(mockedGetSpaceAvailability).toHaveBeenCalledTimes(2)
+    })
+  })
+
+  it('muestra error controlado cuando falla la carga de disponibilidad', async () => {
+    mockedGetSpaceAvailability.mockRejectedValue(
+      new ApiError('Ha ocurrido un error inesperado.', 500),
+    )
+
+    render(
+      <ReservationFormSheet
+        open
+        initialDate="2099-06-01"
+        space={space}
+        onOpenChange={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/No se pudo cargar la disponibilidad del espacio\. Inténtalo de nuevo\./i),
+      ).toBeInTheDocument()
     })
   })
 })

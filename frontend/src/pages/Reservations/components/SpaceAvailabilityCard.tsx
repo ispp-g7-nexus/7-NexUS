@@ -46,9 +46,13 @@ export function SpaceAvailabilityCard({
     <Card className="border-border/80 shadow-sm">
       <CardHeader className="gap-3">
         <div className="flex flex-wrap items-start justify-between gap-2">
-          <div>
-            <CardTitle className="text-lg font-semibold">{space.name}</CardTitle>
-            <p className="mt-1 text-sm text-gray-500">{space.description || "Sin descripción disponible."}</p>
+          <div className="min-w-0">
+            <CardTitle className="text-lg font-semibold break-words line-clamp-2">
+              {space.name}
+            </CardTitle>
+            <p className="mt-1 text-sm text-gray-500 break-words line-clamp-3">
+              {space.description || "Sin descripción disponible."}
+            </p>
           </div>
           <span
             className={`rounded-full px-3 py-1 text-xs font-semibold ${
@@ -99,12 +103,12 @@ export function SpaceAvailabilityCard({
               {availability?.reservations.map((reservation) => (
                 <li key={reservation.id} className="rounded-md border border-border/70 bg-background px-3 py-2 text-sm">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium text-gray-900">
+                    <span className="min-w-0 flex-1 font-medium text-gray-900 break-words line-clamp-2">
                       {reservation.user.first_name || reservation.user.last_name
                         ? `${reservation.user.first_name} ${reservation.user.last_name}`.trim()
                         : reservation.user.email}
                     </span>
-                    <span className="text-gray-500">{formatInterval(reservation.start_time, reservation.end_time)}</span>
+                    <span className="shrink-0 text-gray-500">{formatInterval(reservation.start_time, reservation.end_time)}</span>
                   </div>
                 </li>
               ))}

@@ -146,6 +146,40 @@ class MenuModuleTests(MenuTestBase):
         )
         self.assertIn(response.status_code, [400, 422])
 
+    def test_import_csv_success(self):
+        """Admin puede importar una semana por CSV"""
+        from io import BytesIO
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        csv_content = b"day,type,name,description,allergens,is_gluten_free,is_vegetarian,is_vegan\nlunes,lunch,Macarrones,Con queso,Lactosa,false,true,false\n"
+        csv_file = SimpleUploadedFile("menu.csv", csv_content, content_type="text/csv")
+        data = {"week_start": "2025-01-20", "file": csv_file}
+        response = self.admin_client.post(
+            "/api/menu/weeks/import_csv/",
+            data=data,
+            format="multipart"
+        )
+        self.assertEqual(response.status_code, 200)
+        with tenant_context(self.tenant):
+            self.assertEqual(MenuWeek.objects.filter(week_start="2025-01-20").count(), 1)
+            week = MenuWeek.objects.get(week_start="2025-01-20")
+            monday = week.days.get(day="lunes")
+            self.assertEqual(monday.meals.count(), 1)
+            meal = monday.meals.first()
+            self.assertEqual(meal.name, "Macarrones")
+
+    def test_import_csv_invalid_extension(self):
+        """Falla si el archivo no es un CSV"""
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        txt_file = SimpleUploadedFile("menu.txt", b"dummy", content_type="text/plain")
+        data = {"week_start": "2025-01-20", "file": txt_file}
+        response = self.admin_client.post(
+            "/api/menu/weeks/import_csv/",
+            data=data,
+            format="multipart"
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("CSV válido", response.json()["detail"])
+
     # ------------------------------------------------------------------ #
     # MenuWeek – endpoint /current/
     # ------------------------------------------------------------------ #

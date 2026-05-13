@@ -114,4 +114,40 @@ describe('services/objects', () => {
       end_date: '2026-04-14T10:55:00Z',
     })).rejects.toThrow('Sin stock')
   })
+
+  it('prioriza message cuando backend no devuelve detail', async () => {
+    const fetchMock = vi.mocked(global.fetch)
+    fetchMock.mockResolvedValue(mockJsonResponse({ message: 'Nombre demasiado largo' }, 400))
+
+    await expect(objectsService.createObject({
+      name: 'Objeto inválido',
+    })).rejects.toThrow('Nombre demasiado largo')
+  })
+
+  it('extrae y traduce errores por campo cuando backend devuelve arrays', async () => {
+    const fetchMock = vi.mocked(global.fetch)
+    fetchMock.mockResolvedValue(
+      mockJsonResponse(
+        { description: ['Ensure this field has no more than 255 characters.'] },
+        400,
+      ),
+    )
+
+    await expect(objectsService.createObject({
+      name: 'Objeto inválido',
+      description: 'D'.repeat(260),
+    })).rejects.toThrow('El campo descripción no puede superar los 255 caracteres.')
+  })
+
+  it('normaliza detalle de backend para descripciones demasiado largas', async () => {
+    const fetchMock = vi.mocked(global.fetch)
+    fetchMock.mockResolvedValue(
+      mockJsonResponse({ detail: "El campo 'description' no puede superar 255 caracteres." }, 400),
+    )
+
+    await expect(objectsService.createObject({
+      name: 'Objeto inválido',
+      description: 'D'.repeat(260),
+    })).rejects.toThrow('La descripción no puede superar los 255 caracteres.')
+  })
 })

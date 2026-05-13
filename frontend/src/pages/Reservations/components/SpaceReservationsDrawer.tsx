@@ -62,11 +62,13 @@ export function SpaceReservationsDrawer({
             <p className="text-sm text-gray-500">No hay reservas con este filtro.</p>
           ) : (
             reservations.map((r) => (
-              <article key={r.id} className="rounded-lg border border-border/80 bg-white px-4 py-3 space-y-2">
+              <article key={r.id} className="rounded-lg border border-border/80 bg-white px-4 py-3 space-y-2 overflow-hidden">
                 <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">{r.user.first_name} {r.user.last_name}</p>
-                    <p className="text-xs text-gray-500">{r.user.email}</p>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 break-words">
+                      {r.user.first_name} {r.user.last_name}
+                    </p>
+                    <p className="text-xs text-gray-500 break-words">{r.user.email}</p>
                   </div>
                   <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${
                     r.status === "active" ? "bg-primary/10 text-primary" : "bg-slate-200 text-gray-500"
@@ -78,7 +80,9 @@ export function SpaceReservationsDrawer({
                   {formatDateTime(r.start_time)} → {formatDateTime(r.end_time)}
                 </p>
                 {r.notes && (
-                  <p className="text-xs text-gray-500 border-t border-border/60 pt-2">Nota: {r.notes}</p>
+                  <p className="border-t border-border/60 pt-2 text-xs text-gray-500 whitespace-pre-wrap break-words [overflow-wrap:anywhere] [word-break:break-word]">
+                    Nota: {r.notes}
+                  </p>
                 )}
               </article>
             ))
