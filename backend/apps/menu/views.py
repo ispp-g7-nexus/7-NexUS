@@ -147,7 +147,7 @@ class MenuWeekViewSet(TenantMixin, viewsets.ModelViewSet):
             week_start = week_start - datetime.timedelta(days=week_start.weekday())
             week_end = week_start + datetime.timedelta(days=6)
         except ValueError:
-             return Response({"detail": "Formato de fecha inválido."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "Formato de fecha inválido."}, status=status.HTTP_400_BAD_REQUEST)
 
         tenant = self._resolve_tenant()
         user = self._resolve_user()
@@ -169,7 +169,7 @@ class MenuWeekViewSet(TenantMixin, viewsets.ModelViewSet):
 
         fieldnames = [f.strip().lower() for f in reader.fieldnames]
 
-        menu_week, created = MenuWeek.objects.get_or_create(
+        menu_week, _ = MenuWeek.objects.get_or_create(
             residence=tenant,
             week_start=week_start,
             defaults={
@@ -212,15 +212,17 @@ class MenuWeekViewSet(TenantMixin, viewsets.ModelViewSet):
             is_vegetarian = str(row_lower.get('is_vegetarian', '')).strip().lower() in ['true', '1', 'si', 'sí', 'yes']
             is_vegan = str(row_lower.get('is_vegan', '')).strip().lower() in ['true', '1', 'si', 'sí', 'yes']
             
-            Meal.objects.create(
+            Meal.objects.update_or_create(
                 menu_day=menu_days[day_str],
                 name=name,
-                description=description,
                 type=meal_type,
-                allergens=allergens,
-                is_gluten_free=is_gluten_free,
-                is_vegetarian=is_vegetarian,
-                is_vegan=is_vegan
+                defaults={
+                    'description': description,
+                    'allergens': allergens,
+                    'is_gluten_free': is_gluten_free,
+                    'is_vegetarian': is_vegetarian,
+                    'is_vegan': is_vegan
+                }
             )
             
         return Response(MenuWeekSerializer(menu_week).data, status=status.HTTP_200_OK)
