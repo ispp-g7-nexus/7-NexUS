@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Camera, X } from "lucide-react"; 
+import { Camera, X } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
 import type { AdminSpace, CreateSpacePayload } from "../../../services/adminSpaces";
@@ -7,6 +8,9 @@ import {
   COMMON_SPACE_DESCRIPTION_MAX_LENGTH,
   COMMON_SPACE_NAME_MAX_LENGTH,
 } from "../constants";
+
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const IMAGE_MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
 
 interface SpaceFormSheetProps {
   open: boolean;
@@ -188,12 +192,20 @@ export function SpaceFormSheet({
                     accept="image/*" 
                     onChange={(e) => {
                       const file = e.target.files?.[0];
-                      if (file) { 
-                        const r = new FileReader(); 
-                        r.onloadend = () => setBase64Image(r.result as string); 
-                        r.readAsDataURL(file); 
+                      e.target.value = "";
+                      if (!file) return;
+                      if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+                        toast.error("Solo se permiten imágenes (JPEG, PNG, WebP o GIF).");
+                        return;
                       }
-                    }} 
+                      if (file.size > IMAGE_MAX_SIZE_BYTES) {
+                        toast.error("La imagen no puede superar los 5 MB.");
+                        return;
+                      }
+                      const r = new FileReader();
+                      r.onloadend = () => setBase64Image(r.result as string);
+                      r.readAsDataURL(file);
+                    }}
                     className="hidden" 
                   />
                 </label>
