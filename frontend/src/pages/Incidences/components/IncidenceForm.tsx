@@ -50,7 +50,6 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
 
     if (!locationType) {
       setAreaError(true);
