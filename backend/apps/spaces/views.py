@@ -15,6 +15,7 @@ from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
 from apps.common.utils.jwt_auth import resolve_user_from_request
+from apps.membership.permissions import has_screen_permission
 from apps.residences.models import Residence
 
 from .analytics import (
@@ -108,7 +109,9 @@ def _serialize_reservation_reminder(reservation: SpaceReservation) -> dict[str, 
     }
 
 
-def _build_reservation_reminders(reservations: list[SpaceReservation]) -> list[dict[str, Any]]:
+def _build_reservation_reminders(
+    reservations: list[SpaceReservation],
+) -> list[dict[str, Any]]:
     return sorted(
         [_serialize_reservation_reminder(reservation) for reservation in reservations],
         key=lambda item: item["start_time"],
@@ -527,7 +530,9 @@ class MyReservationRemindersView(AuthenticatedView):
             .order_by("start_time")
         )
 
-        return JsonResponse(_build_reservation_reminders(list(reservations)), safe=False)
+        return JsonResponse(
+            _build_reservation_reminders(list(reservations)), safe=False
+        )
 
 
 class SpaceReservationCancelView(AuthenticatedView):
@@ -660,7 +665,7 @@ class AdminSpaceListCreateView(AdminRequiredMixin, AuthenticatedView):
             residence=residence,
             name=name,
             description=description,
-            img = img,
+            img=img,
             capacity=capacity,
             open_time=ot,
             close_time=ct,
@@ -853,7 +858,29 @@ class AdminSpaceNotificationsView(AdminRequiredMixin, AuthenticatedView):
         return JsonResponse(data, safe=False)
 
 
-class AdminReservationsAnalyticsView(AdminRequiredMixin, AuthenticatedView):
+class AnalyticsPermissionMixin:
+    """Mixin que permite el acceso a analíticas si es admin del módulo O tiene permiso analytics."""
+
+    def check_permissions(self, request):
+        residence = _validate_residence(request)
+        if not residence:
+            return JsonResponse({"detail": "No residence context."}, status=400)
+
+        # Lógica OR: administrador de reservas O permiso general de analytics
+        is_mod_admin = is_reservations_admin(request.user, residence)
+        has_analytics_perm = has_screen_permission(request.user, residence, "analytics")
+
+        if not (is_mod_admin or has_analytics_perm):
+            return JsonResponse(
+                {
+                    "detail": "No tienes permisos para consultar analíticas de este módulo."
+                },
+                status=403,
+            )
+        return None
+
+
+class AdminReservationsAnalyticsView(AnalyticsPermissionMixin, AuthenticatedView):
     def get(self, request):
         residence = _validate_residence(request)
         if not residence:

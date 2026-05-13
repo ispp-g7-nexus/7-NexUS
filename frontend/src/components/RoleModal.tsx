@@ -23,6 +23,8 @@ const AVAILABLE_PERMISSIONS = [
     { id: 'packages', label: 'Paquetería' },
     { id: 'kitchen', label: 'Menú Comedor' },
     { id: 'roles', label: 'Roles' },
+    { id: 'branding', label: 'Personalización (Branding)' },
+    { id: 'analytics', label: 'Analíticas' },
 ];
 
 const RoleModal: React.FC<RoleModalProps> = ({ isOpen, onClose, onSave, editingRole }) => {
@@ -67,6 +69,7 @@ const RoleModal: React.FC<RoleModalProps> = ({ isOpen, onClose, onSave, editingR
         setError(null);
         try {
             await onSave(formData);
+            window.dispatchEvent(new Event("reload-permissions"));
             onClose();
         } catch (err) {
             if (err instanceof Error) {
