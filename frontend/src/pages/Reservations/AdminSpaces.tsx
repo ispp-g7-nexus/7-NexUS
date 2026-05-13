@@ -52,7 +52,9 @@ function SpaceCard({
         <div className="flex items-start justify-between gap-3 text-left">
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-base font-semibold text-gray-900 truncate">{space.name}</h3>
+              <h3 className="text-base font-semibold text-gray-900 break-words line-clamp-2">
+                {space.name}
+              </h3>
               <span
                 className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
                   space.is_active
@@ -64,7 +66,7 @@ function SpaceCard({
               </span>
             </div>
             {space.description && (
-              <p className="mt-1 text-sm text-gray-500 line-clamp-2">{space.description}</p>
+              <p className="mt-1 text-sm text-gray-500 line-clamp-2 break-words">{space.description}</p>
             )}
           </div>
         </div>
@@ -314,7 +316,7 @@ export function AdminSpaces() {
       <Dialog open={!!spaceToDeactivate} onOpenChange={() => setSpaceToDeactivate(null)}>
         <DialogContent className="max-w-[400px] rounded-3xl p-6">
           <DialogTitle className="text-center text-lg font-bold">¿Desactivar espacio?</DialogTitle>
-          <DialogDescription className="text-center text-gray-500 mt-2">
+          <DialogDescription className="text-center text-gray-500 mt-2 break-words">
             Esta acción desactivará "{spaceToDeactivate?.name}". Se cancelarán automáticamente todas las reservas activas asociadas a este espacio.
           </DialogDescription>
           <div className="flex gap-3 mt-6">

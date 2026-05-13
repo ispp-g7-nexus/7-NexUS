@@ -45,7 +45,14 @@ describe('SpaceReservationsDrawer', () => {
     expect(screen.getByText('Sala A')).toBeInTheDocument()
     expect(screen.getByText('Ana Ruiz')).toBeInTheDocument()
     expect(screen.getByText('Activa')).toBeInTheDocument()
-    expect(screen.getByText(/Nota: Trabajo en equipo/i)).toBeInTheDocument()
+    const noteText = screen.getByText(/Nota: Trabajo en equipo/i)
+    expect(noteText).toBeInTheDocument()
+    expect(noteText).toHaveClass(
+      'whitespace-pre-wrap',
+      'break-words',
+      '[overflow-wrap:anywhere]',
+      '[word-break:break-word]',
+    )
   })
 
   it('dispara cambio de filtro al pulsar pestañas', async () => {

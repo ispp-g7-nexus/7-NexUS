@@ -1,8 +1,9 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AdminObjects } from '../AdminObjects'
 import { objectsService } from '../../../services/objects'
+import { toast } from 'sonner'
 
 vi.mock('../../../services/objects', () => ({
   objectsService: {
@@ -26,6 +27,7 @@ vi.mock('../../../components/RentalHistoryView', () => ({
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
 const mockedObjectsService = vi.mocked(objectsService)
+const mockedToast = vi.mocked(toast)
 
 const baseObject = {
   id: 1,
@@ -107,6 +109,29 @@ describe('AdminObjects page', () => {
     await waitFor(() => {
       expect(mockedObjectsService.createObject).toHaveBeenCalledWith(
         expect.objectContaining({ name: 'Bicicleta' }),
+      )
+    })
+  })
+
+  it('aplica límite de 255 caracteres y bloquea descripciones demasiado largas', async () => {
+    const user = userEvent.setup()
+    render(<AdminObjects />)
+
+    await waitFor(() => screen.getByText('Taladro'))
+
+    await user.click(screen.getByRole('button', { name: /Crear objeto/i }))
+
+    const descriptionInput = screen.getByLabelText(/^Descripción$/i)
+    expect(descriptionInput).toHaveAttribute('maxLength', '255')
+
+    fireEvent.change(descriptionInput, { target: { value: 'D'.repeat(260) } })
+    await user.type(screen.getByLabelText(/^Nombre \*/i), 'Objeto con texto largo')
+    await user.click(screen.getByRole('button', { name: /^Crear objeto$/i }))
+
+    await waitFor(() => {
+      expect(mockedObjectsService.createObject).not.toHaveBeenCalled()
+      expect(mockedToast.error).toHaveBeenCalledWith(
+        'La descripción no puede superar 255 caracteres',
       )
     })
   })

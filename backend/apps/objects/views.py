@@ -450,10 +450,10 @@ class ObjectListView(AuthenticatedView):
         try:
             obj = Object.objects.create(
                 name=payload["name"],
-                description=payload["description"],
-                location=payload["location"],
+                description=description,
+                location=location,
                 stock_total=payload["stock_total"],
-                image_url=payload["image_url"],
+                image_url=image_url or None,
                 tags=payload["tags"],
                 residence=request.residence,
             )
@@ -566,12 +566,36 @@ class ObjectDetailView(AuthenticatedView):
         if error_response:
             return error_response
 
+        description, description_error = _validate_optional_text(
+            body.get("description"),
+            field_name="description",
+            max_length=OBJECT_DESCRIPTION_MAX_LENGTH,
+        )
+        if description_error:
+            return JsonResponse({"detail": description_error}, status=400)
+
+        location, location_error = _validate_optional_text(
+            body.get("location"),
+            field_name="location",
+            max_length=OBJECT_LOCATION_MAX_LENGTH,
+        )
+        if location_error:
+            return JsonResponse({"detail": location_error}, status=400)
+
+        image_url, image_url_error = _validate_optional_url(
+            body.get("image_url"),
+            field_name="image_url",
+            max_length=OBJECT_IMAGE_URL_MAX_LENGTH,
+        )
+        if image_url_error:
+            return JsonResponse({"detail": image_url_error}, status=400)
+
         try:
             obj.name = payload["name"]
-            obj.description = payload["description"]
-            obj.location = payload["location"]
+            obj.description = description
+            obj.location = location
             obj.stock_total = payload["stock_total"]
-            obj.image_url = payload["image_url"]
+            obj.image_url = image_url or None
             obj.tags = payload["tags"]
             obj.save()
             obj.labels.set(payload["labels"])

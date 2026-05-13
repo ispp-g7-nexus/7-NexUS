@@ -10,6 +10,7 @@ from typing import Any
 
 import requests
 from django.conf import settings
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core import signing
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
@@ -192,6 +193,16 @@ def sync_package_snapshots(package: Package, resident: Membership) -> None:
     package.building_snapshot = bedroom.edificio if bedroom else ""
 
 
+def _validate_and_save_package(package: Package) -> Package:
+    try:
+        package.full_clean()
+    except DjangoValidationError as exc:
+        raise ValidationError(exc.message_dict or exc.messages)
+
+    package.save()
+    return package
+
+
 def create_package(data: dict[str, Any], residence, created_by) -> Package:
     resident = validate_resident_membership(data["resident_id"], residence)
     now = timezone.now()
@@ -214,8 +225,7 @@ def create_package(data: dict[str, Any], residence, created_by) -> Package:
         package.delivered_at = None
         package.resident_notified_at = now
 
-    package.save()
-    return package
+    return _validate_and_save_package(package)
 
 
 def _handle_package_status_transitions(
@@ -274,8 +284,7 @@ def update_package(package: Package, data: dict[str, Any], residence) -> Package
         now=timezone.now(),
     )
 
-    package.save()
-    return package
+    return _validate_and_save_package(package)
 
 
 def get_resident_membership_for_user(user, residence) -> Membership | None:

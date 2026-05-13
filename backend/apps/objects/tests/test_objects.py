@@ -164,6 +164,57 @@ class ObjectAvailabilityApiTests(FastTenantTestCase):
 
         self.assertEqual(response.status_code, 400)
 
+    def test_create_object_accepts_description_at_max_length(self):
+        import json as _json
+
+        response = self.client.post(
+            "/api/objects/",
+            data=_json.dumps({
+                "name": "Mochila",
+                "description": "D" * 255,
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201, response.content)
+        created = Object.objects.get(name="Mochila")
+        self.assertEqual(len(created.description), 255)
+
+    def test_create_object_rejects_description_too_long(self):
+        import json as _json
+
+        response = self.client.post(
+            "/api/objects/",
+            data=_json.dumps({
+                "name": "Mochila XL",
+                "description": "D" * 256,
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400, response.content)
+        self.assertIn("description", response.json()["detail"])
+
+    def test_update_object_rejects_description_too_long(self):
+        import json as _json
+
+        response = self.client.put(
+            f"/api/objects/{self.object_available.id}/",
+            data=_json.dumps({
+                "name": self.object_available.name,
+                "description": "D" * 256,
+                "location": self.object_available.location,
+                "stock_total": self.object_available.stock_total,
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400, response.content)
+        self.assertIn("description", response.json()["detail"])
+
+        self.object_available.refresh_from_db()
+        self.assertEqual(self.object_available.description, "Bici libre")
+
     def test_user_reservations_use_same_availability_logic(self):
         rental = self._create_active_rental_now(self.object_busy_now, self.user)
 
