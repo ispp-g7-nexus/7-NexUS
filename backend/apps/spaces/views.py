@@ -1,4 +1,6 @@
+import base64
 import json
+import re
 from datetime import datetime, time, timedelta
 from typing import Any
 
@@ -29,6 +31,32 @@ from .models import (
 from .permissions import is_reservations_admin
 
 RESERVATION_REMINDER_WINDOW = timedelta(hours=1)
+
+ALLOWED_IMAGE_MIME_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+IMAGE_MAX_SIZE_BYTES = 5 * 1024 * 1024  # 5 MB
+_DATA_URL_RE = re.compile(r"^data:(?P<mime>[^;]+);base64,(?P<data>.+)$", re.DOTALL)
+
+
+def _validate_space_img(img: str) -> JsonResponse | None:
+    """Returns a 400 JsonResponse if img is not a valid image data URL, else None."""
+    if not img:
+        return None
+    match = _DATA_URL_RE.match(img)
+    if not match:
+        return JsonResponse({"detail": "El formato de la imagen no es válido."}, status=400)
+    mime = match.group("mime")
+    if mime not in ALLOWED_IMAGE_MIME_TYPES:
+        return JsonResponse(
+            {"detail": "Solo se permiten imágenes en formato JPEG, PNG, WebP o GIF."},
+            status=400,
+        )
+    try:
+        decoded = base64.b64decode(match.group("data"))
+    except Exception:
+        return JsonResponse({"detail": "El formato de la imagen no es válido."}, status=400)
+    if len(decoded) > IMAGE_MAX_SIZE_BYTES:
+        return JsonResponse({"detail": "La imagen no puede superar los 5 MB."}, status=400)
+    return None
 
 
 def _serialize_space(space: CommonSpace) -> dict:
@@ -624,6 +652,10 @@ class AdminSpaceListCreateView(AdminRequiredMixin, AuthenticatedView):
                 status=400,
             )
 
+        img_error = _validate_space_img(img)
+        if img_error:
+            return img_error
+
         space = CommonSpace.objects.create(
             residence=residence,
             name=name,
@@ -688,6 +720,9 @@ class AdminSpaceDetailView(AdminRequiredMixin, AuthenticatedView):
             space.description = description
 
         if "img" in payload:
+            img_error = _validate_space_img(str(payload["img"]))
+            if img_error:
+                return img_error
             space.img = payload["img"]
 
         if "capacity" in payload:
