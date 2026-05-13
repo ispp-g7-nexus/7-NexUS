@@ -720,10 +720,11 @@ class AdminSpaceDetailView(AdminRequiredMixin, AuthenticatedView):
             space.description = description
 
         if "img" in payload:
-            img_error = _validate_space_img(str(payload["img"]))
+            img_value = payload["img"] or ""
+            img_error = _validate_space_img(img_value)
             if img_error:
                 return img_error
-            space.img = payload["img"]
+            space.img = img_value
 
         if "capacity" in payload:
             try:
