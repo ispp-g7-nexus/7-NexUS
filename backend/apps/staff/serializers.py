@@ -68,9 +68,13 @@ class StaffCreateSerializer(StaffFieldValidatorMixin, serializers.Serializer):
     password = serializers.CharField(
         write_only=True,
         min_length=8,
+        max_length=64,
         required=False,
         allow_blank=True,
-        error_messages={"min_length": "La contraseña debe tener al menos 8 caracteres."},
+        error_messages={
+            "min_length": "La contraseña debe tener al menos 8 caracteres.",
+            "max_length": "La contraseña no puede superar 64 caracteres."
+        },
     )
     role_id = serializers.IntegerField(
         required=False,
@@ -112,9 +116,13 @@ class StaffUpdateSerializer(StaffFieldValidatorMixin, serializers.Serializer):
     password = serializers.CharField(
         write_only=True,
         min_length=8,
+        max_length=64,
         required=False,
         allow_blank=True,
-        error_messages={"min_length": "La contraseña debe tener al menos 8 caracteres."},
+        error_messages={
+            "min_length": "La contraseña debe tener al menos 8 caracteres.",
+            "max_length": "La contraseña no puede superar 64 caracteres."
+        },
     )
     role_id = serializers.IntegerField(
         required=False,

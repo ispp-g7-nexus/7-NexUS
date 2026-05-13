@@ -41,7 +41,7 @@ class PackageCreateSerializer(serializers.Serializer):
     resident_id = serializers.IntegerField(required=True)
     carrier = serializers.CharField(required=False, allow_blank=True, max_length=120)
     tracking_number = serializers.CharField(required=False, allow_blank=True, max_length=120)
-    notes = serializers.CharField(required=False, allow_blank=True)
+    notes = serializers.CharField(required=False, allow_blank=True, max_length=2000)
     status = serializers.ChoiceField(
         choices=Package.Status.choices,
         required=False,
@@ -54,7 +54,7 @@ class PackageUpdateSerializer(serializers.Serializer):
     resident_id = serializers.IntegerField(required=False)
     carrier = serializers.CharField(required=False, allow_blank=True, max_length=120)
     tracking_number = serializers.CharField(required=False, allow_blank=True, max_length=120)
-    notes = serializers.CharField(required=False, allow_blank=True)
+    notes = serializers.CharField(required=False, allow_blank=True, max_length=2000)
     status = serializers.ChoiceField(choices=Package.Status.choices, required=False)
     received_at = serializers.DateTimeField(required=False)
 

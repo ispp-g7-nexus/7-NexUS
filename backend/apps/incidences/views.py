@@ -210,10 +210,33 @@ class IncidenceViewSet(viewsets.ModelViewSet):
                         "location_type": "No tienes una habitación asignada para reportar incidencias en 'Mi Habitación'."
                     }
                 )
-
+            if "assigned_staff" in serializer.validated_data:
+                staff_member = serializer.validated_data.get("assigned_staff")
+            if staff_member and not staff_member.is_active:
+                raise ValidationError(
+                    {
+                        "assigned_staff": "No se puede asignar la incidencia a un miembro del staff que no esté activo."
+                    }
+                )
         instance = self.get_object()
         old_status = instance.status
-
+        staff_actual = instance.assigned_staff
+        desasignado_automatico = False
+        if (
+            staff_actual and staff_actual.status != "active"
+        ):  # Ajusta a 'active' o is_active según tu modelo Staff
+            # Forzamos que se guarde como None (desasignado)
+            serializer.validated_data["assigned_staff"] = None
+            desasignado_automatico = True
+        else:
+            # Si intentan asignar a alguien NUEVO que está inactivo, lanzamos error normal
+            staff_nuevo = serializer.validated_data.get("assigned_staff")
+            if staff_nuevo and staff_nuevo.status != "active":
+                raise ValidationError(
+                    {
+                        "assigned_staff": "No se puede asignar la incidencia a un miembro del staff que no esté activo."
+                    }
+                )
         updated_incidence = serializer.save()
 
         def get_current_assignee(obj):
@@ -225,6 +248,7 @@ class IncidenceViewSet(viewsets.ModelViewSet):
             return obj.assigned_external_name or ""
 
         old_assignee = get_current_assignee(instance)
+        updated_incidence = serializer.save()
         new_assignee = get_current_assignee(updated_incidence)
         new_status = updated_incidence.status
         quick_comment = self.request.data.get("quick_comment")
@@ -233,7 +257,11 @@ class IncidenceViewSet(viewsets.ModelViewSet):
         if old_status != new_status:
             log_parts.append(f"Estado cambiado a {self.get_status_label(new_status)}.")
 
-        if old_assignee != new_assignee:
+        if desasignado_automatico:
+            log_parts.append(
+                f"El responsable anterior ({old_assignee}) ya no está disponible. Se ha retirado la asignación automáticamente."
+            )
+        elif old_assignee != new_assignee:
             if new_assignee:
                 log_parts.append(f"Asignada a: {new_assignee}.")
             else:

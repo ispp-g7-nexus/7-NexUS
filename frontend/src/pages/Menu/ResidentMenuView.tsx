@@ -52,16 +52,17 @@ const MealCard = ({ meal }: { meal: Meal }) => {
   return (
     <div className={`border rounded-xl p-4 overflow-hidden shadow-sm transition-all hover:shadow-md relative ${getMealTypeColor(meal.type)}`}>
       {meal.image && (
-        <div className="w-full h-40 mb-3 -mt-4 -mx-4 w-[calc(100%+2rem)] border-b border-black/5 relative group">
-          <img src={meal.image} alt={meal.name} className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
+        <div className="w-full h-40 mb-3 rounded-lg border border-gray-200 bg-white flex items-center justify-center overflow-hidden relative group">
+          <img src={meal.image} alt={meal.name} className="w-full h-full object-contain p-1" />
         </div>
       )}
       <div className="flex items-start justify-between mb-2">
         <div className="flex flex-col items-center gap-3 mt-2 flex-1">
-          <div className={`shrink-0 ${meal.image ? '-mt-8 p-1.5 bg-white/90 backdrop-blur rounded-lg shadow-sm border border-white/50 z-10 relative' : ''}`}>
-            {getMealTypeIcon(meal.type)}
-          </div>
+          {!meal.image && (
+            <div className="shrink-0">
+              {getMealTypeIcon(meal.type)}
+            </div>
+          )}
           <div className="flex-1">
             <p className="font-semibold text-gray-900 leading-tight">{meal.name}</p>
             {meal.description && (
@@ -114,6 +115,8 @@ const DayMenuCard = ({ day }: { day: MenuDay }) => {
     month: 'long',
   });
 
+  const MEAL_TYPE_ORDER: Meal['type'][] = ['breakfast', 'lunch', 'snack', 'dinner'];
+
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
       <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4">
@@ -123,18 +126,27 @@ const DayMenuCard = ({ day }: { day: MenuDay }) => {
         <p className="text-sm text-green-50">{formattedDate}</p>
       </div>
 
-      <div className="p-6 space-y-4">
+      <div className="p-6 space-y-6">
         {day.meals && day.meals.length > 0 ? (
-          day.meals.map((meal, index) => (
-            <div key={meal.id || index}>
-              <div className="mb-2">
-                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                  {getMealTypeLabel(meal.type)}
-                </span>
+          MEAL_TYPE_ORDER.map(type => {
+            const mealsOfType = day.meals?.filter(m => m.type === type) || [];
+            if (mealsOfType.length === 0) return null;
+
+            return (
+              <div key={type} className="space-y-3">
+                <div className="mb-2">
+                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    {getMealTypeLabel(type)}
+                  </span>
+                </div>
+                <div className="space-y-4">
+                  {mealsOfType.map((meal, index) => (
+                    <MealCard key={meal.id || index} meal={meal} />
+                  ))}
+                </div>
               </div>
-              <MealCard meal={meal} />
-            </div>
-          ))
+            );
+          })
         ) : (
           <div className="text-center py-8 text-gray-400">
             <p>No hay comidas registradas para este día</p>
