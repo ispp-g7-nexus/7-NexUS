@@ -21,7 +21,9 @@ const PERMISSION_LABELS: Record<string, string> = {
     staff: 'Personal',
     packages: 'Paquetería',
     kitchen: 'Comedor',
-    roles: 'Roles'
+    roles: 'Roles',
+    branding: 'Personalización',
+    analytics: 'Analíticas'
 };
 
 const RoleCard: React.FC<RoleCardProps> = ({ role, onEdit, onDelete }) => {

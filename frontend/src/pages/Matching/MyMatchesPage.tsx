@@ -223,13 +223,13 @@ function MatchProfileModal({
 }) {
     return (
         <Dialog open={!!match} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto w-[95vw] rounded-2xl">
+            <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto w-[95vw] rounded-2xl">
                 <DialogHeader className="mb-6 flex flex-col items-center justify-center space-y-4 pt-4">
-                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-3xl font-bold shadow-md">
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-3xl font-bold shadow-md flex-shrink-0">
                         {match ? getInitials(match.display_name) : ""}
                     </div>
-                    <div className="text-center space-y-1.5">
-                        <DialogTitle className="text-2xl font-bold text-gray-900 leading-tight">
+                    <div className="text-center space-y-1.5 w-full px-2">
+                        <DialogTitle className="text-2xl font-bold text-gray-900 leading-tight break-words whitespace-normal">
                             {match?.display_name}
                         </DialogTitle>
                         <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-secondary text-secondary-foreground rounded-full border border-border">
