@@ -86,6 +86,16 @@ class MenuService {
     return this.request(`/menu/weeks/${weekId}/`, { method: 'DELETE' });
   }
 
+  async importWeekFromCsv(weekStart: string, file: File): Promise<MenuWeek> {
+    const formData = new FormData();
+    formData.append('week_start', weekStart);
+    formData.append('file', file);
+    return this.request<MenuWeek>('/menu/weeks/import_csv/', {
+      method: 'POST',
+      body: formData,
+    });
+  }
+
   async createMeal(dayId: string, meal: any): Promise<Meal> {
     return this.request<Meal>(`/menu/days/${dayId}/meals/`, {
       method: 'POST',
