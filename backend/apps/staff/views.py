@@ -1,3 +1,5 @@
+from urllib import request
+
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from rest_framework import status, viewsets
@@ -5,6 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.membership.models import Membership, Role
+from apps.incidences.models import Incidence, IncidenceUpdate
 
 from .models import Staff
 from .permissions import IsStaffAdmin
@@ -117,31 +120,50 @@ class StaffViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
+        old_status = staff.status
         user = staff.user
-        user_dirty = False
-        if "full_name" in data:
-            names = data["full_name"].strip().split(None, 1)
-            user.first_name = names[0] if names else ""
-            user.last_name = names[1] if len(names) > 1 else ""
-            user_dirty = True
-        if "email" in data:
-            user.email = data["email"].lower()
-            user_dirty = True
-        if data.get("password"):
-            user.set_password(data["password"])
-            user_dirty = True
-        if user_dirty:
-            user.save()
+        
+        with transaction.atomic():
+            user_dirty = False
+            if "full_name" in data:
+                names = data["full_name"].strip().split(None, 1)
+                user.first_name = names[0] if names else ""
+                user.last_name = names[1] if len(names) > 1 else ""
+                user_dirty = True
+            if "email" in data:
+                user.email = data["email"].lower()
+                user_dirty = True
+            if data.get("password"):
+                user.set_password(data["password"])
+                user_dirty = True
+            if user_dirty:
+                user.save()
 
-        for field in ("job_title", "department", "location", "schedule", "status"):
-            if field in data:
-                setattr(staff, field, data[field])
-        staff.save()
+            for field in ("job_title", "department", "location", "schedule", "status"):
+                if field in data:
+                    setattr(staff, field, data[field])
+            staff.save()
 
-        role_id = data.get("role_id")
-        residence = getattr(request, "residence", None)
-        if role_id:
-            _assign_role_membership(staff.user, role_id, residence)
+            new_status = data.get("status")
+
+            # Tratamiento de incidencias si el staff deja de estar activo
+            if new_status and old_status == 'active' and new_status != 'active':
+                incidencias_afectadas = Incidence.objects.filter(assigned_staff=staff)
+                
+                # Ya estamos dentro del transaction.atomic() superior, no hace falta otro.
+                for inc in incidencias_afectadas:
+                    IncidenceUpdate.objects.create(
+                        incidence=inc,
+                        author_name="Sistema",
+                        text=f"El técnico {staff.user.get_full_name() or staff.user.username} ya no está disponible. Asignación retirada automáticamente."
+                    )
+                    inc.assigned_staff = None
+                    inc.save()  
+
+            role_id = data.get("role_id")
+            residence = getattr(request, "residence", None)
+            if role_id:
+                _assign_role_membership(staff.user, role_id, residence)
 
         out = StaffReadSerializer(staff)
         return Response(out.data)

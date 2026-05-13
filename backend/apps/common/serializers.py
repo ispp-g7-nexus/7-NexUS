@@ -10,7 +10,7 @@ class LoginInputSerializer(serializers.Serializer):
     email = serializers.EmailField(
         error_messages={"invalid": "Por favor, introduce un correo electrónico válido."}
     )
-    password = serializers.CharField(write_only=True)
+    password = serializers.CharField(write_only=True, max_length=64)
     portal = serializers.ChoiceField(
         choices=["student", "admin"],
         error_messages={"invalid_choice": "Portal inválido. Usa 'student' o 'admin'."},
@@ -50,8 +50,10 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
     new_password = serializers.CharField(
         write_only=True,
         min_length=8,
+        max_length=64,
         error_messages={
-            "min_length": "La contraseña debe tener al menos 8 caracteres."
+            "min_length": "La contraseña debe tener al menos 8 caracteres.",
+            "max_length": "La contraseña no puede superar 64 caracteres."
         },
     )
 
@@ -61,7 +63,7 @@ class AdminCreateResidentSerializer(serializers.Serializer):
     email = serializers.EmailField(
         error_messages={"invalid": "Por favor, introduce un correo electrónico válido."}
     )
-    password = serializers.CharField(write_only=True, min_length=6)
+    password = serializers.CharField(write_only=True, min_length=6, max_length=64)
     room = serializers.CharField(allow_blank=True)
     building = serializers.CharField(allow_blank=True)
     checkin_date = serializers.DateField(required=False, allow_null=True)

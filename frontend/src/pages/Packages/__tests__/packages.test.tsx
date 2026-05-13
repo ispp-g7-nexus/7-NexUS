@@ -43,7 +43,7 @@ describe('Packages Module - Authentic Marvel Tests', () => {
   describe('AdminPackages', () => {
     it('should render loading state initially and then display packages', async () => {
       render(<AdminPackages />);
-      expect(screen.getByText('Paqueteria')).toBeInTheDocument();
+      expect(screen.getByText('Paquetería')).toBeInTheDocument();
       await waitFor(() => expect(packagesService.list).toHaveBeenCalled());
     });
   });
