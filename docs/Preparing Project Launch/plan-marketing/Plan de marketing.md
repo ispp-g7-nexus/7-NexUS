@@ -102,10 +102,10 @@ Ambos perfiles se benefician de un sistema que sustituye las esperas y el desord
 El objetivo del posicionamiento SEO para NexUS es conseguir que nuestra web aparezca en los primeros resultados de búsqueda cuando un director de residencia o un gestor de alojamientos universitarios busque una solución para mejorar su negocio. No buscamos visitas masivas, sino atraer a las personas que realmente toman la decisión de comprar el software.
 
 ### 3.1 Estrategia de Palabras Clave
-Nuestra estrategia se basa en identificar los problemas que NexUS resuelve y convertirlos en términos de búsqueda. Hemos dividido las palabras clave en tres grupos: 
-* **Gestión Integral:** *"Software para residencias de estudiantes"*, *"App de gestión residencial universitaria"*, *"Software gestión colegios mayores"*.
-* **Funcionalidad Específica:** *"Gestión de incidencias en residencias"*, *"Control de visitas con QR para estudiantes"*, *"Sistema de avisos de menú semanal"*.
-* **Solución de Problemas:** *"Cómo digitalizar una residencia de estudiantes"*, *"Mejorar la comunicación con los residentes"*, *"Cómo reducir errores en el registro"*.
+Nuestra estrategia se basa en identificar los problemas específicos que NexUS resuelve para transformarlos en términos de búsqueda que atraigan a nuestro público objetivo. Para lograr un posicionamiento preciso, hemos estructurado las palabras clave en tres pilares fundamentales que definen la esencia de la aplicación: 
+* **Automatización:** : Este grupo se centra en la eficiencia operativa, incluyendo términos relacionados con la gestión de incidencias sin papeleos, la digitalización de registros y el control de accesos mediante tecnología QR para reducir errores humanos. 
+* **Coliving:** Orientada a posicionar la plataforma dentro del mercado de residencias modernas y nuevos modelos de vivienda compartida que demandan una gestión digital y una experiencia de usuario tecnológica. 
+* **Eventos:** Dirigida a potenciar la vida comunitaria a través de la comunicación de actividades sociales, la consulta de menús y la reserva de espacios comunes, mejorando la conexión entre el residente y su entorno.
 
 ### 3.2 SEO Técnico y Experiencia de Usuario 
 Google premia las páginas web que funcionan bien y son rápidas. Por ello, la estrategia técnica de NexUS se centrará en tres pilares: 
