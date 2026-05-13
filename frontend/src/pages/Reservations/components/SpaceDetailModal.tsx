@@ -103,9 +103,9 @@ export function SpaceDetailModal({ open, spaceId, onClose, onEdit, onDeactivate,
 
                 <div className="p-6 space-y-4">
                   <div className="space-y-1">
-                    <h3 className="text-xl font-bold text-gray-900">{space.name}</h3>
+                    <h3 className="text-xl font-bold text-gray-900 break-words">{space.name}</h3>
                     {space.description && (
-                      <p className="text-sm text-gray-600 leading-relaxed">
+                      <p className="text-sm text-gray-600 leading-relaxed break-words whitespace-pre-wrap">
                         {space.description}
                       </p>
                     )}

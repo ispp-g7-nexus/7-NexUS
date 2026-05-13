@@ -408,11 +408,11 @@ function ObjectCard({
   onViewRentals: (object: ObjectItem) => void;
 }) {
   return (
-    <article className="rounded-xl border border-border/80 bg-white p-5 shadow-sm flex flex-col gap-4">
+    <article className="rounded-xl border border-border/80 bg-white p-5 shadow-sm flex flex-col gap-4 min-w-0 overflow-hidden">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="text-base font-semibold text-gray-900 truncate">{object.name}</h3>
+            <h3 className="text-base font-semibold text-gray-900 line-clamp-2 break-words">{object.name}</h3>
             <span
               className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
                 object.can_rent
@@ -424,7 +424,7 @@ function ObjectCard({
             </span>
           </div>
           {object.description && (
-            <p className="mt-1 text-sm text-gray-500 line-clamp-2">{object.description}</p>
+            <p className="mt-1 text-sm text-gray-500 line-clamp-2 break-words">{object.description}</p>
           )}
         </div>
       </div>
@@ -1039,6 +1039,7 @@ export function AdminObjects() {
                   placeholder="Describe el objeto..."
                   maxLength={OBJECT_DESCRIPTION_MAX_LENGTH}
                   rows={3}
+                  className="w-full max-w-full resize-y overflow-y-auto break-words"
                 />
                 <p className="text-right text-xs text-gray-500">
                   {formData.description.length}/{OBJECT_DESCRIPTION_MAX_LENGTH}
@@ -1135,7 +1136,7 @@ export function AdminObjects() {
         <SheetContent className="w-full sm:max-w-2xl">
           <SheetHeader className="mb-6">
             <SheetTitle>Historial de Reservas</SheetTitle>
-            <SheetDescription>{selectedObject?.name}</SheetDescription>
+            <SheetDescription className="break-words line-clamp-2">{selectedObject?.name}</SheetDescription>
           </SheetHeader>
           <div className="max-h-[calc(100vh-120px)] overflow-y-auto">
             <RentalHistoryView
@@ -1250,4 +1251,3 @@ export function AdminObjects() {
     </section>
   );
 }
-

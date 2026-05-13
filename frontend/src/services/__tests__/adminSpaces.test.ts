@@ -115,6 +115,27 @@ describe('services/adminSpaces', () => {
     expect(error).toMatchObject({ message: 'Sin permisos', status: 403 })
   })
 
+  it('muestra mensaje útil cuando backend responde con errores por campo', async () => {
+    mockedFetchWithAuth.mockResolvedValue(
+      mockJsonResponse({ name: ['Ensure this field has no more than 80 characters.'] }, 400),
+    )
+
+    const error = await createSpace({
+      name: 'A'.repeat(120),
+      description: '',
+      capacity: 3,
+      open_time: '09:00',
+      close_time: '18:00',
+      reservation_interval_minutes: 30,
+    }).catch((caught) => caught)
+
+    expect(error).toEqual(expect.any(ApiError))
+    expect(error).toMatchObject({
+      message: 'El campo nombre no puede superar los 80 caracteres.',
+      status: 400,
+    })
+  })
+
   it('usa el mensaje generico de permisos cuando la respuesta no trae JSON', async () => {
     mockedFetchWithAuth.mockResolvedValue({
       ok: false,

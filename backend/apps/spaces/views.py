@@ -19,7 +19,13 @@ from .analytics import (
     ReservationsAnalyticsValidationError,
     get_admin_reservations_analytics,
 )
-from .models import CommonSpace, SpaceReservation
+from .models import (
+    COMMON_SPACE_DESCRIPTION_MAX_LENGTH,
+    COMMON_SPACE_NAME_MAX_LENGTH,
+    SPACE_RESERVATION_NOTES_MAX_LENGTH,
+    CommonSpace,
+    SpaceReservation,
+)
 from .permissions import is_reservations_admin
 
 RESERVATION_REMINDER_WINDOW = timedelta(hours=1)
@@ -96,6 +102,38 @@ def _validate_residence(request) -> Residence | None:
     if not residence:
         return None
     return residence
+
+
+def _validate_common_space_text_fields(
+    *,
+    name: str | None = None,
+    description: str | None = None,
+) -> JsonResponse | None:
+    if name is not None and len(name) > COMMON_SPACE_NAME_MAX_LENGTH:
+        return JsonResponse(
+            {
+                "name": [
+                    f"El nombre no puede superar los {COMMON_SPACE_NAME_MAX_LENGTH} caracteres."
+                ]
+            },
+            status=400,
+        )
+
+    if (
+        description is not None
+        and len(description) > COMMON_SPACE_DESCRIPTION_MAX_LENGTH
+    ):
+        return JsonResponse(
+            {
+                "description": [
+                    "La descripción no puede superar los "
+                    f"{COMMON_SPACE_DESCRIPTION_MAX_LENGTH} caracteres."
+                ]
+            },
+            status=400,
+        )
+
+    return None
 
 
 def _compute_available_slots(
@@ -290,6 +328,17 @@ class SpaceReservationCreateView(AuthenticatedView):
         start_time_str = str(payload.get("start_time", "")).strip()
         end_time_str = str(payload.get("end_time", "")).strip()
         notes = str(payload.get("notes", "")).strip()
+
+        if len(notes) > SPACE_RESERVATION_NOTES_MAX_LENGTH:
+            return JsonResponse(
+                {
+                    "detail": (
+                        "La nota no puede superar los "
+                        f"{SPACE_RESERVATION_NOTES_MAX_LENGTH} caracteres."
+                    )
+                },
+                status=400,
+            )
 
         if not start_time_str or not end_time_str:
             return JsonResponse(
@@ -527,6 +576,13 @@ class AdminSpaceListCreateView(AdminRequiredMixin, AuthenticatedView):
                 {"detail": "name, open_time y close_time son obligatorios."}, status=400
             )
 
+        text_validation_error = _validate_common_space_text_fields(
+            name=name,
+            description=description,
+        )
+        if text_validation_error:
+            return text_validation_error
+
         try:
             capacity = int(capacity)
             if capacity < 1:
@@ -609,6 +665,9 @@ class AdminSpaceDetailView(AdminRequiredMixin, AuthenticatedView):
                 return JsonResponse(
                     {"detail": "El nombre no puede estar vacío."}, status=400
                 )
+            text_validation_error = _validate_common_space_text_fields(name=name)
+            if text_validation_error:
+                return text_validation_error
             if (
                 CommonSpace.objects.filter(residence=residence, name=name)
                 .exclude(id=space_id)
@@ -620,7 +679,13 @@ class AdminSpaceDetailView(AdminRequiredMixin, AuthenticatedView):
             space.name = name
 
         if "description" in payload:
-            space.description = str(payload["description"]).strip()
+            description = str(payload["description"]).strip()
+            text_validation_error = _validate_common_space_text_fields(
+                description=description
+            )
+            if text_validation_error:
+                return text_validation_error
+            space.description = description
 
         if "img" in payload:
             space.img = payload["img"]
