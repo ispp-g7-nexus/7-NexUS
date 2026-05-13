@@ -125,9 +125,10 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
     const [activeTab, setActiveTab] = useState<AdminTab>(() => getAdminTabFromPath(location.pathname));
 
     const [fullUser, setFullUser] = useState<AuthMeUser | null>(null);
+    const activeUser = fullUser || currentUser;
+    const currentUserEmail = activeUser?.email ?? "";
 
     const [totalChats, setTotalChats] = useState<number>(0);
-    const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
     const [unreadChatKeys, setUnreadChatKeys] = useState<Set<string>>(new Set());
     const [chatRealtimeTick, setChatRealtimeTick] = useState<number>(0);
     const [chatRealtimeEvent, setChatRealtimeEvent] = useState<ChatRealtimeEvent | null>(null);
@@ -459,9 +460,6 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
     const [totalStaff, setTotalStaff] = useState<number>(0);
     const [pendingIncidences, setPendingIncidences] = useState<number>(0);
     const [totalRoles, setTotalRoles] = useState<number>(0);
-
-
-    const activeUser = fullUser || currentUser;
 
     useEffect(() => {
         if (activeTab !== "dashboard") return;

@@ -50,6 +50,32 @@ export function DiningAnalytics() {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
 
+  const parseDate = (value: string) => {
+    if (!value) {
+      return null;
+    }
+    const parsed = Date.parse(value);
+    return Number.isNaN(parsed) ? null : parsed;
+  };
+
+  const handleStartDateChange = (value: string) => {
+    setStartDate(value);
+    const startTime = parseDate(value);
+    const endTime = parseDate(endDate);
+    if (startTime !== null && endTime !== null && startTime > endTime) {
+      setEndDate(value);
+    }
+  };
+
+  const handleEndDateChange = (value: string) => {
+    setEndDate(value);
+    const endTime = parseDate(value);
+    const startTime = parseDate(startDate);
+    if (endTime !== null && startTime !== null && endTime < startTime) {
+      setStartDate(value);
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -144,9 +170,9 @@ export function DiningAnalytics() {
 
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <InteractiveDatePicker value={startDate} onChange={setStartDate} id="menu-analytics-start" allowPastDates={true} />
+          <InteractiveDatePicker value={startDate} onChange={handleStartDateChange} id="menu-analytics-start" allowPastDates={true} />
           <span className="text-sm text-gray-500">a</span>
-          <InteractiveDatePicker value={endDate} onChange={setEndDate} id="menu-analytics-end" allowPastDates={true} />
+          <InteractiveDatePicker value={endDate} onChange={handleEndDateChange} id="menu-analytics-end" allowPastDates={true} />
           <button onClick={applyWindow} className="px-3 py-2 bg-primary text-white rounded-md">Aplicar</button>
           <button onClick={resetWindow} className="px-3 py-2 border border-input rounded-md">Restablecer</button>
         </div>
