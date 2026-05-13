@@ -1,5 +1,88 @@
 # Changelog
 
+## [3.1.0](https://github.com/ispp-g7-nexus/7-NexUS/compare/v3.0.0...v3.1.0) (2026-05-13)
+
+
+### Features
+
+* add group joining and leaving functionality with member status updates ([1cb295d](https://github.com/ispp-g7-nexus/7-NexUS/commit/1cb295d4fb281279e1e14cc87c7b38bb21b3b724))
+* añadir importación de menú con archivo csv ([7ec35af](https://github.com/ispp-g7-nexus/7-NexUS/commit/7ec35af61227d8e8f4998936c05a95f4fdc6f6eb))
+* documentacion time-report, deliverable, banners y anuncio de inversores ([8da9b0c](https://github.com/ispp-g7-nexus/7-NexUS/commit/8da9b0c11554b79a08796fc6c709232b3312166b))
+* documentacion time-report, deliverable, banners y anuncio de inversores ([#789](https://github.com/ispp-g7-nexus/7-NexUS/issues/789)) ([3d513c0](https://github.com/ispp-g7-nexus/7-NexUS/commit/3d513c0e5f6c86f4c3838503483e42485a163e80))
+* enhance group message handling and participant checks in Admin and Student views ([bc69b61](https://github.com/ispp-g7-nexus/7-NexUS/commit/bc69b6141159b825c088741334123ac999684600))
+* enhance WebSocket message broadcasting with buffered amount checks and client termination ([fe20aee](https://github.com/ispp-g7-nexus/7-NexUS/commit/fe20aeee13fd36eb43281ecec87ff65fadce45cb))
+* fix WPL Preparation section and add pilot users list ([bb4d8b2](https://github.com/ispp-g7-nexus/7-NexUS/commit/bb4d8b2de8afaceac835c407c8b340a2badf8900))
+* implement debouncing for group message fetching in AdminChats and StudentChats ([c9fb3e2](https://github.com/ispp-g7-nexus/7-NexUS/commit/c9fb3e2cf84ae92ce581c4ac7041e678310ddab5))
+* implementar vista front para importar menu desde archivo csv ([e4d2989](https://github.com/ispp-g7-nexus/7-NexUS/commit/e4d298972c1dccf2a81cb721c4ae58174d7a1139))
+* Minor fix in connections ([e5b715d](https://github.com/ispp-g7-nexus/7-NexUS/commit/e5b715df76dad67d4b9d3812a27a673d3b401c36))
+* replace QR code section in StudentHome with dynamic residence branding logo ([f46bb47](https://github.com/ispp-g7-nexus/7-NexUS/commit/f46bb477a273e94bce88bd8203666d1b12d2a43d))
+
+
+### Bug Fixes
+
+* fix:  ([101103e](https://github.com/ispp-g7-nexus/7-NexUS/commit/101103e81fb038cac09f864c42745fe3a9e6f9f7))
+* fix:  ([f2900d3](https://github.com/ispp-g7-nexus/7-NexUS/commit/f2900d323f2b391c057a6089553ad5b8238d1c54))
+* :bug: ([c25cde8](https://github.com/ispp-g7-nexus/7-NexUS/commit/c25cde8cbe1f91d8b29083d07e2a2e16ee8a55cb))
+* ajuste cuadro de texto historial ([ef5c301](https://github.com/ispp-g7-nexus/7-NexUS/commit/ef5c301fe4e8d9e9b8ecc363c3f0ddce28c1328c))
+* ajuste cuadro de texto historial ([645c1c8](https://github.com/ispp-g7-nexus/7-NexUS/commit/645c1c8a56d0792899f4965450aecf24729b4b53))
+* Añadido contador límite ([c08e402](https://github.com/ispp-g7-nexus/7-NexUS/commit/c08e4026370194d5190501a940bc0da111e01c8c))
+* añado analiticas y personalizacion a roles ([f0b8c0b](https://github.com/ispp-g7-nexus/7-NexUS/commit/f0b8c0b5fd8483170033dcc52997f158a8941640))
+* añado analiticas y personalizacion a roles ([#773](https://github.com/ispp-g7-nexus/7-NexUS/issues/773)) ([22bd697](https://github.com/ispp-g7-nexus/7-NexUS/commit/22bd697169e5dde96f5b74bab857801b47dbb643))
+* arreglo autenticaciones ([812f9dc](https://github.com/ispp-g7-nexus/7-NexUS/commit/812f9dcb545fde689f6e075173c542e1a86444eb))
+* arreglo autenticaciones ([#770](https://github.com/ispp-g7-nexus/7-NexUS/issues/770)) ([9b9d51e](https://github.com/ispp-g7-nexus/7-NexUS/commit/9b9d51e3dcbfc8ca01985d8bc4fae61f4d9068d9))
+* Arreglo de imágenes y agrupación comidas ([#775](https://github.com/ispp-g7-nexus/7-NexUS/issues/775)) ([e7db248](https://github.com/ispp-g7-nexus/7-NexUS/commit/e7db248ccfd59b8d24e472c7a1f2ffaf29751444))
+* arreglo SonarCloud ([f862a90](https://github.com/ispp-g7-nexus/7-NexUS/commit/f862a909d63e20c74633097da172781bddb0697a))
+* aumentar DATA_UPLOAD_MAX_MEMORY_SIZE para soportar imágenes hasta 5 MB ([83e86e2](https://github.com/ispp-g7-nexus/7-NexUS/commit/83e86e23552194c0541554564720762d16fba7c8))
+* Bug/nx s3.42 arreglo de formularios de menu ([#689](https://github.com/ispp-g7-nexus/7-NexUS/issues/689)) ([44d291c](https://github.com/ispp-g7-nexus/7-NexUS/commit/44d291cce00febb76d60f90076d0dac12e2aaa2f))
+* build frontend ([e228726](https://github.com/ispp-g7-nexus/7-NexUS/commit/e2287261fed09b1172a6ceea8f2209d16b8c17b0))
+* cambio mínimo en doc ([1072151](https://github.com/ispp-g7-nexus/7-NexUS/commit/1072151002f1ff6a2cbbd7a849434fb79763cb5d))
+* cambios arreglados ([9fc777a](https://github.com/ispp-g7-nexus/7-NexUS/commit/9fc777a626f5cce31fd531d880b2fbcf65d0ae0b))
+* coderabbit ([1a3cc5a](https://github.com/ispp-g7-nexus/7-NexUS/commit/1a3cc5a5dd5d7e9aec1384bb69594e6c33e50897))
+* coderrabbit review ([d1ebd23](https://github.com/ispp-g7-nexus/7-NexUS/commit/d1ebd23b09d4c1eb36f9dc430b718197914f6d4f))
+* corrección imágenes admitidas ([e2819b9](https://github.com/ispp-g7-nexus/7-NexUS/commit/e2819b9076920a1cd5ce06940baddf09002c4516))
+* corrección imágenes admitidas ([#781](https://github.com/ispp-g7-nexus/7-NexUS/issues/781)) ([51c231b](https://github.com/ispp-g7-nexus/7-NexUS/commit/51c231b0de0639b3e1fb9bbed8864c42930b7b42))
+* Correcion modulo comedor ([26f2e1f](https://github.com/ispp-g7-nexus/7-NexUS/commit/26f2e1ff5ae3be9786f01ce635099c98db119b42))
+* Correcion modulo comedor ([#778](https://github.com/ispp-g7-nexus/7-NexUS/issues/778)) ([afe9b36](https://github.com/ispp-g7-nexus/7-NexUS/commit/afe9b36a7e7c50db83d7dba31ea6c4a88041f51f))
+* corregido contenedor en admin ([fa9f538](https://github.com/ispp-g7-nexus/7-NexUS/commit/fa9f5383bc1d6d2b993d6bd0e580c88a16fd0aed))
+* corregido modulo paqueteria ([#774](https://github.com/ispp-g7-nexus/7-NexUS/issues/774)) ([2095a3e](https://github.com/ispp-g7-nexus/7-NexUS/commit/2095a3e6e456f1077f5873cdaad955a52316733c))
+* corregir chats ([#777](https://github.com/ispp-g7-nexus/7-NexUS/issues/777)) ([6e506bb](https://github.com/ispp-g7-nexus/7-NexUS/commit/6e506bb3ed993ed4538b03d67d2645184250f730))
+* corregir y añadir validaciones en formulario Avisos ([08bd4a8](https://github.com/ispp-g7-nexus/7-NexUS/commit/08bd4a888e3988ba2e74f5e93f40b715d387cb0e))
+* corregir y añadir validaciones en formulario Avisos ([#764](https://github.com/ispp-g7-nexus/7-NexUS/issues/764)) ([5d3ef99](https://github.com/ispp-g7-nexus/7-NexUS/commit/5d3ef99be5407a19ca61b5df9c4cbdd1401ff73b))
+* cuadros de texto ([90cabcd](https://github.com/ispp-g7-nexus/7-NexUS/commit/90cabcdc6f1bb0a56484e705a18c10043288b745))
+* Dining Analytics DatePicker ([c8d2b73](https://github.com/ispp-g7-nexus/7-NexUS/commit/c8d2b738399eb4de62b595dd6168ecf3c9a2d080))
+* edición perfil ([bc26a3f](https://github.com/ispp-g7-nexus/7-NexUS/commit/bc26a3f67537621aa9ab155c7da091adf9070d65))
+* edición perfil ([#760](https://github.com/ispp-g7-nexus/7-NexUS/issues/760)) ([28627cd](https://github.com/ispp-g7-nexus/7-NexUS/commit/28627cdf8ffed8ff6049ca4c1a2aca7a4377aeb5))
+* eliminar variable formData no utilizada en IncidenceForm ([77c68b7](https://github.com/ispp-g7-nexus/7-NexUS/commit/77c68b7a8e765edf4929660329427e80b6b623ac))
+* Feedback incidencias ([#761](https://github.com/ispp-g7-nexus/7-NexUS/issues/761)) ([73569df](https://github.com/ispp-g7-nexus/7-NexUS/commit/73569df4b267b8f8ab0683e246e904e5f89c167f))
+* feedback pases de invitados corregidos ([658ead9](https://github.com/ispp-g7-nexus/7-NexUS/commit/658ead904370a9e52bf8eecb0f41b0f4eae98557))
+* feedback pases de invitados corregidos ([#780](https://github.com/ispp-g7-nexus/7-NexUS/issues/780)) ([7fc5460](https://github.com/ispp-g7-nexus/7-NexUS/commit/7fc5460a6c016de75f3be67d7341fb69ad4d29e1))
+* handle long common space texts and availability errors ([842ec6f](https://github.com/ispp-g7-nexus/7-NexUS/commit/842ec6f5a85677b5f3819ec815c22cdc1b70fe43))
+* limitar escritura ([01da422](https://github.com/ispp-g7-nexus/7-NexUS/commit/01da422f896b5f9803887ca7af7fdf886cb27d17))
+* manejo de actualización staff en incidencias ([a71654c](https://github.com/ispp-g7-nexus/7-NexUS/commit/a71654cc22364abd16a1c1aabdd129232967ce9c))
+* Mensaje de registro ([446c16b](https://github.com/ispp-g7-nexus/7-NexUS/commit/446c16b3e442136f3e175b0a894b01636515e96c))
+* Mensaje de registro ([#786](https://github.com/ispp-g7-nexus/7-NexUS/issues/786)) ([51d8d04](https://github.com/ispp-g7-nexus/7-NexUS/commit/51d8d0466c32ef164817dd3c8c9d3b857ab7e09f))
+* Mensaje de staff no disponible añadido ([85be6d7](https://github.com/ispp-g7-nexus/7-NexUS/commit/85be6d720466063403ccb4d1cee743f3f791c93d))
+* Minor changes ([176f553](https://github.com/ispp-g7-nexus/7-NexUS/commit/176f5534407d8ca9f85a531f77ec534f711a8554))
+* nx ppl.56 fix comedor ([#788](https://github.com/ispp-g7-nexus/7-NexUS/issues/788)) ([71dd995](https://github.com/ispp-g7-nexus/7-NexUS/commit/71dd9957cde3fb163a6f7fd4fad274464032b6c7))
+* nx ppl.60 corregir qr en inicio ([#771](https://github.com/ispp-g7-nexus/7-NexUS/issues/771)) ([829ade8](https://github.com/ispp-g7-nexus/7-NexUS/commit/829ade89e347f94c53c8988450e9afbf3025134b))
+* permitir borrar imagen de espacio enviando null en el patch ([48e5c33](https://github.com/ispp-g7-nexus/7-NexUS/commit/48e5c33e6192816ca82b8e8634b0d5d3e904bc48))
+* prevent long object descriptions from breaking layout ([5772dae](https://github.com/ispp-g7-nexus/7-NexUS/commit/5772daef4996a6a2b56c1aa68e8087fe7f5d371e))
+* prevent long reservation notes from breaking space booking UI ([00f7ea6](https://github.com/ispp-g7-nexus/7-NexUS/commit/00f7ea6278b789c23d493a5b80722f27aee6e2d5))
+* prevent reservation note text overflow in space booking form ([f6fd09f](https://github.com/ispp-g7-nexus/7-NexUS/commit/f6fd09fa12515491c9106c1db1500cdb5bbb9f7d))
+* reliability D corregido ([0b17618](https://github.com/ispp-g7-nexus/7-NexUS/commit/0b176181a10dcaed8772f168d61e32c487c80c19))
+* remove redundant message polling and update group membership state upon creation ([a350026](https://github.com/ispp-g7-nexus/7-NexUS/commit/a350026123cb1f5d7bb1414efbc184a83f193250))
+* reservas espacios y objetos ([#738](https://github.com/ispp-g7-nexus/7-NexUS/issues/738)) ([7f87dde](https://github.com/ispp-g7-nexus/7-NexUS/commit/7f87dde8bb508bb78f9fca48bd2b40d2262ed29a))
+* Room number ([3343bd9](https://github.com/ispp-g7-nexus/7-NexUS/commit/3343bd99ac9b3c07f499c7ebd8a932aeba4ee66c))
+* Room number ([#794](https://github.com/ispp-g7-nexus/7-NexUS/issues/794)) ([ebc93e5](https://github.com/ispp-g7-nexus/7-NexUS/commit/ebc93e5370c225079201667ad937540c28b40d3a))
+* validaciones de fecha, corrección de desbordamientos y mapeo de errores ([997c981](https://github.com/ispp-g7-nexus/7-NexUS/commit/997c981cf4214517666b3d1bd7507d11862a9b86))
+* validar tipo y tamaño de imagen al subir foto de espacio ([083d701](https://github.com/ispp-g7-nexus/7-NexUS/commit/083d701e04f8ae9d394734532f2e721928d58223))
+* validar tipo y tamaño de imagen al subir foto de espacio ([#785](https://github.com/ispp-g7-nexus/7-NexUS/issues/785)) ([3029c6d](https://github.com/ispp-g7-nexus/7-NexUS/commit/3029c6ded475b3b192b5b314f1693ebe8bcdae9d))
+
+
+### Performance Improvements
+
+* filtrado de solo staff activo ([813d8e4](https://github.com/ispp-g7-nexus/7-NexUS/commit/813d8e4726e43589e872a7b84d08d23482b0d743))
+
 ## 1.0.0 (2026-03-25)
 
 
