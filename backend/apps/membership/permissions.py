@@ -36,6 +36,11 @@ def has_screen_permission(user, residence, screen_name: str) -> bool:
 
         # Comprobamos si la pantalla solicitada está dentro del JSON de permisos del rol
         role_permissions = membership.role.permissions or []
+        is_analytics_request = screen_name == "analytics" or screen_name.startswith(
+            "analytics_"
+        )
+        if is_analytics_request and "analytics" in role_permissions:
+            return True
         if screen_name in role_permissions or "full_access" in role_permissions:
             return True
 

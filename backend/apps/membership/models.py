@@ -19,6 +19,8 @@ class Role(models.Model):
         PACKAGES = "packages", "Paquetería"
         KITCHEN = "kitchen", "Menú Comedor"
         ROLES = "roles", "Roles"
+        BRANDING = "branding", "Personalización"
+        ANALYTICS = "analytics", "Analíticas"
 
     name = models.CharField(max_length=50, verbose_name="Nombre del Rol")
     description = models.TextField(blank=True, verbose_name="Descripción")
@@ -81,7 +83,9 @@ class Membership(models.Model):
         related_name="memberships",
     )
     is_active = models.BooleanField(default=True)
-    check_in_date = models.DateField(null=True, blank=True, verbose_name="Fecha de entrada")
+    check_in_date = models.DateField(
+        null=True, blank=True, verbose_name="Fecha de entrada"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     # Habitación asignada al residente. PROTECT impide eliminar una habitación
