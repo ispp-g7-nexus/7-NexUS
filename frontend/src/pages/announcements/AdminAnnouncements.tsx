@@ -20,6 +20,8 @@ const CATEGORY_OPTIONS: { value: AnnouncementCategory; label: string }[] = [
 ];
 
 const ANNOUNCEMENTS_POLL_MS = 2000;
+const TITLE_MAX_LENGTH = 50;
+const DESCRIPTION_MAX_LENGTH = 255;
 
 const EMPTY_ANNOUNCEMENT_FORM = {
   title: "",
@@ -36,9 +38,7 @@ function getLocalDateString(date: Date = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
-function hasRequiredAnnouncementFields(data: { title: string; description: string; announcement_date: string }) {
-  return Boolean(data.title.trim() && data.description.trim() && data.announcement_date);
-}
+type AnnouncementFormErrors = Partial<Record<"title" | "description" | "announcement_date", string>>;
 
 export function AdminAnnouncements() {
   const [announcements, setAnnouncements] = useState<AnnouncementList[]>([]);
@@ -46,7 +46,6 @@ export function AdminAnnouncements() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [error, setError] = useState<string | null>(null);
   
-  // Estados para diálogos
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -55,6 +54,8 @@ export function AdminAnnouncements() {
   const [deletingAnnouncement, setDeletingAnnouncement] = useState<AnnouncementList | null>(null);
   
   const [newAnnouncement, setNewAnnouncement] = useState(EMPTY_ANNOUNCEMENT_FORM);
+  const [createErrors, setCreateErrors] = useState<AnnouncementFormErrors>({});
+  const [editErrors, setEditErrors] = useState<AnnouncementFormErrors>({});
 
   // Estadísticas
   const [stats, setStats] = useState({
@@ -65,17 +66,43 @@ export function AdminAnnouncements() {
 
   const todayDate = getLocalDateString();
 
-  const isPastDate = (dateValue: string) => {
-    if (!dateValue) return false;
+  const validateForm = (data: typeof EMPTY_ANNOUNCEMENT_FORM) => {
+    const errors: AnnouncementFormErrors = {};
+    if (!data.title.trim()) errors.title = "El título es obligatorio.";
+    else if (data.title.length > TITLE_MAX_LENGTH) errors.title = `Máximo ${TITLE_MAX_LENGTH} caracteres.`;
 
-    const normalizedDate = dateValue.slice(0, 10);
-    return normalizedDate < todayDate;
+    if (!data.description.trim()) errors.description = "La descripción es obligatoria.";
+    else if (data.description.length > DESCRIPTION_MAX_LENGTH) errors.description = `Máximo ${DESCRIPTION_MAX_LENGTH} caracteres.`;
+
+    if (!data.announcement_date) errors.announcement_date = "La fecha es obligatoria.";
+    else if (data.announcement_date < todayDate) errors.announcement_date = "La fecha no puede estar en pasado.";
+
+    return errors;
   };
 
-  const loadAnnouncements = useCallback(async (silent = false) => {
-    if (!silent) {
-      setLoading(true);
+  const validateField = (field: 'title' | 'description' | 'announcement_date', value: string, isCreate: boolean) => {
+    let error = '';
+    if (field === 'title') {
+      if (value.length > TITLE_MAX_LENGTH) error = `Máximo ${TITLE_MAX_LENGTH} caracteres.`;
+    } else if (field === 'description') {
+      if (value.length > DESCRIPTION_MAX_LENGTH) error = `Máximo ${DESCRIPTION_MAX_LENGTH} caracteres.`;
+    } else if (field === 'announcement_date') {
+      if (value.trim() === '') error = "La fecha es obligatoria.";
+      else if (value < todayDate) error = "La fecha no puede estar en pasado.";
     }
+
+    if (isCreate) {
+      setCreateErrors(prev => ({ ...prev, [field]: error }));
+    } else {
+      setEditErrors(prev => ({ ...prev, [field]: error }));
+    }
+  };
+
+  const canCreate = Object.keys(validateForm(newAnnouncement)).length === 0;
+  const canSave = editingAnnouncement ? Object.keys(validateForm(editingAnnouncement as typeof EMPTY_ANNOUNCEMENT_FORM)).length === 0 : false;
+
+  const loadAnnouncements = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     setError(null);
     try {
       const data = await announcementService.getAnnouncementsByCategory(selectedCategory);
@@ -85,21 +112,9 @@ export function AdminAnnouncements() {
       setError("Error al cargar los avisos");
       console.error(err);
     } finally {
-      if (!silent) {
-        setLoading(false);
-      }
+      if (!silent) setLoading(false);
     }
   }, [selectedCategory]);
-
-  useEffect(() => {
-    loadAnnouncements(false);
-
-    const intervalId = window.setInterval(() => {
-      loadAnnouncements(true);
-    }, ANNOUNCEMENTS_POLL_MS);
-
-    return () => window.clearInterval(intervalId);
-  }, [loadAnnouncements]);
 
   const calculateStats = (data: AnnouncementList[]) => {
     const now = new Date();
@@ -122,42 +137,39 @@ export function AdminAnnouncements() {
     });
   };
 
-  const handleCreateAnnouncement = async () => {
-    if (!hasRequiredAnnouncementFields(newAnnouncement)) {
-      toast.error("Por favor, completa todos los campos obligatorios");
-      return;
-    }
+  useEffect(() => {
+    loadAnnouncements(false);
+    const intervalId = window.setInterval(() => loadAnnouncements(true), ANNOUNCEMENTS_POLL_MS);
+    return () => window.clearInterval(intervalId);
+  }, [loadAnnouncements]);
 
-    if (isPastDate(newAnnouncement.announcement_date)) {
-      toast.error("La fecha del aviso no puede ser anterior a hoy");
-      return;
-    }
+  const handleCreateAnnouncement = async () => {
+    const errors = validateForm(newAnnouncement);
+    setCreateErrors(errors);
+    if (Object.keys(errors).length) return;
 
     try {
       await announcementService.createAnnouncement(newAnnouncement);
-      
       toast.success("Aviso publicado correctamente");
       setIsCreateDialogOpen(false);
       setNewAnnouncement(EMPTY_ANNOUNCEMENT_FORM);
       loadAnnouncements();
     } catch (err) {
-      toast.error("Error al crear el aviso");
-      console.error(err);
+      toast.error(err instanceof Error ? err.message : "Error al crear el aviso");
     }
   };
 
   const handleEditAnnouncement = async () => {
     if (!editingAnnouncement) return;
-
-    if (!hasRequiredAnnouncementFields(editingAnnouncement)) {
-      toast.error("Por favor, completa todos los campos obligatorios");
-      return;
-    }
-
-    if (isPastDate(editingAnnouncement.announcement_date)) {
-      toast.error("La fecha del aviso no puede ser anterior a hoy");
-      return;
-    }
+    const errors = validateForm({
+      title: editingAnnouncement.title,
+      description: editingAnnouncement.description,
+      category: editingAnnouncement.category,
+      announcement_date: editingAnnouncement.announcement_date,
+      featured: editingAnnouncement.featured,
+    });
+    setEditErrors(errors);
+    if (Object.keys(errors).length) return;
 
     try {
       await announcementService.updateAnnouncement(editingAnnouncement.id, {
@@ -166,25 +178,17 @@ export function AdminAnnouncements() {
         category: editingAnnouncement.category,
         announcement_date: editingAnnouncement.announcement_date,
       });
-      
       toast.success("Aviso actualizado correctamente");
       setIsEditDialogOpen(false);
       setEditingAnnouncement(null);
       loadAnnouncements();
     } catch (err) {
-      toast.error("Error al actualizar el aviso");
-      console.error(err);
+      toast.error(err instanceof Error ? err.message : "Error al actualizar el aviso");
     }
-  };
-
-  const openDeleteDialog = (announcement: AnnouncementList) => {
-    setDeletingAnnouncement(announcement);
-    setIsDeleteDialogOpen(true);
   };
 
   const handleDeleteAnnouncement = async () => {
     if (!deletingAnnouncement) return;
-
     setIsDeleting(true);
     try {
       await announcementService.deleteAnnouncement(deletingAnnouncement.id);
@@ -194,15 +198,9 @@ export function AdminAnnouncements() {
       loadAnnouncements();
     } catch (err) {
       toast.error("Error al eliminar el aviso");
-      console.error(err);
     } finally {
       setIsDeleting(false);
     }
-  };
-
-  const openEditDialog = (announcement: AnnouncementList) => {
-    setEditingAnnouncement(announcement);
-    setIsEditDialogOpen(true);
   };
 
   return (
@@ -217,7 +215,11 @@ export function AdminAnnouncements() {
           </div>
           <Button 
             className="bg-primary hover:bg-primary/90 text-primary-foreground"
-            onClick={() => setIsCreateDialogOpen(true)}
+            onClick={() => {
+              setNewAnnouncement(EMPTY_ANNOUNCEMENT_FORM);
+              setCreateErrors({});
+              setIsCreateDialogOpen(true);
+            }}
           >
             <Plus className="w-4 h-4 mr-2" />
             Nuevo Aviso
@@ -276,8 +278,15 @@ export function AdminAnnouncements() {
                 key={announcement.id}
                 announcement={announcement}
                 showControls={true}
-                onEdit={() => openEditDialog(announcement)}
-                onDelete={() => openDeleteDialog(announcement)}
+                onEdit={() => {
+                  setEditingAnnouncement(announcement);
+                  setEditErrors({});
+                  setIsEditDialogOpen(true);
+                }}
+                onDelete={() => {
+                  setDeletingAnnouncement(announcement);
+                  setIsDeleteDialogOpen(true);
+                }}
               />
             ))}
           </div>
@@ -285,7 +294,13 @@ export function AdminAnnouncements() {
       </div>
 
       {/* Form Crear Aviso */}
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+      <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          setIsCreateDialogOpen(false);
+          setNewAnnouncement(EMPTY_ANNOUNCEMENT_FORM);
+          setCreateErrors({});
+        }
+      }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Crear Nuevo Aviso</DialogTitle>
@@ -295,17 +310,31 @@ export function AdminAnnouncements() {
           </DialogHeader>
           
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
+            <div>
               <Label htmlFor="title">Título *</Label>
               <Input
                 id="title"
                 placeholder="Ej: Corte de agua programado"
+                maxLength={TITLE_MAX_LENGTH}
                 value={newAnnouncement.title}
-                onChange={(e) => setNewAnnouncement({ ...newAnnouncement, title: e.target.value })}
+                onChange={(e) => {
+                  setNewAnnouncement({ ...newAnnouncement, title: e.target.value });
+                  validateField('title', e.target.value, true);
+                }}
               />
+              <div className="flex items-center justify-between mt-1">
+                {createErrors.title ? (
+                  <p className="text-sm text-destructive">{createErrors.title}</p>
+                ) : (
+                  <div />
+                )}
+                <div className={`text-xs ${createErrors.title ? 'text-destructive' : 'text-muted-foreground'}`}>
+                  {newAnnouncement.title.length}/{TITLE_MAX_LENGTH}
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-2">
+            <div>
               <Label htmlFor="category">Categoría *</Label>
               <Select
                 value={newAnnouncement.category}
@@ -323,27 +352,45 @@ export function AdminAnnouncements() {
               </Select>
             </div>
 
-            <div className="space-y-2">
+            <div>
               <Label htmlFor="description">Descripción *</Label>
               <Textarea
                 id="description"
                 placeholder="Describe el aviso en detalle..."
                 rows={4}
+                maxLength={DESCRIPTION_MAX_LENGTH}
                 value={newAnnouncement.description}
-                onChange={(e) => setNewAnnouncement({ ...newAnnouncement, description: e.target.value })}
+                onChange={(e) => {
+                  setNewAnnouncement({ ...newAnnouncement, description: e.target.value });
+                  validateField('description', e.target.value, true);
+                }}
                 required
               />
+              <div className="flex items-center justify-between mt-1">
+                {createErrors.description ? (
+                  <p className="text-sm text-destructive">{createErrors.description}</p>
+                ) : (
+                  <div />
+                )}
+                <div className={`text-xs ${createErrors.description ? 'text-destructive' : 'text-muted-foreground'}`}>
+                  {newAnnouncement.description.length}/{DESCRIPTION_MAX_LENGTH}
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-2">
+            <div>
               <Label htmlFor="date">Fecha del aviso *</Label>
               <Input
                 id="date"
                 type="date"
                 min={todayDate}
                 value={newAnnouncement.announcement_date}
-                onChange={(e) => setNewAnnouncement({ ...newAnnouncement, announcement_date: e.target.value })}
+                onChange={(e) => {
+                  setNewAnnouncement({ ...newAnnouncement, announcement_date: e.target.value });
+                  validateField('announcement_date', e.target.value, true);
+                }}
               />
+              {createErrors.announcement_date && <p className="text-sm text-destructive mt-1">{createErrors.announcement_date}</p>}
             </div>
           </div>
 
@@ -352,8 +399,9 @@ export function AdminAnnouncements() {
               Cancelar
             </Button>
             <Button
-              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              className={`bg-primary hover:bg-primary/90 text-primary-foreground ${!canCreate ? 'opacity-50 cursor-not-allowed' : ''}`}
               onClick={handleCreateAnnouncement}
+              disabled={!canCreate}
             >
               <Plus className="w-4 h-4 mr-2" />
               Publicar Aviso
@@ -363,7 +411,13 @@ export function AdminAnnouncements() {
       </Dialog>
 
       {/* Diálogo Editar Aviso */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+      <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          setIsEditDialogOpen(false);
+          setEditingAnnouncement(null);
+          setEditErrors({});
+        }
+      }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Editar Aviso</DialogTitle>
@@ -374,19 +428,33 @@ export function AdminAnnouncements() {
 
           {editingAnnouncement && (
             <div className="space-y-4 py-4">
-              <div className="space-y-2">
+              <div>
                 <Label htmlFor="edit-title">Título *</Label>
                 <Input
                   id="edit-title"
+                  maxLength={TITLE_MAX_LENGTH}
                   value={editingAnnouncement.title}
-                  onChange={(e) => setEditingAnnouncement({
-                    ...editingAnnouncement,
-                    title: e.target.value
-                  })}
+                  onChange={(e) => {
+                    setEditingAnnouncement({
+                      ...editingAnnouncement,
+                      title: e.target.value
+                    });
+                    validateField('title', e.target.value, false);
+                  }}
                 />
+                <div className="flex items-center justify-between mt-1">
+                  {editErrors.title ? (
+                    <p className="text-sm text-destructive">{editErrors.title}</p>
+                  ) : (
+                    <div />
+                  )}
+                  <div className={`text-xs ${editErrors.title ? 'text-destructive' : 'text-muted-foreground'}`}>
+                    {editingAnnouncement.title.length}/{TITLE_MAX_LENGTH}
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-2">
+              <div>
                 <Label htmlFor="edit-category">Categoría *</Label>
                 <Select
                   value={editingAnnouncement.category}
@@ -404,32 +472,50 @@ export function AdminAnnouncements() {
                 </Select>
               </div>
 
-              <div className="space-y-2">
+              <div>
                 <Label htmlFor="edit-description">Descripción *</Label>
                 <Textarea
                   id="edit-description"
                   rows={4}
+                  maxLength={DESCRIPTION_MAX_LENGTH}
                   value={editingAnnouncement.description}
-                  onChange={(e) => setEditingAnnouncement({
-                    ...editingAnnouncement,
-                    description: e.target.value
-                  })}
+                    onChange={(e) => {
+                      setEditingAnnouncement({
+                        ...editingAnnouncement,
+                        description: e.target.value
+                      });
+                      validateField('description', e.target.value, false);
+                    }}
                   required
                 />
+                <div className="flex items-center justify-between mt-1">
+                  {editErrors.description ? (
+                    <p className="text-sm text-destructive">{editErrors.description}</p>
+                  ) : (
+                    <div />
+                  )}
+                  <div className={`text-xs ${editErrors.description ? 'text-destructive' : 'text-muted-foreground'}`}>
+                    {editingAnnouncement.description.length}/{DESCRIPTION_MAX_LENGTH}
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-2">
+              <div>
                 <Label htmlFor="edit-date">Fecha del aviso *</Label>
                 <Input
                   id="edit-date"
                   type="date"
                   min={todayDate}
                   value={editingAnnouncement.announcement_date}
-                  onChange={(e) => setEditingAnnouncement({
-                    ...editingAnnouncement,
-                    announcement_date: e.target.value
-                  })}
+                    onChange={(e) => {
+                      setEditingAnnouncement({
+                        ...editingAnnouncement,
+                        announcement_date: e.target.value
+                      });
+                      validateField('announcement_date', e.target.value, false);
+                    }}
                 />
+                {editErrors.announcement_date && <p className="text-sm text-destructive mt-1">{editErrors.announcement_date}</p>}
               </div>
             </div>
           )}
@@ -439,8 +525,9 @@ export function AdminAnnouncements() {
               Cancelar
             </Button>
             <Button 
-              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              className={`bg-primary hover:bg-primary/90 text-primary-foreground ${!canSave ? 'opacity-50 cursor-not-allowed' : ''}`}
               onClick={handleEditAnnouncement}
+              disabled={!canSave}
             >
               Guardar Cambios
             </Button>

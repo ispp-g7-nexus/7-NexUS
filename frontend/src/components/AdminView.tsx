@@ -133,6 +133,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
     const [chatRealtimeEvent, setChatRealtimeEvent] = useState<ChatRealtimeEvent | null>(null);
     const [tenantLogoUrl, setTenantLogoUrl] = useState<string>("");
     const processedGroupMessageEventKeysRef = useRef<Set<string>>(new Set());
+    const groupMembershipRef = useRef<Map<number, boolean>>(new Map());
 
     const applyTenantTheme = (branding: ResidenceBranding) => {
         if (branding.logo_url) {
@@ -305,6 +306,19 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
                 setChatRealtimeEvent(evt);
                 setChatRealtimeTick((prev) => prev + 1);
                 loadChatsCount().catch(() => { });
+                // Update membership cache if group payload is present
+                try {
+                    const incomingGroup = evt.payload?.group as { id?: number; is_member?: boolean } | undefined;
+                    const groupId = Number(evt.payload?.group_id ?? incomingGroup?.id ?? -1);
+                    if (Number.isFinite(groupId) && groupId > 0 && incomingGroup && typeof incomingGroup.is_member === 'boolean') {
+                        groupMembershipRef.current.set(groupId, incomingGroup.is_member);
+                    }
+                    if (evt.event === 'group_deleted' && Number.isFinite(groupId) && groupId > 0) {
+                        groupMembershipRef.current.delete(groupId);
+                    }
+                } catch (e) {
+                    // ignore cache update errors
+                }
                 return;
             }
 
@@ -324,6 +338,14 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
                 return;
             }
 
+            // Si se trata de un mensaje privado, ignorar si el admin NO es participante
+            if (evt.event === "private_message_created") {
+                const participants = Array.isArray(evt.payload?.participants) ? evt.payload.participants.map((p: string) => (typeof p === 'string' ? p.trim().toLowerCase() : '')).filter(Boolean) : null;
+                if (participants && !participants.includes(normalizedCurrentUserEmail)) {
+                    return;
+                }
+            }
+
             if (activeTab === "chats") {
                 return;
             }
@@ -333,17 +355,55 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
                 return;
             }
 
+            // If it's a group message, ensure the admin is member of that group before marking unread.
+            if (evt.event === "group_message_created") {
+                const groupId = Number(evt.payload?.group_id ?? -1);
+                if (!Number.isFinite(groupId) || groupId <= 0) return;
+
+                const cached = groupMembershipRef.current.get(groupId);
+                if (typeof cached === 'boolean') {
+                    if (!cached) return;
+                } else {
+                    // Cache miss: fetch group once and cache membership
+                    (async () => {
+                        try {
+                            const grp = await chatsService.getGroup(groupId);
+                            const isMember = !!grp.is_member;
+                            groupMembershipRef.current.set(groupId, isMember);
+                            if (!isMember) return;
+
+                            setUnreadChatKeys((prev) => {
+                                if (prev.has(chatKey)) return prev;
+                                const next = new Set(prev);
+                                next.add(chatKey);
+                                return next;
+                            });
+                            persistUnreadGroupMessage(groupId);
+                        } catch (e) {
+                            // If fetch fails, do not mark unread
+                        }
+                    })();
+                    return;
+                }
+
+                // cached === true
+                setUnreadChatKeys((prev) => {
+                    if (prev.has(chatKey)) return prev;
+                    const next = new Set(prev);
+                    next.add(chatKey);
+                    return next;
+                });
+                persistUnreadGroupMessage(groupId);
+                return;
+            }
+
+            // Non-group (private) messages reach here: add chatKey (private handled earlier)
             setUnreadChatKeys((prev) => {
                 if (prev.has(chatKey)) return prev;
                 const next = new Set(prev);
                 next.add(chatKey);
                 return next;
             });
-
-            if (evt.event === "group_message_created") {
-                const groupId = Number(evt.payload?.group_id ?? -1);
-                persistUnreadGroupMessage(groupId);
-            }
         });
 
         source.onopen = () => {

@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -123,6 +124,63 @@ class AnnouncementModuleTests(FastTenantTestCase):
         )
         self.assertEqual(response.status_code, 201)
         self.assertEqual(Announcement.objects.count(), 1)
+
+    def test_create_announcement_long_title(self):
+        """Rechazar títulos que superan el límite permitido"""
+        data = {
+            "title": "A" * 56,
+            "description": "Descripción válida",
+            "category": Announcement.Category.GENERAL,
+            "announcement_date": (timezone.now().date()).isoformat(),
+        }
+        response = self.admin_client.post(
+            "/api/announcements/",
+            data=json.dumps(data),
+            content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json()["title"][0],
+            "El título no puede contener más de 50 caracteres."
+        )
+
+    def test_create_announcement_long_description(self):
+        """Rechazar descripciones que superan el límite permitido"""
+        data = {
+            "title": "Aviso válido",
+            "description": "A" * 1001,
+            "category": Announcement.Category.GENERAL,
+            "announcement_date": (timezone.now().date()).isoformat(),
+        }
+        response = self.admin_client.post(
+            "/api/announcements/",
+            data=json.dumps(data),
+            content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json()["description"][0],
+            "La descripción no puede contener más de 255 caracteres."
+        )
+
+    def test_create_announcement_past_date(self):
+        """Rechazar avisos con fecha pasada"""
+        data = {
+            "title": "Aviso válido",
+            "description": "Descripción válida",
+            "category": Announcement.Category.GENERAL,
+            "announcement_date": (timezone.now().date() - timedelta(days=1)).isoformat(),
+        }
+        response = self.admin_client.post(
+            "/api/announcements/",
+            data=json.dumps(data),
+            content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json()["announcement_date"][0],
+            "La fecha no puede estar en pasado."
+        )
 
     def test_list_announcements(self):
         """Listar avisos como admin"""
