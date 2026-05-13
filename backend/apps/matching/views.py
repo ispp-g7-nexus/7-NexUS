@@ -18,7 +18,7 @@ def _masked_display_name(first_name: str, last_name: str, email: str) -> str:
     safe_email = (email or "").strip()
 
     if safe_first_name and safe_last_name:
-        return f"{safe_first_name} {safe_last_name[0].upper()}..."
+        return f"{safe_first_name} {safe_last_name}"
     if safe_first_name:
         return safe_first_name
     if safe_email:

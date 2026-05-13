@@ -20,8 +20,8 @@ from .serializers import (
 from .services import (
     cancel_guest_pass_for_resident,
     create_guest_pass_for_resident,
-    get_admin_visitors_analytics,
     get_active_guest_passes_queryset,
+    get_admin_visitors_analytics,
     get_guest_pass_history_queryset,
     get_or_create_guest_pass_policy,
     get_resident_membership_for_user,
@@ -269,6 +269,9 @@ class AdminGuestPassPolicyView(AdminGuestPassBaseView):
 
 
 class AdminVisitorsAnalyticsView(AdminGuestPassBaseView):
+    required_permission = "analytics"
+    strict_permission = True
+
     def get(self, request):
         residence = self._get_residence(request)
 

@@ -23,12 +23,14 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
   const [loading, setLoading] = useState(false)
   const [locationType, setLocationType] = useState<string>(initialData?.location_type ?? "")
   const [urgent, setUrgent] = useState<boolean>(initialData?.priority === "high")
+  const [title, setTitle] = useState<string>(initialData?.title ?? "")
+  const [description, setDescription] = useState<string>(initialData?.description ?? "")
   const [staffId] = useState("")
   const [externalName] = useState("")
   const [areaError, setAreaError] = useState(false)
-  const [base64Image, setBase64Image] = useState<string | null>(null)
+  const [base64Image, setBase64Image] = useState<string | null>(initialData?.img || null);
   const [, setRooms] = useState<any[]>([])
-  
+
   useEffect(() => {
     if (isAdmin) {
       fetchWithAuth('/api/bedrooms/').then(res => res.json()).then(data => setRooms(data));
@@ -48,8 +50,6 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-
     if (!locationType) {
       setAreaError(true);
       return;
@@ -59,8 +59,8 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
     setLoading(true);
 
     const payload: any = {
-      title: formData.get("title") as string,
-      description: formData.get("description") as string,
+      title,
+      description,
       location_type: locationType,
       priority: (urgent ? "high" : "low") as 'low' | 'high',
       room_number: locationType === "habitacion"
@@ -103,8 +103,23 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
       <div className={UI_CLASSES.body}>
         {/* Campo Título */}
         <div className="space-y-1.5 text-left">
-          <Label htmlFor="title" className={UI_CLASSES.label}>¿Qué sucede?</Label>
-          <Input id="title" name="title" defaultValue={initialData?.title} required className={UI_CLASSES.input} />
+          <div className="flex justify-between items-center gap-3">
+            <Label htmlFor="title" className={UI_CLASSES.label}>¿Qué sucede?</Label>
+            <span className="text-[11px] text-gray-500">
+              {title.length}/75
+            </span>
+          </div>
+          <Input
+            id="title"
+            name="title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            required
+            className={UI_CLASSES.input}
+            maxLength={75}
+            break-words
+            whitespace-pre-wrap
+          />
         </div>
 
         {/* Campo Área */}
@@ -133,8 +148,23 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
 
         {/* Campo Descripción */}
         <div className="space-y-1.5 text-left">
-          <Label className={UI_CLASSES.label}>Descripción detallada</Label>
-          <textarea id="description" name="description" defaultValue={initialData?.description} required className={UI_CLASSES.textarea} />
+          <div className="flex justify-between items-center gap-3">
+            <Label className={UI_CLASSES.label}>Descripción detallada</Label>
+            <span className="text-[11px] text-gray-500">
+              {description.length}/255
+            </span>
+          </div>
+          <textarea
+            id="description"
+            name="description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            required
+            className={UI_CLASSES.textarea}
+            maxLength={255}
+            break-words
+            whitespace-pre-wrap
+          />
         </div>
 
         {/* Campo Foto */}
@@ -149,9 +179,16 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
             <label className={UI_CLASSES.imageUploadPlaceholder}>
               <Camera className="w-6 h-6 mb-1 opacity-40" />
               <span className="text-xs font-medium opacity-60">Subir foto</span>
-              <input type="file" accept="image/*" onChange={(e) => {
+              <input type="file" accept="image/png, image/jpeg, image/webp" onChange={(e) => {
                 const file = e.target.files?.[0];
-                if (file) { const r = new FileReader(); r.onloadend = () => setBase64Image(r.result as string); r.readAsDataURL(file); }
+                if (file) {
+                  if (!file.type.startsWith('image/')) {
+                    alert('Por favor, selecciona solo archivos de imagen (JPG, PNG...).');
+                    e.target.value = '';
+                    return;
+                  }
+                  const r = new FileReader(); r.onloadend = () => setBase64Image(r.result as string); r.readAsDataURL(file);
+                }
               }} className="hidden" />
             </label>
           )}

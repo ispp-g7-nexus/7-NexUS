@@ -1,4 +1,4 @@
-import { Clock, Edit2, Plus, Trash2, Leaf, Flame, X, Loader2, ChevronLeft } from "lucide-react";
+import { Clock, Edit2, Plus, Trash2, Leaf, Flame, X, Loader2, ChevronLeft, FileUp } from "lucide-react";
 import { useState, useEffect, useCallback, JSX, SyntheticEvent } from "react";
 import { MenuWeek, MenuDay, Meal } from "../../types/menu.types";
 import menuService from "../../services/menu.service";
@@ -10,8 +10,8 @@ const getMealTypeLabel = (type: Meal['type']): string => {
   switch (type) {
     case 'breakfast': return 'Desayuno';
     case 'lunch': return 'Comida';
-    case 'dinner': return 'Cena';
     case 'snack': return 'Merienda';
+    case 'dinner': return 'Cena';
     default: return type;
   }
 };
@@ -56,31 +56,43 @@ const MealCardAdmin = ({ meal, onEdit, onDelete }: MealCardAdminProps) => {
   return (
       <div className={`border rounded-xl p-4 overflow-hidden shadow-sm transition-all hover:shadow-md relative ${getMealTypeColor(meal.type)}`}>
   {meal?.image && (
-    <div className="w-full h-40 mb-3 -mt-4 -mx-4 w-[calc(100%+2rem)] border-b border-black/5 relative group">
+    <div className="w-full h-40 mb-3 rounded-lg border border-gray-200 bg-white flex items-center justify-center overflow-hidden relative group">
             <img
               src={meal.image || getPlaceholderImage()}
               alt={meal.name}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain p-1"
               onError={(e: SyntheticEvent<HTMLImageElement>) => {
                 e.currentTarget.src = getPlaceholderImage();
               }}
             />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
     </div>
   )}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-3 flex-1">
-          <div className={`shrink-0 ${meal.image ? 'p-1.5 bg-white/90 backdrop-blur rounded-lg shadow-sm border border-white/50 z-10 relative' : ''}`}>
-            {getMealTypeIcon(meal.type)}
-          </div>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col items-center gap-3 mt-2 flex-1">
+          {!meal.image && (
+            <div className="shrink-0">
+              {getMealTypeIcon(meal.type)}
+            </div>
+          )}
           <div className="flex-1">
             <p className="font-semibold text-gray-900">{meal.name}</p>
             {meal.description && (
-              <p className="text-sm text-gray-500">{meal.description}</p>
+              <p className="text-sm text-gray-500 break-all w-full">
+                {meal.description}
+              </p>
             )}
           </div>
-        </div>
-        <div className={`flex gap-2 ml-4 shrink-0 ${meal.image ? ' z-10 relative' : ''}`}>
+          </div>
+          {meal.allergens && meal.allergens.trim() !== '' && (
+          <div className="flex items-start gap-1 text-sm text-orange-600 bg-orange-50 p-2 rounded-md overflow-hidden">
+            <span className="shrink-0" title="Alérgenos">⚠️</span>
+            <p className="overflow-hidden">
+              <span className="font-semibold">Alérgenos: </span>
+              <span className="break-words">{meal.allergens}</span>
+            </p>
+          </div>
+        )}        
+        <div className={`flex gap-2 shrink-0 ${meal.image ? ' z-10 relative' : ''}`}>
           <button
             onClick={() => onEdit(meal)}
             className="p-1.5 hover:bg-green-100 rounded-md text-green-600 transition-colors"
@@ -132,8 +144,8 @@ interface MealTypeOption {
 const MEAL_TYPES: MealTypeOption[] = [
   { value: 'breakfast', label: 'Desayuno' },
   { value: 'lunch', label: 'Comida' },
-  { value: 'dinner', label: 'Cena' },
   { value: 'snack', label: 'Merienda' },
+  { value: 'dinner', label: 'Cena' },
 ];
 
 interface EditMealModalProps {
@@ -147,17 +159,31 @@ interface EditMealModalProps {
 }
 
 const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditMealModalProps) => {
-  const [formData, setFormData] = useState<Meal>(
-    meal || { allergens: [], name: '', type: 'lunch', description: '', isGlutenFree: false, isVegetarian: false, isVegan: false }
-  );
+  const [formData, setFormData] = useState<Meal>(() =>
+  meal
+    ? {
+        ...meal,
+        allergens: Array.isArray(meal.allergens) 
+        ? meal.allergens.join(', ') 
+        : (meal.allergens || ''),
+      }
+    : { allergens: '', name: '', type: 'lunch', description: '', isGlutenFree: false, isVegetarian: false, isVegan: false }
+);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [imageToDelete, setImageToDelete] = useState(false);
   useEffect(() => {
     if (isOpen) {
       setFormData(
-        meal || { allergens: [], name: '', type: 'lunch', description: '', isGlutenFree: false, isVegetarian: false, isVegan: false }
-      );
+      meal
+        ? {
+            ...meal,
+            allergens: Array.isArray(meal.allergens) 
+        ? meal.allergens.join(', ') 
+        : (meal.allergens || ''),
+          }
+        : { allergens: '', name: '', type: 'lunch', description: '', isGlutenFree: false, isVegetarian: false, isVegan: false }
+    );
       setImageToDelete(false);
       setPhotoFile(null);
       setPreviewUrl(null);
@@ -210,10 +236,11 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
           {/* Nombre */}
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-1">
-              Nombre de la comida *
+              Nombre de la comida * ({formData.name?.length || 0}/80)
             </label>
             <input
               type="text"
+              maxLength={80}
               value={formData.name}
               onChange={(e) => handleChange('name', e.target.value)}
               placeholder="Ej: Arroz con pollo"
@@ -242,9 +269,10 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
           {/* Descripción */}
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-1">
-              Descripción (opcional)
+              Descripción (opcional) * ({formData.description?.length || 0}/150)
             </label>
             <textarea
+              maxLength={150}
               value={formData.description || ''}
               onChange={(e) => handleChange('description', e.target.value)}
               placeholder="Ej: Acompañado de ensalada fresca"
@@ -261,8 +289,8 @@ const EditMealModal = ({ meal, isOpen, onClose, onSave, dayId, isSaving }: EditM
             </label>
             <input
               type="text"
-              value={formData.allergens?.join(', ') || ''}
-              onChange={(e) => handleChange('allergens', e.target.value.split(',').map(a => a.trim()).filter(Boolean))}
+              value={formData.allergens || ''}
+              onChange={(e) => handleChange('allergens', e.target.value)}
               placeholder="Ej: Gluten, Maní, Leche"
               className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
@@ -387,6 +415,11 @@ const NewWeekModal = ({ isOpen, onClose, onSave, isSaving }: NewWeekModalProps) 
 
   if (!isOpen) return null;
 
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const selectedDateObj = new Date(selectedDate + 'T00:00:00');
+  const isDateInPast = selectedDateObj < today;
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70] animate-in fade-in duration-200">
       <div className="bg-white rounded-xl shadow-lg max-w-sm w-full mx-4 animate-in zoom-in-95 duration-200">
@@ -412,8 +445,12 @@ const NewWeekModal = ({ isOpen, onClose, onSave, isSaving }: NewWeekModalProps) 
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
+              min={new Date().toISOString().split('T')[0]}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
             />
+            {isDateInPast && (
+              <p className="text-sm text-red-600 mt-2">No puedes crear menús para fechas pasadas</p>
+            )}
           </div>
         </div>
 
@@ -427,11 +464,100 @@ const NewWeekModal = ({ isOpen, onClose, onSave, isSaving }: NewWeekModalProps) 
           </button>
           <button
             onClick={() => onSave(selectedDate, selectedDate)}
-            disabled={isSaving || !selectedDate}
+            disabled={isSaving || !selectedDate || isDateInPast}
             className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
             Crear semana
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+interface ImportCsvModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (weekStart: string, file: File) => void;
+  isSaving?: boolean;
+}
+
+const ImportCsvModal = ({ isOpen, onClose, onSave, isSaving }: ImportCsvModalProps) => {
+  const [selectedDate, setSelectedDate] = useState('');
+  const [file, setFile] = useState<File | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      const today = new Date();
+      setSelectedDate(today.toISOString().split('T')[0]);
+      setFile(null);
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70] animate-in fade-in duration-200">
+      <div className="bg-white rounded-xl shadow-lg max-w-sm w-full mx-4 animate-in zoom-in-95 duration-200">
+        <div className="flex items-center justify-between p-6 border-b border-gray-100">
+          <h2 className="text-xl font-semibold text-gray-900">
+            Importar Menú por CSV
+          </h2>
+          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-md transition-colors">
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-4">
+          <p className="text-sm text-gray-500 leading-relaxed">
+            Sube un archivo CSV con el formato adecuado. Selecciona una fecha de inicio para la semana.
+          </p>
+          <div>
+            <label htmlFor="csv-week-date" className="block text-sm font-medium text-gray-700 mb-2">
+              Fecha de inicio
+            </label>
+            <input
+              id="csv-week-date"
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
+            />
+          </div>
+          <div>
+             <label htmlFor="csv-file" className="block text-sm font-medium text-gray-700 mb-2">
+              Archivo CSV
+             </label>
+             <input
+              id="csv-file"
+              type="file"
+              accept=".csv"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+             />
+          </div>
+        </div>
+
+        <div className="flex gap-3 p-6 border-t border-gray-100 bg-gray-50/50 rounded-b-xl">
+          <button
+            onClick={onClose}
+            disabled={isSaving}
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-white transition-colors disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={() => {
+               if (selectedDate && file) {
+                  onSave(selectedDate, file);
+               }
+            }}
+            disabled={isSaving || !selectedDate || !file}
+            className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+            Importar
           </button>
         </div>
       </div>
@@ -454,6 +580,8 @@ const DayMenuCardAdmin = ({ day, onAddMeal, onEditMeal, onDeleteMeal }: DayMenuC
     month: 'long',
   });
 
+  const MEAL_TYPE_ORDER: Meal['type'][] = ['breakfast', 'lunch', 'snack', 'dinner'];
+
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
       <div className="bg-primary px-6 py-4 flex items-center justify-between">
@@ -473,22 +601,32 @@ const DayMenuCardAdmin = ({ day, onAddMeal, onEditMeal, onDeleteMeal }: DayMenuC
         </button>
       </div>
 
-      <div className="p-6 space-y-4">
+      <div className="p-6 space-y-6">
         {day.meals && day.meals.length > 0 ? (
-          day.meals.map((meal, index) => (
-            <div key={meal.id || index}>
-              <div className="mb-2">
-                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                  {getMealTypeLabel(meal.type)}
-                </span>
+          MEAL_TYPE_ORDER.map(type => {
+            const mealsOfType = day.meals?.filter(m => m.type === type) || [];
+            if (mealsOfType.length === 0) return null;
+
+            return (
+              <div key={type} className="space-y-3">
+                <div className="mb-2">
+                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    {getMealTypeLabel(type)}
+                  </span>
+                </div>
+                <div className="space-y-4">
+                  {mealsOfType.map((meal, index) => (
+                    <MealCardAdmin
+                      key={meal.id || index}
+                      meal={meal}
+                      onEdit={(m) => onEditMeal(m, day.id || '')}
+                      onDelete={onDeleteMeal}
+                    />
+                  ))}
+                </div>
               </div>
-              <MealCardAdmin
-                meal={meal}
-                onEdit={(m) => onEditMeal(m, day.id || '')}
-                onDelete={onDeleteMeal}
-              />
-            </div>
-          ))
+            );
+          })
         ) : (
           <div className="text-center py-8 text-gray-400">
             <p>No hay comidas registradas para este día</p>
@@ -509,6 +647,7 @@ export function AdminMenuView() {
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isNewWeekModalOpen, setIsNewWeekModalOpen] = useState(false);
+  const [isImportCsvModalOpen, setIsImportCsvModalOpen] = useState(false);
   const [selectedMeal, setSelectedMeal] = useState<Meal | undefined>();
   const [editingDayId, setEditingDayId] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
@@ -649,6 +788,7 @@ export function AdminMenuView() {
     formData.append('name', meal.name);
     formData.append('description', meal.description || '');
     formData.append('type', meal.type);
+    formData.append('allergens', Array.isArray(meal.allergens) ? meal.allergens.join(',') : (meal.allergens || ''));
     formData.append('isGlutenFree', String(meal.isGlutenFree));
     formData.append('isVegetarian', String(meal.isVegetarian));
     formData.append('isVegan', String(meal.isVegan));
@@ -692,6 +832,22 @@ export function AdminMenuView() {
       await loadWeeks();
     } catch (err) {
       showToast('Error al crear semana: ' + (err instanceof Error ? err.message : 'Error desconocido'), 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleImportCsv = async (weekStart: string, file: File) => {
+    setIsSaving(true);
+    try {
+      const newWeek = await menuService.importWeekFromCsv(weekStart, file);
+      setIsImportCsvModalOpen(false);
+      setMenuWeek(newWeek);
+      setSelectedWeekId(newWeek.id || null);
+      showToast('Menú importado correctamente', 'success');
+      await loadWeeks();
+    } catch (err) {
+      showToast('Error al importar menú: ' + (err instanceof Error ? err.message : 'Error desconocido'), 'error');
     } finally {
       setIsSaving(false);
     }
@@ -786,13 +942,22 @@ export function AdminMenuView() {
                 {error || 'No hay menús semanales creados aún'}
               </p>
             </div>
-            <button
-              onClick={() => setIsNewWeekModalOpen(true)}
-              className="px-5 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors font-medium flex items-center gap-2 shadow-sm"
-            >
-              <Plus className="w-5 h-5" />
-              Nueva Semana
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setIsImportCsvModalOpen(true)}
+                className="px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium flex items-center gap-2 shadow-sm"
+              >
+                <FileUp className="w-5 h-5" />
+                Importar CSV
+              </button>
+              <button
+                onClick={() => setIsNewWeekModalOpen(true)}
+                className="px-5 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors font-medium flex items-center gap-2 shadow-sm"
+              >
+                <Plus className="w-5 h-5" />
+                Nueva Semana
+              </button>
+            </div>
           </div>
 
           <div className="col-span-full text-center py-16 text-gray-400">
@@ -805,6 +970,13 @@ export function AdminMenuView() {
           isOpen={isNewWeekModalOpen}
           onClose={() => setIsNewWeekModalOpen(false)}
           onSave={handleCreateWeek}
+          isSaving={isSaving}
+        />
+
+        <ImportCsvModal
+          isOpen={isImportCsvModalOpen}
+          onClose={() => setIsImportCsvModalOpen(false)}
+          onSave={handleImportCsv}
           isSaving={isSaving}
         />
 
@@ -850,10 +1022,10 @@ export function AdminMenuView() {
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
-              <span className="text-lg font-semibold text-gray-900 whitespace-nowrap min-w-[120px] text-center">
-                {new Date(menuWeek.weekStart + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+              <span className="text-lg font-semibold text-gray-900 whitespace-nowrap min-w-[180px] text-center">
+                {new Date(menuWeek.weekStart + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
                 {' - '}
-                {new Date(menuWeek.weekEnd + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                {new Date(menuWeek.weekEnd + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
               </span>
               <button
                 onClick={() => handleNavigateWeek('next')}
@@ -902,6 +1074,13 @@ export function AdminMenuView() {
               </button>
 
               <button
+                onClick={() => setIsImportCsvModalOpen(true)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-2"
+              >
+                <FileUp className="w-4 h-4" />
+                Importar CSV
+              </button>
+              <button
                 onClick={() => setIsNewWeekModalOpen(true)}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center gap-2"
               >
@@ -937,7 +1116,7 @@ export function AdminMenuView() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-800">
             <div>
               <p className="font-medium mb-1">✓ Comidas por tipo</p>
-              <p>Organiza las comidas por tipos: Desayuno, Comida, Cena y Merienda</p>
+              <p>Organiza las comidas por tipos: Desayuno, Comida, Merienda y Cena </p>
             </div>
             <div>
               <p className="font-medium mb-1">✓ Información dietética</p>
@@ -973,6 +1152,14 @@ export function AdminMenuView() {
         isSaving={isSaving}
       />
 
+      {/* Import CSV Modal */}
+      <ImportCsvModal
+        isOpen={isImportCsvModalOpen}
+        onClose={() => setIsImportCsvModalOpen(false)}
+        onSave={handleImportCsv}
+        isSaving={isSaving}
+      />
+
       {/* Confirm Modal */}
       <ConfirmModal
         isOpen={confirmConfig.isOpen}
@@ -994,36 +1181,38 @@ export function AdminMenuView() {
       <div className="mt-12 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="bg-[#1B4D1C] p-4 flex justify-between items-center">
           <h3 className="text-white font-bold">Solicitudes Especiales</h3>
-          <span className="bg-white/20 text-white text-xs px-2 py-1 rounded">{specialRequests.filter(r => r.status === 'pending').length}</span>
+          <span className="bg-white/20 text-white text-xs px-2 py-1 rounded">
+            {specialRequests.filter(r => r.status === 'pending').length}
+          </span>
         </div>
         <div className="divide-y divide-gray-100">
           {specialRequests.length === 0 ? (
             <p className="p-8 text-center text-gray-400">No hay peticiones</p>
           ) : (
             <>
-              {/* Peticiones Pendientes */}
               {specialRequests.filter(r => r.status === 'pending').map((req) => (
-                <div key={req.id} className="p-4 flex justify-between items-center bg-orange-50/50 hover:bg-orange-50 transition-colors">
-                  <div>
-                    <p className="font-bold text-gray-800">{req.user_name || 'Usuario'}</p>
-                    <p className="text-sm text-gray-500">{req.date}: {req.description}</p>
+                <div key={req.id} className="p-4 flex items-center justify-between w-full gap-4 bg-orange-50/50 hover:bg-orange-50 transition-colors">
+                  <div className="flex-1 min-w-0 max-w-[75%] pr-2">
+                    <p className="font-bold text-gray-800 break-all">{req.user_name || 'Usuario'}</p>
+                    <p className="text-sm text-gray-500 break-all">{req.date}: {req.description}</p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 shrink-0 justify-center">
                     <button 
                       onClick={() => handleUpdateSpecialRequest(req.id, 'approved')} 
-                      className="bg-green-600 text-white px-3 py-1 rounded-lg text-sm font-bold hover:bg-green-700 transition-colors"
+                      className="bg-green-600 text-white px-3 py-1 rounded-lg text-sm font-bold hover:bg-green-700 transition-colors shrink-0 whitespace-nowrap"
                     >
                       Aprobar
                     </button>
                     <button 
                       onClick={() => handleUpdateSpecialRequest(req.id, 'rejected')} 
-                      className="border border-red-200 text-red-600 px-3 py-1 rounded-lg text-sm font-bold hover:bg-red-50 transition-colors"
+                      className="border border-red-200 text-red-600 px-3 py-1 rounded-lg text-sm font-bold hover:bg-red-50 transition-colors shrink-0 whitespace-nowrap"
                     >
                       Rechazar
                     </button>
                   </div>
                 </div>
               ))}
+
               
               {/* Historial (Aprobadas/Rechazadas) */}
               {specialRequests.filter(r => r.status !== 'pending').length > 0 && (
@@ -1051,7 +1240,7 @@ export function AdminMenuView() {
                             {req.status === 'approved' ? 'Aprobada' : 'Rechazada'}
                           </span>
                         </div>
-                        <p className="text-sm text-gray-500">{req.date}: {req.description}</p>
+                        <p className="text-sm text-gray-500 break-all">{req.date}: {req.description}</p>
                       </div>
                     </div>
                   ))}

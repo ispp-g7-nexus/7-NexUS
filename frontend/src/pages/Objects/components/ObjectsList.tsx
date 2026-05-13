@@ -139,8 +139,8 @@ function ObjectCard({
   const isOutOfStock = !object.can_rent && object.current_available_stock === 0;
 
   return (
-    <Card className="border-border/80 shadow-sm">
-      <CardContent className="p-4 space-y-4">
+    <Card className="border-border/80 shadow-sm overflow-hidden">
+      <CardContent className="p-4 space-y-4 min-w-0">
         {object.image_url && (
           <img
             src={object.image_url}
@@ -152,11 +152,11 @@ function ObjectCard({
           />
         )}
         
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div>
-            <h3 className="text-lg font-semibold">{object.name}</h3>
+        <div className="flex flex-wrap items-start justify-between gap-2 min-w-0">
+          <div className="min-w-0 flex-1">
+            <h3 className="text-lg font-semibold break-words line-clamp-2">{object.name}</h3>
             {object.description && (
-              <p className="mt-1 text-sm text-gray-500">{object.description}</p>
+              <p className="mt-1 text-sm text-gray-500 break-words line-clamp-3">{object.description}</p>
             )}
           </div>
           <span
@@ -178,7 +178,7 @@ function ObjectCard({
           {object.location && (
             <div className="flex items-center gap-2">
               <MapPin className="h-4 w-4" />
-              <span>{object.location}</span>
+              <span className="break-words">{object.location}</span>
             </div>
           )}
           <div className="flex items-center gap-2">
@@ -192,7 +192,7 @@ function ObjectCard({
           {object.tags && (
             <div className="flex items-center gap-2 sm:col-span-2">
               <Tag className="h-4 w-4" />
-              <span>{object.tags}</span>
+              <span className="break-words">{object.tags}</span>
             </div>
           )}
         </div>
@@ -206,12 +206,12 @@ function ObjectCard({
           ) : (
             <ul className="space-y-2">
               {reservations.map((reservation) => (
-                <li key={reservation.id} className="rounded-md border border-border/70 bg-background px-3 py-2 text-sm">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium text-gray-900">
+                <li key={reservation.id} className="rounded-md border border-border/70 bg-background px-3 py-2 text-sm min-w-0 overflow-hidden">
+                  <div className="flex items-center justify-between gap-2 min-w-0">
+                    <span className="font-medium text-gray-900 min-w-0 flex-1 break-words line-clamp-2">
                       {getReservationUserDisplayName(reservation.user)}
                     </span>
-                    <span className="text-gray-500">
+                    <span className="text-gray-500 shrink-0 text-right">
                       {formatInterval(reservation.start_date, reservation.end_date)}
                     </span>
                   </div>

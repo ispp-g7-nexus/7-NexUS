@@ -54,12 +54,27 @@ export function AdminProfile() {
         }
     };
 
+    const MAX_LENGTH = 40;
     const validateForm = () => {
         const newErrors: Record<string, string> = {};
 
-        if (!userData.first_name.trim()) newErrors.first_name = "El nombre es obligatorio.";
-        if (!userData.last_name.trim()) newErrors.last_name = "Los apellidos son obligatorios.";
-        if (!userData.username.trim()) newErrors.username = "El nombre de usuario es obligatorio.";
+        if (!userData.first_name.trim()) {
+            newErrors.first_name = "El nombre es obligatorio.";
+        } else if (userData.first_name.length > MAX_LENGTH) {
+            newErrors.first_name = `El nombre no puede superar los ${MAX_LENGTH} caracteres.`;
+        }
+
+        if (!userData.last_name.trim()) {
+            newErrors.last_name = "Los apellidos son obligatorios.";
+        } else if (userData.last_name.length > MAX_LENGTH) {
+            newErrors.last_name = `Los apellidos no pueden superar los ${MAX_LENGTH} caracteres.`;
+        }
+
+        if (!userData.username.trim()) {
+            newErrors.username = "El nombre de usuario es obligatorio.";
+        } else if (userData.username.length > MAX_LENGTH) {
+            newErrors.username = `El nombre de usuario no puede superar los ${MAX_LENGTH} caracteres.`;
+        }
 
         if (!userData.email.trim()) {
             newErrors.email = "El correo es obligatorio.";
@@ -103,14 +118,14 @@ export function AdminProfile() {
     };
 
     const handleLogout = async () => {
-    try {
-        await authService.logout();
-        globalThis.location.assign('/');
-    } catch (error) {
-        console.error("Error en logout:", error);
-        toast.error("No se pudo cerrar la sesión. Inténtalo de nuevo.");
-    }
-};
+        try {
+            await authService.logout();
+            globalThis.location.assign('/');
+        } catch (error) {
+            console.error("Error en logout:", error);
+            toast.error("No se pudo cerrar la sesión. Inténtalo de nuevo.");
+        }
+    };
 
     if (isLoading) {
         return (
@@ -122,16 +137,18 @@ export function AdminProfile() {
     }
 
     return (
-        <div className="min-h-[85vh] w-full flex items-center justify-center p-4 md:p-6 bg-transparent">
+        <div className="min-h-[85vh] w-full flex items-center justify-center p-4 md:p-6 bg-transparent text-slate-900">
             <div className="w-full max-w-4xl bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-gray-100 overflow-hidden transition-all duration-300">
 
                 <div className="bg-primary p-8 text-primary-foreground flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative overflow-hidden">
                     <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-white opacity-10 rounded-full blur-2xl"></div>
 
-                    <div className="relative z-10">
-                        <div className="flex items-center gap-3">
-                            <h2 className="text-3xl font-bold tracking-tight">Mi Perfil</h2>
-                            <span className="bg-primary-foreground/20 text-primary-foreground text-xs font-semibold px-3 py-1 rounded-full border border-primary-foreground/30 backdrop-blur-sm">
+                    <div className="relative z-10 max-w-full overflow-hidden">
+                        <div className="flex items-center gap-3 flex-wrap">
+                            <h2 className="text-3xl font-bold tracking-tight truncate max-w-[250px] sm:max-w-md" title={`${userData.first_name} ${userData.last_name}`}>
+                                {userData.first_name} {userData.last_name}
+                            </h2>
+                            <span className="bg-primary-foreground/20 text-primary-foreground text-xs font-semibold px-3 py-1 rounded-full border border-primary-foreground/30 backdrop-blur-sm shrink-0">
                                 {userData.status}
                             </span>
                         </div>
@@ -165,10 +182,12 @@ export function AdminProfile() {
                             <input
                                 id="first_name"
                                 type="text"
+                                name="first_name"
                                 value={userData.first_name}
                                 onChange={(e) => handleInputChange('first_name', e.target.value)}
                                 disabled={!isEditing}
-                                className={`w-full px-4 py-3 border rounded-xl focus:outline-none transition-all duration-200 ${errors.first_name ? 'border-red-500 bg-red-50/30 focus:ring-4 focus:ring-red-500/10' :
+                                maxLength={MAX_LENGTH} 
+                                className={`w-full px-4 py-3 border rounded-xl focus:outline-none transition-all duration-200 break-words ${errors.first_name ? 'border-red-500 bg-red-50/30 focus:ring-4 focus:ring-red-500/10' :
                                     isEditing ? 'border-primary/50 focus:border-primary focus:ring-4 focus:ring-primary/10 bg-white hover:border-primary/70' :
                                         'border-gray-200 bg-gray-50/80 text-gray-600 cursor-default'
                                     }`}
@@ -181,10 +200,12 @@ export function AdminProfile() {
                             <input
                                 id="last_name"
                                 type="text"
+                                name="last_name"
                                 value={userData.last_name}
                                 onChange={(e) => handleInputChange('last_name', e.target.value)}
                                 disabled={!isEditing}
-                                className={`w-full px-4 py-3 border rounded-xl focus:outline-none transition-all duration-200 ${errors.last_name ? 'border-red-500 bg-red-50/30 focus:ring-4 focus:ring-red-500/10' :
+                                maxLength={MAX_LENGTH}
+                                className={`w-full px-4 py-3 border rounded-xl focus:outline-none transition-all duration-200 break-words ${errors.last_name ? 'border-red-500 bg-red-50/30 focus:ring-4 focus:ring-red-500/10' :
                                     isEditing ? 'border-primary/50 focus:border-primary focus:ring-4 focus:ring-primary/10 bg-white hover:border-primary/70' :
                                         'border-gray-200 bg-gray-50/80 text-gray-600 cursor-default'
                                     }`}
@@ -272,18 +293,18 @@ export function AdminProfile() {
                             </button>
                         </div>
                     )}
-    
-                <div className="mt-12 pt-8 border-t border-gray-100 max-w-sm">
-                    <button
-                        type="button"
-                        onClick={handleLogout}
-                        className="w-full flex items-center justify-center gap-3 px-6 py-3.5 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-xl hover:shadow-lg hover:from-red-700 hover:to-red-600 transition-all font-bold tracking-wide"
-                    >
-                        <LogOut size={22} />
-                        CERRAR SESIÓN
-                    </button>
-                </div>
-            </form>
+
+                    <div className="mt-12 pt-8 border-t border-gray-100 max-w-sm">
+                        <button
+                            type="button"
+                            onClick={handleLogout}
+                            className="w-full flex items-center justify-center gap-3 px-6 py-3.5 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-xl hover:shadow-lg hover:from-red-700 hover:to-red-600 transition-all font-bold tracking-wide"
+                        >
+                            <LogOut size={22} />
+                            CERRAR SESIÓN
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     );

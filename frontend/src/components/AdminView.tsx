@@ -125,14 +125,16 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
     const [activeTab, setActiveTab] = useState<AdminTab>(() => getAdminTabFromPath(location.pathname));
 
     const [fullUser, setFullUser] = useState<AuthMeUser | null>(null);
+    const activeUser = fullUser || currentUser;
+    const currentUserEmail = activeUser?.email ?? "";
 
     const [totalChats, setTotalChats] = useState<number>(0);
-    const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
     const [unreadChatKeys, setUnreadChatKeys] = useState<Set<string>>(new Set());
     const [chatRealtimeTick, setChatRealtimeTick] = useState<number>(0);
     const [chatRealtimeEvent, setChatRealtimeEvent] = useState<ChatRealtimeEvent | null>(null);
     const [tenantLogoUrl, setTenantLogoUrl] = useState<string>("");
     const processedGroupMessageEventKeysRef = useRef<Set<string>>(new Set());
+    const groupMembershipRef = useRef<Map<number, boolean>>(new Map());
 
     const applyTenantTheme = (branding: ResidenceBranding) => {
         if (branding.logo_url) {
@@ -282,14 +284,27 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
     }, []);
 
     useEffect(() => {
-        authService.me().then((session) => {
-            if (session.user) {
-                setFullUser(session.user);
-                if (session.user.email) {
-                    setCurrentUserEmail(session.user.email);
+        const fetchUserData = async () => {
+            try {
+                const session = await authService.me();
+                if (session.user) {
+                    setFullUser(session.user);
+                    console.log("Permisos actualizados:", session.user.roles);
                 }
+            } catch (error) {
+                console.error("Error al refrescar permisos", error);
             }
-        }).catch(() => { });
+        };
+
+        fetchUserData();
+
+        window.addEventListener("focus", fetchUserData);
+        window.addEventListener("reload-permissions", fetchUserData);
+
+        return () => {
+            window.removeEventListener("focus", fetchUserData);
+            window.removeEventListener("reload-permissions", fetchUserData);
+        };
     }, []);
 
     useEffect(() => {
@@ -305,6 +320,19 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
                 setChatRealtimeEvent(evt);
                 setChatRealtimeTick((prev) => prev + 1);
                 loadChatsCount().catch(() => { });
+                // Update membership cache if group payload is present
+                try {
+                    const incomingGroup = evt.payload?.group as { id?: number; is_member?: boolean } | undefined;
+                    const groupId = Number(evt.payload?.group_id ?? incomingGroup?.id ?? -1);
+                    if (Number.isFinite(groupId) && groupId > 0 && incomingGroup && typeof incomingGroup.is_member === 'boolean') {
+                        groupMembershipRef.current.set(groupId, incomingGroup.is_member);
+                    }
+                    if (evt.event === 'group_deleted' && Number.isFinite(groupId) && groupId > 0) {
+                        groupMembershipRef.current.delete(groupId);
+                    }
+                } catch (e) {
+                    // ignore cache update errors
+                }
                 return;
             }
 
@@ -324,6 +352,14 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
                 return;
             }
 
+            // Si se trata de un mensaje privado, ignorar si el admin NO es participante
+            if (evt.event === "private_message_created") {
+                const participants = Array.isArray(evt.payload?.participants) ? evt.payload.participants.map((p: string) => (typeof p === 'string' ? p.trim().toLowerCase() : '')).filter(Boolean) : null;
+                if (participants && !participants.includes(normalizedCurrentUserEmail)) {
+                    return;
+                }
+            }
+
             if (activeTab === "chats") {
                 return;
             }
@@ -333,17 +369,55 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
                 return;
             }
 
+            // If it's a group message, ensure the admin is member of that group before marking unread.
+            if (evt.event === "group_message_created") {
+                const groupId = Number(evt.payload?.group_id ?? -1);
+                if (!Number.isFinite(groupId) || groupId <= 0) return;
+
+                const cached = groupMembershipRef.current.get(groupId);
+                if (typeof cached === 'boolean') {
+                    if (!cached) return;
+                } else {
+                    // Cache miss: fetch group once and cache membership
+                    (async () => {
+                        try {
+                            const grp = await chatsService.getGroup(groupId);
+                            const isMember = !!grp.is_member;
+                            groupMembershipRef.current.set(groupId, isMember);
+                            if (!isMember) return;
+
+                            setUnreadChatKeys((prev) => {
+                                if (prev.has(chatKey)) return prev;
+                                const next = new Set(prev);
+                                next.add(chatKey);
+                                return next;
+                            });
+                            persistUnreadGroupMessage(groupId);
+                        } catch (e) {
+                            // If fetch fails, do not mark unread
+                        }
+                    })();
+                    return;
+                }
+
+                // cached === true
+                setUnreadChatKeys((prev) => {
+                    if (prev.has(chatKey)) return prev;
+                    const next = new Set(prev);
+                    next.add(chatKey);
+                    return next;
+                });
+                persistUnreadGroupMessage(groupId);
+                return;
+            }
+
+            // Non-group (private) messages reach here: add chatKey (private handled earlier)
             setUnreadChatKeys((prev) => {
                 if (prev.has(chatKey)) return prev;
                 const next = new Set(prev);
                 next.add(chatKey);
                 return next;
             });
-
-            if (evt.event === "group_message_created") {
-                const groupId = Number(evt.payload?.group_id ?? -1);
-                persistUnreadGroupMessage(groupId);
-            }
         });
 
         source.onopen = () => {
@@ -386,9 +460,6 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
     const [totalStaff, setTotalStaff] = useState<number>(0);
     const [pendingIncidences, setPendingIncidences] = useState<number>(0);
     const [totalRoles, setTotalRoles] = useState<number>(0);
-
-
-    const activeUser = fullUser || currentUser;
 
     useEffect(() => {
         if (activeTab !== "dashboard") return;
@@ -441,7 +512,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
         { id: "events", label: "Eventos & Comunidad", icon: <Calendar className="w-5 h-5" />, permission: "events" },
         { id: "reservations", label: "Objetos & Espacios", icon: <BookOpen className="w-5 h-5" />, permission: "reservations" },
         { id: "roles", label: "Roles", icon: <Shield className="w-5 h-5" />, permission: "roles" },
-        { id: "branding", label: "Personalización", icon: <Palette className="w-5 h-5" /> },
+        { id: "branding", label: "Personalización", icon: <Palette className="w-5 h-5" />, permission: "branding" },
         { id: "announcements", label: "Avisos", icon: <Bell className="w-5 h-5" />, permission: "announcements" },
         { id: "visitors", label: "Visitantes", icon: <UserCheck className="w-5 h-5" />, permission: "guests" },
         { id: "chats", label: "Chats", icon: <MessageSquare className="w-5 h-5" />, permission: "chats" },
@@ -495,7 +566,7 @@ export function AdminView({ onLogout, currentUser }: AdminViewProps) {
     const currentTab = allNavItems.find((item) => item.id === activeTab) || allNavItems[0];
 
     const renderContent = () => {
-        const alwaysAllowed = ["dashboard", "profile", "branding"];
+        const alwaysAllowed = ["dashboard", "profile"];
         const isAllowed = alwaysAllowed.includes(activeTab) || allNavItems.some(item => item.id === activeTab);
 
         if (!isAllowed) {

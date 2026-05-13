@@ -94,12 +94,12 @@ function DeliveryCard({ sender, tracking, delivery_code, date, status, location,
 
   return (
     <Card className="border-none shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-      <CardContent className="p-0 !pb-0 flex flex-col">
-        <div className="flex">
+      <CardContent className="p-0 !pb-0 flex min-w-0 flex-col">
+        <div className="flex min-w-0">
           <div className={`w-1.5 ${isReady ? "bg-chart-2" : "bg-border"}`} />
-          <div className="px-4 pt-2 pb-3 flex-1">
-            <div className="flex justify-between">
-              <div className="flex flex-col">
+          <div className="min-w-0 flex-1 px-4 pt-2 pb-3">
+            <div className="flex min-w-0 justify-between gap-3">
+              <div className="flex min-w-0 flex-col">
                 <div className="flex items-center gap-2 mb-1">
                   <h3 className="font-bold text-card-foreground">{sender}</h3>
                   {is_unread && (
@@ -107,7 +107,7 @@ function DeliveryCard({ sender, tracking, delivery_code, date, status, location,
                   )}
                 </div>
                 <div className="flex flex-col gap-3 text-xs text-gray-500">
-                  <span className="font-mono">#{tracking}</span>
+                  <span className="break-all font-mono">#{tracking}</span>
                   <div className="flex items-center gap-3">
                     <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {date}</span>
                     {location && (
@@ -133,9 +133,9 @@ function DeliveryCard({ sender, tracking, delivery_code, date, status, location,
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-md">
                       <DialogHeader>
-                        <DialogTitle>Codigo de recogida</DialogTitle>
+                        <DialogTitle>Código de recogida</DialogTitle>
                         <DialogDescription>
-                          Muestra este codigo al personal de recepcion para retirar el paquete correspondiente a {sender}.
+                          Muestra este código al personal de recepción para retirar el paquete correspondiente a {sender}.
                         </DialogDescription>
                       </DialogHeader>
                       <div className="flex items-center justify-center p-8">

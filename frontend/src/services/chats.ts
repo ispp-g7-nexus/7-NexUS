@@ -29,6 +29,7 @@ export interface ChatGroup {
   members: number;
   members_list: ChatMember[];
   created_by_email?: string;
+  is_member?: boolean;
 }
 
 export interface UpsertChatGroupPayload {
@@ -243,6 +244,20 @@ export const chatsService = {
     });
     await handleResponse<void>(res);
     trackEvent('chat_group_left', { group_id: groupId });
+  },
+
+  joinGroup: async (groupId: number): Promise<ChatGroup> => {
+    const res = await fetchWithAuth(`${MY_GROUPS_URL}${groupId}/join/`, {
+      method: "POST",
+    });
+    const group = await handleResponse<ChatGroup>(res);
+    trackEvent('chat_group_joined', { group_id: groupId });
+    return group;
+  },
+
+  listAvailableGroups: async (): Promise<ChatGroup[]> => {
+    const res = await fetchWithAuth(`${MY_GROUPS_URL}available/`);
+    return handleResponse<ChatGroup[]>(res);
   },
 
   // ── Mensajes de Grupo ──

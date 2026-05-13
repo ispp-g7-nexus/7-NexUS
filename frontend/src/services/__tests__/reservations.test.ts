@@ -101,6 +101,35 @@ describe('services/reservations', () => {
     expect(error).toMatchObject({ message: 'Franja ocupada', status: 400 })
   })
 
+  it('extrae errores por campo y los muestra con mensaje útil', async () => {
+    mockedFetchWithAuth.mockResolvedValue(
+      mockJsonResponse(
+        { name: ['Ensure this field has no more than 80 characters.'] },
+        400,
+      ),
+    )
+
+    const error = await listCommonSpaces().catch((caught) => caught)
+
+    expect(error).toEqual(expect.any(ApiError))
+    expect(error).toMatchObject({
+      message: 'El campo nombre no puede superar los 80 caracteres.',
+      status: 400,
+    })
+  })
+
+  it('prioriza message cuando el backend no usa detail', async () => {
+    mockedFetchWithAuth.mockResolvedValue(mockJsonResponse({ message: 'Error de validación' }, 400))
+
+    const error = await listCommonSpaces().catch((caught) => caught)
+
+    expect(error).toEqual(expect.any(ApiError))
+    expect(error).toMatchObject({
+      message: 'Error de validación',
+      status: 400,
+    })
+  })
+
   it('usa mensaje generico de permisos cuando el backend no devuelve JSON', async () => {
     mockedFetchWithAuth.mockResolvedValue({
       ok: false,

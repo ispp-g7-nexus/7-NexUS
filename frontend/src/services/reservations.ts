@@ -84,18 +84,99 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+const FIELD_LABELS: Record<string, string> = {
+  name: "nombre",
+  description: "descripción",
+  capacity: "aforo",
+  open_time: "hora de apertura",
+  close_time: "hora de cierre",
+  reservation_interval_minutes: "intervalo de reserva",
+  start_time: "hora de inicio",
+  end_time: "hora de fin",
+  notes: "nota",
+};
+
+function normalizeFieldMessage(fieldName: string, rawMessage: string): string {
+  const message = rawMessage.trim();
+  const label = FIELD_LABELS[fieldName] ?? fieldName;
+
+  const maxLengthMatch = message.match(/Ensure this field has no more than (\d+) characters\./i);
+  if (maxLengthMatch) {
+    return `El campo ${label} no puede superar los ${maxLengthMatch[1]} caracteres.`;
+  }
+  if (/This field may not be blank\./i.test(message)) {
+    return `El campo ${label} no puede estar vacío.`;
+  }
+  if (/This field is required\./i.test(message)) {
+    return `El campo ${label} es obligatorio.`;
+  }
+
+  return message;
+}
+
+function collectFieldMessages(payload: Record<string, unknown>): string[] {
+  const messages: string[] = [];
+
+  for (const [fieldName, value] of Object.entries(payload)) {
+    if (fieldName === "detail" || fieldName === "message" || fieldName === "error") {
+      continue;
+    }
+
+    if (typeof value === "string" && value.trim()) {
+      messages.push(normalizeFieldMessage(fieldName, value));
+      continue;
+    }
+
+    if (Array.isArray(value)) {
+      const firstText = value.find((item) => typeof item === "string" && item.trim());
+      if (typeof firstText === "string") {
+        messages.push(normalizeFieldMessage(fieldName, firstText));
+      }
+    }
+  }
+
+  return messages;
+}
+
+function pickErrorMessage(payload: unknown, fallbackMessage: string): string {
+  if (typeof payload === "string" && payload.trim()) {
+    return payload;
+  }
+
+  if (!isRecord(payload)) {
+    return fallbackMessage;
+  }
+
+  if (typeof payload.detail === "string" && payload.detail.trim()) {
+    return payload.detail;
+  }
+  if (typeof payload.message === "string" && payload.message.trim()) {
+    return payload.message;
+  }
+  if (typeof payload.error === "string" && payload.error.trim()) {
+    return payload.error;
+  }
+
+  const fieldMessages = collectFieldMessages(payload);
+  if (fieldMessages.length > 0) {
+    return fieldMessages[0];
+  }
+
+  return fallbackMessage;
+}
+
 async function parseError(response: Response): Promise<ApiError> {
-  let message = "Ha ocurrido un error inesperado.";
+  const fallbackMessage =
+    response.status === 401 || response.status === 403
+      ? "No tienes permisos para realizar esta acción."
+      : "Ha ocurrido un error inesperado.";
+  let message = fallbackMessage;
 
   try {
     const payload = (await response.json()) as unknown;
-    if (isRecord(payload) && typeof payload.detail === "string" && payload.detail.trim()) {
-      message = payload.detail;
-    }
+    message = pickErrorMessage(payload, fallbackMessage);
   } catch {
-    if (response.status === 401 || response.status === 403) {
-      message = "No tienes permisos para realizar esta acción.";
-    }
+    message = fallbackMessage;
   }
 
   return new ApiError(message, response.status);

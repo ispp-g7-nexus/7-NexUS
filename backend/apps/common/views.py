@@ -33,6 +33,7 @@ from .services import (
     has_access_for_portal,
     process_password_reset_confirm,
     process_password_reset_request,
+    process_welcome_email,
 )
 
 UserModel = get_user_model()
@@ -371,7 +372,13 @@ class AdminCreateResidentView(APIView):
                         user.set_password(passwd)
                         user.save()
             else:
-                process_password_reset_request(user.email, request)
+                # If the user was just created by the admin, send the welcome email
+                # (which includes a link to set the initial password). For existing
+                # users without a provided password, send the usual password reset.
+                if created:
+                    process_welcome_email(user.email, request)
+                else:
+                    process_password_reset_request(user.email, request)
         except Exception:
             pass
 

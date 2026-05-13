@@ -67,10 +67,10 @@ export function AnnouncementCard({
                 </Badge>
               )}
             </div>
-            <h3 className="font-bold text-card-foreground text-base md:text-lg mb-1.5 line-clamp-2">
+            <h3 className="font-bold text-card-foreground text-base md:text-lg mb-1.5 break-words">
               {announcement.title}
             </h3>
-            <p className="text-sm text-muted-foreground mb-2.5">
+            <p className="text-sm text-muted-foreground mb-2.5 break-words">
               {announcement.description}
             </p>
             <div className="flex items-center gap-3 text-xs text-muted-foreground mt-auto pt-2">

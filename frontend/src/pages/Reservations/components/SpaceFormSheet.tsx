@@ -1,8 +1,16 @@
 import { useEffect, useState } from "react";
-import { Camera, X } from "lucide-react"; 
+import { Camera, X } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
 import type { AdminSpace, CreateSpacePayload } from "../../../services/adminSpaces";
+import {
+  COMMON_SPACE_DESCRIPTION_MAX_LENGTH,
+  COMMON_SPACE_NAME_MAX_LENGTH,
+} from "../constants";
+
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const IMAGE_MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
 
 interface SpaceFormSheetProps {
   open: boolean;
@@ -32,6 +40,7 @@ export function SpaceFormSheet({
 }: SpaceFormSheetProps) {
   const [form, setForm] = useState<CreateSpacePayload>(EMPTY_FORM);
   const [base64Image, setBase64Image] = useState<string | null>(null);
+  const [errors, setErrors] = useState<{ name?: string; description?: string }>({});
 
   useEffect(() => {
     if (open) {
@@ -50,6 +59,7 @@ export function SpaceFormSheet({
         setForm(EMPTY_FORM);
         setBase64Image(null);
       }
+      setErrors({});
     }
   }, [open, space]);
 
@@ -58,9 +68,38 @@ export function SpaceFormSheet({
   const set = <K extends keyof CreateSpacePayload>(key: K, value: CreateSpacePayload[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
+  function validateForm(payload: CreateSpacePayload): { name?: string; description?: string } {
+    const nextErrors: { name?: string; description?: string } = {};
+
+    if (!payload.name.trim()) {
+      nextErrors.name = "El nombre es obligatorio.";
+    } else if (payload.name.trim().length > COMMON_SPACE_NAME_MAX_LENGTH) {
+      nextErrors.name = `El nombre no puede superar los ${COMMON_SPACE_NAME_MAX_LENGTH} caracteres.`;
+    }
+
+    if ((payload.description ?? "").trim().length > COMMON_SPACE_DESCRIPTION_MAX_LENGTH) {
+      nextErrors.description = `La descripción no puede superar los ${COMMON_SPACE_DESCRIPTION_MAX_LENGTH} caracteres.`;
+    }
+
+    return nextErrors;
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await onSubmit({ ...form, img: base64Image });
+    const normalizedPayload: CreateSpacePayload = {
+      ...form,
+      name: form.name.trim(),
+      description: (form.description ?? "").trim(),
+      img: base64Image,
+    };
+    const nextErrors = validateForm(normalizedPayload);
+    if (nextErrors.name || nextErrors.description) {
+      setErrors(nextErrors);
+      return;
+    }
+
+    setErrors({});
+    await onSubmit(normalizedPayload);
   };
 
   const isEditing = space !== null;
@@ -85,26 +124,50 @@ export function SpaceFormSheet({
         <CardContent className="pt-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Nombre *</label>
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-sm font-medium">Nombre *</label>
+                <span className="text-xs text-gray-500">
+                  {form.name.length}/{COMMON_SPACE_NAME_MAX_LENGTH}
+                </span>
+              </div>
               <input
                 required
                 type="text"
                 value={form.name}
-                onChange={(e) => set("name", e.target.value)}
+                maxLength={COMMON_SPACE_NAME_MAX_LENGTH}
+                onChange={(e) => {
+                  set("name", e.target.value);
+                  if (errors.name) {
+                    setErrors((prev) => ({ ...prev, name: undefined }));
+                  }
+                }}
                 className="border-input bg-background focus-visible:ring-ring/50 w-full rounded-md border px-3 py-2 text-sm outline-none focus-visible:ring-[3px]"
                 placeholder="Salón de usos múltiples"
               />
+              {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Descripción</label>
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-sm font-medium">Descripción</label>
+                <span className="text-xs text-gray-500">
+                  {form.description?.length ?? 0}/{COMMON_SPACE_DESCRIPTION_MAX_LENGTH}
+                </span>
+              </div>
               <textarea
                 value={form.description}
-                onChange={(e) => set("description", e.target.value)}
+                maxLength={COMMON_SPACE_DESCRIPTION_MAX_LENGTH}
+                onChange={(e) => {
+                  set("description", e.target.value);
+                  if (errors.description) {
+                    setErrors((prev) => ({ ...prev, description: undefined }));
+                  }
+                }}
                 rows={3}
-                className="border-input bg-background focus-visible:ring-ring/50 w-full rounded-md border px-3 py-2 text-sm outline-none focus-visible:ring-[3px] resize-none"
+                className="border-input bg-background focus-visible:ring-ring/50 w-full rounded-md border px-3 py-2 text-sm outline-none focus-visible:ring-[3px] resize-none break-words"
                 placeholder="Describe el espacio..."
               />
+              {errors.description && <p className="text-xs text-destructive">{errors.description}</p>}
             </div>
 
             <div className="space-y-2 text-left">
@@ -129,12 +192,20 @@ export function SpaceFormSheet({
                     accept="image/*" 
                     onChange={(e) => {
                       const file = e.target.files?.[0];
-                      if (file) { 
-                        const r = new FileReader(); 
-                        r.onloadend = () => setBase64Image(r.result as string); 
-                        r.readAsDataURL(file); 
+                      e.target.value = "";
+                      if (!file) return;
+                      if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+                        toast.error("Solo se permiten imágenes (JPEG, PNG, WebP o GIF).");
+                        return;
                       }
-                    }} 
+                      if (file.size > IMAGE_MAX_SIZE_BYTES) {
+                        toast.error("La imagen no puede superar los 5 MB.");
+                        return;
+                      }
+                      const r = new FileReader();
+                      r.onloadend = () => setBase64Image(r.result as string);
+                      r.readAsDataURL(file);
+                    }}
                     className="hidden" 
                   />
                 </label>

@@ -58,12 +58,12 @@ export function MatchCard({
                 </div>
 
                 <div className="flex-1 min-w-0">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1">
-                        <h3 className="text-lg font-bold text-gray-900 truncate pr-4">
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 mb-1">
+                        <h3 className="text-lg font-bold text-gray-900 break-words pr-2 leading-snug flex-1 min-w-0">
                             {match.display_name}
                         </h3>
 
-                        <div className="flex items-center gap-2 self-start sm:self-auto">
+                        <div className="flex items-center gap-2 self-start sm:self-auto flex-shrink-0">
                             <div className="flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 rounded-full border border-green-200">
                                 <Sparkles className="w-4 h-4 text-green-600" />
                                 <span className="text-sm font-bold">{scorePercent}% Match</span>

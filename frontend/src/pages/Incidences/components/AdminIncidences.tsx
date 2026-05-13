@@ -32,7 +32,9 @@ const ManageIncidenceModal = ({ incidence, onClose, onRefresh }: ManageModalProp
   const [newComment, setNewComment] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const staffOptions = staff.reduce((acc, m) => ({
+  const staffOptions = staff
+    .filter(m => m.status == 'active')
+    .reduce((acc, m) => ({
     ...acc, [String(m.id)]: m.full_name
   }), {
     "none": "Sin asignar",
@@ -67,7 +69,7 @@ const ManageIncidenceModal = ({ incidence, onClose, onRefresh }: ManageModalProp
         <DialogTitle className={UI_CLASSES.notesTitle}>Gestionar Incidencia</DialogTitle>
         <DialogDescription className="sr-only">Actualizar estado o asignar personal</DialogDescription>
         <div className="p-6 bg-white overflow-y-auto max-h-[85vh] space-y-6 pb-12 text-left">
-          <p className="text-slate-500 text-sm font-medium">{incidence.title} • {locationDisplay}</p>
+          <p className="text-slate-500 text-sm font-medium break-all">{incidence.title} • {locationDisplay}</p>
 
           <div className="space-y-5">
             {incidence.img && (
@@ -105,7 +107,12 @@ const ManageIncidenceModal = ({ incidence, onClose, onRefresh }: ManageModalProp
                 <input value={externalName} onChange={(e) => setExternalName(e.target.value)} placeholder="Ej: Cerrajero..." className={UI_CLASSES.input} />
               </div>
             )}
-
+            <div className="space-y-2 text-left">
+              <Label className={UI_CLASSES.label}>Descripción del problema</Label>
+              <div className="relative">
+                <textarea value={incidence.description} readOnly className={UI_CLASSES.historyScrollArea} />
+              </div>
+            </div>
             <div className="space-y-2 text-left">
               <Label className={UI_CLASSES.label}>Historial de actualizaciones</Label>
               <div className={UI_CLASSES.historyScrollArea}>
@@ -116,7 +123,7 @@ const ManageIncidenceModal = ({ incidence, onClose, onRefresh }: ManageModalProp
                         <span className="text-[9px] font-black text-primary uppercase bg-primary/10 px-1.5 py-0.5 rounded">{u.author_name || 'Admin'}</span>
                         <span className="text-[9px] text-slate-400 font-bold">{new Date(u.created_at).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
                       </div>
-                      <p className="text-xs text-slate-600 leading-snug">{u.text}</p>
+                      <p className="text-xs text-slate-600 leading-snug break-words whitespace-pre-wrap">{u.text}</p>
                     </div>
                   ))
                 ) : <p className="text-center py-4 text-xs text-slate-400 italic">Sin mensajes previos.</p>}
@@ -126,7 +133,7 @@ const ManageIncidenceModal = ({ incidence, onClose, onRefresh }: ManageModalProp
             <div className="space-y-2 text-left">
               <Label className={UI_CLASSES.label}>Mensaje para el residente</Label>
               <div className="relative">
-                <textarea value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="Escribe aquí..." className={UI_CLASSES.textarea} />
+                <textarea value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="Escribe aquí..." className={UI_CLASSES.textarea} maxLength={255}/>
                 <Send size={16} className="absolute right-3 bottom-3 text-slate-300 pointer-events-none" />
               </div>
             </div>
@@ -239,7 +246,7 @@ export const AdminIncidences = () => {
                     <div className="text-left flex-1 flex flex-col justify-between">
                       <div>
                         <h2 className={UI_CLASSES.cardTitle}>{inc.title}</h2>
-                        <div className={UI_CLASSES.cardLocation}><MapPin size={14} /> {LOCATION_LABELS[inc.location_type]} 
+                        <div className={UI_CLASSES.cardLocation}><MapPin size={14} /> {LOCATION_LABELS[inc.location_type]}
                         </div>
                         <div className="flex flex-wrap gap-2 mt-4">
                           <span className={`${cfg.admin.bg} ${cfg.admin.text} ${UI_CLASSES.statusBadge}`}>{cfg.label}</span>
@@ -265,7 +272,7 @@ export const AdminIncidences = () => {
         <Dialog open={!!incidenceToDelete} onOpenChange={() => setIncidenceToDelete(null)}>
           <DialogContent className="max-w-[400px] rounded-3xl p-6">
             <DialogTitle className="text-center font-bold">¿Eliminar incidencia?</DialogTitle>
-            <DialogDescription className="text-center text-gray-500 mt-2">
+            <DialogDescription className="text-center text-gray-500 mt-2 break-all">
               Esta acción no se puede deshacer. Vas a borrar el reporte: <strong>{incidenceToDelete?.title}</strong>.
             </DialogDescription>
             <div className="flex gap-3 mt-6">

@@ -3,6 +3,16 @@ import { trackEvent } from "./analytics";
 
 const PACKAGES_URL = "/api/packages/";
 
+class PackageApiError extends Error {
+  response: { data: unknown; status: number };
+
+  constructor(message: string, data: unknown, status: number) {
+    super(message);
+    this.name = "PackageApiError";
+    this.response = { data, status };
+  }
+}
+
 export type PackageStatus = "RECEIVED" | "DELIVERED";
 
 export interface PackageAdminItem {
@@ -112,7 +122,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
         .flat()
         .join(" ") ||
       `Error ${response.status}`;
-    throw new Error(message);
+    throw new PackageApiError(message, body, response.status);
   }
 
   return response.json() as Promise<T>;

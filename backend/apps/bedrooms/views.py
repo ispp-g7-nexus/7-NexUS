@@ -16,7 +16,11 @@ from apps.membership.permissions import (
 )
 
 from .models import Bedroom, BedroomAuditLog
-from .serializers import BedroomAuditLogSerializer, BedroomSerializer, ResidentSerializer
+from .serializers import (
+    BedroomAuditLogSerializer,
+    BedroomSerializer,
+    ResidentSerializer,
+)
 from .services import delete_bedroom, list_available_bedrooms
 
 
@@ -103,7 +107,11 @@ class BedroomCreateView(AdminRequiredView):
             if not serializer.is_valid():
                 return JsonResponse({"detail": serializer.errors}, status=400)
             bedroom = serializer.save(residence=request.residence)
-            BedroomAuditLog.objects.create(bedroom=bedroom, user=request.user, action=BedroomAuditLog.Action.CREATED)
+            BedroomAuditLog.objects.create(
+                bedroom=bedroom,
+                user=request.user,
+                action=BedroomAuditLog.Action.CREATED,
+            )
             return JsonResponse(
                 {"id": bedroom.id, "detail": "Bedroom created successfully"}, status=201
             )
@@ -149,7 +157,12 @@ class BedroomUpdateView(AdminRequiredView):
                 if getattr(bedroom, k, None) != v
             }
             bedroom = serializer.save()
-            BedroomAuditLog.objects.create(bedroom=bedroom, user=request.user, action=BedroomAuditLog.Action.UPDATED, changes=changes)
+            BedroomAuditLog.objects.create(
+                bedroom=bedroom,
+                user=request.user,
+                action=BedroomAuditLog.Action.UPDATED,
+                changes=changes,
+            )
             return JsonResponse(
                 {"id": bedroom.id, "detail": "Bedroom updated successfully"}, status=200
             )
@@ -259,9 +272,13 @@ class BedroomAuditLogView(AdminRequiredView):
 
 
 class BedroomAnalyticsView(AdminRequiredView):
+    required_permission = "analytics"
+    strict_permission = True
+
     def get(self, request):
         from django.db.models import Count
         from django.db.models.functions import ExtractYear
+
         from apps.membership.models import Membership
 
         if not hasattr(request, "residence") or not request.residence:
@@ -280,18 +297,29 @@ class BedroomAnalyticsView(AdminRequiredView):
         # Map bedroom_id -> occupant count
         bedroom_occupant_map = {
             item["bedroom_id"]: item["occupants"]
-            for item in active_students.values("bedroom_id").annotate(occupants=Count("id"))
+            for item in active_students.values("bedroom_id").annotate(
+                occupants=Count("id")
+            )
         }
 
         # All bedrooms for this residence
-        all_bedrooms = list(Bedroom.objects.filter(residence=residence).values("id", "edificio", "tipo", "capacidad_maxima"))
+        all_bedrooms = list(
+            Bedroom.objects.filter(residence=residence).values(
+                "id", "edificio", "tipo", "capacidad_maxima"
+            )
+        )
 
         # --- Occupation by building ---
         buildings: dict = {}
         for b in all_bedrooms:
             key = b["edificio"] or "Sin edificio"
             if key not in buildings:
-                buildings[key] = {"total_rooms": 0, "total_capacity": 0, "occupied_rooms": 0, "occupants": 0}
+                buildings[key] = {
+                    "total_rooms": 0,
+                    "total_capacity": 0,
+                    "occupied_rooms": 0,
+                    "occupants": 0,
+                }
             buildings[key]["total_rooms"] += 1
             buildings[key]["total_capacity"] += b["capacidad_maxima"]
             occ = bedroom_occupant_map.get(b["id"], 0)
@@ -307,7 +335,11 @@ class BedroomAnalyticsView(AdminRequiredView):
                     "total_capacity": data["total_capacity"],
                     "occupied_rooms": data["occupied_rooms"],
                     "occupants": data["occupants"],
-                    "occupation_rate": round(data["occupants"] / data["total_capacity"] * 100, 1) if data["total_capacity"] > 0 else 0.0,
+                    "occupation_rate": round(
+                        data["occupants"] / data["total_capacity"] * 100, 1
+                    )
+                    if data["total_capacity"] > 0
+                    else 0.0,
                 }
                 for key, data in buildings.items()
             ],
@@ -330,7 +362,11 @@ class BedroomAnalyticsView(AdminRequiredView):
                 "total_rooms": data["total_rooms"],
                 "total_capacity": data["total_capacity"],
                 "occupants": data["occupants"],
-                "occupation_rate": round(data["occupants"] / data["total_capacity"] * 100, 1) if data["total_capacity"] > 0 else 0.0,
+                "occupation_rate": round(
+                    data["occupants"] / data["total_capacity"] * 100, 1
+                )
+                if data["total_capacity"] > 0
+                else 0.0,
             }
             for key, data in tipos.items()
         ]
@@ -359,14 +395,20 @@ class BedroomAnalyticsView(AdminRequiredView):
         total_capacity = sum(b["capacidad_maxima"] for b in all_bedrooms)
         total_occupants = active_students.count()
 
-        return JsonResponse({
-            "summary": {
-                "total_rooms": total_rooms,
-                "total_capacity": total_capacity,
-                "total_occupants": total_occupants,
-                "overall_occupation_rate": round(total_occupants / total_capacity * 100, 1) if total_capacity > 0 else 0.0,
-            },
-            "occupation_by_building": occupation_by_building,
-            "occupation_by_type": occupation_by_type,
-            "occupation_by_year": occupation_by_year,
-        })
+        return JsonResponse(
+            {
+                "summary": {
+                    "total_rooms": total_rooms,
+                    "total_capacity": total_capacity,
+                    "total_occupants": total_occupants,
+                    "overall_occupation_rate": round(
+                        total_occupants / total_capacity * 100, 1
+                    )
+                    if total_capacity > 0
+                    else 0.0,
+                },
+                "occupation_by_building": occupation_by_building,
+                "occupation_by_type": occupation_by_type,
+                "occupation_by_year": occupation_by_year,
+            }
+        )
