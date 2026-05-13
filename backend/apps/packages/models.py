@@ -33,7 +33,7 @@ class Package(models.Model):
     carrier = models.CharField(max_length=120, blank=True)
     tracking_number = models.CharField(max_length=120, blank=True)
     delivery_code = models.CharField(max_length=5, default=generate_delivery_code)
-    notes = models.TextField(blank=True)
+    notes = models.TextField(blank=True, max_length=2000)
     status = models.CharField(
         max_length=20,
         choices=Status.choices,

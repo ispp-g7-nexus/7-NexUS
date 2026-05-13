@@ -191,7 +191,7 @@ function formatLocation(room?: string, building?: string): string {
   const roomLabel = room ? `Hab. ${room}` : "";
   const buildingLabel = building ? `Edif. ${building}` : "";
 
-  return [roomLabel, buildingLabel].filter(Boolean).join(" - ") || "Sin ubicacion";
+  return [roomLabel, buildingLabel].filter(Boolean).join(" - ") || "Sin ubicación";
 }
 
 function getResidentOptionLabel(resident: Resident): string {
@@ -209,21 +209,21 @@ function getReasonLabel(reason: string): string {
     case "fuzzy_name_match":
       return "Coincidencia aproximada por nombre";
     case "name_room_disambiguated_match":
-      return "Coincidencia por nombre y habitacion";
+      return "Coincidencia por nombre y habitación";
     case "unique_room_match":
-      return "Coincidencia unica por habitacion";
+      return "Coincidencia única por habitación";
     case "resident_name_subset_match":
       return "Coincidencia por nombre base";
     case "ambiguous_name_match":
       return "Nombre ambiguo";
     case "ambiguous_room_match":
-      return "Habitacion compartida o ambigua";
+      return "Habitación compartida o ambigua";
     case "low_confidence":
       return "Coincidencia con baja confianza";
     case "no_match":
-      return "Sin coincidencia automatica";
+      return "Sin coincidencia automática";
     default:
-      return "Resultado del analisis disponible";
+      return "Resultado del análisis disponible";
   }
 }
 
@@ -446,7 +446,7 @@ function PackageDetailsDialog({
         <DialogHeader>
           <DialogTitle>Detalle del paquete</DialogTitle>
           <DialogDescription>
-            Consulta toda la informacion registrada para este envio.
+            Consulta toda la información registrada para este envío.
           </DialogDescription>
         </DialogHeader>
 
@@ -470,7 +470,7 @@ function PackageDetailsDialog({
             </div>
             <div className="rounded-xl bg-gray-50 p-4">
               <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
-                Ubicacion del residente
+                Ubicación del residente
               </p>
               <p className="mt-1 text-sm text-gray-900">
                 {formatLocation(packageItem.room, packageItem.building)}
@@ -512,17 +512,17 @@ function PackageDetailsDialog({
             </div>
             <div className="rounded-xl bg-gray-50 p-4">
               <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
-                Ultima actualizacion
+                Última actualización
               </p>
               <p className="mt-1 text-sm text-gray-900">
                 {formatDateTime(packageItem.updated_at)}
               </p>
             </div>
-            <div className="sm:col-span-2 rounded-xl bg-gray-50 p-4">
+            <div className="sm:col-span-2 min-w-0 rounded-xl bg-gray-50 p-4">
               <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
                 Notas internas
               </p>
-              <p className="mt-1 whitespace-pre-wrap text-sm text-gray-700">
+              <p className="mt-1 max-h-60 overflow-y-auto break-words whitespace-pre-wrap text-sm text-gray-700">
                 {packageItem.notes || "No hay notas registradas."}
               </p>
             </div>
@@ -570,7 +570,7 @@ function DeletePackageDialog({
         <DialogHeader>
           <DialogTitle>Eliminar paquete</DialogTitle>
           <DialogDescription>
-            Esta accion borrara el registro del paquete de{" "}
+            Esta acción borrará el registro del paquete de{" "}
             <span className="font-semibold text-gray-900">
               {packageItem?.resident_name}
             </span>
@@ -631,7 +631,7 @@ function DeliveryDialog({
         <DialogHeader>
           <DialogTitle>Registrar entrega</DialogTitle>
           <DialogDescription>
-            Verifica que el codigo coincida con el provisto por el residente.
+            Verifica que el código coincida con el provisto por el residente.
           </DialogDescription>
         </DialogHeader>
 
@@ -654,7 +654,7 @@ function DeliveryDialog({
                   </span>
                 </div>
               </div>
-              <p className="text-base text-gray-900 mt-4">¿Es correcto el codigo?</p>
+              <p className="text-base text-gray-900 mt-4">¿Es correcto el código?</p>
             </div>
           </div>
         )}
@@ -705,7 +705,7 @@ function PackagePreviewCard({
         </div>
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-emerald-700/70">
-            Habitacion
+            Habitación
           </p>
           <p className="mt-1 text-sm text-gray-900">
             {formatLocation(
@@ -825,7 +825,7 @@ function ResidentAutocomplete({
             <Input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Buscar por nombre, email, habitacion o edificio..."
+              placeholder="Buscar por nombre, email, habitación o edificio..."
               className="pl-9"
             />
           </div>
@@ -1062,7 +1062,7 @@ function PackageFormDialog({
             </DialogTitle>
             <DialogDescription>
               {isEdit
-                ? "Actualiza los datos del envio o cambia su estado."
+                ? "Actualiza los datos del envío o cambia su estado."
                 : "Sube la foto de la etiqueta para autocompletar el destinatario y registrar la llegada."}
             </DialogDescription>
           </DialogHeader>
@@ -1157,25 +1157,37 @@ function PackageFormDialog({
                 </NativeSelect>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="package-carrier">Transportista</Label>
+              <div className="space-y-2 min-w-0">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="package-carrier">Transportista</Label>
+                  <span className="text-[11px] text-gray-400">
+                    {form.carrier.length}/120
+                  </span>
+                </div>
                 <Input
                   id="package-carrier"
                   value={form.carrier}
+                  maxLength={120}
                   onChange={(event) => updateField("carrier", event.target.value)}
                   placeholder="Ej: DHL, Correos, GLS..."
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="package-tracking">Tracking</Label>
+              <div className="space-y-2 min-w-0">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="package-tracking">Tracking</Label>
+                  <span className="text-[11px] text-gray-400">
+                    {form.tracking_number.length}/120
+                  </span>
+                </div>
                 <Input
                   id="package-tracking"
                   value={form.tracking_number}
+                  maxLength={120}
                   onChange={(event) =>
                     updateField("tracking_number", event.target.value)
                   }
-                  placeholder="Codigo de seguimiento"
+                  placeholder="Código de seguimiento"
                 />
               </div>
 
@@ -1190,14 +1202,21 @@ function PackageFormDialog({
                 />
               </div>
 
-              <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="package-notes">Notas</Label>
+              <div className="space-y-2 sm:col-span-2 min-w-0">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="package-notes">Notas</Label>
+                  <span className="text-[11px] text-gray-400">
+                    {form.notes.length}/2000
+                  </span>
+                </div>
                 <Textarea
                   id="package-notes"
                   rows={4}
                   value={form.notes}
+                  maxLength={2000}
                   onChange={(event) => updateField("notes", event.target.value)}
                   placeholder="Observaciones internas sobre el paquete"
+                  className="max-h-60 resize-y"
                 />
               </div>
             </div>
