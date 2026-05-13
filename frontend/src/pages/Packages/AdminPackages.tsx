@@ -70,6 +70,68 @@ function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback;
 }
 
+type ApiErrorLike = Error & {
+  response?: {
+    data?: unknown;
+    status?: number;
+  };
+};
+
+const PACKAGE_FIELD_LABELS: Record<string, string> = {
+  resident_id: "Residente",
+  carrier: "Transportista",
+  tracking_number: "Tracking",
+  notes: "Notas",
+  status: "Estado",
+  received_at: "Fecha de recepción",
+  delivered_at: "Fecha de entrega",
+  detail: "Error",
+  non_field_errors: "Error",
+};
+
+function isApiErrorLike(error: unknown): error is ApiErrorLike {
+  return Boolean(error && typeof error === "object" && "response" in error);
+}
+
+function formatApiValidationMessages(data: unknown, fieldLabel?: string): string[] {
+  if (data == null) {
+    return [];
+  }
+
+  if (typeof data === "string" || typeof data === "number" || typeof data === "boolean") {
+    return [fieldLabel ? `${fieldLabel}: ${data}` : String(data)];
+  }
+
+  if (Array.isArray(data)) {
+    return data.flatMap((item) => formatApiValidationMessages(item, fieldLabel));
+  }
+
+  if (typeof data === "object") {
+    return Object.entries(data as Record<string, unknown>).flatMap(([key, value]) => {
+      if (key === "detail" || key === "non_field_errors") {
+        return formatApiValidationMessages(value);
+      }
+
+      const nextLabel = PACKAGE_FIELD_LABELS[key] || key.replace(/_/g, " ");
+      return formatApiValidationMessages(value, nextLabel);
+    });
+  }
+
+  return [];
+}
+
+function showPackageApiError(error: unknown, fallback: string): void {
+  const apiData = isApiErrorLike(error) ? error.response?.data : undefined;
+  const messages = formatApiValidationMessages(apiData);
+
+  if (messages.length > 0) {
+    messages.forEach((message) => toast.error(message));
+    return;
+  }
+
+  toast.error(getErrorMessage(error, fallback));
+}
+
 function isPermissionError(error: unknown): boolean {
   const message = getErrorMessage(error, "").toLowerCase();
   return (
@@ -129,7 +191,7 @@ function formatLocation(room?: string, building?: string): string {
   const roomLabel = room ? `Hab. ${room}` : "";
   const buildingLabel = building ? `Edif. ${building}` : "";
 
-  return [roomLabel, buildingLabel].filter(Boolean).join(" - ") || "Sin ubicacion";
+  return [roomLabel, buildingLabel].filter(Boolean).join(" - ") || "Sin ubicación";
 }
 
 function getResidentOptionLabel(resident: Resident): string {
@@ -147,21 +209,21 @@ function getReasonLabel(reason: string): string {
     case "fuzzy_name_match":
       return "Coincidencia aproximada por nombre";
     case "name_room_disambiguated_match":
-      return "Coincidencia por nombre y habitacion";
+      return "Coincidencia por nombre y habitación";
     case "unique_room_match":
-      return "Coincidencia unica por habitacion";
+      return "Coincidencia única por habitación";
     case "resident_name_subset_match":
       return "Coincidencia por nombre base";
     case "ambiguous_name_match":
       return "Nombre ambiguo";
     case "ambiguous_room_match":
-      return "Habitacion compartida o ambigua";
+      return "Habitación compartida o ambigua";
     case "low_confidence":
       return "Coincidencia con baja confianza";
     case "no_match":
-      return "Sin coincidencia automatica";
+      return "Sin coincidencia automática";
     default:
-      return "Resultado del analisis disponible";
+      return "Resultado del análisis disponible";
   }
 }
 
@@ -318,32 +380,32 @@ function PackageCard({
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-xl bg-gray-50 p-3">
+          <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="min-w-0 rounded-xl bg-gray-50 p-3">
               <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
                 Tracking
               </p>
-              <p className="mt-1 font-mono text-sm text-gray-900">
+              <p className="mt-1 break-all font-mono text-sm text-gray-900">
                 {packageItem.tracking_number || "Sin tracking"}
               </p>
             </div>
-            <div className="rounded-xl bg-gray-50 p-3">
+            <div className="min-w-0 rounded-xl bg-gray-50 p-3">
               <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
-                Ubicacion
+                Ubicación
               </p>
               <p className="mt-1 text-sm text-gray-900">
                 {formatLocation(packageItem.room, packageItem.building)}
               </p>
             </div>
-            <div className="rounded-xl bg-gray-50 p-3">
+            <div className="min-w-0 rounded-xl bg-gray-50 p-3">
               <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
-                Recepcion
+                Recepción
               </p>
               <p className="mt-1 text-sm text-gray-900">
                 {formatDateTime(packageItem.received_at)}
               </p>
             </div>
-            <div className="rounded-xl bg-gray-50 p-3">
+            <div className="min-w-0 rounded-xl bg-gray-50 p-3">
               <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
                 Entrega
               </p>
@@ -356,11 +418,11 @@ function PackageCard({
           </div>
 
           {packageItem.notes && (
-            <div className="rounded-xl border border-dashed border-gray-200 bg-white p-3">
+            <div className="min-w-0 rounded-xl border border-dashed border-gray-200 bg-white p-3">
               <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
                 Notas
               </p>
-              <p className="mt-1 line-clamp-2 text-sm text-gray-600">
+              <p className="mt-1 break-words whitespace-pre-wrap text-sm text-gray-600">
                 {packageItem.notes}
               </p>
             </div>
@@ -384,7 +446,7 @@ function PackageDetailsDialog({
         <DialogHeader>
           <DialogTitle>Detalle del paquete</DialogTitle>
           <DialogDescription>
-            Consulta toda la informacion registrada para este envio.
+            Consulta toda la información registrada para este envío.
           </DialogDescription>
         </DialogHeader>
 
@@ -408,7 +470,7 @@ function PackageDetailsDialog({
             </div>
             <div className="rounded-xl bg-gray-50 p-4">
               <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
-                Ubicacion del residente
+                Ubicación del residente
               </p>
               <p className="mt-1 text-sm text-gray-900">
                 {formatLocation(packageItem.room, packageItem.building)}
@@ -450,17 +512,17 @@ function PackageDetailsDialog({
             </div>
             <div className="rounded-xl bg-gray-50 p-4">
               <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
-                Ultima actualizacion
+                Última actualización
               </p>
               <p className="mt-1 text-sm text-gray-900">
                 {formatDateTime(packageItem.updated_at)}
               </p>
             </div>
-            <div className="sm:col-span-2 rounded-xl bg-gray-50 p-4">
+            <div className="sm:col-span-2 min-w-0 rounded-xl bg-gray-50 p-4">
               <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
                 Notas internas
               </p>
-              <p className="mt-1 whitespace-pre-wrap text-sm text-gray-700">
+              <p className="mt-1 max-h-60 overflow-y-auto break-words whitespace-pre-wrap text-sm text-gray-700">
                 {packageItem.notes || "No hay notas registradas."}
               </p>
             </div>
@@ -508,7 +570,7 @@ function DeletePackageDialog({
         <DialogHeader>
           <DialogTitle>Eliminar paquete</DialogTitle>
           <DialogDescription>
-            Esta accion borrara el registro del paquete de{" "}
+            Esta acción borrará el registro del paquete de{" "}
             <span className="font-semibold text-gray-900">
               {packageItem?.resident_name}
             </span>
@@ -569,7 +631,7 @@ function DeliveryDialog({
         <DialogHeader>
           <DialogTitle>Registrar entrega</DialogTitle>
           <DialogDescription>
-            Verifica que el codigo coincida con el provisto por el residente.
+            Verifica que el código coincida con el provisto por el residente.
           </DialogDescription>
         </DialogHeader>
 
@@ -584,7 +646,7 @@ function DeliveryDialog({
             </div>
 
             <div className="space-y-4 text-center py-4">
-              <p className="text-sm font-medium text-gray-700">Codigo de recogida esperado:</p>
+              <p className="text-sm font-medium text-gray-700">Código de recogida esperado:</p>
               <div className="flex justify-center">
                 <div className="bg-gray-100 px-6 py-3 rounded-xl border-2 border-dashed border-gray-300">
                   <span className="text-4xl font-mono font-bold tracking-widest text-gray-800">
@@ -592,7 +654,7 @@ function DeliveryDialog({
                   </span>
                 </div>
               </div>
-              <p className="text-base text-gray-900 mt-4">¿Es correcto el codigo?</p>
+              <p className="text-base text-gray-900 mt-4">¿Es correcto el código?</p>
             </div>
           </div>
         )}
@@ -643,7 +705,7 @@ function PackagePreviewCard({
         </div>
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-emerald-700/70">
-            Habitacion
+            Habitación
           </p>
           <p className="mt-1 text-sm text-gray-900">
             {formatLocation(
@@ -763,7 +825,7 @@ function ResidentAutocomplete({
             <Input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Buscar por nombre, email, habitacion o edificio..."
+              placeholder="Buscar por nombre, email, habitación o edificio..."
               className="pl-9"
             />
           </div>
@@ -863,6 +925,8 @@ function PackageFormDialog({
   ) {
     setForm((current) => ({ ...current, [key]: value }));
   }
+
+  const maxReceivedAt = toDateTimeLocal(new Date().toISOString());
 
   async function handleLabelImageChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -998,7 +1062,7 @@ function PackageFormDialog({
             </DialogTitle>
             <DialogDescription>
               {isEdit
-                ? "Actualiza los datos del envio o cambia su estado."
+                ? "Actualiza los datos del envío o cambia su estado."
                 : "Sube la foto de la etiqueta para autocompletar el destinatario y registrar la llegada."}
             </DialogDescription>
           </DialogHeader>
@@ -1012,8 +1076,8 @@ function PackageFormDialog({
                     Analizar etiqueta del paquete
                   </p>
                   <p className="mt-1 text-sm text-gray-500">
-                    Selecciona una imagen y el sistema intentara detectar el
-                    residente, transportista y tracking automaticamente.
+                    Selecciona una imagen y el sistema intentará detectar el
+                    residente, transportista y tracking automáticamente.
                   </p>
                 </div>
                 <Label
@@ -1093,46 +1157,66 @@ function PackageFormDialog({
                 </NativeSelect>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="package-carrier">Transportista</Label>
+              <div className="space-y-2 min-w-0">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="package-carrier">Transportista</Label>
+                  <span className="text-[11px] text-gray-400">
+                    {form.carrier.length}/120
+                  </span>
+                </div>
                 <Input
                   id="package-carrier"
                   value={form.carrier}
+                  maxLength={120}
                   onChange={(event) => updateField("carrier", event.target.value)}
                   placeholder="Ej: DHL, Correos, GLS..."
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="package-tracking">Tracking</Label>
+              <div className="space-y-2 min-w-0">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="package-tracking">Tracking</Label>
+                  <span className="text-[11px] text-gray-400">
+                    {form.tracking_number.length}/120
+                  </span>
+                </div>
                 <Input
                   id="package-tracking"
                   value={form.tracking_number}
+                  maxLength={120}
                   onChange={(event) =>
                     updateField("tracking_number", event.target.value)
                   }
-                  placeholder="Codigo de seguimiento"
+                  placeholder="Código de seguimiento"
                 />
               </div>
 
               <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="package-received-at">Fecha de recepcion</Label>
+                <Label htmlFor="package-received-at">Fecha de recepción</Label>
                 <Input
                   id="package-received-at"
                   type="datetime-local"
                   value={form.received_at}
+                  max={maxReceivedAt}
                   onChange={(event) => updateField("received_at", event.target.value)}
                 />
               </div>
 
-              <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="package-notes">Notas</Label>
+              <div className="space-y-2 sm:col-span-2 min-w-0">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="package-notes">Notas</Label>
+                  <span className="text-[11px] text-gray-400">
+                    {form.notes.length}/2000
+                  </span>
+                </div>
                 <Textarea
                   id="package-notes"
                   rows={4}
                   value={form.notes}
+                  maxLength={2000}
                   onChange={(event) => updateField("notes", event.target.value)}
                   placeholder="Observaciones internas sobre el paquete"
+                  className="max-h-60 resize-y"
                 />
               </div>
             </div>
@@ -1200,7 +1284,7 @@ export function AdminPackages() {
       if (isPermissionError(error)) {
         setIsUnauthorized(true);
       } else {
-        toast.error(getErrorMessage(error, "No se pudo cargar la paqueteria."));
+        toast.error(getErrorMessage(error, "No se pudo cargar la paquetería."));
       }
     } finally {
       setLoading(false);
@@ -1277,7 +1361,7 @@ export function AdminPackages() {
         toast.success("Paquete registrado correctamente.");
         return true;
       } catch (error) {
-        toast.error(getErrorMessage(error, "No se pudo registrar el paquete."));
+        showPackageApiError(error, "No se pudo registrar el paquete.");
         return false;
       }
     },
@@ -1292,7 +1376,7 @@ export function AdminPackages() {
         toast.success("Paquete actualizado correctamente.");
         return true;
       } catch (error) {
-        toast.error(getErrorMessage(error, "No se pudo actualizar el paquete."));
+        showPackageApiError(error, "No se pudo actualizar el paquete.");
         return false;
       }
     },
@@ -1309,7 +1393,7 @@ export function AdminPackages() {
       toast.success("Paquete eliminado correctamente.");
       return true;
     } catch (error) {
-      toast.error(getErrorMessage(error, "No se pudo eliminar el paquete."));
+      showPackageApiError(error, "No se pudo eliminar el paquete.");
       return false;
     }
   }, []);
@@ -1323,7 +1407,7 @@ export function AdminPackages() {
         toast.success("Entrega registrada correctamente.");
         return true;
       } catch (error) {
-        toast.error(getErrorMessage(error, "No se pudo registrar la entrega."));
+        showPackageApiError(error, "No se pudo registrar la entrega.");
         return false;
       }
     },
@@ -1334,7 +1418,7 @@ export function AdminPackages() {
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-3 text-gray-500">
         <Package className="h-10 w-10 opacity-40" />
-        <p className="text-sm">No tienes permisos para ver la paqueteria.</p>
+        <p className="text-sm">No tienes permisos para ver la paquetería.</p>
       </div>
     );
   }
@@ -1343,7 +1427,7 @@ export function AdminPackages() {
     <section className="space-y-6 p-1">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Paqueteria</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Paquetería</h2>
           <p className="mt-1 text-sm text-gray-500">
             Gestiona entradas, entregas y seguimiento de paquetes para los
             residentes.
