@@ -1,0 +1,4 @@
+day,type,name,description,allergens,is_gluten_free,is_vegetarian,is_vegan
+Lunes,lunch,Macarrones con queso,Plato de pasta,Lácteos y Gluten,false,true,false
+Lunes,dinner,Sopa de pollo,Con fideos,Gluten,false,false,false
+Martes,breakfast,Tostadas con aceite,,Gluten,false,true,true
