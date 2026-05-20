@@ -13,6 +13,13 @@ export default defineConfig({
         target: 'http://demo.nexus.local',
         changeOrigin: true,
         secure: false,
+      },
+      // Las imágenes subidas (p. ej. fotos de los platos del menú) se sirven
+      // desde el backend en /media; sin este proxy no se ven en desarrollo.
+      '/media': {
+        target: 'http://demo.nexus.local',
+        changeOrigin: true,
+        secure: false,
       }
     }
   },

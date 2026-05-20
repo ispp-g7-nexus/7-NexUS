@@ -6,11 +6,18 @@ import { matchingService, type MyMatchesResponse, type MatchItem } from "../../s
 import { getInitials, getTags, formatWeekendReturn, formatStudyLocation, formatOutsidePlans, formatVisitorsPreference, formatBasicItems, formatTemperature } from "./utils";
 import { MatchCard } from "./components/MatchCard";
 
+// Nº máximo de sondeos en estado "processing" antes de mostrar un aviso
+// (12 intentos × 5 s = 1 minuto). Evita un spinner infinito si el cálculo
+// de compatibilidad tarda demasiado o no se ha llegado a procesar.
+const MAX_PROCESSING_POLLS = 12;
+
 export function MyMatchesPage({ onOpenPrivateChat }: { readonly onOpenPrivateChat?: (conversationId: number) => void } = {}) {
     const [payload, setPayload] = useState<MyMatchesResponse | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedMatch, setSelectedMatch] = useState<MatchItem | null>(null);
+    const [processingTimedOut, setProcessingTimedOut] = useState(false);
+    const [pollCount, setPollCount] = useState(0);
     const navigate = useNavigate();
 
     const fetchMatches = useCallback(async () => {
@@ -25,17 +32,31 @@ export function MyMatchesPage({ onOpenPrivateChat }: { readonly onOpenPrivateCha
         }
     }, []);
 
+    const retryMatches = useCallback(() => {
+        setProcessingTimedOut(false);
+        setPollCount(0);
+        setIsLoading(true);
+        fetchMatches();
+    }, [fetchMatches]);
+
     useEffect(() => {
         fetchMatches();
     }, [fetchMatches]);
 
     useEffect(() => {
-        if (payload?.status !== "processing") {
+        if (payload?.status !== "processing" || processingTimedOut) {
             return;
         }
-        const intervalId = globalThis.setInterval(fetchMatches, 5000);
-        return () => globalThis.clearInterval(intervalId);
-    }, [payload?.status, fetchMatches]);
+        if (pollCount >= MAX_PROCESSING_POLLS) {
+            setProcessingTimedOut(true);
+            return;
+        }
+        const intervalId = globalThis.setTimeout(() => {
+            setPollCount((count) => count + 1);
+            fetchMatches();
+        }, 5000);
+        return () => globalThis.clearTimeout(intervalId);
+    }, [payload?.status, pollCount, processingTimedOut, fetchMatches]);
 
     const updateMatchInPayload = useCallback(
         (membershipId: number, updater: (m: MatchItem) => MatchItem) => {
@@ -134,6 +155,8 @@ export function MyMatchesPage({ onOpenPrivateChat }: { readonly onOpenPrivateCha
                 <PageHeader />
                 <ContentRenderer
                     payload={payload}
+                    processingTimedOut={processingTimedOut}
+                    onRetry={retryMatches}
                     onToggleLike={toggleLike}
                     onOpenChat={openChatWith}
                     onSelectMatch={setSelectedMatch}
@@ -164,11 +187,15 @@ function PageHeader() {
 
 function ContentRenderer({
     payload,
+    processingTimedOut,
+    onRetry,
     onToggleLike,
     onOpenChat,
     onSelectMatch,
 }: {
     payload: MyMatchesResponse;
+    processingTimedOut: boolean;
+    onRetry: () => void;
     onToggleLike: (match: MatchItem, e?: React.MouseEvent) => void;
     onOpenChat: (match: MatchItem, e?: React.MouseEvent) => void;
     onSelectMatch: (match: MatchItem) => void;
@@ -182,6 +209,22 @@ function ContentRenderer({
     }
 
     if (payload.status === "processing") {
+        if (processingTimedOut) {
+            return (
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 space-y-3">
+                    <p className="text-sm text-amber-800">
+                        El cálculo de tus matches está tardando más de lo habitual. Vuelve a intentarlo en unos minutos.
+                    </p>
+                    <button
+                        type="button"
+                        onClick={onRetry}
+                        className="text-sm font-semibold text-amber-900 underline underline-offset-2"
+                    >
+                        Reintentar
+                    </button>
+                </div>
+            );
+        }
         return (
             <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
                 <div className="flex items-center gap-3">

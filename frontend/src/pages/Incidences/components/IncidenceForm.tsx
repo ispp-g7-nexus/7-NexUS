@@ -29,11 +29,19 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
   const [externalName] = useState("")
   const [areaError, setAreaError] = useState(false)
   const [base64Image, setBase64Image] = useState<string | null>(initialData?.img || null);
-  const [, setRooms] = useState<any[]>([])
+  const [rooms, setRooms] = useState<any[]>([])
+  const [roomId, setRoomId] = useState<string>(
+    initialData?.room_number_detail?.id
+      ? String(initialData.room_number_detail.id)
+      : (initialData?.room_number ? String(initialData.room_number) : "")
+  )
 
   useEffect(() => {
     if (isAdmin) {
-      fetchWithAuth('/api/bedrooms/').then(res => res.json()).then(data => setRooms(data));
+      fetchWithAuth('/api/bedrooms/')
+        .then(res => res.json())
+        .then(data => setRooms(Array.isArray(data) ? data : (data?.results ?? [])))
+        .catch(() => setRooms([]));
     }
   }, [isAdmin]);
 
@@ -55,17 +63,30 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
       return;
     }
 
+    if (isAdmin && locationType === "habitacion" && !roomId) {
+      alert("Selecciona la habitación a la que pertenece la incidencia.");
+      return;
+    }
+
     setAreaError(false);
     setLoading(true);
+
+    let roomNumber: number | string | null = null;
+    if (locationType === "habitacion") {
+      if (isAdmin) {
+        roomNumber = roomId ? Number(roomId) : null;
+      } else {
+        roomNumber = initialData?.room_number_detail?.id || initialData?.room_number || null;
+      }
+    }
 
     const payload: any = {
       title,
       description,
       location_type: locationType,
       priority: (urgent ? "high" : "low") as 'low' | 'high',
-      room_number: locationType === "habitacion"
-        ? (initialData?.room_number_detail?.id || initialData?.room_number || null)
-        : null, assigned_staff: isAdmin && staffId && !["external", "none"].includes(staffId) ? Number(staffId) : null,
+      room_number: roomNumber,
+      assigned_staff: isAdmin && staffId && !["external", "none"].includes(staffId) ? Number(staffId) : null,
       assigned_external_name: isAdmin && staffId === "external" ? externalName : "",
       img: base64Image,
     };
@@ -136,7 +157,7 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
                 ⚠️ Por favor, selecciona un área
               </p>
             )}            <SelectContent className="rounded-2xl">
-              {!isAdmin && <SelectItem value="habitacion">Mi Habitación</SelectItem>}
+              <SelectItem value="habitacion">{isAdmin ? "Habitación" : "Mi Habitación"}</SelectItem>
               <SelectItem value="baño">Baño Común</SelectItem>
               <SelectItem value="cocina">Cocina</SelectItem>
               <SelectItem value="comedor">Comedor</SelectItem>
@@ -145,6 +166,27 @@ export function IncidenceForm({ onSuccess, onClose, isAdmin = false, initialData
             </SelectContent>
           </Select>
         </div>
+
+        {/* Campo Habitación (solo admin, cuando el área es una habitación) */}
+        {isAdmin && locationType === "habitacion" && (
+          <div className="space-y-1.5 text-left">
+            <Label className={UI_CLASSES.label}>Habitación</Label>
+            <Select onValueChange={setRoomId} value={roomId}>
+              <SelectTrigger className={UI_CLASSES.selectTrigger}>
+                <SelectValue placeholder="Selecciona la habitación" />
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl">
+                {rooms.map((room) => (
+                  <SelectItem key={room.id} value={String(room.id)}>
+                    {`Habitación ${room.numero}`}
+                    {room.planta != null ? ` · Planta ${room.planta}` : ""}
+                    {room.edificio ? ` · Edificio ${room.edificio}` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         {/* Campo Descripción */}
         <div className="space-y-1.5 text-left">

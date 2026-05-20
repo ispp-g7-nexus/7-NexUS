@@ -3,6 +3,8 @@ from datetime import timedelta
 from django.utils import timezone
 from rest_framework import serializers
 
+from apps.common.utils.validators import validate_person_name
+
 from .models import GuestPass, GuestPassPolicy
 from .services import is_guest_pass_out_of_schedule
 
@@ -39,6 +41,12 @@ class GuestPassCreateSerializer(serializers.Serializer):
         allow_null=True,
         max_length=500,
     )
+
+    def validate_guest_first_name(self, value):
+        return validate_person_name(value, "El nombre")
+
+    def validate_guest_last_name(self, value):
+        return validate_person_name(value, "El apellido")
 
     def validate(self, attrs):
         valid_from = attrs["valid_from"]

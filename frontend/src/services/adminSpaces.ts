@@ -187,6 +187,11 @@ export async function deactivateSpace(spaceId: number): Promise<void> {
   trackEvent('admin_space_deactivated', { space_id: spaceId });
 }
 
+export async function deleteSpace(spaceId: number): Promise<void> {
+  await requestVoid(`${ADMIN_SPACES_BASE}/${spaceId}/?permanent=true`, { method: "DELETE" });
+  trackEvent('admin_space_deleted', { space_id: spaceId });
+}
+
 export function listSpaceReservations(
   spaceId: number,
   status?: "active" | "cancelled",
