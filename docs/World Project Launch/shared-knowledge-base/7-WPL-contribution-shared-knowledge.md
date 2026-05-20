@@ -8,6 +8,19 @@ sidebar_position: 5
 
 ## 📅[Entrega 1: WPL] – [Fecha: 14/05/2026]
 
+### Enlace al Repositorio Común
+
+#### Enlace general
+- **GitHub**: https://github.com/ASoult10/Knowledge-Base-Turno-De-Tarde-ISPP-25-26
+
+- **Docusaurus**: https://asoult10.github.io/Knowledge-Base-Turno-De-Tarde-ISPP-25-26/
+
+#### Enlace a los aportes de NexUS
+
+- **GitHub**: https://github.com/ASoult10/Knowledge-Base-Turno-De-Tarde-ISPP-25-26/tree/main/my-website/docs/group-7
+
+- **Docusaurus**: https://asoult10.github.io/Knowledge-Base-Turno-De-Tarde-ISPP-25-26/docs/category/grupo-7/
+
 ### 🎯 1. Nuestro Feedback Directo (NexUS)
 *Anotaciones sobre lo que los profesores han comentado específicamente sobre nuestra presentación y proyecto.*
 
