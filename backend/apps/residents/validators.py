@@ -5,6 +5,8 @@ from django.core.validators import EmailValidator
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 
+from apps.common.utils.validators import validate_person_name
+
 
 # Mensajes reutilizables
 INVALID_EMAIL_MESSAGE = "Por favor, introduce un correo electrónico válido."
@@ -15,25 +17,12 @@ class ResidentFieldValidatorMixin:
     de escritura de residente.
     """
 
-    NAME_TOKEN_RE = re.compile(r"[A-Za-zÀ-ÿ'\-]{2,}")
-
     def validate_full_name(self, value: str) -> str:
-        value = (value or "").strip()
-        if not value:
-            raise serializers.ValidationError("El nombre no puede estar vacío.")
-
-        tokens = value.split()
-        valid_tokens = [t for t in tokens if self.NAME_TOKEN_RE.search(t)]
-        if len(valid_tokens) < 2:
-            raise serializers.ValidationError(
-                "Introduce al menos un nombre y un apellido válidos."
-            )
-
-        alpha_match = re.search(r"[A-Za-zÀ-ÿ]", value)
-        if not alpha_match:
-            raise serializers.ValidationError("Nombre inválido.")
-
-        return value
+        # Validamos que el nombre solo contenga caracteres propios de un nombre
+        # (letras, espacios, guiones y apóstrofes). No se exige un número
+        # concreto de palabras: el campo admite el nombre tal y como lo
+        # escriba el administrador.
+        return validate_person_name(value, "El nombre")
 
     def validate_email(self, value: str) -> str:
         value = (value or "").strip().lower()

@@ -7,6 +7,7 @@ import { Card, CardContent } from "../../components/ui/card";
 import {
   createSpace,
   deactivateSpace,
+  deleteSpace,
   listAdminSpaces,
   listSpaceReservations,
   updateSpace,
@@ -125,6 +126,7 @@ export function AdminSpaces() {
   const [detailSpaceId, setDetailSpaceId] = useState<number | null>(null);
 
   const [spaceToDeactivate, setSpaceToDeactivate] = useState<AdminSpace | null>(null);
+  const [spaceToDelete, setSpaceToDelete] = useState<AdminSpace | null>(null);
 
   const loadSpaces = async () => {
     setLoading(true);
@@ -196,10 +198,26 @@ export function AdminSpaces() {
     try {
       await deactivateSpace(spaceToDeactivate.id);
       toast.success("Espacio desactivado.");
-      setSpaceToDeactivate(null); 
+      setSpaceToDeactivate(null);
       await loadSpaces();
     } catch (err) {
       toast.error(isApiError(err) ? err.message : "Error al desactivar el espacio.");
+    }
+  };
+
+  const handleDelete = (space: AdminSpace) => {
+    setSpaceToDelete(space);
+  };
+
+  const executeDelete = async () => {
+    if (!spaceToDelete) return;
+    try {
+      await deleteSpace(spaceToDelete.id);
+      toast.success("Espacio eliminado de forma permanente.");
+      setSpaceToDelete(null);
+      await loadSpaces();
+    } catch (err) {
+      toast.error(isApiError(err) ? err.message : "Error al eliminar el espacio.");
     }
   };
 
@@ -309,6 +327,7 @@ export function AdminSpaces() {
         onClose={() => setDetailOpen(false)}
         onEdit={(s) => { setDetailOpen(false); handleOpenEdit(s); }}
         onDeactivate={(s) => { setDetailOpen(false); handleDeactivate(s); }}
+        onDelete={(s) => { setDetailOpen(false); handleDelete(s); }}
         onViewReservations={(s) => { setDetailOpen(false); void handleViewReservations(s); }}
       />
 
@@ -327,12 +346,38 @@ export function AdminSpaces() {
             >
               Cancelar
             </Button>
-            <Button 
-              variant="destructive" 
-              onClick={executeDeactivate} 
+            <Button
+              variant="destructive"
+              onClick={executeDeactivate}
               className="flex-1 rounded-xl h-12 font-bold"
             >
               Desactivar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL ELIMINAR PERMANENTEMENTE */}
+      <Dialog open={!!spaceToDelete} onOpenChange={() => setSpaceToDelete(null)}>
+        <DialogContent className="max-w-[400px] rounded-3xl p-6">
+          <DialogTitle className="text-center text-lg font-bold">¿Eliminar espacio?</DialogTitle>
+          <DialogDescription className="text-center text-gray-500 mt-2 break-words">
+            Esta acción eliminará "{spaceToDelete?.name}" de forma permanente, junto con todas sus reservas e historial. No se puede deshacer.
+          </DialogDescription>
+          <div className="flex gap-3 mt-6">
+            <Button
+              variant="outline"
+              onClick={() => setSpaceToDelete(null)}
+              className="flex-1 rounded-xl h-12 font-bold"
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={executeDelete}
+              className="flex-1 rounded-xl h-12 font-bold"
+            >
+              Eliminar definitivamente
             </Button>
           </div>
         </DialogContent>

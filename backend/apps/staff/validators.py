@@ -1,14 +1,13 @@
 from rest_framework import serializers
 
+from apps.common.utils.validators import validate_person_name
+
 
 class StaffFieldValidatorMixin:
     """Validadores de campo reutilizados en todos los serializers de escritura."""
 
     def validate_full_name(self, value: str) -> str:
-        value = value.strip()
-        if not value:
-            raise serializers.ValidationError("El nombre no puede estar vacío.")
-        return value
+        return validate_person_name(value, "El nombre")
 
     def validate_email(self, value: str) -> str:
         return value.lower().strip()

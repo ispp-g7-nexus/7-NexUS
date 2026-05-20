@@ -278,7 +278,7 @@ export function ResidentMenuView({ onGoToProfile, onLogout, onNavigate }: Reside
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin text-green-600 mx-auto mb-4" />
           <p className="text-gray-500">Cargando menú...</p>
@@ -289,13 +289,13 @@ export function ResidentMenuView({ onGoToProfile, onLogout, onNavigate }: Reside
 
   if (!menuWeek) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      <div className="min-h-screen bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="mb-8">
-            <h1 className="text-4xl font-serif text-gray-900 mb-2">
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
               Menú del Comedor
             </h1>
-            <p className="text-gray-600">
+            <p className="text-sm text-gray-500">
               {error || 'No hay menú disponible para esta semana'}
             </p>
           </div>

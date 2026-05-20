@@ -495,6 +495,23 @@ const ImportCsvModal = ({ isOpen, onClose, onSave, isSaving }: ImportCsvModalPro
     }
   }, [isOpen]);
 
+  const handleDownloadTemplate = () => {
+    const rows = [
+      'day;type;name;description;allergens;is_gluten_free;is_vegetarian;is_vegan',
+      'lunes;breakfast;Tostadas con tomate;Pan tostado con tomate y aceite;gluten;false;true;true',
+      'lunes;lunch;Lentejas estofadas;Lentejas con verduras;;true;true;true',
+      'lunes;dinner;Crema de calabaza;Crema templada de calabaza;lactosa;true;true;false',
+      'martes;lunch;Pollo al horno;Pollo asado con patatas;;true;false;false',
+    ];
+    const blob = new Blob([`﻿${rows.join('\r\n')}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'plantilla_menu.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -513,6 +530,25 @@ const ImportCsvModal = ({ isOpen, onClose, onSave, isSaving }: ImportCsvModalPro
           <p className="text-sm text-gray-500 leading-relaxed">
             Sube un archivo CSV con el formato adecuado. Selecciona una fecha de inicio para la semana.
           </p>
+
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 space-y-2">
+            <p className="text-xs font-semibold text-gray-700">Formato del CSV</p>
+            <ul className="text-xs text-gray-500 leading-relaxed list-disc pl-4 space-y-0.5">
+              <li>Separador de columnas: <code className="font-mono">;</code> o <code className="font-mono">,</code></li>
+              <li>Columnas: <code className="font-mono">day</code>, <code className="font-mono">type</code>, <code className="font-mono">name</code>, <code className="font-mono">description</code>, <code className="font-mono">allergens</code>, <code className="font-mono">is_gluten_free</code>, <code className="font-mono">is_vegetarian</code>, <code className="font-mono">is_vegan</code></li>
+              <li><code className="font-mono">day</code>: lunes, martes, miércoles, jueves, viernes, sábado o domingo</li>
+              <li><code className="font-mono">type</code>: breakfast, lunch, snack o dinner</li>
+              <li>Campos sí/no: usa <code className="font-mono">true</code> o <code className="font-mono">false</code></li>
+            </ul>
+            <button
+              type="button"
+              onClick={handleDownloadTemplate}
+              className="text-xs font-semibold text-green-700 underline underline-offset-2 hover:text-green-800"
+            >
+              Descargar plantilla de ejemplo
+            </button>
+          </div>
+
           <div>
             <label htmlFor="csv-week-date" className="block text-sm font-medium text-gray-700 mb-2">
               Fecha de inicio
@@ -920,7 +956,7 @@ export function AdminMenuView() {
   
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin text-green-600 mx-auto mb-4" />
           <p className="text-gray-500">Cargando menú...</p>
@@ -931,14 +967,14 @@ export function AdminMenuView() {
 
   if (!menuWeek) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      <div className="min-h-screen bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-4xl font-serif text-gray-900 mb-2">
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">
                 Gestión del Menú
               </h1>
-              <p className="text-gray-600">
+              <p className="text-sm text-gray-500">
                 {error || 'No hay menús semanales creados aún'}
               </p>
             </div>
@@ -1004,13 +1040,16 @@ export function AdminMenuView() {
   const canGoNext = currentIndex > 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+    <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8 flex flex-col gap-6">
-          <h1 className="text-4xl font-serif text-gray-900 text-center">
-            Gestión del Menú
-          </h1>
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-gray-900">
+              Gestión del Menú
+            </h1>
+            <p className="text-sm text-gray-500 mt-1">Gestión administrativa del comedor</p>
+          </div>
 
           <div className="flex items-center justify-center gap-6">
             {/* Week Navigation */}
