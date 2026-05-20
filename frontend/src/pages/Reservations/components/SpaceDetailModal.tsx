@@ -10,10 +10,11 @@ interface Props {
   readonly onClose: () => void;
   readonly onEdit?: (space: AdminSpace) => void;
   readonly onDeactivate?: (space: AdminSpace) => void;
+  readonly onDelete?: (space: AdminSpace) => void;
   readonly onViewReservations?: (space: AdminSpace) => void;
 }
 
-export function SpaceDetailModal({ open, spaceId, onClose, onEdit, onDeactivate, onViewReservations }: Props) {
+export function SpaceDetailModal({ open, spaceId, onClose, onEdit, onDeactivate, onDelete, onViewReservations }: Props) {
   const [space, setSpace] = useState<AdminSpace | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -142,6 +143,15 @@ export function SpaceDetailModal({ open, spaceId, onClose, onEdit, onDeactivate,
                       </Button>
                     )}
                     {deactivateButton}
+                    {onDelete && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => onDelete(space)}
+                      >
+                        Eliminar
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>

@@ -218,7 +218,7 @@ export const AdminIncidences = () => {
                       </div>
                       <div className="flex flex-col items-end gap-2">
                         <div className="flex gap-1">
-                          {inc.is_mine && (!inc.updates || inc.updates.length === 0) && !inc.assigned_staff && !(inc.assigned_external_name && inc.assigned_external_name.trim()) && (
+                          {inc.is_mine && (
                             <>
                               <button
                                 onClick={() => setIncidenceToEdit(inc)}

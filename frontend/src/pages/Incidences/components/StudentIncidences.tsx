@@ -171,12 +171,24 @@ export default function StudentIncidences(props: Readonly<StudentIncidencesProps
                             </div>
                             <div className="flex flex-col items-end gap-2">
                               <span className={`${UI_CLASSES.statusBadge} ${style.colorClass}`}>{config.label}</span>
-                              {inc.is_mine && inc.status === 'pending' && !inc.assigned_staff && !(inc.assigned_external_name && inc.assigned_external_name.trim()) && (!inc.updates || inc.updates.length === 0) && (
-                                <div className="flex gap-1">
-                                  <button onClick={() => setIncidenceToEdit(inc)} className={UI_CLASSES.actionBtnSmall} title="Editar"><Pencil size={12} className="text-blue-500" /></button>
-                                  <button onClick={() => setIncidenceToDelete(inc)} className={UI_CLASSES.actionBtnSmall} title="Eliminar"><Trash2 size={12} className="text-red-500" /></button>
-                                </div>
-                              )}
+                              {inc.is_mine && (() => {
+                                const isAssigned = !!inc.assigned_staff || !!(inc.assigned_external_name && inc.assigned_external_name.trim());
+                                const hasUpdates = !!inc.updates && inc.updates.length > 0;
+                                // El reporte solo puede editarse/borrarse mientras siga
+                                // pendiente, sin responsable y sin actualizaciones.
+                                const isLocked = inc.status !== 'pending' || isAssigned || hasUpdates;
+                                const lockReason = isAssigned
+                                  ? "No se puede modificar: la incidencia ya tiene un responsable asignado."
+                                  : hasUpdates
+                                    ? "No se puede modificar: la incidencia ya tiene actualizaciones."
+                                    : "No se puede modificar: la incidencia ya está en gestión.";
+                                return (
+                                  <div className="flex gap-1">
+                                    <button onClick={() => !isLocked && setIncidenceToEdit(inc)} disabled={isLocked} className={`${UI_CLASSES.actionBtnSmall} ${isLocked ? 'opacity-40 cursor-not-allowed' : ''}`} title={isLocked ? lockReason : "Editar"}><Pencil size={12} className="text-blue-500" /></button>
+                                    <button onClick={() => !isLocked && setIncidenceToDelete(inc)} disabled={isLocked} className={`${UI_CLASSES.actionBtnSmall} ${isLocked ? 'opacity-40 cursor-not-allowed' : ''}`} title={isLocked ? lockReason : "Eliminar"}><Trash2 size={12} className="text-red-500" /></button>
+                                  </div>
+                                );
+                              })()}
                             </div>
 
                           </div>

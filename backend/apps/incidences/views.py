@@ -1,6 +1,6 @@
 from datetime import date, timedelta
 
-from django.db.models import Avg, DurationField, ExpressionWrapper, F, Q
+from django.db.models import Avg, Case, DurationField, ExpressionWrapper, F, IntegerField, Q, Value, When
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -42,8 +42,20 @@ class IncidenceViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        queryset = Incidence.objects.filter(is_active=True).select_related(
-            "student", "assigned_staff__user"
+        # Priorización automática: las incidencias urgentes (high) se listan
+        # siempre antes que las de prioridad baja y, dentro de cada grupo,
+        # de la más reciente a la más antigua.
+        queryset = (
+            Incidence.objects.filter(is_active=True)
+            .select_related("student", "assigned_staff__user")
+            .annotate(
+                priority_rank=Case(
+                    When(priority="high", then=Value(0)),
+                    default=Value(1),
+                    output_field=IntegerField(),
+                )
+            )
+            .order_by("priority_rank", "-created_at")
         )
 
         if user.is_staff:

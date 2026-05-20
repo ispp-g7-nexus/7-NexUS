@@ -210,6 +210,20 @@ class AdminSpaceViewsTests(FastTenantTestCase):
         self.assertFalse(self.space.is_active)
         self.assertEqual(reservation.status, SpaceReservation.Status.CANCELLED)
 
+    def test_admin_delete_permanent_removes_space_and_reservations(self):
+        reservation = self._create_reservation(self.non_staff_user, self.space)
+        space_id = self.space.id
+
+        resp = self.admin_client.delete(
+            f"/api/admin/spaces/{space_id}/?permanent=true"
+        )
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(CommonSpace.objects.filter(id=space_id).exists())
+        self.assertFalse(
+            SpaceReservation.objects.filter(id=reservation.id).exists()
+        )
+
     def test_admin_notifications_excludes_requesting_user_and_limits(self):
         User = get_user_model()
         other_users = [
