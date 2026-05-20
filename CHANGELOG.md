@@ -1,5 +1,19 @@
 # Changelog
 
+## [4.1.0](https://github.com/ispp-g7-nexus/7-NexUS/compare/v4.0.0...v4.1.0) (2026-05-20)
+
+
+### Features
+
+* add reusable name validation and integrate into serializers and validators ([03b425f](https://github.com/ispp-g7-nexus/7-NexUS/commit/03b425fc0e456bc5308d9451ec24fcc363a68f8b))
+* add reusable name validation and integrate into serializers and… ([#803](https://github.com/ispp-g7-nexus/7-NexUS/issues/803)) ([a4f3154](https://github.com/ispp-g7-nexus/7-NexUS/commit/a4f31545735d8f21c1350b27e4d59df526649ea2))
+
+
+### Bug Fixes
+
+* corregidos enlaces videos demo ([f5c6a2a](https://github.com/ispp-g7-nexus/7-NexUS/commit/f5c6a2a97c82726f515d2bf9495b93b444102fb2))
+* corregidos nombres de videos demo ([015ecf1](https://github.com/ispp-g7-nexus/7-NexUS/commit/015ecf1e22ca46d3809a7ae6f5a7aa960073b6c3))
+
 ## 1.0.0 (2026-03-25)
 
 
