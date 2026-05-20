@@ -1007,7 +1007,7 @@ export function AdminObjects() {
 
       {/* Create / Edit Object Dialog */}
       <Dialog open={formOpen} onOpenChange={(open) => (open ? setFormOpen(true) : handleCloseForm())}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
           <form onSubmit={handleSubmit}>
             <DialogHeader>
               <DialogTitle>{dialogTitle}</DialogTitle>

@@ -778,13 +778,20 @@ class ResidentsValidatorsAndSerializersTests(FastTenantTestCase):
             defaults={"description": "Student", "is_system_default": True, "residence": None},
         )
 
-    def test_full_name_validator_rejects_single_token(self):
+    def test_full_name_validator_accepts_single_token(self):
         class _Validator(ResidentFieldValidatorMixin):
             pass
 
         validator = _Validator()
-        with self.assertRaisesMessage(serializers.ValidationError, "Introduce al menos un nombre y un apellido válidos."):
-            validator.validate_full_name("Carlos")
+        self.assertEqual(validator.validate_full_name(" Carlos "), "Carlos")
+
+    def test_full_name_validator_rejects_invalid_characters(self):
+        class _Validator(ResidentFieldValidatorMixin):
+            pass
+
+        validator = _Validator()
+        with self.assertRaises(serializers.ValidationError):
+            validator.validate_full_name("Carlos·$%&/")
 
     def test_full_name_validator_accepts_name_and_last_name(self):
         class _Validator(ResidentFieldValidatorMixin):

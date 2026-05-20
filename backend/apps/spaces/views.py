@@ -606,7 +606,13 @@ class AdminSpaceListCreateView(AdminRequiredMixin, AuthenticatedView):
 
         if not name or not open_time or not close_time:
             return JsonResponse(
-                {"detail": "name, open_time y close_time son obligatorios."}, status=400
+                {
+                    "detail": (
+                        "El nombre, la hora de apertura y la hora de cierre "
+                        "son obligatorios."
+                    )
+                },
+                status=400,
             )
 
         text_validation_error = _validate_common_space_text_fields(
@@ -648,7 +654,12 @@ class AdminSpaceListCreateView(AdminRequiredMixin, AuthenticatedView):
 
         if ct <= ot:
             return JsonResponse(
-                {"detail": "close_time debe ser posterior a open_time."}, status=400
+                {
+                    "detail": (
+                        "La hora de cierre debe ser posterior a la hora de apertura."
+                    )
+                },
+                status=400,
             )
 
         if CommonSpace.objects.filter(residence=residence, name=name).exists():
@@ -747,7 +758,8 @@ class AdminSpaceDetailView(AdminRequiredMixin, AuthenticatedView):
                 space.open_time = dt_time.fromisoformat(str(payload["open_time"]))
             except ValueError:
                 return JsonResponse(
-                    {"detail": "Formato de open_time inválido."}, status=400
+                    {"detail": "El formato de la hora de apertura no es válido."},
+                    status=400,
                 )
 
         if "close_time" in payload:
@@ -755,7 +767,8 @@ class AdminSpaceDetailView(AdminRequiredMixin, AuthenticatedView):
                 space.close_time = dt_time.fromisoformat(str(payload["close_time"]))
             except ValueError:
                 return JsonResponse(
-                    {"detail": "Formato de close_time inválido."}, status=400
+                    {"detail": "El formato de la hora de cierre no es válido."},
+                    status=400,
                 )
 
         if "is_active" in payload:
@@ -763,7 +776,12 @@ class AdminSpaceDetailView(AdminRequiredMixin, AuthenticatedView):
 
         if space.close_time <= space.open_time:
             return JsonResponse(
-                {"detail": "close_time debe ser posterior a open_time."}, status=400
+                {
+                    "detail": (
+                        "La hora de cierre debe ser posterior a la hora de apertura."
+                    )
+                },
+                status=400,
             )
 
         if "reservation_interval_minutes" in payload:
@@ -784,9 +802,30 @@ class AdminSpaceDetailView(AdminRequiredMixin, AuthenticatedView):
         return JsonResponse(_serialize_space(space))
 
     def delete(self, request, space_id: int):
-        """Desactiva un espacio (soft delete) y cancela sus reservas activas."""
+        """Elimina un espacio.
+
+        Por defecto realiza un borrado lógico (soft delete): desactiva el
+        espacio y cancela sus reservas activas, conservando el historial.
+
+        Con el parámetro ``?permanent=true`` realiza un borrado definitivo:
+        elimina el espacio y, en cascada, todas sus reservas. Esta acción no
+        se puede deshacer.
+        """
         residence = _validate_residence(request)
         space = get_object_or_404(CommonSpace, id=space_id, residence=residence)
+
+        permanent = request.GET.get("permanent", "").strip().lower() in (
+            "true",
+            "1",
+            "yes",
+        )
+
+        if permanent:
+            with transaction.atomic():
+                space.delete()
+            return JsonResponse(
+                {"detail": "Espacio eliminado de forma permanente."}
+            )
 
         with transaction.atomic():
             SpaceReservation.objects.filter(
